@@ -1,1 +1,12 @@
 venv
+
+# Local env
+.env
+
+# Cache for distance matrix and other runtime caches
+.cache/
+
+# Secrets collected from other projects (do not commit)
+secrets/
+
+.DS_Store
