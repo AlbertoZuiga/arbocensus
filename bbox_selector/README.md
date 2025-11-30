@@ -1,16 +1,121 @@
 # Seleccionar bounding box con Google Maps — `bbox_selector`
 
-Resumen
---------
+## Resumen
+
+Pequeña aplicación Flask para seleccionar visualmente un bounding box sobre un mapa (Google Maps JS) y para mostrar los árboles que hay dentro del área visible o dentro del rectángulo dibujado. Las coordenadas del rectángulo se guardan en `saved_bbox.json`. La app puede leer directamente de las bases de datos `arbocensus` y `arbocensus-api` (JDBC o DSN) para devolver puntos de árboles vía el endpoint `/trees`.
+
+## Rápido: instalación y ejecución (local / Docker)
+
+1. Usar Docker Compose (recomendado para desarrollo local):
+
+```bash
+cd bbox_selector
+# opcional: cambiar puerto host (por defecto 5000)
+HOST_PORT=5001 docker compose up --build
+```
+
+2. Ejecutar local en un virtualenv:
+
+```bash
+cd bbox_selector
+./run.sh --local
+```
+
+3. Ejecutar con venv manualmente (si prefieres):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python app.py
+```
+
+4. Abrir en el navegador: `http://127.0.0.1:5000` (o `http://127.0.0.1:5001` si usaste `HOST_PORT=5001`).
+
+## Qué hace la app
+
+- Muestra un mapa Google Maps con la herramienta de dibujo (rectangle).
+- Al dibujar o editar el rectángulo guarda automáticamente sus coordenadas en `saved_bbox.json`.
+- Pide al backend `/trees` los árboles dentro del viewport (o del rectángulo si configuras el cliente) y los pinta con un icono de árbol SVG. Al hacer clic en un marcador se muestra un InfoWindow con metadatos.
+
+## Variables de entorno y `.env`
+
+- `GOOGLE_API_KEY` (obligatorio para la UI): clave de la Google Maps JavaScript API. Puedes ponerla en `bbox_selector/.env` o exportarla en tu shell.
+- `ARBOCENSUS_API_DB_URL` y `ARBOCENSUS_DB_URL` (opcionales): DSN (`postgres://...`) o JDBC (`jdbc:postgresql://host:port/dbname`). Si usas JDBC y no incluye `user`/`password`, exporta `ARBOCENSUS_API_DB_URL_USER` / `ARBOCENSUS_API_DB_URL_PASSWORD` y equivalentes para la otra DB.
+
+Ejemplo `.env` (no commitear):
+
+```
+GOOGLE_API_KEY=YOUR_KEY_HERE
+HOST_PORT=5001
+ARBOCENSUS_API_DB_URL='postgres://user:pass@host:5432/db'
+ARBOCENSUS_DB_URL='jdbc:postgresql://host:5432/db2'
+ARBOCENSUS_DB_URL_USER='dbuser'
+ARBOCENSUS_DB_URL_PASSWORD='dbpass'
+```
+
+## Cómo funciona `/trees`
+
+- `GET /trees?north=..&south=..&east=..&west=..&max=..` devuelve `{ ok: true, trees: [...] }`.
+- El servidor intenta, en orden, conectarse a `ARBOCENSUS_API_DB_URL` y luego a `ARBOCENSUS_DB_URL`, consultar tablas conocidas (`arbocensus_api_app_sample` y `arbocensus_app_sample`), combinar resultados y deduplicar por coordenadas.
+- Si no hay DB accesible la respuesta será `{'ok': True, 'trees': []}`.
+
+## Docker & Docker Compose
+
+- `Dockerfile` y `docker-compose.yml` están incluidos. Por seguridad no se incorpora `.env` en la imagen; `docker compose` carga variables desde `bbox_selector/.env` si lo indicas en `docker-compose.yml`.
+- Para desarrollo con recarga de código montamos el repo dentro del contenedor (volume). Si cambias dependencias, reconstruye la imagen con `docker compose build`.
+
+Comandos útiles:
+
+```bash
+# construir y levantar (foreground)
+docker compose up --build
+
+# en background
+docker compose up --build -d
+
+# ver logs
+docker compose logs -f
+
+# parar
+docker compose down
+```
+
+## Pruebas
+
+- Tests unitarios con `pytest` en `bbox_selector/tests`. Puedes ejecutarlos usando el venv:
+
+```bash
+cd bbox_selector
+./run.sh --local
+.venv/bin/python -m pytest -q
+```
+
+- También puedes ejecutar tests dentro de un contenedor si prefieres.
+
+## Desarrollo y recomendaciones
+
+- No subir `.env` ni secretos al repo. `.dockerignore` excluye `.env` y `.venv`.
+- Para grandes cantidades de puntos usa clustering (MarkerClusterer) o paginación en servidor.
+- Si quieres que `/trees` use columnas diferentes o una tabla distinta, dímelo y lo adapto.
+
+## Contacto / contribuciones
+
+Si quieres que añada integración con clustering, paginación o tests que simulen la DB (mocks para `psycopg2`), lo agrego.
+
+# Seleccionar bounding box con Google Maps — `bbox_selector`
+
+## Resumen
+
 Pequeña aplicación Flask para seleccionar visualmente un bounding box sobre un mapa (Google Maps JS), y para mostrar los árboles que hay dentro del área visible o dentro del rectángulo dibujado. Las coordenadas del rectángulo se guardan en `saved_bbox.json`. Además la app puede leer directamente de las bases de datos `arbocensus` y `arbocensus-api` (JDBC o DSN) para devolver puntos de árboles vía el endpoint `/trees`.
 
-Rápido: instalación y ejecución (local)
------------------------------------
+## Rápido: instalación y ejecución (local)
+
 1. Preparar la API key de Google Maps JavaScript API:
 
 ```bash
 export GOOGLE_API_KEY="TU_GOOGLE_MAPS_JS_KEY"
-````
+```
 
 2. (Opcional) configurar conexiones a las bases de datos (ver sección siguiente). Si no vas a usar DB directa, la app seguirá funcionando pero no mostrará árboles.
 
