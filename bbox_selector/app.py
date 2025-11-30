@@ -1,8 +1,6 @@
 import os
 import json
 
-import psycopg2
-import psycopg2.extras
 import dotenv
 from flask import Flask, render_template, request, jsonify
 
@@ -47,7 +45,6 @@ def save_bbox():
 
 @app.route('/trees')
 def trees():
-    # Expect query params: north,south,east,west,max
     try:
         north = float(request.args.get('north'))
         south = float(request.args.get('south'))
@@ -58,7 +55,12 @@ def trees():
 
     max_results = int(request.args.get('max', 300))
 
-    # Prefer direct DB access: try arbocensus-api DB and arbocensus DB
+    try:
+        import psycopg2
+        import psycopg2.extras
+    except Exception:
+        psycopg2 = None
+
     results = []
     seen = set()
 
@@ -195,4 +197,7 @@ def trees():
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    host = os.getenv('HOST', '0.0.0.0')
+    debug_env = os.getenv('FLASK_DEBUG', os.getenv('DEBUG', 'False'))
+    DEBUG = str(debug_env).lower() in ('1', 'true', 'yes')
+    app.run(host=host, port=5000, debug=DEBUG)
