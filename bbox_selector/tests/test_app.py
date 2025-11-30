@@ -63,3 +63,20 @@ def test_save_and_trees(client):
     j2 = r2.get_json()
     assert j2.get('ok') is True
     assert isinstance(j2.get('trees'), list)
+
+
+def test_save_with_trees_payload(client):
+    payload = { 'north': -33.4, 'south': -33.6, 'east': -70.4, 'west': -70.8,
+                'trees': [ { 'lat': -33.5, 'lng': -70.5, 'meta': {'id': 123} } ] }
+    r = client.post('/save', json=payload)
+    assert r.status_code == 200
+    j = r.get_json()
+    assert j.get('ok') is True
+
+    p = pathlib.Path(pathlib.Path(__file__).parents[1]) / 'saved_bbox.json'
+    assert p.exists()
+    data = json.loads(p.read_text(encoding='utf-8'))
+    assert data['north'] == payload['north']
+    assert 'trees' in data
+    assert isinstance(data['trees'], list)
+    assert data['trees'][0]['meta']['id'] == 123
