@@ -31,6 +31,28 @@ cd bbox_selector
 
 If you want, puedo añadir una sección detallada de despliegue o integrar `bbox_selector` en la documentación principal.
 
+> Nota: fuente actual de inputs — `bbox_selector`
+
+- **Estado actual:** la entrada del polígono geográfico y la lista de árboles (ID, lat, lng) se obtiene hoy desde el subproyecto `bbox_selector/`. Es decir, por defecto el flujo asume que el usuario selecciona bounding boxes y exporta los árboles desde esa app.
+- **Formato mínimo esperado:** `bbox_selector` debe entregar un JSON (o endpoint) que contenga un polígono válido y una lista de árboles con los campos `id`, `lat`, `lng`. Un ejemplo simplificado:
+
+```
+{
+  "polygon": { "type": "bbox", "nw": {"lat": -34.0, "lng": -58.0}, "se": {"lat": -34.1, "lng": -58.1} },
+  "trees": [ {"id": 12, "lat": -34.123, "lng": -58.456}, {"id": 55, "lat": -34.124, "lng": -58.457} ]
+}
+```
+
+- **Dónde leerlo desde el orquestador:** la integración puede realizarse mediante un endpoint HTTP expuesto por `bbox_selector`, un archivo exportado en un formato JSON compartido, o almacenamiento compartido (S3, FS). El componente que consuma estos datos debe transformar la entrada al contrato mínimo descrito arriba.
+
+Alternativas futuras (cómo reemplazar `bbox_selector`):
+
+- **GeoJSON / Shapefiles:** agregar un importador que convierta polígonos complejos y listas de puntos a la estructura mínima.
+- **API externa:** crear un conector para consumir un endpoint REST que retorne el mismo JSON.
+- **Lectura directa de DB:** implementar un adaptador que haga la consulta SQL y construya el payload esperado.
+
+Requisito para cualquier alternativa: el adaptador debe garantizar que se entregue un polígono válido y una lista de árboles con `id`, `lat` y `lng`.
+
 # 📌 1. Resumen General del Proyecto
 
 El sistema recibe un conjunto de árboles georreferenciados y un polígono delimitador del área de trabajo, generando rutas caminables óptimas para _N_ censantes. Considera caminabilidad real, tiempos de censo, carga por agente y heurísticas avanzadas de optimización.
