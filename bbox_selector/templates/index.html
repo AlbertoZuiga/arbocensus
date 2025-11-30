@@ -35,31 +35,32 @@
           north: ne.lat(), south: sw.lat(), east: ne.lng(), west: sw.lng(), max: 500
         });
         document.getElementById('status').innerText = 'Cargando árboles...';
-        fetch('/trees?' + params.toString())
-          .then(r => r.json())
-          .then(j => {
-            if (!j.ok) { document.getElementById('status').innerText = 'Error cargando árboles: ' + (j.error||''); return; }
-            clearMarkers();
-            for(const t of j.trees){
-              const treeSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="12" r="8" fill="%2394d93b"/><rect x="14" y="18" width="4" height="8" fill="%238b5a2b"/></svg>';
-              const m = new google.maps.Marker({
-                position: { lat: t.lat, lng: t.lng },
-                map: map,
-                title: 'Árbol',
-                icon: {
-                  url: 'data:image/svg+xml;utf-8,' + treeSvg,
-                  scaledSize: new google.maps.Size(24, 24)
-                }
-              });
-              const info = document.createElement('div');
-              info.innerHTML = '<div><strong>Árbol</strong><br/>' + (t.meta && t.meta.tree_id ? ('ID: ' + t.meta.tree_id + '<br/>') : '') + (t.meta && t.meta.id ? ('sample: ' + t.meta.id) : '') + '</div>';
-              const infowindow = new google.maps.InfoWindow({ content: info });
-              m.addListener('click', () => infowindow.open(map, m));
-              markers.push(m);
-            }
-            document.getElementById('status').innerText = 'Árboles mostrados: ' + j.trees.length;
-          })
-          .catch(err => { document.getElementById('status').innerText = 'Error cargando árboles: ' + err; });
+          return fetch('/trees?' + params.toString())
+            .then(r => r.json())
+            .then(j => {
+              if (!j.ok) { document.getElementById('status').innerText = 'Error cargando árboles: ' + (j.error||''); return j; }
+              clearMarkers();
+              for(const t of j.trees){
+                const treeSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="12" r="8" fill="%2394d93b"/><rect x="14" y="18" width="4" height="8" fill="%238b5a2b"/></svg>';
+                const m = new google.maps.Marker({
+                  position: { lat: t.lat, lng: t.lng },
+                  map: map,
+                  title: 'Árbol',
+                  icon: {
+                    url: 'data:image/svg+xml;utf-8,' + treeSvg,
+                    scaledSize: new google.maps.Size(24, 24)
+                  }
+                });
+                const info = document.createElement('div');
+                info.innerHTML = '<div><strong>Árbol</strong><br/>' + (t.meta && t.meta.tree_id ? ('ID: ' + t.meta.tree_id + '<br/>') : '') + (t.meta && t.meta.id ? ('sample: ' + t.meta.id) : '') + '</div>';
+                const infowindow = new google.maps.InfoWindow({ content: info });
+                m.addListener('click', () => infowindow.open(map, m));
+                markers.push(m);
+              }
+              document.getElementById('status').innerText = 'Árboles mostrados: ' + j.trees.length;
+              return j;
+            })
+            .catch(err => { document.getElementById('status').innerText = 'Error cargando árboles: ' + err; return { ok: false, error: String(err), trees: [] }; });
       }
 
       function initMap(){
@@ -79,14 +80,18 @@
         google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
           if (currentRect) { currentRect.setMap(null); }
           currentRect = event.overlay;
-          saveRectBounds(currentRect.getBounds());
+          // when created or edited, fetch trees for the rect and then save bbox + trees
+          fetchTreesForBounds(currentRect.getBounds()).then(j => {
+            const trees = (j && j.trees) ? j.trees : [];
+            saveRectBounds(currentRect.getBounds(), trees);
+          });
 
-          // Also fetch trees that are in the current viewport
-          fetchTreesForBounds(map.getBounds());
-
-          // when edited, save again
+          // when edited, save again (debounce a bit?) - keep simple: fetch then save
           google.maps.event.addListener(currentRect, 'bounds_changed', function(){
-            saveRectBounds(currentRect.getBounds());
+            fetchTreesForBounds(currentRect.getBounds()).then(j => {
+              const trees = (j && j.trees) ? j.trees : [];
+              saveRectBounds(currentRect.getBounds(), trees);
+            });
           });
         });
 
@@ -96,7 +101,7 @@
         });
       }
 
-      function saveRectBounds(bounds){
+      function saveRectBounds(bounds, trees){
         const ne = bounds.getNorthEast();
         const sw = bounds.getSouthWest();
         const payload = {
@@ -105,6 +110,11 @@
           south: sw.lat(),
           west: sw.lng()
         };
+
+        // if caller provided trees, include them
+        if (trees && Array.isArray(trees)) {
+          payload.trees = trees;
+        }
 
         document.getElementById('status').innerText = 'Guardando...';
 

@@ -37,8 +37,18 @@ def save_bbox():
     }
 
     out_path = os.path.join(os.path.dirname(__file__), 'saved_bbox.json')
+
+    # optional trees payload: expect a list of {lat,lng,meta}
+    trees = data.get('trees')
+    if trees is not None and not isinstance(trees, list):
+        return jsonify({'ok': False, 'error': 'trees must be a list'}), 400
+
+    out_obj = dict(bbox)
+    if trees is not None:
+        out_obj['trees'] = trees
+
     with open(out_path, 'w', encoding='utf-8') as f:
-        json.dump(bbox, f, indent=2)
+        json.dump(out_obj, f, indent=2)
 
     return jsonify({'ok': True, 'path': out_path})
 
