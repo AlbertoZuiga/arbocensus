@@ -1,8 +1,6 @@
 import os
 import json
 
-import psycopg2
-import psycopg2.extras
 import dotenv
 from flask import Flask, render_template, request, jsonify
 
@@ -39,15 +37,24 @@ def save_bbox():
     }
 
     out_path = os.path.join(os.path.dirname(__file__), 'saved_bbox.json')
+
+    # optional trees payload: expect a list of {lat,lng,meta}
+    trees = data.get('trees')
+    if trees is not None and not isinstance(trees, list):
+        return jsonify({'ok': False, 'error': 'trees must be a list'}), 400
+
+    out_obj = dict(bbox)
+    if trees is not None:
+        out_obj['trees'] = trees
+
     with open(out_path, 'w', encoding='utf-8') as f:
-        json.dump(bbox, f, indent=2)
+        json.dump(out_obj, f, indent=2)
 
     return jsonify({'ok': True, 'path': out_path})
 
 
 @app.route('/trees')
 def trees():
-    # Expect query params: north,south,east,west,max
     try:
         north = float(request.args.get('north'))
         south = float(request.args.get('south'))
@@ -58,7 +65,12 @@ def trees():
 
     max_results = int(request.args.get('max', 300))
 
-    # Prefer direct DB access: try arbocensus-api DB and arbocensus DB
+    try:
+        import psycopg2
+        import psycopg2.extras
+    except Exception:
+        psycopg2 = None
+
     results = []
     seen = set()
 
@@ -195,4 +207,7 @@ def trees():
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    host = os.getenv('HOST', '0.0.0.0')
+    debug_env = os.getenv('FLASK_DEBUG', os.getenv('DEBUG', 'False'))
+    DEBUG = str(debug_env).lower() in ('1', 'true', 'yes')
+    app.run(host=host, port=5000, debug=DEBUG)

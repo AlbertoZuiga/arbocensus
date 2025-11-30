@@ -1,0 +1,9 @@
+.venv
+__pycache__/
+*.pyc
+saved_bbox.json
+.env
+secrets/
+node_modules/
+coverage/
+*.log
