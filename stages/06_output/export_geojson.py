@@ -30,10 +30,12 @@ def write_geojson(obj, path: str):
         json.dump(obj, f, ensure_ascii=False)
 
 
-def build_points_geojson(nodes: List[Dict[str, Any]], clusters_map: Dict[int, int]) -> Dict[str, Any]:
+def build_points_geojson_from_nodes(nodes: List[Dict[str, Any]], clusters_map: Dict[int, int] = None) -> Dict[str, Any]:
     features = []
     for i, n in enumerate(nodes):
-        props = {'node_index': i, 'cluster_id': clusters_map.get(i)}
+        props = {'node_index': i}
+        if clusters_map:
+            props['cluster_id'] = clusters_map.get(i)
         feat = {
             'type': 'Feature',
             'geometry': {'type': 'Point', 'coordinates': [n['lng'], n['lat']]},
@@ -57,11 +59,30 @@ def build_routes_geojson(nodes: List[Dict[str, Any]], routes: List[Dict[str, Any
     return {'type': 'FeatureCollection', 'features': features}
 
 
+def build_points_geojson_from_trees(trees: List[Dict[str, Any]]) -> Dict[str, Any]:
+    features = []
+    for i, t in enumerate(trees):
+        lat = t.get('lat') or t.get('latitude')
+        lng = t.get('lng') or t.get('longitude')
+        props = {k: v for k, v in t.items() if k not in ('lat', 'lng', 'latitude', 'longitude')}
+        props['index'] = i
+        feat = {
+            'type': 'Feature',
+            'geometry': {'type': 'Point', 'coordinates': [float(lng), float(lat)]},
+            'properties': props
+        }
+        features.append(feat)
+    return {'type': 'FeatureCollection', 'features': features}
+
+
 def main(argv: List[str]):
     graph_path = 'stages/03_graph/03_graph.json'
     clusters_path = 'stages/04_cluster/clusters_by_censantes.json'
     routes_path = 'stages/05_tsp/routes_by_cluster.json'
     out_dir = 'stages/06_output'
+    input_path = 'stages/01_bbox_input/01_input.json'
+    filtered_path = 'stages/02_filter/02_filtered.json'
+    bbox_path = 'saved_bbox.json'
     # simple args
     if len(argv) > 1:
         graph_path = argv[1]
@@ -70,23 +91,59 @@ def main(argv: List[str]):
     if len(argv) > 3:
         routes_path = argv[3]
 
-    graph = load(graph_path)
+    # Graph / nodes
+    graph = load(graph_path) if os.path.exists(graph_path) else {'nodes': []}
     nodes = graph.get('nodes', [])
-    clusters_data = load(clusters_path)
-    clusters = clusters_data.get('clusters', [])
-    # build map node_index -> cluster_id
-    clusters_map = {}
-    for c in clusters:
-        cid = c.get('cluster_id')
-        members = c.get('member_node_indices', [])
-        for m in members:
-            clusters_map[m] = cid
 
-    points = build_points_geojson(nodes, clusters_map)
-    write_geojson(points, os.path.join(out_dir, 'clusters.geojson'))
-    print('Wrote clusters.geojson')
+    # Input trees
+    if os.path.exists(input_path):
+        inp = load(input_path)
+        trees = inp.get('trees') or inp.get('data') or []
+        pts = build_points_geojson_from_trees(trees)
+        write_geojson(pts, os.path.join(out_dir, 'input_points.geojson'))
+        print('Wrote input_points.geojson')
 
-    # if routes exist
+    # Filtered
+    if os.path.exists(filtered_path):
+        fdata = load(filtered_path)
+        ftrees = fdata.get('trees') or fdata.get('data') or []
+        fpts = build_points_geojson_from_trees(ftrees)
+        write_geojson(fpts, os.path.join(out_dir, 'filtered_points.geojson'))
+        print('Wrote filtered_points.geojson')
+
+    # BBox polygon (if saved_bbox.json exists with 'polygon' or 'bbox')
+    if os.path.exists(bbox_path):
+        b = load(bbox_path)
+        geom = None
+        if 'polygon' in b:
+            geom = {'type': 'Polygon', 'coordinates': b['polygon']}
+        elif 'bbox' in b:
+            # bbox as [minx,miny,maxx,maxy]
+            bb = b['bbox']
+            minx, miny, maxx, maxy = bb
+            coords = [[minx, miny], [minx, maxy], [maxx, maxy], [maxx, miny], [minx, miny]]
+            geom = {'type': 'Polygon', 'coordinates': [coords]}
+        if geom:
+            feat = {'type': 'FeatureCollection', 'features': [{'type': 'Feature', 'geometry': geom, 'properties': {}}]}
+            write_geojson(feat, os.path.join(out_dir, 'bbox.geojson'))
+            print('Wrote bbox.geojson')
+
+    # clusters
+    if os.path.exists(clusters_path):
+        clusters_data = load(clusters_path)
+        clusters = clusters_data.get('clusters', [])
+        # build map node_index -> cluster_id
+        clusters_map = {}
+        for c in clusters:
+            cid = c.get('cluster_id')
+            members = c.get('member_node_indices', [])
+            for m in members:
+                clusters_map[m] = cid
+        pts = build_points_geojson_from_nodes(nodes, clusters_map)
+        write_geojson(pts, os.path.join(out_dir, 'clusters.geojson'))
+        print('Wrote clusters.geojson')
+
+    # routes
     if os.path.exists(routes_path):
         routes_data = load(routes_path)
         routes = routes_data.get('routes') or routes_data.get('routes', [])

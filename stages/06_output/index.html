@@ -8,10 +8,28 @@
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; }
     .legend { background: white; padding: 6px; }
+    .controls { position: absolute; top: 10px; left: 10px; z-index: 400; background: white; padding:8px; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+    .controls button { margin:2px 0; display:block; width:100%; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div class="controls" id="controls">
+    <strong>Capas</strong>
+    <label><input type="checkbox" id="cb_bbox" checked> BBox</label>
+    <label><input type="checkbox" id="cb_input" checked> Input (raw)</label>
+    <label><input type="checkbox" id="cb_filtered" checked> Filtered</label>
+    <label><input type="checkbox" id="cb_graph" checked> Graph nodes</label>
+    <label><input type="checkbox" id="cb_clusters" checked> Clusters</label>
+    <label><input type="checkbox" id="cb_routes" checked> Routes</label>
+    <hr/>
+    <strong>Etapas</strong>
+    <button id="btn_stage_01">Stage 01 - Input</button>
+    <button id="btn_stage_02">Stage 02 - Filter</button>
+    <button id="btn_stage_03">Stage 03 - Graph</button>
+    <button id="btn_stage_04">Stage 04 - Clusters</button>
+    <button id="btn_stage_05">Stage 05 - Routes</button>
+  </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([-33.45, -70.66], 13);
@@ -20,40 +38,74 @@
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    async function loadAndShow(){
-      const pts = await fetch('clusters.geojson').then(r=>r.json());
-      const routes = await fetch('routes.geojson').then(r=>r.json()).catch(()=>null);
+    // Layers
+    let layer_bbox = null;
+    let layer_input = null;
+    let layer_filtered = null;
+    let layer_graph = null;
+    let layer_clusters = null;
+    let layer_routes = null;
 
-      // compute distinct cluster ids
-      const ids = [...new Set(pts.features.map(f=>f.properties.cluster_id))].filter(x=>x!==undefined && x!==null);
-      const colors = {};
-      function colorFor(i){
-        if(colors[i]) return colors[i];
-        const c = `hsl(${(i*57)%360} 80% 45%)`;
-        colors[i]=c; return c;
-      }
+    const colors = {};
+    function colorFor(i){ if(colors[i]) return colors[i]; const c = `hsl(${(i*37)%360} 80% 45%)`; colors[i]=c; return c; }
 
-      const pointLayer = L.geoJSON(pts, {
-        pointToLayer: (feat, latlng) => {
-          const cid = feat.properties.cluster_id;
-          const color = cid===undefined? '#777': colorFor(cid);
-          return L.circleMarker(latlng, {radius:4, color: color, fillColor: color, fillOpacity: 0.9});
-        },
-        onEachFeature: (feat, layer) => {
-          const p = feat.properties;
-          layer.bindPopup(`node: ${p.node_index}<br/>cluster: ${p.cluster_id}`);
-        }
-      }).addTo(map);
-
-      if(routes){
-        L.geoJSON(routes, {
-          style: (f)=>({color: colorFor(f.properties.cluster_id), weight: 3, opacity: 0.9})
-        }).addTo(map);
-      }
-
-      map.fitBounds(pointLayer.getBounds());
+    async function fetchJsonMaybe(path){
+      try{ const r = await fetch(path); if(!r.ok) throw new Error('no'); return await r.json(); }catch(e){ return null }
     }
-    loadAndShow().catch(e=>{console.error(e); alert('No se pudo cargar geojson: '+e.message)});
+
+    async function loadLayers(){
+      const bbox = await fetchJsonMaybe('bbox.geojson');
+      if(bbox){ layer_bbox = L.geoJSON(bbox, {style:{color:'#444', weight:2, fill:false}}).addTo(map); }
+
+      const input = await fetchJsonMaybe('input_points.geojson');
+      if(input){ layer_input = L.geoJSON(input, {pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:3,color:'#000',fillOpacity:0.7}), onEachFeature:(f,l)=>l.bindPopup(JSON.stringify(f.properties)) }).addTo(map); }
+
+      const filtered = await fetchJsonMaybe('filtered_points.geojson');
+      if(filtered){ layer_filtered = L.geoJSON(filtered, {pointToLayer:(f,latlng)=>L.circleMarker(latlng,{radius:4,color:'#0a0',fillOpacity:0.8}), onEachFeature:(f,l)=>l.bindPopup(JSON.stringify(f.properties)) }).addTo(map); }
+
+      const graph = await fetchJsonMaybe('clusters.geojson');
+      if(graph){
+        layer_graph = L.geoJSON(graph, {pointToLayer:(f,latlng)=>{
+          const cid = f.properties.cluster_id; const color = cid===undefined? '#777' : colorFor(cid);
+          return L.circleMarker(latlng,{radius:4,color:color,fillColor:color,fillOpacity:0.9})
+        }, onEachFeature:(f,l)=>l.bindPopup(`node:${f.properties.node_index}<br/>cluster:${f.properties.cluster_id}`)}).addTo(map);
+      }
+
+      const routes = await fetchJsonMaybe('routes.geojson');
+      if(routes){ layer_routes = L.geoJSON(routes, {style:(f)=>({color: colorFor(f.properties.cluster_id), weight:3, opacity:0.9})}).addTo(map); }
+
+      // Fit bounds to available point layer preferentially
+      const fitLayer = layer_graph || layer_filtered || layer_input || layer_routes || layer_bbox;
+      if(fitLayer){ map.fitBounds(fitLayer.getBounds()); }
+    }
+
+    function setLayerVisibility(layer, visible){ if(!layer) return; if(visible) map.addLayer(layer); else map.removeLayer(layer); }
+
+    // wire controls
+    document.getElementById('cb_bbox').addEventListener('change', e=> setLayerVisibility(layer_bbox, e.target.checked));
+    document.getElementById('cb_input').addEventListener('change', e=> setLayerVisibility(layer_input, e.target.checked));
+    document.getElementById('cb_filtered').addEventListener('change', e=> setLayerVisibility(layer_filtered, e.target.checked));
+    document.getElementById('cb_graph').addEventListener('change', e=> setLayerVisibility(layer_graph, e.target.checked));
+    document.getElementById('cb_clusters').addEventListener('change', e=> setLayerVisibility(layer_graph, e.target.checked));
+    document.getElementById('cb_routes').addEventListener('change', e=> setLayerVisibility(layer_routes, e.target.checked));
+
+    // stage presets
+    document.getElementById('btn_stage_01').addEventListener('click', ()=>{ document.getElementById('cb_bbox').checked=true; document.getElementById('cb_input').checked=true; document.getElementById('cb_filtered').checked=false; document.getElementById('cb_graph').checked=false; document.getElementById('cb_routes').checked=false; applyCheckboxes(); });
+    document.getElementById('btn_stage_02').addEventListener('click', ()=>{ document.getElementById('cb_bbox').checked=true; document.getElementById('cb_input').checked=false; document.getElementById('cb_filtered').checked=true; document.getElementById('cb_graph').checked=false; document.getElementById('cb_routes').checked=false; applyCheckboxes(); });
+    document.getElementById('btn_stage_03').addEventListener('click', ()=>{ document.getElementById('cb_bbox').checked=true; document.getElementById('cb_filtered').checked=false; document.getElementById('cb_graph').checked=true; document.getElementById('cb_routes').checked=false; applyCheckboxes(); });
+    document.getElementById('btn_stage_04').addEventListener('click', ()=>{ document.getElementById('cb_clusters').checked=true; document.getElementById('cb_graph').checked=true; document.getElementById('cb_routes').checked=false; applyCheckboxes(); });
+    document.getElementById('btn_stage_05').addEventListener('click', ()=>{ document.getElementById('cb_clusters').checked=true; document.getElementById('cb_routes').checked=true; applyCheckboxes(); });
+
+    function applyCheckboxes(){
+      setLayerVisibility(layer_bbox, document.getElementById('cb_bbox').checked);
+      setLayerVisibility(layer_input, document.getElementById('cb_input').checked);
+      setLayerVisibility(layer_filtered, document.getElementById('cb_filtered').checked);
+      setLayerVisibility(layer_graph, document.getElementById('cb_graph').checked);
+      setLayerVisibility(layer_clusters, document.getElementById('cb_clusters').checked);
+      setLayerVisibility(layer_routes, document.getElementById('cb_routes').checked);
+    }
+
+    loadLayers().catch(e=>{console.error(e); alert('No se pudo cargar capas: '+e.message)});
   </script>
 </body>
 </html>
