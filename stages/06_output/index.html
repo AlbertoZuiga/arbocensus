@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visualizador de clusters - Arbocensus</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .legend { background: white; padding: 6px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([-33.45, -70.66], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    async function loadAndShow(){
+      const pts = await fetch('clusters.geojson').then(r=>r.json());
+      const routes = await fetch('routes.geojson').then(r=>r.json()).catch(()=>null);
+
+      // compute distinct cluster ids
+      const ids = [...new Set(pts.features.map(f=>f.properties.cluster_id))].filter(x=>x!==undefined && x!==null);
+      const colors = {};
+      function colorFor(i){
+        if(colors[i]) return colors[i];
+        const c = `hsl(${(i*57)%360} 80% 45%)`;
+        colors[i]=c; return c;
+      }
+
+      const pointLayer = L.geoJSON(pts, {
+        pointToLayer: (feat, latlng) => {
+          const cid = feat.properties.cluster_id;
+          const color = cid===undefined? '#777': colorFor(cid);
+          return L.circleMarker(latlng, {radius:4, color: color, fillColor: color, fillOpacity: 0.9});
+        },
+        onEachFeature: (feat, layer) => {
+          const p = feat.properties;
+          layer.bindPopup(`node: ${p.node_index}<br/>cluster: ${p.cluster_id}`);
+        }
+      }).addTo(map);
+
+      if(routes){
+        L.geoJSON(routes, {
+          style: (f)=>({color: colorFor(f.properties.cluster_id), weight: 3, opacity: 0.9})
+        }).addTo(map);
+      }
+
+      map.fitBounds(pointLayer.getBounds());
+    }
+    loadAndShow().catch(e=>{console.error(e); alert('No se pudo cargar geojson: '+e.message)});
+  </script>
+</body>
+</html>
