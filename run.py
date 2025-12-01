@@ -8,7 +8,6 @@ Usage:
   python run.py --run --input examples/example_bbox.json --out stages/06_output/
 """
 import argparse
-import json
 import os
 import subprocess
 import sys
