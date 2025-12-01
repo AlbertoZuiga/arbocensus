@@ -103,7 +103,7 @@ def get_conn_from_env(name):
 
 def try_load_secret_db():
     # Look for secrets/heatmap_database_url.txt relative to repo root
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     possible = os.path.join(repo_root, 'secrets', 'heatmap_database_url.txt')
     if os.path.isfile(possible):
         with open(possible, 'r', encoding='utf-8') as f:
@@ -182,7 +182,7 @@ def query_dbs(north, south, east, west, max_results=500):
 
 def main():
     # Load .env from repo root so environment variables used by bbox_selector are available
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     dotenv_path = os.path.join(repo_root, '.env')
     dotenv.load_dotenv(dotenv_path)
 
@@ -197,8 +197,23 @@ def main():
             args.bbox = os.path.join(repo_root, args.bbox)
 
     bbox_obj = None
-    if args.bbox and os.path.isfile(args.bbox):
-        bbox_obj = load_bbox_from_file(args.bbox)
+    if args.bbox:
+        if os.path.isfile(args.bbox):
+            bbox_obj = load_bbox_from_file(args.bbox)
+            if bbox_obj is None:
+                print(f'Warning: failed to parse bbox JSON at {args.bbox}')
+        else:
+            print(f'Info: bbox file not found at {args.bbox}')
+
+    # final fallback: try repo_root/saved_bbox.json explicitly if still missing
+    if not bbox_obj:
+        fb = os.path.join(repo_root, 'saved_bbox.json')
+        if os.path.isfile(fb):
+            bbox_obj = load_bbox_from_file(fb)
+            if bbox_obj:
+                print(f'Info: using fallback bbox file {fb}')
+            else:
+                print(f'Warning: failed to parse fallback bbox JSON at {fb}')
 
     # allow explicit bbox args to override file
     north = args.north if args.north is not None else (bbox_obj.get('north') if bbox_obj else None)
