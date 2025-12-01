@@ -122,11 +122,11 @@ def try_load_secret_db():
 def add_point(results, seen, lat, lng, meta=None):
     if lat is None or lng is None:
         return
-    key = (round(float(lat), 6), round(float(lng), 6))
+    key = (round(float(lat), 7), round(float(lng), 7))
     if key in seen:
         return
     seen.add(key)
-    results.append({'lat': float(lat), 'lng': float(lng), 'meta': meta})
+    results.append({'lat': round(float(lat), 7), 'lng': round(float(lng), 7), 'meta': meta})
 
 
 def query_dbs(north, south, east, west, max_results=500):

@@ -30,10 +30,10 @@ def save_bbox():
         return jsonify({'ok': False, 'error': 'no json'}), 400
 
     bbox = {
-        'north': float(data.get('north')),
-        'south': float(data.get('south')),
-        'east': float(data.get('east')),
-        'west': float(data.get('west')),
+        'north': round(float(data.get('north')), 7),
+        'south': round(float(data.get('south')), 7),
+        'east': round(float(data.get('east')), 7),
+        'west': round(float(data.get('west')), 7),
     }
 
     out_path = os.path.join(os.path.dirname(__file__), 'saved_bbox.json')
@@ -77,11 +77,11 @@ def trees():
     def add_point(lat, lng, meta=None):
         if lat is None or lng is None:
             return
-        key = (round(float(lat), 6), round(float(lng), 6))
+        key = (round(float(lat), 7), round(float(lng), 7))
         if key in seen:
             return
         seen.add(key)
-        results.append({'lat': float(lat), 'lng': float(lng), 'meta': meta})
+        results.append({'lat': round(float(lat), 7), 'lng': round(float(lng), 7), 'meta': meta})
 
     def parse_jdbc(jdbc_url):
         if not jdbc_url.startswith('jdbc:postgresql://'):
