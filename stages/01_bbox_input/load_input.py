@@ -9,7 +9,8 @@ Behaviour:
   - Attempts to read DB connection strings from environment variables
     `ARBOCENSUS_API_DB_URL` and `ARBOCENSUS_DB_URL` (same names used in bbox_selector).
   - If not set, will try `secrets/heatmap_database_url.txt` to populate `ARBOCENSUS_DB_URL`.
-  - If no DB is reachable, will write a JSON containing the bbox and any `trees` found in the input bbox file.
+  - If no DB is reachable, will write a JSON containing the bbox and any `trees` 
+    found in the input bbox file.
 """
 import argparse
 import json
@@ -27,7 +28,11 @@ def parse_args():
     p.add_argument('--west', type=float)
     p.add_argument('--max', type=int, default=500)
     p.add_argument('--out', help='Output json path', default='stages/01_bbox_input/01_input.json')
-    p.add_argument('--use-secrets', action='store_true', help='Try secrets/heatmap_database_url.txt if env missing')
+    p.add_argument(
+        '--use-secrets',
+        action='store_true',
+        help='Try secrets/heatmap_database_url.txt if env missing'
+    )
     return p.parse_args()
 
 
