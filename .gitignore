@@ -14,3 +14,25 @@ secrets/
 saved_bbox.json
 
 .pylintrc
+archive/
+
+# Generated data and artifacts (do not commit large or changing outputs)
+artifacts/
+data/
+
+# Common GIS output formats (optional — keep small examples in `examples/` if needed)
+*.geojson
+*.geojson.gz
+*.ndjson
+
+# Local run directories
+artifacts/latest
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.eggs/
+*.whl
