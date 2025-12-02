@@ -21,7 +21,7 @@ def run_stage_input(args):
     if getattr(args, 'run_id', None) or getattr(args, 'outdir', None):
         run_dir = io_mod.make_run_dir(base=args.outdir if getattr(args, 'outdir', None) else 'artifacts/runs', run_id=getattr(args, 'run_id', None))
         # preserve stage subdir structure
-        stage_sub = os.path.join(run_dir, '01_bbox_input')
+        stage_sub = os.path.join(run_dir, 'bbox_input')
         os.makedirs(stage_sub, exist_ok=True)
         out_path = os.path.join(stage_sub, os.path.basename(args.out))
     io_mod.write_json(out_obj, out_path, params={'bbox': args.bbox})
@@ -128,12 +128,12 @@ def run_stage_tsp(args):
 def run_export(args):
     import json
     # read graph, clusters, routes from archive paths by default
-    graph_path = args.graph if hasattr(args, 'graph') else 'artifacts/runs/latest/03_graph/03_graph.json'
-    input_path = getattr(args, 'input', 'artifacts/runs/latest/01_bbox_input/01_input.json')
-    filtered_path = getattr(args, 'filtered', 'artifacts/runs/latest/02_filter/02_filtered.json')
-    clusters_path = args.clusters if hasattr(args, 'clusters') else 'artifacts/runs/latest/04_cluster/clusters_by_censantes.json'
-    routes_path = args.routes if hasattr(args, 'routes') else 'artifacts/runs/latest/05_tsp/routes_by_cluster.json'
-    out_dir = getattr(args, 'outdir', 'artifacts/runs/latest/06_output')
+    graph_path = args.graph if hasattr(args, 'graph') else 'artifacts/runs/latest/graph/graph.json'
+    input_path = getattr(args, 'input', 'artifacts/runs/latest/bbox_input/input.json')
+    filtered_path = getattr(args, 'filtered', 'artifacts/runs/latest/filter/filtered.json')
+    clusters_path = args.clusters if hasattr(args, 'clusters') else 'artifacts/runs/latest/cluster/clusters_by_censantes.json'
+    routes_path = args.routes if hasattr(args, 'routes') else 'artifacts/runs/latest/tsp/routes_by_cluster.json'
+    out_dir = getattr(args, 'outdir', 'artifacts/runs/latest/output')
     os.makedirs(out_dir, exist_ok=True)
     
     if not os.path.exists(graph_path):
@@ -224,36 +224,36 @@ def main():
 
     si = sub.add_parser('input')
     si.add_argument('--bbox', default='saved_bbox.json')
-    si.add_argument('--out', default='artifacts/runs/latest/01_bbox_input/01_input.json')
+    si.add_argument('--out', default='artifacts/runs/latest/bbox_input/input.json')
 
     sf = sub.add_parser('filter')
-    sf.add_argument('--inp', default='artifacts/runs/latest/01_bbox_input/01_input.json')
-    sf.add_argument('--out', default='artifacts/runs/latest/02_filter/02_filtered.json')
+    sf.add_argument('--inp', default='artifacts/runs/latest/bbox_input/input.json')
+    sf.add_argument('--out', default='artifacts/runs/latest/filter/filtered.json')
 
     sg = sub.add_parser('graph')
-    sg.add_argument('--inp', default='artifacts/runs/latest/02_filter/02_filtered.json')
-    sg.add_argument('--out', default='artifacts/runs/latest/03_graph/03_graph.json')
+    sg.add_argument('--inp', default='artifacts/runs/latest/filter/filtered.json')
+    sg.add_argument('--out', default='artifacts/runs/latest/graph/graph.json')
 
     sc = sub.add_parser('cluster')
-    sc.add_argument('--inp', default='artifacts/runs/latest/03_graph/03_graph.json')
-    sc.add_argument('--out', default='artifacts/runs/latest/04_cluster/clusters_by_censantes.json')
+    sc.add_argument('--inp', default='artifacts/runs/latest/graph/graph.json')
+    sc.add_argument('--out', default='artifacts/runs/latest/cluster/clusters_by_censantes.json')
     sc.add_argument('--num', type=int, default=8)
     sc.add_argument('--time', type=float, default=1.5)
 
     st = sub.add_parser('tsp')
-    st.add_argument('--graph', default='artifacts/runs/latest/03_graph/03_graph.json')
-    st.add_argument('--clusters', default='artifacts/runs/latest/04_cluster/clusters_by_censantes.json')
-    st.add_argument('--out', default='artifacts/runs/latest/05_tsp/routes_by_cluster.json')
+    st.add_argument('--graph', default='artifacts/runs/latest/graph/graph.json')
+    st.add_argument('--clusters', default='artifacts/runs/latest/cluster/clusters_by_censantes.json')
+    st.add_argument('--out', default='artifacts/runs/latest/tsp/routes_by_cluster.json')
     st.add_argument('--time-per-tree', type=float, default=1.5)
     st.add_argument('--walking-kmh', type=float, default=5.0)
 
     se = sub.add_parser('export')
-    se.add_argument('--graph', default='artifacts/runs/latest/03_graph/03_graph.json')
-    se.add_argument('--input', default='artifacts/runs/latest/01_bbox_input/01_input.json')
-    se.add_argument('--filtered', default='artifacts/runs/latest/02_filter/02_filtered.json')
-    se.add_argument('--clusters', default='artifacts/runs/latest/04_cluster/clusters_by_censantes.json')
-    se.add_argument('--routes', default='artifacts/runs/latest/05_tsp/routes_by_cluster.json')
-    se.add_argument('--outdir', default='artifacts/runs/latest/06_output')
+    se.add_argument('--graph', default='artifacts/runs/latest/graph/graph.json')
+    se.add_argument('--input', default='artifacts/runs/latest/bbox_input/input.json')
+    se.add_argument('--filtered', default='artifacts/runs/latest/filter/filtered.json')
+    se.add_argument('--clusters', default='artifacts/runs/latest/cluster/clusters_by_censantes.json')
+    se.add_argument('--routes', default='artifacts/runs/latest/tsp/routes_by_cluster.json')
+    se.add_argument('--outdir', default='artifacts/runs/latest/output')
 
     args = p.parse_args()
     if args.cmd == 'input':

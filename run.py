@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """Simple runner for stages pipeline (skeleton).
 
-Usage:
-  python run.py --list
-  python run.py --init   # ensure folders exist
-  python run.py --stage 01
-  python run.py --run --input examples/example_bbox.json --out stages/06_output/
 """
 import argparse
 import os
@@ -16,12 +11,12 @@ import sys
 
 ROOT = os.path.dirname(__file__)
 STAGES = [
-    ("01", "01_bbox_input"),
-    ("02", "02_filter"),
-    ("03", "03_graph"),
-    ("04", "04_cluster"),
-    ("05", "05_tsp"),
-    ("06", "06_output"),
+    ("01", "bbox_input"),
+    ("02", "filter"),
+    ("03", "graph"),
+    ("04", "cluster"),
+    ("05", "tsp"),
+    ("06", "output"),
 ]
 
 
@@ -69,17 +64,6 @@ def run_pipeline(input_file=None, out_dir=None):
             return res
     print("Pipeline finished (skeleton).")
     return 0
-
-
-def parse_args():
-    p = argparse.ArgumentParser()
-    p.add_argument("--list", action="store_true", help="List stages")
-    p.add_argument("--init", action="store_true", help="Create stage dirs if missing")
-    p.add_argument("--stage", help="Run single stage number (eg 01)")
-    p.add_argument("--run", action="store_true", help="Run full pipeline")
-    p.add_argument("--input", help="Path to input JSON")
-    p.add_argument("--out", help="Output dir for final stage")
-    return p.parse_args()
 
 
 def main():
