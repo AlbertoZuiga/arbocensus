@@ -1,561 +1,988 @@
 # 🌳 Generador de Rutas Óptimas para Censo de Árboles
 
-**Balanceo de carga — Caminabilidad real — Integración con Google Maps API**
+**Pipeline modular — Balanceo de carga — Clustering geográfico — Optimización TSP**
 
-Este proyecto implementa un sistema completo para generar rutas óptimas de censo de árboles dentro de un área urbana. El objetivo principal es distribuir equitativamente el trabajo entre múltiples censantes, asegurando rutas caminables, eficientes y basadas en datos geográficos reales.
+Este proyecto implementa un sistema completo para generar rutas óptimas de censo de árboles dentro de un área urbana. El objetivo principal es distribuir equitativamente el trabajo entre múltiples censantes mediante clustering geográfico y algoritmos de optimización de rutas (TSP).
 
 ---
 
-**Subproject: bbox_selector**
+## 📋 Tabla de Contenidos
 
-- **Location:** `bbox_selector/` — pequeña app Flask para seleccionar bounding boxes y visualizar árboles en un mapa (Google Maps JS).
-- **Quick start (Docker Compose, recommended for local dev):**
+1. [Resumen del Proyecto](#-1-resumen-del-proyecto)
+2. [Arquitectura y Estructura](#-2-arquitectura-y-estructura)
+3. [Instalación y Configuración](#-3-instalación-y-configuración)
+4. [Uso del Sistema](#-4-uso-del-sistema)
+5. [Módulos del Pipeline](#-5-módulos-del-pipeline)
+6. [Visualización de Resultados](#-6-visualización-de-resultados)
+7. [Documentación Técnica](#-7-documentación-técnica)
+
+---
+
+## 🎯 1. Resumen del Proyecto
+
+### Objetivo Principal
+
+Generar rutas óptimas para el censo de árboles urbanos, distribuyendo equitativamente el trabajo entre N censantes mediante:
+
+- **Clustering geográfico** basado en capacidad y proximidad
+- **Optimización de rutas** usando heurísticas TSP (Nearest Neighbor + 2-opt)
+- **Cálculo de tiempos** considerando distancias caminables y tiempo de censo por árbol
+
+### Características Principales
+
+- ✅ **Pipeline modular** con 6 etapas independientes
+- ✅ **Entrada flexible**: archivo JSON o base de datos PostgreSQL
+- ✅ **Clustering recursivo** por división espacial con balanceo de capacidad
+- ✅ **Optimización TSP** usando NN + 2-opt para cada cluster
+- ✅ **Exportación GeoJSON** para visualización en mapas interactivos
+- ✅ **Viewer web** (Leaflet) para inspeccionar resultados por etapa
+- ✅ **Metadata tracking** con versionado git y timestamps automáticos
+
+### Flujo de Datos
+
+```
+Input (JSON/DB) → Filtrado → Grafo → Clustering → TSP → Export (GeoJSON)
+     ↓               ↓          ↓         ↓         ↓          ↓
+01_input.json → 02_filtered → 03_graph → 04_clusters → 05_routes → 06_output/
+```
+
+---
+
+## 🏗 2. Arquitectura y Estructura
+
+### Estructura de Directorios
+
+```
+mi_proyecto/
+├── src/
+│   └── arbocensus_pipeline/          # Package principal del pipeline
+│       ├── __init__.py
+│       ├── cli.py                     # CLI para ejecutar etapas
+│       ├── input.py                   # Carga de datos (DB/file)
+│       ├── filter.py                  # Filtrado de árboles
+│       ├── graph.py                   # Construcción de grafo y matriz
+│       ├── cluster.py                 # Clustering geográfico
+│       ├── tsp.py                     # Algoritmos TSP (NN + 2-opt)
+│       ├── export.py                  # Exportación a GeoJSON
+│       ├── io.py                      # Utilidades I/O + metadata
+│       └── utils.py                   # Funciones auxiliares (haversine, 2-opt)
+├── viewer/
+│   └── index.html                     # Visualizador web Leaflet
+├── bbox_selector/                     # App Flask para selección de áreas
+│   ├── app.py
+│   ├── templates/
+│   ├── Dockerfile
+│   └── docker-compose.yml
+├── artifacts/
+│   └── runs/
+│       ├── <run-id>/                  # Outputs por ejecución
+│       │   ├── 01_bbox_input/
+│       │   ├── 02_filtered.json
+│       │   ├── 03_graph.json
+│       │   ├── clusters_by_censantes.json
+│       │   ├── routes_by_cluster.json
+│       │   └── 06_output/             # GeoJSON para viewer
+│       └── latest/                    # Symlink a última ejecución
+├── secrets/                           # Credenciales (no en git)
+│   ├── arbocensus.env
+│   └── heatmap_database_url.txt
+├── run.py                             # Runner principal (delega a CLI)
+├── saved_bbox.json                    # Bbox de ejemplo (fallback)
+├── README.md
+└── TODO.md
+```
+
+### Componentes Principales
+
+#### 1. **Pipeline Core** (`src/arbocensus_pipeline/`)
+
+Módulos Python que implementan cada etapa del procesamiento:
+
+| Módulo       | Responsabilidad                                                            |
+| ------------ | -------------------------------------------------------------------------- |
+| `input.py`   | Carga bbox y árboles desde archivo JSON o base de datos PostgreSQL         |
+| `filter.py`  | Elimina duplicados y valida coordenadas; filtra puntos dentro del polígono |
+| `graph.py`   | Construye lista de nodos y matriz de distancias (Haversine)                |
+| `cluster.py` | Divide nodos en clusters balanceados usando split recursivo                |
+| `tsp.py`     | Resuelve TSP por cluster con Nearest Neighbor + 2-opt                      |
+| `export.py`  | Genera GeoJSON de puntos, rutas, bbox y polígonos de clusters              |
+| `io.py`      | Helpers para lectura/escritura con metadata automática                     |
+| `utils.py`   | Funciones matemáticas (haversine, NN, 2-opt, tour_length)                  |
+| `cli.py`     | Interfaz de línea de comandos para ejecutar cada etapa                     |
+
+#### 2. **Runner Principal** (`run.py`)
+
+Script top-level que:
+
+- Inserta `src/` en `sys.path` automáticamente
+- Delega toda la ejecución al módulo `arbocensus_pipeline.cli`
+- Permite ejecutar el pipeline sin configurar `PYTHONPATH`
 
 ```bash
-cd bbox_selector
-# optionally set HOST_PORT to map host port (default 5000)
-HOST_PORT=5001 docker compose up --build
+python run.py input --bbox saved_bbox.json --out artifacts/01_input.json
 ```
 
-- **Run locally (without Docker):**
+#### 3. **Visualizador Web** (`viewer/index.html`)
+
+Aplicación Leaflet standalone que:
+
+- Carga GeoJSON desde `artifacts/runs/latest/06_output/`
+- Muestra capas: bbox, input, filtered, clusters, routes
+- Permite alternar entre etapas del pipeline
+- Soporta hover, popups y controles de capa
+
+#### 4. **Bbox Selector** (`bbox_selector/`)
+
+App Flask para:
+
+- Seleccionar áreas geográficas usando Google Maps
+- Exportar JSON con polígono y lista de árboles
+- Probar consultas a la base de datos
+
+---
+
+## ⚙️ 3. Instalación y Configuración
+
+### Requisitos
+
+- Python 3.10+
+- PostgreSQL (opcional, para lectura directa de DB)
+- Navegador moderno (para el viewer)
+
+### Instalación
 
 ```bash
+# Clonar repositorio
+git clone <repo-url>
+cd mi_proyecto
+
+# Crear entorno virtual
+python3 -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+
+# Instalar dependencias
+pip install psycopg2-binary python-dotenv
+
+# (Opcional) Para bbox_selector
 cd bbox_selector
-./run.sh --local
+pip install -r requirements.txt
 ```
 
-- **Notes:**
-  - The app reads `GOOGLE_API_KEY` from `bbox_selector/.env` or from your environment.
-  - `ARBOCENSUS_API_DB_URL` and `ARBOCENSUS_DB_URL` may be provided as DSN (`postgres://...`) or JDBC (`jdbc:postgresql://...`) and the app will attempt to parse both.
-  - Tests live under `bbox_selector/tests` and can be run from the subfolder using the included venv or Docker.
+### Configuración de Base de Datos (Opcional)
 
-If you want, puedo añadir una sección detallada de despliegue o integrar `bbox_selector` en la documentación principal.
+Si quieres cargar árboles directamente desde PostgreSQL:
 
-> Nota: fuente actual de inputs — `bbox_selector`
+Crea archivo `.env` en la raíz:
 
-- **Estado actual:** la entrada del polígono geográfico y la lista de árboles (ID, lat, lng) se obtiene hoy desde el subproyecto `bbox_selector/`. Es decir, por defecto el flujo asume que el usuario selecciona bounding boxes y exporta los árboles desde esa app.
-- **Formato mínimo esperado:** `bbox_selector` debe entregar un JSON (o endpoint) que contenga un polígono válido y una lista de árboles con los campos `id`, `lat`, `lng`. Un ejemplo simplificado:
-
+```bash
+ARBOCENSUS_DB_URL=postgres://user:pass@host:5432/db_name
+ARBOCENSUS_API_DB_URL=postgres://user:pass@host:5432/api_db
 ```
+
+El pipeline intentará conectarse usando estas credenciales. Si fallan, usará el archivo `saved_bbox.json` como fallback.
+
+---
+
+## 🚀 4. Uso del Sistema
+
+### Ejecución Rápida (Pipeline Completo)
+
+```bash
+# 1. Cargar datos de entrada
+python run.py input --bbox saved_bbox.json --out artifacts/01_input.json --run-id demo
+
+# 2. Filtrar árboles
+python run.py filter --inp artifacts/runs/demo/01_bbox_input/01_input.json \
+  --out 02_filtered.json --run-id demo
+
+# 3. Construir grafo
+python run.py graph --inp artifacts/runs/demo/02_filtered.json \
+  --out 03_graph.json --run-id demo
+
+# 4. Clustering (8 censantes)
+python run.py cluster --inp artifacts/runs/demo/03_graph.json \
+  --out clusters_by_censantes.json --num 8 --run-id demo
+
+# 5. Resolver TSP
+python run.py tsp --inp artifacts/runs/demo/03_graph.json \
+  --clusters artifacts/runs/demo/clusters_by_censantes.json \
+  --out routes_by_cluster.json --run-id demo
+
+# 6. Exportar GeoJSON
+python run.py export --graph artifacts/runs/demo/03_graph.json \
+  --routes artifacts/runs/demo/routes_by_cluster.json \
+  --outdir artifacts/runs/demo/06_output --run-id demo
+
+# 7. Abrir viewer
+open viewer/index.html
+# (o servir con: python -m http.server 8000)
+```
+
+### Parametros del CLI
+
+#### `input`
+
+- `--bbox PATH`: Ruta al JSON con bbox y árboles
+- `--out PATH`: Archivo de salida
+- `--run-id ID`: Identificador de ejecución (crea `artifacts/runs/<ID>/`)
+- `--max N`: Máximo de árboles a cargar desde DB (default: 500)
+
+#### `filter`
+
+- `--inp PATH`: Archivo de entrada (01_input.json)
+- `--out PATH`: Archivo de salida
+
+#### `graph`
+
+- `--inp PATH`: Archivo filtrado (02_filtered.json)
+- `--out PATH`: Archivo de salida (03_graph.json)
+
+#### `cluster`
+
+- `--inp PATH`: Grafo de entrada
+- `--out PATH`: Archivo de salida
+- `--num N`: Número de censantes (default: 8)
+
+#### `tsp`
+
+- `--inp PATH`: Grafo
+- `--clusters PATH`: Archivo de clusters
+- `--out PATH`: Archivo de salida
+- `--time-per-tree MINS`: Tiempo de censo por árbol (default: 5 min)
+- `--walking-speed KMH`: Velocidad caminata (default: 4 km/h)
+
+#### `export`
+
+- `--graph PATH`: Grafo con nodos
+- `--routes PATH`: Rutas TSP
+- `--outdir DIR`: Directorio de salida para GeoJSON
+
+---
+
+## 📦 5. Módulos del Pipeline
+
+### 5.1 `input.py` — Carga de Datos
+
+**Funciones principales:**
+
+- `load_input(bbox_path, max_results=500, use_secrets=False)`: Carga bbox y árboles desde archivo JSON o base de datos
+- `load_env()`: Carga variables de entorno desde `.env` (requiere python-dotenv)
+- `_get_conn_from_env()`: Obtiene conexión PostgreSQL desde variables de entorno
+- `_query_dbs()`: Consulta tablas de árboles y combina resultados
+
+**Flujo:**
+
+1. Intenta cargar desde archivo `bbox_path` (ej: `saved_bbox.json`)
+2. Si falla o está vacío, intenta conectar a base de datos:
+   - Lee `ARBOCENSUS_DB_URL` y `ARBOCENSUS_API_DB_URL`
+   - Como fallback, lee `secrets/heatmap_database_url.txt`
+   - Consulta tablas de árboles y deduplica por ID
+3. Retorna dict con: `{"north", "south", "east", "west", "trees": [...]}`
+
+**Output:** `01_bbox_input/01_input.json`
+
+---
+
+### 5.2 `filter.py` — Filtrado de Árboles
+
+**Funciones principales:**
+
+- `filter_trees(obj)`: Filtra árboles duplicados y valida coordenadas
+- `point_in_poly(x, y, poly)`: Verifica si un punto está dentro de un polígono (ray casting)
+
+**Filtros aplicados:**
+
+- Elimina duplicados por ID
+- Descarta árboles sin coordenadas válidas
+- (Opcional) Verifica que el punto esté dentro del polígono geográfico
+
+**Output:** `02_filtered.json`
+
+---
+
+### 5.3 `graph.py` — Construcción del Grafo
+
+**Funciones principales:**
+
+- `build_nodes(trees)`: Convierte lista de árboles en nodos numerados
+- `compute_matrix(nodes)`: Calcula matriz simétrica NxN de distancias Haversine
+
+**Detalles:**
+
+- Usa distancia Haversine (en metros) como métrica baseline (P0)
+- Matriz simétrica: `M[i][j] = M[j][i]`
+- Complejidad: O(n²) para n árboles
+
+**Output:** `03_graph.json`
+
+```json
 {
-  "polygon": { "type": "bbox", "nw": {"lat": -34.0, "lng": -58.0}, "se": {"lat": -34.1, "lng": -58.1} },
-  "trees": [ {"id": 12, "lat": -34.123, "lng": -58.456}, {"id": 55, "lat": -34.124, "lng": -58.457} ]
+  "nodes": [{"id": 0, "lat": -33.45, "lng": -70.66, "meta": {...}}],
+  "distances": [[0, 150.2, ...], [150.2, 0, ...]]
 }
 ```
 
-- **Dónde leerlo desde el orquestador:** la integración puede realizarse mediante un endpoint HTTP expuesto por `bbox_selector`, un archivo exportado en un formato JSON compartido, o almacenamiento compartido (S3, FS). El componente que consuma estos datos debe transformar la entrada al contrato mínimo descrito arriba.
+---
 
-Alternativas futuras (cómo reemplazar `bbox_selector`):
+### 5.4 `cluster.py` — Clustering Geográfico
 
-- **GeoJSON / Shapefiles:** agregar un importador que convierta polígonos complejos y listas de puntos a la estructura mínima.
-- **API externa:** crear un conector para consumir un endpoint REST que retorne el mismo JSON.
-- **Lectura directa de DB:** implementar un adaptador que haga la consulta SQL y construya el payload esperado.
+**Funciones principales:**
 
-Requisito para cualquier alternativa: el adaptador debe garantizar que se entregue un polígono válido y una lista de árboles con `id`, `lat` y `lng`.
+- `make_clusters_recursive(nodes, max_size)`: Divide nodos en clusters balanceados
+- `recursive_split(node_list, nodes, max_size, out_clusters)`: Split recursivo por eje más largo
+- `reorder_by_nn(cluster_members, distances)`: Reordena miembros del cluster con NN
+- `bounding_box(nodes)`: Calcula bbox de un conjunto de nodos
+- `longest_axis(nodes)`: Determina si dividir por latitud o longitud
 
-# 📌 1. Resumen General del Proyecto
+**Algoritmo:**
 
-El sistema recibe un conjunto de árboles georreferenciados y un polígono delimitador del área de trabajo, generando rutas caminables óptimas para _N_ censantes. Considera caminabilidad real, tiempos de censo, carga por agente y heurísticas avanzadas de optimización.
+1. Calcula bounding box del conjunto de nodos
+2. Identifica el eje más largo (lat o lng)
+3. Ordena nodos por ese eje y divide por la mediana
+4. Repite recursivamente hasta que cada cluster tenga ≤ `max_size` nodos
 
-**Características principales:**
+**Output:** `clusters_by_censantes.json`
 
-- Caminabilidad real usando Google Maps (modo _walking_).
-- Optimización **min–max** para minimizar la ruta más larga.
-- Balanceo de carga entre censantes.
-- Clusterización geográfica inteligente.
-- Soporte para múltiples estrategias TSP.
-- Compatibilidad con métodos utilizados en censos previos.
-
-El tiempo total por censante se calcula como:
-
-```
-tiempo_total = tiempo_por_censo * cantidad_arboles + distancia_recorrida * velocidad_de_caminata
+```json
+{
+  "clusters": [
+    {"cluster_id": 0, "members": [0, 5, 12, ...], "size": 62},
+    {"cluster_id": 1, "members": [1, 3, 8, ...], "size": 63}
+  ]
+}
 ```
 
 ---
 
-# 🧩 2. Inputs y Outputs del Sistema
+### 5.5 `tsp.py` — Optimización de Rutas
 
-## 2.1 Inputs
+**Funciones principales:**
 
-| Input                        | Descripción                              |
-| ---------------------------- | ---------------------------------------- |
-| **Polígono geográfico**      | Define el límite del área a censar       |
-| **Lista de árboles**         | Contiene ID + latitud + longitud         |
-| **Cantidad de censantes**    | Número de personas asignadas             |
-| **Punto inicial (opcional)** | Origen común o calculado automáticamente |
+- `compute_route_for_cluster(members, distances, time_per_tree, walking_speed_kmh, haversine_multiplier)`: Resuelve TSP para un cluster
 
-## 2.2 Outputs
+**Algoritmo:**
 
-Para cada censante se genera:
+1. **Nearest Neighbor (NN)**: Genera tour inicial greedy
+2. **2-opt**: Mejora el tour eliminando cruces
+3. Calcula métricas:
+   - `route_meters`: Distancia total en metros
+   - `route_minutes`: Tiempo caminando
+   - `service_minutes`: Tiempo censando árboles
+   - `total_minutes`: Suma de ambos
 
-- Ruta caminable completa (polilínea de Google Maps)
-- Lista ordenada de árboles asignados
-- Tiempo estimado total
+**Parámetros:**
 
-Ejemplo:
+- `time_per_tree`: Minutos por árbol (default: 5)
+- `walking_speed_kmh`: Velocidad de caminata (default: 4 km/h)
+- `haversine_multiplier`: Factor de ajuste para distancia real vs. Haversine (default: 1.0)
 
-```
+**Output:** `routes_by_cluster.json`
+
+```json
 {
-  "censante_1": {
-    "tiempo_estimado": 47,
-    "ruta": [
-      { "lat": -34.123, "lng": -58.456 },
-      { "lat": -34.124, "lng": -58.457 }
-    ],
-    "arboles": [12, 55, 73]
+  "routes": [
+    {
+      "cluster_id": 0,
+      "route": [0, 12, 5, 18, ...],
+      "size": 62,
+      "route_meters": 4823.5,
+      "route_minutes": 72.3,
+      "service_minutes": 310.0,
+      "total_minutes": 382.3
+    }
+  ]
+}
+```
+
+---
+
+### 5.6 `export.py` — Exportación GeoJSON
+
+**Funciones principales:**
+
+- `build_points_geojson_from_nodes(nodes, clusters_map)`: Crea GeoJSON de puntos con cluster_id
+- `build_routes_geojson(nodes, routes)`: Crea GeoJSON de LineStrings para rutas
+- `write_geojson(obj, path)`: Escribe GeoJSON a archivo
+
+**Outputs generados:**
+
+- `bbox.geojson`: Polígono del área de trabajo
+- `input_points.geojson`: Todos los puntos originales
+- `filtered_points.geojson`: Puntos después del filtrado
+- `clusters.geojson`: Puntos coloreados por cluster
+- `routes.geojson`: LineStrings de cada ruta TSP
+- `cluster_polygons.geojson`: (Opcional) Polígonos convexos de clusters
+
+---
+
+### 5.7 `utils.py` — Utilidades Matemáticas
+
+**Funciones principales:**
+
+- `haversine_m(lat1, lon1, lat2, lon2)`: Distancia entre dos puntos en metros
+- `nn_tour(start, nodes, distances)`: Genera tour con algoritmo Nearest Neighbor
+- `two_opt(route, distances, max_iter=100)`: Mejora tour eliminando cruces
+- `tour_length(tour, distances)`: Calcula longitud total de un tour (incluyendo retorno)
+
+**Detalles técnicos:**
+
+- **Haversine**: Usa radio terrestre de 6371 km
+- **NN**: Greedy O(n²), siempre visita el nodo más cercano no visitado
+- **2-opt**: Intercambia pares de aristas, itera hasta no encontrar mejoras
+
+---
+
+### 5.8 `io.py` — Gestión de I/O y Metadata
+
+**Funciones principales:**
+
+- `write_json(obj, path, params=None)`: Escribe JSON con metadata automática
+- `read_json(path)`: Lee JSON desde archivo
+- `make_run_dir(base='artifacts/runs', run_id=None)`: Crea directorio para ejecución
+- `sha256_of_file(path)`: Calcula hash de archivo (para cache)
+
+**Metadata automática (`__meta__`):**
+
+```json
+{
+  "__meta__": {
+    "created_at": "2025-12-02T10:30:45Z",
+    "pipeline_version": "a3f2b1c...",
+    "params": { "bbox": "saved_bbox.json", "num_censantes": 8 }
   }
 }
 ```
 
----
+**Run directories:**
 
-# 🧠 3. Arquitectura General del Algoritmo
-
-La solución completa consta de 5 etapas principales:
-
----
-
-## 3.1 Filtrado de árboles dentro del polígono
-
-Aún no está totalmente definido cómo se entregará el área de trabajo. Podría recibirse como un polígono completo, como una lista de vértices que lo componen, o usando una estructura más compleja. Sin embargo, para simplificar la etapa inicial, se asume que el área vendrá representada como un rectángulo definido por dos coordenadas: la esquina superior izquierda y la esquina inferior derecha. Ese rectángulo funciona como zona preliminar de trabajo.
-
-En esta primera versión, se aplica un **pre‑filtrado mediante bounding box (optimización SQL)** para descartar rápidamente árboles que están fuera del área aproximada.
-
-Ejemplo SQL:
-
-```
-SELECT *
-FROM tabla_arboles
-WHERE latitud BETWEEN min_lat AND max_lat
-  AND longitud BETWEEN min_lng AND max_lng;
-```
-
-Opciones futuras:
-
-- Point-In-Polygon clásico (Ray casting)
-- Turf.js / Shapely
+- Crea `artifacts/runs/<run-id>/` con timestamp único
+- Actualiza symlink `artifacts/runs/latest/` apuntando a la última ejecución
+- Permite reproducibilidad y comparación entre ejecuciones
 
 ---
 
-## 3.2 Construcción del grafo caminable
+### 5.9 `cli.py` — Interfaz de Línea de Comandos
 
-Se genera una matriz de tiempos caminados:
+**Subcomandos disponibles:**
 
-```
-M[i][j] = tiempo caminando entre árbol i y árbol j
-```
+| Comando   | Descripción               | Inputs                | Output                       |
+| --------- | ------------------------- | --------------------- | ---------------------------- |
+| `input`   | Carga datos desde file/DB | `--bbox`, `--max`     | `01_input.json`              |
+| `filter`  | Filtra y deduplica        | `--inp`               | `02_filtered.json`           |
+| `graph`   | Construye grafo           | `--inp`               | `03_graph.json`              |
+| `cluster` | Crea clusters             | `--inp`, `--num`      | `clusters_by_censantes.json` |
+| `tsp`     | Resuelve rutas            | `--inp`, `--clusters` | `routes_by_cluster.json`     |
+| `export`  | Genera GeoJSON            | `--graph`, `--routes` | `06_output/*.geojson`        |
 
-Opciones:
+**Flags globales:**
 
-- Google Distance Matrix API
-- OSRM / GraphHopper
-- Cacheo inteligente
-
----
-
-## 3.3 Clusterización de árboles en N grupos
-
-Utilizada para distribuir equitativamente la carga entre censantes.
-
-Métodos:
-
-- KMeans geográfico
-- KMedoids (robusto a outliers)
-- DBSCAN
-- Clusterización inicial + rebalanceo
+- `--run-id ID`: Identificador de ejecución (crea subdir en artifacts)
+- `--outdir DIR`: Directorio base para outputs (default: `artifacts/runs`)
 
 ---
 
-## 3.4 Generación de rutas por cluster (TSP caminable)
+## 🗺 6. Visualización de Resultados
 
-Métodos TSP:
+### Viewer Web (`viewer/index.html`)
 
-- Nearest Neighbor
-- 2-opt / 3-opt
-- Algoritmos evolutivos
-- Simulated Annealing
-- Christofides
+**Características:**
 
-Selección de punto inicial:
+- ✅ Mapa Leaflet con tiles CartoDB Voyager
+- ✅ Carga automática desde `artifacts/runs/latest/06_output/`
+- ✅ Controles de capa para cada etapa
+- ✅ Popups con información de nodos y rutas
+- ✅ Presets por etapa (botones 1-5)
+- ✅ Hover effects en rutas
+- ✅ Responsive y full-screen
 
-- Manual
-- Automático
-- Centroide del cluster
+**Capas disponibles:**
 
----
+- **BBox**: Límites del área de trabajo (línea punteada)
+- **Input**: Puntos originales (gris)
+- **Filtered**: Puntos filtrados (verde)
+- **Nodos**: Puntos coloreados por cluster
+- **Clusters**: Polígonos de clusters (semi-transparentes)
+- **Rutas**: LineStrings coloreados por cluster
 
-## 3.5 Optimización Global (MIN–MAX)
+**Uso:**
 
-Busca minimizar:
+```bash
+# Opción 1: Abrir directamente (si el navegador permite file://)
+open viewer/index.html
 
-- La ruta más larga
-- La diferencia entre censantes
-- El total de pasos
-
-Métodos:
-
-- Local search inter–cluster
-- Threshold acceptance
-- Rebalanceo adaptativo
-- Multi–arranque
-
----
-
-# 📦 4. Estructura Sugerida del Proyecto
-
-```
-mi_proyecto/
-  ├─ src/
-  │   ├─ geometry/
-  │   │   ├─ polygon.js
-  │   │   └─ point_in_polygon.js
-  │   ├─ clustering/
-  │   │   ├─ kmeans.js
-  │   │   └─ balance.js
-  │   ├─ tsp/
-  │   │   ├─ tsp_solver.js
-  │   │   ├─ heuristics/
-  │   │   │   ├─ nearest_neighbor.js
-  │   │   │   └─ two_opt.js
-  │   ├─ maps/
-  │   │   ├─ distance_matrix.js
-  │   │   └─ directions.js
-  │   └─ orchestrator.js
-  ├─ README.md
-  └─ package.json
+# Opción 2: Servir con HTTP server
+python -m http.server 8000
+# Luego abrir: http://localhost:8000/viewer/index.html
 ```
 
----
+**Presets de etapas:**
 
-# 🗺️ 5. Dependencias Principales
-
-## 5.1 APIs Google
-
-- Distance Matrix API
-- Directions API
-- Maps Geometry API
-
-## 5.2 Librerías sugeridas
-
-- Turf.js / Shapely
-- Implementaciones TSP
-- KMeans / KMedoids
+- **Stage 1**: Muestra Input + BBox
+- **Stage 2**: Muestra Filtered + BBox
+- **Stage 3**: Muestra Nodos del grafo
+- **Stage 4**: Muestra Clusters + Nodos
+- **Stage 5**: Muestra Rutas + Clusters + Nodos
 
 ---
 
-# 🧪 6. Plan de Implementación (TODO)
+## 📡 7. Bbox Selector (Herramienta Auxiliar)
 
-### Fase 1 — Setup
+### Descripción
 
-- Estructura base
-- Cargar polígono + árboles
-- Point-in-polygon
+App Flask para seleccionar áreas geográficas y exportar datos de árboles.
 
-### Fase 2 — Grafo caminable
+**Ubicación:** `bbox_selector/`
 
-- Distance Matrix
-- Matriz **M**
-- Cache
+**Funcionalidades:**
 
-### Fase 3 — Clusterización
+- Mapa interactivo Google Maps para dibujar bounding boxes
+- Consulta directa a base de datos PostgreSQL
+- Exportación de JSON compatible con el pipeline
+- Modo Docker y modo local
 
-- Clusterización geográfica
-- Función de costo
-- Rebalanceo
+### Instalación y Uso
 
-### Fase 4 — TSP por cluster
+**Opción 1: Docker Compose (recomendado)**
 
-- NN + 2-opt
-- Punto inicial automático
+```bash
+cd bbox_selector
+HOST_PORT=5001 docker compose up --build
+# Abrir: http://localhost:5001
+```
 
-### Fase 5 — Optimización Global
+**Opción 2: Local**
 
-- Intercambio inter-rutas
-- Métricas min–max
-- Criterio de parada
+```bash
+cd bbox_selector
+./run.sh --local
+# Abrir: http://localhost:5000
+```
 
-### Fase 6 — Rutas finales
+**Configuración:**
 
-- Polilíneas Directions API
-- JSON
-- Integración app front/móvil
+- Requiere `GOOGLE_API_KEY` en `bbox_selector/.env`
+- Credenciales de DB: `ARBOCENSUS_DB_URL` y `ARBOCENSUS_API_DB_URL`
+- Soporta formatos: `postgres://...` y `jdbc:postgresql://...`
 
-### Fase 7 — Documentación
+**Output:**
+Genera archivo JSON con:
 
-- Ejemplos
-- Documentación módulos
-- Notas sobre límite de APIs
+```json
+{
+  "polygon": {
+    "type": "Polygon",
+    "coordinates": [[[lng, lat], [lng, lat], ...]]
+  },
+  "trees": [
+    {"id": 123, "lat": -33.45, "lng": -70.66},
+    ...
+  ]
+}
+```
+
+Este archivo puede usarse directamente con:
+
+```bash
+python run.py input --bbox bbox_selector/saved_bbox.json
+```
 
 ---
 
-# 🧮 7. Formalización Matemática (mTSP — Min–Max)
+## 🔬 7. Documentación Técnica
 
-Incluye la definición de parámetros, variables, restricciones, MTZ, función objetivo, comentarios prácticos y limitaciones de escalabilidad exactamente como en el contenido original.
+### 7.1 Algoritmos Implementados
 
-_(Todo el bloque matemático original se mantiene tal cual.)_
+#### Clustering: Recursive Split
 
----
+**Estrategia:** Divide espacialmente los nodos hasta alcanzar capacidad máxima por cluster.
 
-# 🔍 8. Comparación Práctica de Heurísticas
+**Pasos:**
 
-En este apartado se comparan las distintas heurísticas y estrategias disponibles para resolver el mTSP caminable, evaluando sus ventajas, desventajas y escenarios de uso real.
+1. Calcular bounding box de todos los nodos
+2. Identificar eje más largo (latitud o longitud)
+3. Ordenar nodos por ese eje
+4. Dividir en la mediana
+5. Repetir recursivamente en cada mitad
 
-## 8.1 Estrategias de Arquitectura (Cluster-first / Route-first / Integradas)
-
-### **Cluster-first, route-second**
-
-Primero se agrupan los árboles y luego se resuelve un TSP por cada cluster.  
 **Ventajas:**
 
-- Muy escalable para miles de árboles
-- Fácil de paralelizar
-- Modular  
-  **Desventajas:**
-- La calidad depende fuertemente de los clusters iniciales
-- Puede requerir rebalanceo posterior
+- Simple y rápido O(n log n)
+- Produce clusters geográficamente compactos
+- Balanceo automático de tamaños
 
-### **Route-first, split-second**
+**Desventajas:**
 
-Se crea una gran ruta única y luego se divide en secciones.  
-**Ventajas:**
-
-- Sencillo y rápido
-- Rutas visualmente coherentes  
-  **Desventajas:**
-- Si la gran ruta serpentea, las divisiones pueden ser malas
-- No garantiza equilibrio entre censantes
-
-### **Estrategias integradas (LNS, Tabu, metaheurísticas)**
-
-Asignación y orden se optimizan simultáneamente.  
-**Ventajas:**
-
-- La mejor calidad global
-- Excelente para min–max  
-  **Desventajas:**
-- Más tiempo de cómputo
-- Implementación más compleja
+- No considera distancias reales (solo coordenadas)
+- Puede crear clusters subóptimos en zonas irregulares
 
 ---
 
-## 8.2 Métodos de Clusterización
+#### TSP: Nearest Neighbor + 2-opt
 
-### **KMeans geográfico**
+**Nearest Neighbor:**
 
-- Rápido y simple
-- Usa distancia euclidiana
-- Puede fallar si la ciudad tiene geometría compleja
+1. Comenzar en nodo arbitrario
+2. Visitar siempre el nodo no visitado más cercano
+3. Retornar al inicio
 
-### **KMedoids**
+**Complejidad:** O(n²)
+**Calidad:** Aproximación 1.5-2x del óptimo
 
-- Mucho más robusto a outliers
-- Puede usar distancias caminables reales
-- Ideal para optimización precisa
+**2-opt (Mejora local):**
 
-### **DBSCAN**
+1. Tomar dos aristas del tour
+2. Eliminarlas y reconectar de forma cruzada
+3. Si mejora el tour, aceptar cambio
+4. Repetir hasta convergencia
 
-- Útil para densidades heterogéneas
-- No garantiza exactamente N clusters
+**Complejidad:** O(n² × iteraciones)
+**Calidad:** Elimina cruces evidentes, mejora 20-40% sobre NN
 
-### **Balanced KMeans / capacitated clustering**
+**Resultado combinado:**
 
-- Permite que cada cluster tenga una carga similar
-- Excelente para min–max
-
----
-
-## 8.3 Heurísticas de TSP
-
-### **Nearest Neighbor (NN)**
-
-- Ultra rápido
-- Buena base, pero calidad limitada
-
-### **2-opt / 3-opt**
-
-- El estándar de la industria
-- Elimina cruces y mejora drásticamente la ruta
-- Relación calidad/tiempo excelente
-
-### **Lin–Kernighan (LK)**
-
-- Una de las mejores heurísticas del mundo para TSP
-- Implementación más compleja
-
-### **Algoritmos evolutivos, SA, ACO**
-
-- Flexibles y configurables
-- Útiles para clusters grandes o problemas difíciles
-
-### **Christofides**
-
-- Garantía 1.5 para métricas métricas
-- No siempre aplicable a walking real
+- NN da tour inicial rápido
+- 2-opt refina eliminando ineficiencias
+- Calidad razonable para clusters de <200 nodos
 
 ---
 
-## 8.4 Estrategias de Optimización Global (inter-cluster)
+### 7.2 Métricas de Distancia
 
-### **Relocate**
+#### Haversine (Implementación Actual - P0)
 
-Mover un nodo de una ruta a otra para balancear tiempos.
-
-### **Swap (1-1 y 1-k)**
-
-Intercambiar puntos entre rutas.
-
-### **Cross-Exchange**
-
-Intercambiar segmentos completos.
-
-### **2-opt\***
-
-Cortes entre rutas distintas para mejorar conectividad.
-
-### **Large Neighborhood Search (LNS)**
-
-Uno de los métodos más usados en VRP:
-
-- se destruye parte de la solución
-- se reconstruye óptimamente con greedy-repair
-- se aplican criterios de aceptación
-
-### Comparativa rápida
-
-| Método         | Calidad    | Costo computacional | Escalabilidad |
-| -------------- | ---------- | ------------------- | ------------- |
-| NN + 2-opt     | Media      | Baja                | Alta          |
-| KMeans + 2-opt | Alta       | Media               | Muy alta      |
-| LK             | Muy alta   | Alta                | Media         |
-| LNS            | Muy alta   | Alta                | Alta          |
-| Tabu           | Medio-alta | Media               | Alta          |
-
----
-
-# 🚀 9. Mejoras del Pipeline y Diseño del Optimizador Global
-
-En esta sección se detallan estrategias avanzadas para mejorar la calidad de las rutas y reducir el tiempo máximo (min–max) entre censantes.
-
-## 9.1 Preprocesamiento Espacial
-
-- Uso de bounding box y filtros por cuadrantes.
-- Proyección a UTM para distancias euclidianas rápidas.
-- Construcción de índices espaciales (quadtree / R-tree).
-
-## 9.2 Construcción del Grafo Caminable
-
-- Uso de OSRM/GraphHopper local para evitar costos de API.
-- Cache persistente para pares ya consultados.
-- Cálculo de distancias solo para K vecinos relevantes (KNN).
-
-## 9.3 Clusterización Híbrida
-
-Pipeline recomendado:
-
-1. **KMeans** para partición inicial rápida
-2. **Rebalanceo por distancia caminable** mediante KMedoids local
-3. **Ajuste dinámico** según tiempos estimados por cluster
-
-## 9.4 Rutas Iniciales
-
-- Generar múltiples semillas: NN, sweep, random, farthest-insertion.
-- Aplicar **2-opt** o **3-opt** rápidamente en cada cluster.
-- Seleccionar la mejor semilla como punto de partida.
-
-## 9.5 Optimización Global
-
-El corazón del optimizador:
-
-### **Operadores disponibles**
-
-- relocate
-- swap
-- 2-opt\*
-- cross-exchange
-- merge-and-split
-
-### **Large Neighborhood Search (LNS) recomendado**
-
-**Destructor:**
-
-- remover nodos de la ruta más larga
-- seleccionar nodos extremos o problemáticos
-- remover nodos según impacto marginal
-
-**Repair:**
-
-- insertar cada nodo en la posición que minimiza el incremento del Z (max tiempo)
-- reoptimizar localmente la ruta afectada
-
-**Criterios de aceptación:**
-
-- simulated annealing
-- threshold acceptance
-- tabu para movimientos repetidos
-
-## 9.6 Paralelización
-
-- Resolver TSPs de cada cluster en paralelo.
-- Paralelizar operadores locales cuando las rutas no interactúan.
-- Ejecución multi-start en múltiples hilos.
-
-## 9.7 Pseudocódigo General del Optimizador Global
+**Fórmula:**
 
 ```
-sol = generar_solucion_inicial()
-mejor = sol
-
-while tiempo_disponible:
-    r_max = ruta_mas_larga(sol)
-    nodos = seleccionar_nodos(r_max)
-    sol2 = destruir(sol, nodos)
-    sol2 = reparar(sol2, nodos)
-    sol2 = mejorar_localmente(sol2)
-
-    if aceptar(sol2, sol):
-        sol = sol2
-
-    if sol.Z < mejor.Z:
-        mejor = sol
+a = sin²(Δφ/2) + cos φ₁ × cos φ₂ × sin²(Δλ/2)
+c = 2 × atan2(√a, √(1−a))
+d = R × c
 ```
 
-## 9.8 Monitoreo y Métricas Internas
+Donde:
 
-- Evolución del valor Z
-- Tiempo total por censante
-- Varianza entre rutas
-- Número de iteraciones exitosas
-- Porcentaje de mejoras aceptadas
+- φ = latitud en radianes
+- λ = longitud en radianes
+- R = 6371 km (radio terrestre)
 
-## 9.9 Recomendación de Pipeline Final
+**Características:**
 
-1. KMeans inicial
-2. Distancias caminables solo por cluster
-3. NN + 2-opt
-4. LNS con relocate / swap
-5. Ajuste final 3-opt / LK
-6. Selección de la mejor solución multi-start
+- Distancia "en línea recta" sobre la esfera terrestre
+- No considera calles, edificios, ni topografía
+- Error típico: +20-40% vs. distancia caminable real
 
----
+**Uso recomendado:**
 
-# 📊 10. Plan de Evaluación Experimental
-
-Incluye:
-
-- Dataset
-- Métricas
-- Experimentos
-- Ablation
-- Sensibilidad a parámetros
+- Prototipado rápido
+- Áreas pequeñas (<5 km²)
+- Cuando no se requiere precisión absoluta
 
 ---
 
-# 📝 11. Recomendaciones Finales
+#### Rutas Caminables Reales (Roadmap P1)
 
-- Implementar primero KMeans + NN + 2-opt + rebalanceo simple
-- Cache y batching para Distance Matrix
-- Para mayor calidad: LNS con greedy-repair
-- Uso de OR-Tools para prototipos
+**Opciones:**
+
+1. **Google Distance Matrix API**
+
+   - Ventaja: Rutas reales, considerando calles
+   - Desventaja: Costoso (0.01 USD/request), límites estrictos
+
+2. **OSRM (Open Source Routing Machine)**
+
+   - Ventaja: Gratis, instalable localmente
+   - Desventaja: Requiere servidor, datos OSM actualizados
+
+3. **Valhalla / GraphHopper**
+   - Similar a OSRM, diferentes trade-offs
+
+**Estrategia recomendada para P1:**
+
+- Usar Haversine para clustering inicial
+- Calcular matriz de distancias reales solo para nodos en mismo cluster
+- Cachear resultados para evitar requests repetidos
 
 ---
+
+### 7.3 Cálculo de Tiempos
+
+**Fórmula del tiempo total por censante:**
+
+```
+T_total = T_servicio + T_ruta
+
+Donde:
+T_servicio = n_arboles × tiempo_por_arbol
+T_ruta = distancia_metros × (60 min/h) / (1000 m/km) / velocidad_kmh
+```
+
+**Parámetros configurables:**
+
+- `tiempo_por_arbol`: 3-10 minutos (default: 5)
+- `velocidad_kmh`: 3-5 km/h (default: 4)
+- `haversine_multiplier`: 1.0-1.5 (ajuste empírico para distancia real)
+
+**Ejemplo:**
+
+- 50 árboles × 5 min = 250 min servicio
+- 3000 m × 60 / 1000 / 4 = 45 min ruta
+- **Total: 295 min (~5 horas)**
+
+---
+
+### 7.4 Formato de Datos
+
+#### Input JSON (`01_input.json`)
+
+```json
+{
+  "north": -33.40,
+  "south": -33.50,
+  "east": -70.60,
+  "west": -70.70,
+  "polygon": {
+    "type": "Polygon",
+    "coordinates": [[[lng, lat], ...]]
+  },
+  "trees": [
+    {
+      "id": 123,
+      "lat": -33.4567,
+      "lng": -70.6543,
+      "species": "Platanus orientalis",
+      "...": "otros campos opcionales"
+    }
+  ],
+  "__meta__": {
+    "created_at": "2025-12-02T10:30:00Z",
+    "pipeline_version": "abc123"
+  }
+}
+```
+
+#### Graph JSON (`03_graph.json`)
+
+```json
+{
+  "nodes": [
+    {"id": 0, "lat": -33.45, "lng": -70.66, "meta": {...}},
+    {"id": 1, "lat": -33.46, "lng": -70.67, "meta": {...}}
+  ],
+  "distances": [
+    [0, 150.2, 280.5],
+    [150.2, 0, 190.3],
+    [280.5, 190.3, 0]
+  ]
+}
+```
+
+#### Routes JSON (`routes_by_cluster.json`)
+
+```json
+{
+  "routes": [
+    {
+      "cluster_id": 0,
+      "route": [0, 5, 12, 8, 3],
+      "size": 5,
+      "route_meters": 823.4,
+      "route_minutes": 12.3,
+      "service_minutes": 25.0,
+      "total_minutes": 37.3
+    }
+  ]
+}
+```
+
+---
+
+### 7.5 Optimizaciones Futuras
+
+#### Min-Max Global
+
+**Objetivo:** Minimizar el tiempo del censante más lento.
+
+**Estrategia:**
+
+1. Después de TSP inicial, identificar cluster más largo
+2. Aplicar operadores de rebalanceo:
+   - **Relocate**: mover 1 nodo a otro cluster
+   - **Swap**: intercambiar nodos entre clusters
+   - **2-opt\***: intercambiar segmentos entre rutas
+3. Aceptar cambio si reduce max(T_total)
+
+**Implementación:** LNS (Large Neighborhood Search)
+
+---
+
+#### Cache de Distancias
+
+Para evitar recalcular distancias:
+
+```python
+# Usar hash de coordenadas como key
+def cache_key(lat1, lon1, lat2, lon2):
+    return f"{lat1:.6f},{lon1:.6f}-{lat2:.6f},{lon2:.6f}"
+
+# Guardar en archivo o DB
+cache = {}
+if key in cache:
+    return cache[key]
+else:
+    dist = compute_real_distance(lat1, lon1, lat2, lon2)
+    cache[key] = dist
+    return dist
+```
+
+---
+
+#### Paralelización
+
+**Oportunidades:**
+
+- TSP por cluster (cada uno independiente)
+- Cálculo de distancias (por pares)
+- Evaluación de operadores de búsqueda local
+
+**Implementación Python:**
+
+```python
+from multiprocessing import Pool
+
+def solve_cluster_tsp(cluster):
+    return compute_route_for_cluster(...)
+
+with Pool(8) as p:
+    routes = p.map(solve_cluster_tsp, clusters)
+```
+
+---
+
+### 7.6 Testing y Validación
+
+**Checklist de validación:**
+
+- [ ] Todo árbol aparece exactamente una vez en los clusters
+- [ ] Tours no tienen duplicados (excepto inicio/fin)
+- [ ] Distancias son simétricas: `M[i][j] == M[j][i]`
+- [ ] Coordenadas están en rango válido (lat: -90 a 90, lng: -180 a 180)
+- [ ] GeoJSON es válido (validar con geojsonlint.com)
+- [ ] Metadata contiene timestamp y versión
+
+**Tests unitarios sugeridos:**
+
+```python
+# test_clustering.py
+def test_all_nodes_assigned():
+    clusters = make_clusters_recursive(nodes, max_size=50)
+    all_members = [m for c in clusters for m in c]
+    assert len(all_members) == len(nodes)
+    assert len(set(all_members)) == len(nodes)
+
+# test_tsp.py
+def test_tour_is_valid():
+    route = nn_tour(0, [0,1,2,3], distances)
+    assert len(route) == 4
+    assert len(set(route)) == 4
+```
+
+---
+
+## 🚧 8. Roadmap y Próximas Mejoras
+
+### Versión Actual (P0) ✅
+
+- [x] Pipeline completo con 6 etapas
+- [x] Clustering recursivo geográfico
+- [x] TSP con NN + 2-opt
+- [x] Exportación GeoJSON
+- [x] Viewer web interactivo
+- [x] Soporte para DB PostgreSQL
+
+### Próxima Versión (P1) 🔜
+
+- [ ] Integración OSRM para distancias reales
+- [ ] Cache persistente de distancias
+- [ ] Optimización min-max con LNS
+- [ ] Tests automatizados (pytest)
+- [ ] CI/CD con GitHub Actions
+- [ ] Documentación API (Sphinx)
+
+### Versión Futura (P2) 💡
+
+- [ ] Interfaz web completa (React/Vue)
+- [ ] Exportación a formatos móviles (GPX, KML)
+- [ ] Comparación de múltiples estrategias
+- [ ] Visualización 3D de rutas
+- [ ] API REST para integración externa
+
+---
+
+## 📚 9. Referencias y Recursos
+
+### Algoritmos
+
+- **TSP**: Applegate et al., "The Traveling Salesman Problem: A Computational Study" (2006)
+- **2-opt**: Croes, "A Method for Solving Traveling-Salesman Problems" (1958)
+- **Lin-Kernighan**: Lin & Kernighan, "An Effective Heuristic Algorithm for TSP" (1973)
+
+### Herramientas
+
+- [OSRM](http://project-osrm.org/) - Routing engine
+- [Leaflet](https://leafletjs.com/) - JavaScript mapping library
+- [GeoJSON.io](http://geojson.io/) - GeoJSON validator/editor
+- [OR-Tools](https://developers.google.com/optimization) - Google optimization library
+
+### Librerías Python
+
+- `psycopg2` - PostgreSQL adapter
+- `python-dotenv` - Environment variables
+- `geojson` - GeoJSON utilities (opcional)
+
+---
+
+## 🤝 10. Contribución
+
+### Estructura de Commits
+
+```
+tipo(scope): descripción breve
+
+Descripción detallada (opcional)
+
+Closes #123
+```
+
+**Tipos:**
+
+- `feat`: Nueva funcionalidad
+- `fix`: Corrección de bug
+- `refactor`: Refactorización sin cambio funcional
+- `docs`: Cambios en documentación
+- `test`: Agregar/modificar tests
+- `perf`: Mejora de performance
+
+### Workflow
+
+1. Fork del repositorio
+2. Crear branch: `git checkout -b feat/mi-feature`
+3. Commits con mensajes descriptivos
+4. Push: `git push origin feat/mi-feature`
+5. Crear Pull Request
+
+---
+
+## 📄 11. Licencia
+
+[Especificar licencia del proyecto]
+
+---
+
+## 📞 12. Contacto y Soporte
+
+- **Issues:** [GitHub Issues](https://github.com/tu-repo/issues)
+- **Documentación:** Este README y archivos en `docs/`
+- **Email:** [tu-email@ejemplo.com]
+
+---
+
+**Última actualización:** 2 de diciembre de 2025
