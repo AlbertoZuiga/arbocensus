@@ -1,6 +1,5 @@
 """Clustering helpers: recursive split and capacity assignment"""
 
-import math
 from typing import Any, Dict, List, Tuple
 
 from .utils import nn_tour, two_opt

@@ -130,7 +130,6 @@ def run_stage_tsp(args):
         g = json.load(f)
     with open(args.clusters, "r", encoding="utf-8") as f:
         cobj = json.load(f)
-    nodes = g.get("nodes", [])
     distances = g.get("distances", [])
     clusters = cobj.get("clusters") or cobj.get("cluster_list") or []
     routes = []

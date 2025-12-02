@@ -14,7 +14,7 @@ flask_app = module.app
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def client(_, monkeypatch):
     # ensure no DB env variables interfere
     monkeypatch.delenv("ARBOCENSUS_API_DB_URL", raising=False)
     monkeypatch.delenv("ARBOCENSUS_DB_URL", raising=False)

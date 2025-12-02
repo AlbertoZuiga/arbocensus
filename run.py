@@ -2,7 +2,6 @@
 """Simple runner for stages pipeline (skeleton).
 
 """
-import argparse
 import os
 import subprocess
 import sys
