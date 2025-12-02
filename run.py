@@ -11,6 +11,8 @@ import argparse
 import os
 import subprocess
 import sys
+# Note: do not import package modules at top-level; we'll make `src/` available
+# to imports at runtime in `main()` so `python run.py` works without PYTHONPATH.
 
 ROOT = os.path.dirname(__file__)
 STAGES = [
@@ -81,18 +83,19 @@ def parse_args():
 
 
 def main():
-    args = parse_args()
-    if args.list:
-        list_stages()
-        return
-    if args.init:
-        init_dirs()
-        return
-    if args.stage:
-        sys.exit(run_stage(args.stage, args.input, args.out))
-    if args.run:
-        sys.exit(run_pipeline(args.input, args.out))
-    print("No action specified. Use --list, --init, --stage N or --run")
+    # Delegate exclusively to the new package CLI
+    try:
+        # Ensure `src/` is on sys.path so `import arbocensus_pipeline...` works
+        from importlib import import_module
+        src_path = os.path.join(ROOT, 'src')
+        if os.path.isdir(src_path) and src_path not in sys.path:
+            sys.path.insert(0, src_path)
+        cli = import_module('arbocensus_pipeline.cli')
+        cli.main()
+    except Exception as e:
+        print('Error: could not run package CLI:', e)
+        print('Ensure the repository layout is intact (a `src/arbocensus_pipeline` package).')
+        sys.exit(2)
 
 
 if __name__ == '__main__':
