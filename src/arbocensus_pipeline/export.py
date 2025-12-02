@@ -1,5 +1,5 @@
 """Export utilities for GeoJSON visualization"""
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import os
 import json
 
@@ -12,6 +12,25 @@ def write_geojson(obj: Dict[str, Any], path: str):
         json.dump(obj, f, ensure_ascii=False)
 
 
+def build_bbox_geojson(north: float, south: float, east: float, west: float) -> Dict[str, Any]:
+    """Build a GeoJSON polygon for the bounding box."""
+    coords = [
+        [west, north],
+        [east, north],
+        [east, south],
+        [west, south],
+        [west, north]
+    ]
+    return {
+        'type': 'FeatureCollection',
+        'features': [{
+            'type': 'Feature',
+            'geometry': {'type': 'Polygon', 'coordinates': [coords]},
+            'properties': {'type': 'bbox'}
+        }]
+    }
+
+
 def build_points_geojson_from_nodes(nodes: List[Dict[str, Any]], clusters_map: Dict[int, int] = None) -> Dict[str, Any]:
     features = []
     for i, n in enumerate(nodes):
@@ -20,6 +39,62 @@ def build_points_geojson_from_nodes(nodes: List[Dict[str, Any]], clusters_map: D
             props['cluster_id'] = clusters_map.get(i)
         feat = {'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [n['lng'], n['lat']]}, 'properties': props}
         features.append(feat)
+    return {'type': 'FeatureCollection', 'features': features}
+
+
+def build_points_geojson_from_trees(trees: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Build GeoJSON from raw tree objects (with lat/lng or latitude/longitude)."""
+    features = []
+    for i, t in enumerate(trees):
+        lat = t.get('lat') or t.get('latitude')
+        lng = t.get('lng') or t.get('longitude')
+        if lat is None or lng is None:
+            continue
+        props = {'tree_index': i}
+        if 'id' in t:
+            props['tree_id'] = t['id']
+        feat = {'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [lng, lat]}, 'properties': props}
+        features.append(feat)
+    return {'type': 'FeatureCollection', 'features': features}
+
+
+def build_cluster_polygons_geojson(nodes: List[Dict[str, Any]], clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Build convex hull polygons for each cluster."""
+    features = []
+    for c in clusters:
+        members = c.get('member_node_indices', [])
+        if len(members) < 3:
+            continue  # Need at least 3 points for a polygon
+        
+        # Get coordinates of cluster members
+        points = [[nodes[i]['lng'], nodes[i]['lat']] for i in members if i < len(nodes)]
+        
+        # Simple convex hull (could be improved with proper algorithm)
+        # For now, just create a bounding box around the cluster
+        if points:
+            lngs = [p[0] for p in points]
+            lats = [p[1] for p in points]
+            min_lng, max_lng = min(lngs), max(lngs)
+            min_lat, max_lat = min(lats), max(lats)
+            
+            coords = [
+                [min_lng, min_lat],
+                [max_lng, min_lat],
+                [max_lng, max_lat],
+                [min_lng, max_lat],
+                [min_lng, min_lat]
+            ]
+            
+            feat = {
+                'type': 'Feature',
+                'geometry': {'type': 'Polygon', 'coordinates': [coords]},
+                'properties': {
+                    'cluster_id': c.get('cluster_id'),
+                    'size': len(members)
+                }
+            }
+            features.append(feat)
+    
     return {'type': 'FeatureCollection', 'features': features}
 
 
