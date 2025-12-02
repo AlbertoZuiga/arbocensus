@@ -1,6 +1,7 @@
 """TSP algorithms: NN + 2-opt wrapper"""
-from typing import List, Dict, Any
-from .utils import nn_tour, two_opt, tour_length
+from typing import Any, Dict, List
+
+from .utils import nn_tour, tour_length, two_opt
 
 
 def compute_route_for_cluster(members: List[int], distances: List[List[float]], time_per_tree: float, walking_speed_kmh: float, haversine_multiplier: float = 1.0) -> Dict[str, Any]:

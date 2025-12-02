@@ -1,5 +1,5 @@
 """Filter stage utilities"""
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 def point_in_poly(x, y, poly):

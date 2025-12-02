@@ -1,7 +1,7 @@
 """Input stage: load bbox and trees (DB fallback or file)"""
-from typing import Dict, Any, Optional
-import os
 import json
+import os
+from typing import Any, Dict, Optional
 
 
 def load_bbox_file(path: str) -> Dict[str, Any]:

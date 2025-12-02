@@ -1,10 +1,9 @@
-import os
 import json
+import os
 import pathlib
+from importlib import util
 
 import pytest
-from importlib import util
-import pathlib
 
 # Load the app module directly from file to avoid PYTHONPATH import issues
 app_path = pathlib.Path(__file__).parents[1] / 'app.py'

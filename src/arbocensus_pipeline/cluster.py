@@ -1,7 +1,8 @@
 """Clustering helpers: recursive split and capacity assignment"""
-from typing import List, Dict, Any, Tuple
 import math
-from .utils import two_opt, nn_tour
+from typing import Any, Dict, List, Tuple
+
+from .utils import nn_tour, two_opt
 
 
 def bounding_box(nodes: List[Dict[str, Any]]) -> Tuple[float, float, float, float]:

@@ -1,13 +1,13 @@
 """Simple CLI runner for pipeline stages"""
 import argparse
 import os
-from . import input as inp
-from . import io as io_mod
+
+from . import cluster, export
 from . import filter as flt
 from . import graph
-from . import cluster
+from . import input as inp
+from . import io as io_mod
 from . import tsp
-from . import export
 
 
 def run_stage_input(args):
@@ -65,7 +65,8 @@ def run_stage_graph(args):
 
 
 def run_stage_cluster(args):
-    import json, math
+    import json
+    import math
     if not os.path.exists(args.inp):
         print(f'Graph file {args.inp} not found')
         return
@@ -127,6 +128,7 @@ def run_stage_tsp(args):
 
 def run_export(args):
     import json
+
     # read graph, clusters, routes from archive paths by default
     graph_path = args.graph if hasattr(args, 'graph') else 'artifacts/runs/latest/graph/graph.json'
     input_path = getattr(args, 'input', 'artifacts/runs/latest/bbox_input/input.json')

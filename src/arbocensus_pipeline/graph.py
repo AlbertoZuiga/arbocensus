@@ -1,5 +1,6 @@
 """Graph stage: build nodes and distance matrix"""
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from .utils import haversine_m
 
 

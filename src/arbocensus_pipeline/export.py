@@ -1,7 +1,7 @@
 """Export utilities for GeoJSON visualization"""
-from typing import List, Dict, Any, Optional
-import os
 import json
+import os
+from typing import Any, Dict, List, Optional
 
 
 def write_geojson(obj: Dict[str, Any], path: str):
