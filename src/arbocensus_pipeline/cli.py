@@ -13,7 +13,7 @@ from . import export
 def run_stage_input(args):
     # Use package helpers to load bbox and write the input JSON (with DB fallback)
     try:
-        out_obj = inp.load_input(bbox_path=args.bbox, max_results=getattr(args, 'max', 500), use_secrets=getattr(args, 'use_secrets', False))
+        out_obj = inp.load_input(bbox_path=args.bbox, max_results=getattr(args, 'max', None), use_secrets=getattr(args, 'use_secrets', False))
     except Exception as e:
         print('Failed to load input:', e)
         return

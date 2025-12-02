@@ -1,5 +1,5 @@
 """Input stage: load bbox and trees (DB fallback or file)"""
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import os
 import json
 
@@ -108,7 +108,7 @@ def _add_point(results, seen, lat, lng, meta=None):
     results.append({'lat': round(float(lat), 7), 'lng': round(float(lng), 7), 'meta': meta})
 
 
-def _query_dbs(north, south, east, west, max_results=500):
+def _query_dbs(north: float, south: float, east: float, west: float, max_results: Optional[int] = None):
     results = []
     seen = set()
     # Try ARBOCENSUS_API_DB_URL
@@ -120,8 +120,8 @@ def _query_dbs(north, south, east, west, max_results=500):
                      FROM arbocensus_api_app_sample
                      WHERE tree_latitude BETWEEN %s AND %s
                        AND tree_longitude BETWEEN %s AND %s
-                     LIMIT %s'''
-            cur.execute(sql, (south, north, west, east, max_results))
+                    ''' + (f'LIMIT %s' if max_results is not None else '')
+            cur.execute(sql, (south, north, west, east, max_results) if max_results is not None else (south, north, west, east))
             for row in cur.fetchall():
                 _add_point(results, seen, row[2], row[3], {'source': 'arbocensus_api', 'id': row[0], 'tree_id': row[1]})
         except Exception as e:
@@ -144,8 +144,8 @@ def _query_dbs(north, south, east, west, max_results=500):
                      FROM arbocensus_app_sample
                      WHERE latitude BETWEEN %s AND %s
                        AND longitude BETWEEN %s AND %s
-                     LIMIT %s'''
-            cur.execute(sql, (south, north, west, east, max_results))
+                    ''' + (f'LIMIT %s' if max_results is not None else '')
+            cur.execute(sql, (south, north, west, east, max_results) if max_results is not None else (south, north, west, east))
             for row in cur.fetchall():
                 _add_point(results, seen, row[1], row[2], {'source': 'arbocensus', 'id': row[0]})
         except Exception as e:
@@ -163,7 +163,7 @@ def _query_dbs(north, south, east, west, max_results=500):
     return results
 
 
-def load_input(bbox_path: str = None, north: float = None, south: float = None, east: float = None, west: float = None, max_results: int = 500, use_secrets: bool = False, repo_root: str = None):
+def load_input(bbox_path: str = None, north: float = None, south: float = None, east: float = None, west: float = None, max_results: Optional[int] = None, use_secrets: bool = False, repo_root: str = None):
     """Load bbox and attempt DB queries; returns a dict with north/south/east/west/trees."""
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
