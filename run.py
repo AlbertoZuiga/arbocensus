@@ -50,13 +50,17 @@ def run_stage(stage_num, input_path=None, out_dir=None):
             print(f"Executing {p} ...")
             res = subprocess.call([sys.executable, p, input_path or "", out_dir or ""])
             return res
-    print(f"No runnable script found in {stage_dir}. (Place a run.py or main.py there.)")
+    print(
+        f"No runnable script found in {stage_dir}. (Place a run.py or main.py there.)"
+    )
     return 0
 
 
 def run_pipeline(input_file=None, out_dir=None):
-    print("Running pipeline (skeleton):\n\
-        - stages will be attempted in order; if a stage has no script it will be skipped.")
+    print(
+        "Running pipeline (skeleton):\n\
+        - stages will be attempted in order; if a stage has no script it will be skipped."
+    )
     for num, _ in STAGES:
         print(f"-> Stage {num}")
         res = run_stage(num, input_file, out_dir)
@@ -72,16 +76,19 @@ def main():
     try:
         # Ensure `src/` is on sys.path so `import arbocensus_pipeline...` works
         from importlib import import_module
-        src_path = os.path.join(ROOT, 'src')
+
+        src_path = os.path.join(ROOT, "src")
         if os.path.isdir(src_path) and src_path not in sys.path:
             sys.path.insert(0, src_path)
-        cli = import_module('arbocensus_pipeline.cli')
+        cli = import_module("arbocensus_pipeline.cli")
         cli.main()
     except Exception as e:
-        print('Error: could not run package CLI:', e)
-        print('Ensure the repository layout is intact (a `src/arbocensus_pipeline` package).')
+        print("Error: could not run package CLI:", e)
+        print(
+            "Ensure the repository layout is intact (a `src/arbocensus_pipeline` package)."
+        )
         sys.exit(2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

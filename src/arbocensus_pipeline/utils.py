@@ -8,7 +8,10 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     phi2 = math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
+    a = (
+        math.sin(dphi / 2.0) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
+    )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
@@ -38,7 +41,9 @@ def tour_length(tour: List[int], distances: List[List[float]]) -> float:
     return s
 
 
-def two_opt(route: List[int], distances: List[List[float]], max_iter: int = 100) -> List[int]:
+def two_opt(
+    route: List[int], distances: List[List[float]], max_iter: int = 100
+) -> List[int]:
     best = route[:]
     best_len = tour_length(best, distances)
     improved = True
@@ -51,7 +56,7 @@ def two_opt(route: List[int], distances: List[List[float]], max_iter: int = 100)
             for j in range(i + 1, n - 1):
                 if j - i == 1:
                     continue
-                new = best[:i] + best[i:j + 1][::-1] + best[j + 1:]
+                new = best[:i] + best[i : j + 1][::-1] + best[j + 1 :]
                 nl = tour_length(new, distances)
                 if nl + 1e-9 < best_len:
                     best = new

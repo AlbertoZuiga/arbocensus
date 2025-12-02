@@ -1,4 +1,5 @@
 """Filter stage utilities"""
+
 from typing import Any, Dict, List
 
 
@@ -8,17 +9,19 @@ def point_in_poly(x, y, poly):
     for i in range(n):
         xi, yi = poly[i]
         xj, yj = poly[(i + 1) % n]
-        intersect = ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi + 1e-16) + xi)
+        intersect = ((yi > y) != (yj > y)) and (
+            x < (xj - xi) * (y - yi) / (yj - yi + 1e-16) + xi
+        )
         if intersect:
             inside = not inside
     return inside
 
 
 def filter_trees(obj: Dict[str, Any]) -> Dict[str, Any]:
-    trees = obj.get('trees', [])
+    trees = obj.get("trees", [])
     poly_coords = None
-    if obj.get('polygon'):
-        coords = obj['polygon'].get('coordinates')
+    if obj.get("polygon"):
+        coords = obj["polygon"].get("coordinates")
         if coords and len(coords) > 0:
             ring = coords[0]
             poly_coords = [(p[0], p[1]) for p in ring]
@@ -29,8 +32,8 @@ def filter_trees(obj: Dict[str, Any]) -> Dict[str, Any]:
         lat = None
         lng = None
         if isinstance(t, dict):
-            lat = t.get('lat') or t.get('latitude')
-            lng = t.get('lng') or t.get('longitude')
+            lat = t.get("lat") or t.get("latitude")
+            lng = t.get("lng") or t.get("longitude")
         if lat is None or lng is None:
             continue
         try:
@@ -45,8 +48,14 @@ def filter_trees(obj: Dict[str, Any]) -> Dict[str, Any]:
             if not point_in_poly(lngf, latf, poly_coords):
                 continue
         seen.add(key)
-        out.append({'lat': latf, 'lng': lngf, 'meta': t.get('meta') if isinstance(t, dict) else None})
+        out.append(
+            {
+                "lat": latf,
+                "lng": lngf,
+                "meta": t.get("meta") if isinstance(t, dict) else None,
+            }
+        )
 
     res = obj.copy()
-    res['trees'] = out
+    res["trees"] = out
     return res
