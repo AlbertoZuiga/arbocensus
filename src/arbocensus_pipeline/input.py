@@ -144,12 +144,20 @@ def _safe_close_connection(connection):
         pass
 
 
-def _query_api_db(south, north, west, east, max_results, results, seen):
-    """Query ARBOCENSUS_API_DB_URL database."""
+def _query_api_db(bounds, max_results, results, seen):
+    """Query ARBOCENSUS_API_DB_URL database.
+    
+    Args:
+        bounds: Tuple of (south, north, west, east)
+        max_results: Maximum number of results
+        results: List to append results to
+        seen: Set of seen coordinates
+    """
     api_conn = _get_conn_from_env("ARBOCENSUS_API_DB_URL")
     if not api_conn:
         return
 
+    south, north, west, east = bounds
     cur = None
     try:
         cur = api_conn.cursor()
@@ -179,12 +187,20 @@ def _query_api_db(south, north, west, east, max_results, results, seen):
         _safe_close_connection(api_conn)
 
 
-def _query_main_db(south, north, west, east, max_results, results, seen):
-    """Query ARBOCENSUS_DB_URL database."""
+def _query_main_db(bounds, max_results, results, seen):
+    """Query ARBOCENSUS_DB_URL database.
+    
+    Args:
+        bounds: Tuple of (south, north, west, east)
+        max_results: Maximum number of results
+        results: List to append results to
+        seen: Set of seen coordinates
+    """
     main_conn = _get_conn_from_env("ARBOCENSUS_DB_URL")
     if not main_conn:
         return
 
+    south, north, west, east = bounds
     cur = None
     try:
         cur = main_conn.cursor()
@@ -223,9 +239,10 @@ def _query_dbs(
 ):
     results = []
     seen = set()
+    bounds = (south, north, west, east)
 
-    _query_api_db(south, north, west, east, max_results, results, seen)
-    _query_main_db(south, north, west, east, max_results, results, seen)
+    _query_api_db(bounds, max_results, results, seen)
+    _query_main_db(bounds, max_results, results, seen)
 
     return results
 
