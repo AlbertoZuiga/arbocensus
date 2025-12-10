@@ -62,7 +62,7 @@ def save_bbox():
 
 
 @app.route("/trees")
-def trees():
+def get_trees():
     try:
         north = float(request.args.get("north"))
         south = float(request.args.get("south"))
