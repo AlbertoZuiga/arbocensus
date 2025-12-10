@@ -114,6 +114,106 @@ def _add_point(results, seen, lat, lng, meta=None):
     )
 
 
+def _build_sql_query(max_results: Optional[int]) -> str:
+    """Build SQL query with optional LIMIT clause."""
+    limit_clause = "LIMIT %s" if max_results is not None else ""
+    return limit_clause
+
+
+def _build_query_params(south, north, west, east, max_results):
+    """Build query parameters tuple based on max_results."""
+    base_params = (south, north, west, east)
+    if max_results is not None:
+        return base_params + (max_results,)
+    return base_params
+
+
+def _safe_close_cursor(cursor):
+    """Safely close database cursor."""
+    try:
+        cursor.close()
+    except (psycopg2.Error, AttributeError):
+        pass
+
+
+def _safe_close_connection(connection):
+    """Safely close database connection."""
+    try:
+        connection.close()
+    except (psycopg2.Error, AttributeError):
+        pass
+
+
+def _query_api_db(south, north, west, east, max_results, results, seen):
+    """Query ARBOCENSUS_API_DB_URL database."""
+    api_conn = _get_conn_from_env("ARBOCENSUS_API_DB_URL")
+    if not api_conn:
+        return
+
+    cur = None
+    try:
+        cur = api_conn.cursor()
+        sql = """SELECT id, tree_id, tree_latitude AS lat, tree_longitude AS lng
+                 FROM arbocensus_api_app_sample
+                 WHERE tree_latitude BETWEEN %s AND %s
+                   AND tree_longitude BETWEEN %s AND %s
+                """ + _build_sql_query(
+            max_results
+        )
+        params = _build_query_params(south, north, west, east, max_results)
+        cur.execute(sql, params)
+
+        for row in cur.fetchall():
+            _add_point(
+                results,
+                seen,
+                row[2],
+                row[3],
+                {"source": "arbocensus_api", "id": row[0], "tree_id": row[1]},
+            )
+    except (psycopg2.Error, OSError) as e:
+        print("arbocensus_api query failed:", e)
+    finally:
+        if cur:
+            _safe_close_cursor(cur)
+        _safe_close_connection(api_conn)
+
+
+def _query_main_db(south, north, west, east, max_results, results, seen):
+    """Query ARBOCENSUS_DB_URL database."""
+    main_conn = _get_conn_from_env("ARBOCENSUS_DB_URL")
+    if not main_conn:
+        return
+
+    cur = None
+    try:
+        cur = main_conn.cursor()
+        sql = """SELECT id, latitude AS lat, longitude AS lng
+                 FROM arbocensus_app_sample
+                 WHERE latitude BETWEEN %s AND %s
+                   AND longitude BETWEEN %s AND %s
+                """ + _build_sql_query(
+            max_results
+        )
+        params = _build_query_params(south, north, west, east, max_results)
+        cur.execute(sql, params)
+
+        for row in cur.fetchall():
+            _add_point(
+                results,
+                seen,
+                row[1],
+                row[2],
+                {"source": "arbocensus", "id": row[0]},
+            )
+    except (psycopg2.Error, OSError) as e:
+        print("arbocensus query failed:", e)
+    finally:
+        if cur:
+            _safe_close_cursor(cur)
+        _safe_close_connection(main_conn)
+
+
 def _query_dbs(
     north: float,
     south: float,
@@ -123,84 +223,9 @@ def _query_dbs(
 ):
     results = []
     seen = set()
-    # Try ARBOCENSUS_API_DB_URL
-    api_conn = _get_conn_from_env("ARBOCENSUS_API_DB_URL")
-    if api_conn:
-        try:
-            cur = api_conn.cursor()
-            sql = """SELECT id, tree_id, tree_latitude AS lat, tree_longitude AS lng
-                     FROM arbocensus_api_app_sample
-                     WHERE tree_latitude BETWEEN %s AND %s
-                       AND tree_longitude BETWEEN %s AND %s
-                    """ + (
-                "LIMIT %s" if max_results is not None else ""
-            )
-            cur.execute(
-                sql,
-                (
-                    (south, north, west, east, max_results)
-                    if max_results is not None
-                    else (south, north, west, east)
-                ),
-            )
-            for row in cur.fetchall():
-                _add_point(
-                    results,
-                    seen,
-                    row[2],
-                    row[3],
-                    {"source": "arbocensus_api", "id": row[0], "tree_id": row[1]},
-                )
-        except (psycopg2.Error, OSError) as e:
-            print("arbocensus_api query failed:", e)
-        finally:
-            try:
-                cur.close()
-            except (psycopg2.Error, AttributeError):
-                pass
-            try:
-                api_conn.close()
-            except (psycopg2.Error, AttributeError):
-                pass
 
-    main_conn = _get_conn_from_env("ARBOCENSUS_DB_URL")
-    if main_conn:
-        try:
-            cur = main_conn.cursor()
-            sql = """SELECT id, latitude AS lat, longitude AS lng
-                     FROM arbocensus_app_sample
-                     WHERE latitude BETWEEN %s AND %s
-                       AND longitude BETWEEN %s AND %s
-                    """ + (
-                "LIMIT %s" if max_results is not None else ""
-            )
-            cur.execute(
-                sql,
-                (
-                    (south, north, west, east, max_results)
-                    if max_results is not None
-                    else (south, north, west, east)
-                ),
-            )
-            for row in cur.fetchall():
-                _add_point(
-                    results,
-                    seen,
-                    row[1],
-                    row[2],
-                    {"source": "arbocensus", "id": row[0]},
-                )
-        except (psycopg2.Error, OSError) as e:
-            print("arbocensus query failed:", e)
-        finally:
-            try:
-                cur.close()
-            except (psycopg2.Error, AttributeError):
-                pass
-            try:
-                main_conn.close()
-            except (psycopg2.Error, AttributeError):
-                pass
+    _query_api_db(south, north, west, east, max_results, results, seen)
+    _query_main_db(south, north, west, east, max_results, results, seen)
 
     return results
 
