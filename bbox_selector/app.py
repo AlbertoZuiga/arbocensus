@@ -4,6 +4,12 @@ import os
 import dotenv
 from flask import Flask, jsonify, render_template, request
 
+try:
+    import psycopg2
+    import psycopg2.extras
+except ImportError:
+    psycopg2 = None
+
 app = Flask(__name__)
 
 dotenv.load_dotenv()
@@ -67,12 +73,6 @@ def trees():
 
     max_results = int(request.args.get("max", 300))
 
-    try:
-        import psycopg2
-        import psycopg2.extras
-    except ImportError:
-        psycopg2 = None
-
     results = []
     seen = set()
 
@@ -116,7 +116,7 @@ def trees():
         if val.startswith("postgres://") or val.startswith("postgresql://"):
             try:
                 return psycopg2.connect(dsn=val)
-            except Exception:
+            except (psycopg2.Error, OSError):
                 return None
 
         parsed = parse_jdbc(val)
@@ -136,7 +136,7 @@ def trees():
                 return psycopg2.connect(
                     host=host, port=port, dbname=dbname, user=user, password=password
                 )
-            except Exception:
+            except (psycopg2.Error, OSError):
                 return None
         return None
 
@@ -160,17 +160,17 @@ def trees():
                         "tree_id": row.get("tree_id"),
                     },
                 )
-        except Exception as e:
+        except (psycopg2.Error, OSError) as e:
             # log or ignore; continue to next DB
             print("arbocensus_api query failed:", e)
         finally:
             try:
                 cur.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
             try:
                 api_conn.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
 
     main_conn = get_conn_from_env("ARBOCENSUS_DB_URL")
@@ -189,17 +189,17 @@ def trees():
                     row.get("lng"),
                     {"source": "arbocensus", "id": row.get("id")},
                 )
-        except Exception as e:
+        except (psycopg2.Error, OSError) as e:
             print("arbocensus query failed:", e)
 
         finally:
             try:
                 cur.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
             try:
                 main_conn.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
 
     return jsonify({"ok": True, "trees": results})
