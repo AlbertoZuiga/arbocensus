@@ -133,7 +133,7 @@ def _query_dbs(
                      WHERE tree_latitude BETWEEN %s AND %s
                        AND tree_longitude BETWEEN %s AND %s
                     """ + (
-                f"LIMIT %s" if max_results is not None else ""
+                "LIMIT %s" if max_results is not None else ""
             )
             cur.execute(
                 sql,
@@ -172,7 +172,7 @@ def _query_dbs(
                      WHERE latitude BETWEEN %s AND %s
                        AND longitude BETWEEN %s AND %s
                     """ + (
-                f"LIMIT %s" if max_results is not None else ""
+                "LIMIT %s" if max_results is not None else ""
             )
             cur.execute(
                 sql,
