@@ -61,6 +61,158 @@ def save_bbox():
     return jsonify({"ok": True, "path": out_path})
 
 
+def _add_point(results, seen, lat, lng, meta=None):
+    """Add a point to results if not already seen."""
+    if lat is None or lng is None:
+        return
+    key = (round(float(lat), 7), round(float(lng), 7))
+    if key in seen:
+        return
+    seen.add(key)
+    results.append(
+        {"lat": round(float(lat), 7), "lng": round(float(lng), 7), "meta": meta}
+    )
+
+
+def _parse_jdbc(jdbc_url):
+    """Parse JDBC URL to extract connection parameters."""
+    if not jdbc_url.startswith("jdbc:postgresql://"):
+        return None
+    s = jdbc_url[len("jdbc:postgresql://") :]
+
+    if "/" in s:
+        hostpart, dbname = s.split("/", 1)
+    else:
+        hostpart, dbname = s, ""
+    if ":" in hostpart:
+        db_host, port = hostpart.split(":", 1)
+        try:
+            port = int(port)
+        except ValueError:
+            port = None
+    else:
+        db_host = hostpart
+        port = None
+    return {"host": db_host, "port": port, "dbname": dbname}
+
+
+def _get_conn_from_env(name):
+    """Get database connection from environment variable."""
+    val = os.getenv(name)
+    if not val:
+        return None
+    val = val.strip()
+
+    if val.startswith("postgres://") or val.startswith("postgresql://"):
+        try:
+            return psycopg2.connect(dsn=val)
+        except (psycopg2.Error, OSError):
+            return None
+
+    parsed = _parse_jdbc(val)
+    if parsed:
+        user = (
+            os.getenv(name + "_USER") or os.getenv("PGUSER") or os.getenv("DB_USER")
+        )
+        password = (
+            os.getenv(name + "_PASSWORD")
+            or os.getenv("PGPASSWORD")
+            or os.getenv("DB_PASSWORD")
+        )
+        db_host = parsed.get("host")
+        db_port = parsed.get("port")
+        db_name = parsed.get("dbname")
+        try:
+            return psycopg2.connect(
+                host=db_host, port=db_port, dbname=db_name, user=user, password=password
+            )
+        except (psycopg2.Error, OSError):
+            return None
+    return None
+
+
+def _safe_close_cursor(cursor):
+    """Safely close database cursor."""
+    try:
+        cursor.close()
+    except (psycopg2.Error, AttributeError):
+        pass
+
+
+def _safe_close_connection(connection):
+    """Safely close database connection."""
+    try:
+        connection.close()
+    except (psycopg2.Error, AttributeError):
+        pass
+
+
+def _query_api_database(south, north, west, east, max_results, results, seen):
+    """Query the arbocensus API database."""
+    api_conn = _get_conn_from_env("ARBOCENSUS_API_DB_URL")
+    if not api_conn:
+        return
+
+    cur = None
+    try:
+        cur = api_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        sql = """SELECT id, tree_id, tree_latitude AS lat, tree_longitude AS lng
+                 FROM arbocensus_api_app_sample
+                 WHERE tree_latitude BETWEEN %s AND %s
+                   AND tree_longitude BETWEEN %s AND %s
+                 LIMIT %s"""
+        cur.execute(sql, (south, north, west, east, max_results))
+        for row in cur.fetchall():
+            _add_point(
+                results,
+                seen,
+                row.get("lat"),
+                row.get("lng"),
+                {
+                    "source": "arbocensus_api",
+                    "id": row.get("id"),
+                    "tree_id": row.get("tree_id"),
+                },
+            )
+    except (psycopg2.Error, OSError) as e:
+        print("arbocensus_api query failed:", e)
+    finally:
+        if cur:
+            _safe_close_cursor(cur)
+        _safe_close_connection(api_conn)
+
+
+def _query_main_database(south, north, west, east, max_results, results, seen):
+    """Query the main arbocensus database."""
+    main_conn = _get_conn_from_env("ARBOCENSUS_DB_URL")
+    if not main_conn:
+        return
+
+    cur = None
+    try:
+        cur = main_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        sql = """SELECT id, latitude AS lat, longitude AS lng
+                 FROM arbocensus_app_sample
+                 WHERE latitude BETWEEN %s AND %s
+                   AND longitude BETWEEN %s AND %s
+                 LIMIT %s"""
+        cur.execute(sql, (south, north, west, east, max_results))
+        for row in cur.fetchall():
+            _add_point(
+                results,
+                seen,
+                row.get("lat"),
+                row.get("lng"),
+                {"source": "arbocensus", "id": row.get("id")},
+            )
+    except (psycopg2.Error, OSError) as e:
+        print("arbocensus query failed:", e)
+    finally:
+        if cur:
+            _safe_close_cursor(cur)
+        _safe_close_connection(main_conn)
+
+
 @app.route("/trees")
 def get_trees():
     try:
@@ -76,131 +228,8 @@ def get_trees():
     results = []
     seen = set()
 
-    def add_point(lat, lng, meta=None):
-        if lat is None or lng is None:
-            return
-        key = (round(float(lat), 7), round(float(lng), 7))
-        if key in seen:
-            return
-        seen.add(key)
-        results.append(
-            {"lat": round(float(lat), 7), "lng": round(float(lng), 7), "meta": meta}
-        )
-
-    def parse_jdbc(jdbc_url):
-        if not jdbc_url.startswith("jdbc:postgresql://"):
-            return None
-        s = jdbc_url[len("jdbc:postgresql://") :]
-
-        if "/" in s:
-            hostpart, dbname = s.split("/", 1)
-        else:
-            hostpart, dbname = s, ""
-        if ":" in hostpart:
-            db_host, port = hostpart.split(":", 1)
-            try:
-                port = int(port)
-            except ValueError:
-                port = None
-        else:
-            db_host = hostpart
-            port = None
-        return {"host": db_host, "port": port, "dbname": dbname}
-
-    def get_conn_from_env(name):
-        val = os.getenv(name)
-        if not val:
-            return None
-        val = val.strip()
-
-        if val.startswith("postgres://") or val.startswith("postgresql://"):
-            try:
-                return psycopg2.connect(dsn=val)
-            except (psycopg2.Error, OSError):
-                return None
-
-        parsed = parse_jdbc(val)
-        if parsed:
-            user = (
-                os.getenv(name + "_USER") or os.getenv("PGUSER") or os.getenv("DB_USER")
-            )
-            password = (
-                os.getenv(name + "_PASSWORD")
-                or os.getenv("PGPASSWORD")
-                or os.getenv("DB_PASSWORD")
-            )
-            db_host = parsed.get("host")
-            db_port = parsed.get("port")
-            db_name = parsed.get("dbname")
-            try:
-                return psycopg2.connect(
-                    host=db_host, port=db_port, dbname=db_name, user=user, password=password
-                )
-            except (psycopg2.Error, OSError):
-                return None
-        return None
-
-    api_conn = get_conn_from_env("ARBOCENSUS_API_DB_URL")
-    if api_conn:
-        try:
-            cur = api_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            sql = """SELECT id, tree_id, tree_latitude AS lat, tree_longitude AS lng
-                     FROM arbocensus_api_app_sample
-                     WHERE tree_latitude BETWEEN %s AND %s
-                       AND tree_longitude BETWEEN %s AND %s
-                     LIMIT %s"""
-            cur.execute(sql, (south, north, west, east, max_results))
-            for row in cur.fetchall():
-                add_point(
-                    row.get("lat"),
-                    row.get("lng"),
-                    {
-                        "source": "arbocensus_api",
-                        "id": row.get("id"),
-                        "tree_id": row.get("tree_id"),
-                    },
-                )
-        except (psycopg2.Error, OSError) as e:
-            # log or ignore; continue to next DB
-            print("arbocensus_api query failed:", e)
-        finally:
-            try:
-                cur.close()
-            except (psycopg2.Error, AttributeError):
-                pass
-            try:
-                api_conn.close()
-            except (psycopg2.Error, AttributeError):
-                pass
-
-    main_conn = get_conn_from_env("ARBOCENSUS_DB_URL")
-    if main_conn:
-        try:
-            cur = main_conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            sql = """SELECT id, latitude AS lat, longitude AS lng
-                     FROM arbocensus_app_sample
-                     WHERE latitude BETWEEN %s AND %s
-                       AND longitude BETWEEN %s AND %s
-                     LIMIT %s"""
-            cur.execute(sql, (south, north, west, east, max_results))
-            for row in cur.fetchall():
-                add_point(
-                    row.get("lat"),
-                    row.get("lng"),
-                    {"source": "arbocensus", "id": row.get("id")},
-                )
-        except (psycopg2.Error, OSError) as e:
-            print("arbocensus query failed:", e)
-
-        finally:
-            try:
-                cur.close()
-            except (psycopg2.Error, AttributeError):
-                pass
-            try:
-                main_conn.close()
-            except (psycopg2.Error, AttributeError):
-                pass
+    _query_api_database(south, north, west, east, max_results, results, seen)
+    _query_main_database(south, north, west, east, max_results, results, seen)
 
     return jsonify({"ok": True, "trees": results})
 
