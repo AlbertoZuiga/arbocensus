@@ -5,6 +5,7 @@
 import os
 import subprocess
 import sys
+from importlib import import_module
 
 # Note: do not import package modules at top-level; we'll make `src/` available
 # to imports at runtime in `main()` so `python run.py` works without PYTHONPATH.
@@ -73,9 +74,6 @@ def run_pipeline(input_file=None, out_dir=None):
 def main():
     # Delegate exclusively to the new package CLI
     try:
-        # Ensure `src/` is on sys.path so `import arbocensus_pipeline...` works
-        from importlib import import_module
-
         src_path = os.path.join(ROOT, "src")
         if os.path.isdir(src_path) and src_path not in sys.path:
             sys.path.insert(0, src_path)

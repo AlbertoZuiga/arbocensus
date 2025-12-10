@@ -4,6 +4,9 @@ import json
 import os
 from typing import Any, Dict, Optional
 
+import dotenv
+import psycopg2
+
 
 def load_bbox_file(path: str) -> Dict[str, Any]:
     if not os.path.isfile(path):
@@ -25,8 +28,6 @@ def load_env(repo_root: str = None):
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     dotenv_path = os.path.join(repo_root, ".env")
     try:
-        import dotenv
-
         dotenv.load_dotenv(dotenv_path)
     except Exception:
         # optional dependency - warn but continue
@@ -54,11 +55,6 @@ def _parse_jdbc(jdbc_url: str):
 
 
 def _get_conn_from_env(name: str):
-    try:
-        import psycopg2
-    except Exception:
-        return None
-
     val = os.getenv(name)
     if not val:
         return None

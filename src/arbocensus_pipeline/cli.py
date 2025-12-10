@@ -1,6 +1,8 @@
 """Simple CLI runner for pipeline stages"""
 
 import argparse
+import json
+import math
 import os
 
 from . import cluster, export
@@ -38,8 +40,6 @@ def run_stage_input(args):
 
 def run_stage_filter(args):
     # Read input JSON, apply in-package filter and write result
-    import json
-
     if not os.path.exists(args.inp):
         print(f"Input file {args.inp} not found")
         return
@@ -58,8 +58,6 @@ def run_stage_filter(args):
 
 
 def run_stage_graph(args):
-    import json
-
     if not os.path.exists(args.inp):
         print(f"Input file {args.inp} not found")
         return
@@ -83,8 +81,6 @@ def run_stage_graph(args):
 
 
 def run_stage_cluster(args):
-    import json
-    import math
 
     if not os.path.exists(args.inp):
         print(f"Graph file {args.inp} not found")
@@ -118,7 +114,6 @@ def run_stage_cluster(args):
 
 
 def run_stage_tsp(args):
-    import json
 
     if not os.path.exists(args.graph):
         print(f"Graph file {args.graph} not found")
@@ -165,7 +160,6 @@ def run_stage_tsp(args):
 
 
 def run_export(args):
-    import json
 
     # read graph, clusters, routes from archive paths by default
     graph_path = (
