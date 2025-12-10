@@ -97,15 +97,15 @@ def get_trees():
         else:
             hostpart, dbname = s, ""
         if ":" in hostpart:
-            host, port = hostpart.split(":", 1)
+            db_host, port = hostpart.split(":", 1)
             try:
                 port = int(port)
             except ValueError:
                 port = None
         else:
-            host = hostpart
+            db_host = hostpart
             port = None
-        return {"host": host, "port": port, "dbname": dbname}
+        return {"host": db_host, "port": port, "dbname": dbname}
 
     def get_conn_from_env(name):
         val = os.getenv(name)
@@ -129,12 +129,12 @@ def get_trees():
                 or os.getenv("PGPASSWORD")
                 or os.getenv("DB_PASSWORD")
             )
-            host = parsed.get("host")
-            port = parsed.get("port")
-            dbname = parsed.get("dbname")
+            db_host = parsed.get("host")
+            db_port = parsed.get("port")
+            db_name = parsed.get("dbname")
             try:
                 return psycopg2.connect(
-                    host=host, port=port, dbname=dbname, user=user, password=password
+                    host=db_host, port=db_port, dbname=db_name, user=user, password=password
                 )
             except (psycopg2.Error, OSError):
                 return None
