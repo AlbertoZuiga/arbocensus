@@ -1,8 +1,8 @@
 import math
 from typing import List
 
-
 EARTH_RADIUS_M = 6371000.0
+
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     phi1 = math.radians(lat1)

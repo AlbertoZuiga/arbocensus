@@ -9,7 +9,7 @@ import json
 import os
 import subprocess
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 
@@ -31,7 +31,7 @@ def write_json(obj: Dict[str, Any], path: str, params: Optional[Dict[str, Any]] 
     """
     _ensure_dir(path)
     meta = obj.get("__meta__", {}) if isinstance(obj, dict) else {}
-    meta.setdefault("created_at", datetime.utcnow().isoformat() + "Z")
+    meta.setdefault("created_at", datetime.now(timezone.utc).isoformat() + "Z")
     # try to get git commit sha if available
     try:
         sha = (
@@ -42,7 +42,7 @@ def write_json(obj: Dict[str, Any], path: str, params: Optional[Dict[str, Any]] 
             .strip()
         )
         meta.setdefault("pipeline_version", sha)
-    except (subprocess.CalledProcessError, OSError, FileNotFoundError):
+    except (subprocess.CalledProcessError, OSError):
         meta.setdefault("pipeline_version", None)
     if params:
         meta.setdefault("params", params)
@@ -72,7 +72,7 @@ def make_run_dir(base: str = "artifacts/runs", run_id: Optional[str] = None) -> 
     If `run_id` is None, creates one based on timestamp and uuid.
     """
     if run_id is None:
-        now = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        now = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         run_id = f"{now}-{uuid.uuid4().hex[:8]}"
     path = os.path.join(base, run_id)
     os.makedirs(path, exist_ok=True)

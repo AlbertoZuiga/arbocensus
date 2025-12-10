@@ -44,9 +44,8 @@ def filter_trees(obj: Dict[str, Any]) -> Dict[str, Any]:
         key = (round(latf, 6), round(lngf, 6))
         if key in seen:
             continue
-        if poly_coords:
-            if not point_in_poly(lngf, latf, poly_coords):
-                continue
+        if poly_coords and not point_in_poly(lngf, latf, poly_coords):
+            continue
         seen.add(key)
         out.append(
             {

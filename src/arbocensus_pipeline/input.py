@@ -205,40 +205,21 @@ def _query_dbs(
     return results
 
 
-def load_input(
-    bbox_path: str = None,
-    north: float = None,
-    south: float = None,
-    east: float = None,
-    west: float = None,
-    max_results: Optional[int] = None,
-    use_secrets: bool = False,
-    repo_root: str = None,
-):
-    """Load bbox and attempt DB queries; returns a dict with north/south/east/west/trees."""
-    if repo_root is None:
-        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    load_env(repo_root)
-
-    # default bbox path: saved_bbox.json in repo root
+def _load_bbox_from_file(bbox_path: str, repo_root: str):
+    """Load bbox object from file with fallback."""
     if not bbox_path:
         bbox_path = os.path.join(repo_root, "saved_bbox.json")
-    else:
-        if not os.path.isabs(bbox_path):
-            bbox_path = os.path.join(repo_root, bbox_path)
+    elif not os.path.isabs(bbox_path):
+        bbox_path = os.path.join(repo_root, bbox_path)
 
     bbox_obj = None
     if bbox_path and os.path.isfile(bbox_path):
         try:
             with open(bbox_path, "r", encoding="utf-8") as f:
                 bbox_obj = json.load(f)
-        except (json.JSONDecodeError, OSError, ValueError):
+        except (OSError, ValueError):
             print(f"Warning: failed to parse bbox JSON at {bbox_path}")
-    else:
-        # no bbox file found
-        pass
 
-    # fallback to repo saved_bbox
     if not bbox_obj:
         fb = os.path.join(repo_root, "saved_bbox.json")
         if os.path.isfile(fb):
@@ -246,18 +227,69 @@ def load_input(
                 with open(fb, "r", encoding="utf-8") as f:
                     bbox_obj = json.load(f)
                     print(f"Info: using fallback bbox file {fb}")
-            except (json.JSONDecodeError, OSError, ValueError):
+            except (OSError, ValueError):
                 print(f"Warning: failed to parse fallback bbox JSON at {fb}")
+    return bbox_obj
 
-    # allow explicit bbox args to override file
-    north = (
-        north if north is not None else (bbox_obj.get("north") if bbox_obj else None)
-    )
-    south = (
-        south if south is not None else (bbox_obj.get("south") if bbox_obj else None)
-    )
-    east = east if east is not None else (bbox_obj.get("east") if bbox_obj else None)
-    west = west if west is not None else (bbox_obj.get("west") if bbox_obj else None)
+
+def _resolve_bbox_coords(north, south, east, west, bbox_obj):
+    """Resolve bbox coordinates from args or bbox_obj."""
+
+    north_from_bbox = bbox_obj.get("north") if bbox_obj else None
+    north = north if north is not None else north_from_bbox
+
+    south_from_bbox = bbox_obj.get("south") if bbox_obj else None
+    south = south if south is not None else south_from_bbox
+
+    east_from_bbox = bbox_obj.get("east") if bbox_obj else None
+    east = east if east is not None else east_from_bbox
+
+    west_from_bbox = bbox_obj.get("west") if bbox_obj else None
+    west = west if west is not None else west_from_bbox
+
+    return north, south, east, west
+
+
+def _fallback_trees_from_bbox(bbox_obj, north, south, east, west):
+    """Extract trees from bbox_obj if available."""
+    trees = []
+    if bbox_obj and isinstance(bbox_obj.get("trees"), list):
+        for t in bbox_obj.get("trees"):
+            lat = t.get("lat") or t.get("latitude")
+            lng = t.get("lng") or t.get("longitude")
+            if lat is None or lng is None:
+                continue
+            if south <= lat <= north and west <= lng <= east:
+                trees.append({"lat": float(lat), "lng": float(lng), "meta": t})
+    return trees
+
+
+def load_input(
+    bbox_path: str = None,
+    max_results: Optional[int] = None,
+    use_secrets: bool = False,
+    repo_root: str = None,
+    **bbox_coords,
+):
+    """Load bbox and attempt DB queries; returns a dict with north/south/east/west/trees.
+
+    Args:
+        bbox_path: Path to bbox JSON file
+        max_results: Maximum number of results to return from DB
+        use_secrets: Whether to load secret database credentials
+        repo_root: Repository root directory
+        **bbox_coords: Bbox coordinates (north, south, east, west)
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    load_env(repo_root)
+
+    bbox_obj = _load_bbox_from_file(bbox_path, repo_root)
+    north = bbox_coords.get("north")
+    south = bbox_coords.get("south")
+    east = bbox_coords.get("east")
+    west = bbox_coords.get("west")
+    north, south, east, west = _resolve_bbox_coords(north, south, east, west, bbox_obj)
 
     if None in (north, south, east, west):
         raise ValueError(
@@ -273,21 +305,13 @@ def load_input(
     except (psycopg2.Error, OSError, ValueError, TypeError) as e:
         print("DB query stage failed:", e)
 
-    # fallback: if no trees from DB, and bbox_obj contains 'trees', filter those
-    if not trees and bbox_obj and isinstance(bbox_obj.get("trees"), list):
-        for t in bbox_obj.get("trees"):
-            lat = t.get("lat") or t.get("latitude")
-            lng = t.get("lng") or t.get("longitude")
-            if lat is None or lng is None:
-                continue
-            if south <= lat <= north and west <= lng <= east:
-                trees.append({"lat": float(lat), "lng": float(lng), "meta": t})
+    if not trees:
+        trees = _fallback_trees_from_bbox(bbox_obj, north, south, east, west)
 
-    out_obj = {
+    return {
         "north": north,
         "south": south,
         "east": east,
         "west": west,
         "trees": trees,
     }
-    return out_obj

@@ -159,108 +159,184 @@ def run_stage_tsp(args):
     print(f"Wrote routes for {len(routes)} clusters to {out_path}")
 
 
-def run_export(args):
+def _export_bbox_and_input_points(bbox_data, out_dir):
+    """Export bbox.geojson and input_points.geojson."""
+    north = bbox_data.get("north")
+    south = bbox_data.get("south")
+    east = bbox_data.get("east")
+    west = bbox_data.get("west")
+    if all(v is not None for v in [north, south, east, west]):
+        bbox_geo = export.build_bbox_geojson(north, south, east, west)
+        bbox_path = os.path.join(out_dir, "bbox.geojson")
+        export.write_geojson(bbox_geo, bbox_path)
+        print(f"Wrote {bbox_path}")
 
-    # read graph, clusters, routes from archive paths by default
-    graph_path = (
-        args.graph
-        if hasattr(args, "graph")
-        else "artifacts/runs/latest/graph/graph.json"
-    )
-    input_path = getattr(args, "input", "artifacts/runs/latest/bbox_input/input.json")
-    filtered_path = getattr(
-        args, "filtered", "artifacts/runs/latest/filter/filtered.json"
-    )
-    clusters_path = (
-        args.clusters
-        if hasattr(args, "clusters")
-        else "artifacts/runs/latest/cluster/clusters_by_censantes.json"
-    )
-    routes_path = (
-        args.routes
-        if hasattr(args, "routes")
-        else "artifacts/runs/latest/tsp/routes_by_cluster.json"
-    )
-    out_dir = getattr(args, "outdir", "artifacts/runs/latest/output")
-    os.makedirs(out_dir, exist_ok=True)
+    raw_trees = bbox_data.get("trees", [])
+    if raw_trees:
+        input_geo = export.build_points_geojson_from_trees(raw_trees)
+        input_pts_path = os.path.join(out_dir, "input_points.geojson")
+        export.write_geojson(input_geo, input_pts_path)
+        print(f"Wrote {input_pts_path}")
 
-    if not os.path.exists(graph_path):
-        print(f"Graph file {graph_path} not found")
+
+def _export_filtered_points(filtered_path, out_dir):
+    """Export filtered_points.geojson."""
+    if not os.path.exists(filtered_path):
         return
+    with open(filtered_path, "r", encoding="utf-8") as f:
+        filtered_data = json.load(f)
+    filtered_trees = filtered_data.get("trees", [])
+    if filtered_trees:
+        filtered_geo = export.build_points_geojson_from_trees(filtered_trees)
+        filtered_pts_path = os.path.join(out_dir, "filtered_points.geojson")
+        export.write_geojson(filtered_geo, filtered_pts_path)
+        print(f"Wrote {filtered_pts_path}")
 
-    with open(graph_path, "r", encoding="utf-8") as f:
-        g = json.load(f)
-    nodes = g.get("nodes", [])
 
-    # Load input for bbox
-    bbox_data = None
-    if os.path.exists(input_path):
-        with open(input_path, "r", encoding="utf-8") as f:
-            bbox_data = json.load(f)
-
-        # Generate bbox.geojson
-        north = bbox_data.get("north")
-        south = bbox_data.get("south")
-        east = bbox_data.get("east")
-        west = bbox_data.get("west")
-        if all(v is not None for v in [north, south, east, west]):
-            bbox_geo = export.build_bbox_geojson(north, south, east, west)
-            bbox_path = os.path.join(out_dir, "bbox.geojson")
-            export.write_geojson(bbox_geo, bbox_path)
-            print(f"Wrote {bbox_path}")
-
-        # Generate input_points.geojson (raw trees)
-        raw_trees = bbox_data.get("trees", [])
-        if raw_trees:
-            input_geo = export.build_points_geojson_from_trees(raw_trees)
-            input_pts_path = os.path.join(out_dir, "input_points.geojson")
-            export.write_geojson(input_geo, input_pts_path)
-            print(f"Wrote {input_pts_path}")
-
-    # Generate filtered_points.geojson
-    if os.path.exists(filtered_path):
-        with open(filtered_path, "r", encoding="utf-8") as f:
-            filtered_data = json.load(f)
-        filtered_trees = filtered_data.get("trees", [])
-        if filtered_trees:
-            filtered_geo = export.build_points_geojson_from_trees(filtered_trees)
-            filtered_pts_path = os.path.join(out_dir, "filtered_points.geojson")
-            export.write_geojson(filtered_geo, filtered_pts_path)
-            print(f"Wrote {filtered_pts_path}")
-
-    # Load clusters
+def _load_clusters(clusters_path):
+    """Load clusters and return clusters_map and clusters_list."""
     clusters_map = {}
     clusters_list = []
-    if os.path.exists(clusters_path):
-        with open(clusters_path, "r", encoding="utf-8") as f:
-            cobj = json.load(f)
-        clusters_list = cobj.get("clusters", [])
-        for c in clusters_list:
-            for i in c.get("member_node_indices", []):
-                clusters_map[i] = c.get("cluster_id")
+    if not os.path.exists(clusters_path):
+        return clusters_map, clusters_list
+    with open(clusters_path, "r", encoding="utf-8") as f:
+        cobj = json.load(f)
+    clusters_list = cobj.get("clusters", [])
+    for c in clusters_list:
+        for i in c.get("member_node_indices", []):
+            clusters_map[i] = c.get("cluster_id")
+    return clusters_map, clusters_list
 
-    # Build clusters.geojson (nodes colored by cluster)
+
+def _export_routes(routes_path, nodes, out_dir):
+    """Export routes.geojson."""
+    if not os.path.exists(routes_path):
+        return
+    with open(routes_path, "r", encoding="utf-8") as f:
+        robj = json.load(f)
+    routes = robj.get("routes", [])
+    rgeo = export.build_routes_geojson(nodes, routes)
+    rpath = os.path.join(out_dir, "routes.geojson")
+    export.write_geojson(rgeo, rpath)
+    print(f"Wrote {rpath}")
+
+
+def _get_export_paths(args):
+    """Extract all file paths from args for export stage."""
+    return {
+        "graph": getattr(args, "graph", "artifacts/runs/latest/graph/graph.json"),
+        "input": getattr(args, "input", "artifacts/runs/latest/bbox_input/input.json"),
+        "filtered": getattr(
+            args, "filtered", "artifacts/runs/latest/filter/filtered.json"
+        ),
+        "clusters": getattr(
+            args, "clusters", "artifacts/runs/latest/cluster/clusters_by_censantes.json"
+        ),
+        "routes": getattr(
+            args, "routes", "artifacts/runs/latest/tsp/routes_by_cluster.json"
+        ),
+        "out_dir": getattr(args, "outdir", "artifacts/runs/latest/output"),
+    }
+
+
+def _export_cluster_data(nodes, clusters_map, clusters_list, out_dir):
+    """Export clusters.geojson and cluster_polygons.geojson."""
     pts = export.build_points_geojson_from_nodes(nodes, clusters_map)
     pts_path = os.path.join(out_dir, "clusters.geojson")
     export.write_geojson(pts, pts_path)
     print(f"Wrote {pts_path}")
 
-    # Build cluster_polygons.geojson
     if clusters_list:
         cluster_polygons = export.build_cluster_polygons_geojson(nodes, clusters_list)
         polygons_path = os.path.join(out_dir, "cluster_polygons.geojson")
         export.write_geojson(cluster_polygons, polygons_path)
         print(f"Wrote {polygons_path}")
 
-    # routes
-    if os.path.exists(routes_path):
-        with open(routes_path, "r", encoding="utf-8") as f:
-            robj = json.load(f)
-        routes = robj.get("routes", [])
-        rgeo = export.build_routes_geojson(nodes, routes)
-        rpath = os.path.join(out_dir, "routes.geojson")
-        export.write_geojson(rgeo, rpath)
-        print(f"Wrote {rpath}")
+
+def run_export(args):
+    paths = _get_export_paths(args)
+    os.makedirs(paths["out_dir"], exist_ok=True)
+
+    if not os.path.exists(paths["graph"]):
+        print(f"Graph file {paths['graph']} not found")
+        return
+
+    with open(paths["graph"], "r", encoding="utf-8") as f:
+        nodes = json.load(f).get("nodes", [])
+
+    # Export bbox and input points
+    if os.path.exists(paths["input"]):
+        with open(paths["input"], "r", encoding="utf-8") as f:
+            _export_bbox_and_input_points(json.load(f), paths["out_dir"])
+
+    # Export filtered points
+    _export_filtered_points(paths["filtered"], paths["out_dir"])
+
+    # Load clusters and export
+    clusters_map, clusters_list = _load_clusters(paths["clusters"])
+    _export_cluster_data(nodes, clusters_map, clusters_list, paths["out_dir"])
+
+    # Export routes
+    _export_routes(paths["routes"], nodes, paths["out_dir"])
+
+
+def _setup_input_parser(subparsers):
+    """Configure input subcommand parser."""
+    si = subparsers.add_parser("input")
+    si.add_argument("--bbox", default="saved_bbox.json")
+    si.add_argument("--out", default="artifacts/runs/latest/bbox_input/input.json")
+
+
+def _setup_filter_parser(subparsers):
+    """Configure filter subcommand parser."""
+    sf = subparsers.add_parser("filter")
+    sf.add_argument("--inp", default="artifacts/runs/latest/bbox_input/input.json")
+    sf.add_argument("--out", default="artifacts/runs/latest/filter/filtered.json")
+
+
+def _setup_graph_parser(subparsers):
+    """Configure graph subcommand parser."""
+    sg = subparsers.add_parser("graph")
+    sg.add_argument("--inp", default="artifacts/runs/latest/filter/filtered.json")
+    sg.add_argument("--out", default="artifacts/runs/latest/graph/graph.json")
+
+
+def _setup_cluster_parser(subparsers):
+    """Configure cluster subcommand parser."""
+    sc = subparsers.add_parser("cluster")
+    sc.add_argument("--inp", default="artifacts/runs/latest/graph/graph.json")
+    sc.add_argument(
+        "--out", default="artifacts/runs/latest/cluster/clusters_by_censantes.json"
+    )
+    sc.add_argument("--num", type=int, default=8)
+    sc.add_argument("--time", type=float, default=1.5)
+
+
+def _setup_tsp_parser(subparsers):
+    """Configure tsp subcommand parser."""
+    st = subparsers.add_parser("tsp")
+    st.add_argument("--graph", default="artifacts/runs/latest/graph/graph.json")
+    st.add_argument(
+        "--clusters", default="artifacts/runs/latest/cluster/clusters_by_censantes.json"
+    )
+    st.add_argument("--out", default="artifacts/runs/latest/tsp/routes_by_cluster.json")
+    st.add_argument("--time-per-tree", type=float, default=1.5)
+    st.add_argument("--walking-kmh", type=float, default=5.0)
+
+
+def _setup_export_parser(subparsers):
+    """Configure export subcommand parser."""
+    se = subparsers.add_parser("export")
+    se.add_argument("--graph", default="artifacts/runs/latest/graph/graph.json")
+    se.add_argument("--input", default="artifacts/runs/latest/bbox_input/input.json")
+    se.add_argument("--filtered", default="artifacts/runs/latest/filter/filtered.json")
+    se.add_argument(
+        "--clusters", default="artifacts/runs/latest/cluster/clusters_by_censantes.json"
+    )
+    se.add_argument(
+        "--routes", default="artifacts/runs/latest/tsp/routes_by_cluster.json"
+    )
+    se.add_argument("--outdir", default="artifacts/runs/latest/output")
 
 
 def main():
@@ -278,46 +354,12 @@ def main():
     )
     sub = p.add_subparsers(dest="cmd")
 
-    si = sub.add_parser("input")
-    si.add_argument("--bbox", default="saved_bbox.json")
-    si.add_argument("--out", default="artifacts/runs/latest/bbox_input/input.json")
-
-    sf = sub.add_parser("filter")
-    sf.add_argument("--inp", default="artifacts/runs/latest/bbox_input/input.json")
-    sf.add_argument("--out", default="artifacts/runs/latest/filter/filtered.json")
-
-    sg = sub.add_parser("graph")
-    sg.add_argument("--inp", default="artifacts/runs/latest/filter/filtered.json")
-    sg.add_argument("--out", default="artifacts/runs/latest/graph/graph.json")
-
-    sc = sub.add_parser("cluster")
-    sc.add_argument("--inp", default="artifacts/runs/latest/graph/graph.json")
-    sc.add_argument(
-        "--out", default="artifacts/runs/latest/cluster/clusters_by_censantes.json"
-    )
-    sc.add_argument("--num", type=int, default=8)
-    sc.add_argument("--time", type=float, default=1.5)
-
-    st = sub.add_parser("tsp")
-    st.add_argument("--graph", default="artifacts/runs/latest/graph/graph.json")
-    st.add_argument(
-        "--clusters", default="artifacts/runs/latest/cluster/clusters_by_censantes.json"
-    )
-    st.add_argument("--out", default="artifacts/runs/latest/tsp/routes_by_cluster.json")
-    st.add_argument("--time-per-tree", type=float, default=1.5)
-    st.add_argument("--walking-kmh", type=float, default=5.0)
-
-    se = sub.add_parser("export")
-    se.add_argument("--graph", default="artifacts/runs/latest/graph/graph.json")
-    se.add_argument("--input", default="artifacts/runs/latest/bbox_input/input.json")
-    se.add_argument("--filtered", default="artifacts/runs/latest/filter/filtered.json")
-    se.add_argument(
-        "--clusters", default="artifacts/runs/latest/cluster/clusters_by_censantes.json"
-    )
-    se.add_argument(
-        "--routes", default="artifacts/runs/latest/tsp/routes_by_cluster.json"
-    )
-    se.add_argument("--outdir", default="artifacts/runs/latest/output")
+    _setup_input_parser(sub)
+    _setup_filter_parser(sub)
+    _setup_graph_parser(sub)
+    _setup_cluster_parser(sub)
+    _setup_tsp_parser(sub)
+    _setup_export_parser(sub)
 
     args = p.parse_args()
     if args.cmd == "input":

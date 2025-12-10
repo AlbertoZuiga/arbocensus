@@ -79,7 +79,7 @@ def main():
             sys.path.insert(0, src_path)
         cli = import_module("arbocensus_pipeline.cli")
         cli.main()
-    except (ImportError, ModuleNotFoundError, AttributeError) as e:
+    except (ImportError, AttributeError) as e:
         print("Error: could not run package CLI:", e)
         print(
             "Ensure the repository layout is intact (a `src/arbocensus_pipeline` package)."
