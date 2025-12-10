@@ -21,7 +21,7 @@ def run_stage_input(args):
             max_results=getattr(args, "max", None),
             use_secrets=getattr(args, "use_secrets", False),
         )
-    except Exception as e:
+    except (ValueError, OSError, RuntimeError) as e:
         print("Failed to load input:", e)
         return
     out_path = args.out

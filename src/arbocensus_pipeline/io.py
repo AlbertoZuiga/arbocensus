@@ -42,7 +42,7 @@ def write_json(obj: Dict[str, Any], path: str, params: Optional[Dict[str, Any]] 
             .strip()
         )
         meta.setdefault("pipeline_version", sha)
-    except Exception:
+    except (subprocess.CalledProcessError, OSError, FileNotFoundError):
         meta.setdefault("pipeline_version", None)
     if params:
         meta.setdefault("params", params)
@@ -82,10 +82,10 @@ def make_run_dir(base: str = "artifacts/runs", run_id: Optional[str] = None) -> 
         if os.path.islink(latest) or os.path.exists(latest):
             try:
                 os.remove(latest)
-            except Exception:
+            except OSError:
                 pass
         os.symlink(os.path.abspath(path), latest)
-    except Exception:
+    except OSError:
         # symlink may fail on some systems; ignore
         pass
     return path

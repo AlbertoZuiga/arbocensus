@@ -39,7 +39,7 @@ def filter_trees(obj: Dict[str, Any]) -> Dict[str, Any]:
         try:
             latf = float(lat)
             lngf = float(lng)
-        except Exception:
+        except (ValueError, TypeError):
             continue
         key = (round(latf, 6), round(lngf, 6))
         if key in seen:

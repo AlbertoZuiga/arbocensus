@@ -70,7 +70,7 @@ def trees():
     try:
         import psycopg2
         import psycopg2.extras
-    except Exception:
+    except ImportError:
         psycopg2 = None
 
     results = []

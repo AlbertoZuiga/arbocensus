@@ -29,7 +29,7 @@ def load_env(repo_root: str = None):
     dotenv_path = os.path.join(repo_root, ".env")
     try:
         dotenv.load_dotenv(dotenv_path)
-    except Exception:
+    except (ImportError, AttributeError):
         # optional dependency - warn but continue
         print("python-dotenv not installed; skipping .env load")
 
@@ -46,7 +46,7 @@ def _parse_jdbc(jdbc_url: str):
         host, port = hostpart.split(":", 1)
         try:
             port = int(port)
-        except Exception:
+        except (ValueError, TypeError):
             port = None
     else:
         host = hostpart
@@ -63,7 +63,7 @@ def _get_conn_from_env(name: str):
     if val.startswith("postgres://") or val.startswith("postgresql://"):
         try:
             return psycopg2.connect(dsn=val)
-        except Exception:
+        except (psycopg2.Error, OSError):
             return None
 
     parsed = _parse_jdbc(val)
@@ -81,7 +81,7 @@ def _get_conn_from_env(name: str):
             return psycopg2.connect(
                 host=host, port=port, dbname=dbname, user=user, password=password
             )
-        except Exception:
+        except (psycopg2.Error, OSError):
             return None
     return None
 
@@ -104,7 +104,7 @@ def _add_point(results, seen, lat, lng, meta=None):
         return
     try:
         key = (round(float(lat), 7), round(float(lng), 7))
-    except Exception:
+    except (ValueError, TypeError):
         return
     if key in seen:
         return
@@ -151,16 +151,16 @@ def _query_dbs(
                     row[3],
                     {"source": "arbocensus_api", "id": row[0], "tree_id": row[1]},
                 )
-        except Exception as e:
+        except (psycopg2.Error, OSError) as e:
             print("arbocensus_api query failed:", e)
         finally:
             try:
                 cur.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
             try:
                 api_conn.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
 
     main_conn = _get_conn_from_env("ARBOCENSUS_DB_URL")
@@ -190,16 +190,16 @@ def _query_dbs(
                     row[2],
                     {"source": "arbocensus", "id": row[0]},
                 )
-        except Exception as e:
+        except (psycopg2.Error, OSError) as e:
             print("arbocensus query failed:", e)
         finally:
             try:
                 cur.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
             try:
                 main_conn.close()
-            except Exception:
+            except (psycopg2.Error, AttributeError):
                 pass
 
     return results
@@ -232,7 +232,7 @@ def load_input(
         try:
             with open(bbox_path, "r", encoding="utf-8") as f:
                 bbox_obj = json.load(f)
-        except Exception:
+        except (json.JSONDecodeError, OSError, ValueError):
             print(f"Warning: failed to parse bbox JSON at {bbox_path}")
     else:
         # no bbox file found
@@ -246,7 +246,7 @@ def load_input(
                 with open(fb, "r", encoding="utf-8") as f:
                     bbox_obj = json.load(f)
                     print(f"Info: using fallback bbox file {fb}")
-            except Exception:
+            except (json.JSONDecodeError, OSError, ValueError):
                 print(f"Warning: failed to parse fallback bbox JSON at {fb}")
 
     # allow explicit bbox args to override file
@@ -270,7 +270,7 @@ def load_input(
     trees = []
     try:
         trees = _query_dbs(north, south, east, west, max_results)
-    except Exception as e:
+    except (psycopg2.Error, OSError, ValueError, TypeError) as e:
         print("DB query stage failed:", e)
 
     # fallback: if no trees from DB, and bbox_obj contains 'trees', filter those
