@@ -11,8 +11,6 @@ secrets/
 
 .DS_Store
 
-saved_bbox.json
-
 .pylintrc
 archive/
 
