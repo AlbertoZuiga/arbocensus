@@ -19,7 +19,7 @@ INPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/bbox_input/input.json"
 FILTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/filter/filtered.json"
 CLUSTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/cluster/clusters_by_censantes.json"
 ROUTES_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/tsp/routes_by_cluster.json"
-OUTPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}//output"
+OUTPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/output"
 
 def run_stage_input(args):
     # Use package helpers to load bbox and write the input JSON (with DB fallback)
