@@ -9,6 +9,7 @@ python run.py export
 ```
 
 Esto genera en `artifacts/runs/latest/06_output/`:
+
 - `bbox.geojson` - Límites del área
 - `input_points.geojson` - Árboles originales
 - `filtered_points.geojson` - Árboles filtrados

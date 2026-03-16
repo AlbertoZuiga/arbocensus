@@ -2,7 +2,7 @@
 
 ## Resumen
 
-Aplicación pequeña en Flask para seleccionar visualmente una caja delimitadora (bounding box) sobre un mapa (Google Maps (JavaScript)) y mostrar los árboles dentro del área visible o del rectángulo dibujado. Las coordenadas del rectángulo se guardan en `saved_bbox.json`. El backend puede leer directamente de las bases `arbocensus` y `arbocensus-api` (JDBC o DSN) para devolver puntos de árboles vía el endpoint `/trees`.
+Aplicación pequeña en Flask para seleccionar visualmente una caja delimitadora (bounding box) sobre un mapa Google Maps (JavaScript) y mostrar los árboles dentro del área visible o del rectángulo dibujado. Las coordenadas del rectángulo se guardan en `saved_bbox.json`. El backend puede leer directamente de las bases `arbocensus` y `arbocensus-api` (JDBC o DSN) para devolver puntos de árboles vía el endpoint `/trees`.
 
 Hechos relevantes:
 
@@ -13,6 +13,7 @@ Hechos relevantes:
 ## Rápido: instalación y ejecución
 
 1. Recomendado — Docker Compose (desarrollo):
+
 
 ```bash
 cd bbox_selector
@@ -55,7 +56,7 @@ Nota: el servidor intenta conectarse a las bases configuradas (si existen) y, si
 
 Ejemplo mínimo `.env` (no commitear):
 
-```
+```.env
 GOOGLE_API_KEY=YOUR_KEY_HERE
 HOST_PORT=5001
 ARBOCENSUS_API_DB_URL='postgres://user:pass@host:5432/db'
@@ -140,7 +141,7 @@ Las pruebas actuales comprueban que la interfaz carga, que `/save` persiste corr
 
 - No subir `.env` ni secretos al repositorio. Añade a `.gitignore`:
 
-```
+```.gitignore
 .venv
 .env
 saved_bbox.json

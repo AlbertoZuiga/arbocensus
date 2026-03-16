@@ -1,6 +1,6 @@
 # 🌳 Generador de Rutas Óptimas para Censo de Árboles
 
-**Pipeline modular — Balanceo de carga — Clustering geográfico — Optimización TSP**
+*Pipeline modular* — *Balanceo de carga* — *Clustering geográfico* — *Optimización TSP*
 
 Este proyecto implementa un sistema completo para generar rutas óptimas de censo de árboles dentro de un área urbana. El objetivo principal es distribuir equitativamente el trabajo entre múltiples censantes mediante clustering geográfico y algoritmos de optimización de rutas (TSP).
 
@@ -8,13 +8,75 @@ Este proyecto implementa un sistema completo para generar rutas óptimas de cens
 
 ## 📋 Tabla de Contenidos
 
-1. [Resumen del Proyecto](#-1-resumen-del-proyecto)
-2. [Arquitectura y Estructura](#-2-arquitectura-y-estructura)
-3. [Instalación y Configuración](#-3-instalación-y-configuración)
-4. [Uso del Sistema](#-4-uso-del-sistema)
-5. [Módulos del Pipeline](#-5-módulos-del-pipeline)
-6. [Visualización de Resultados](#-6-visualización-de-resultados)
-7. [Documentación Técnica](#-7-documentación-técnica)
+- [🌳 Generador de Rutas Óptimas para Censo de Árboles](#-generador-de-rutas-óptimas-para-censo-de-árboles)
+  - [📋 Tabla de Contenidos](#-tabla-de-contenidos)
+  - [🎯 1. Resumen del Proyecto](#-1-resumen-del-proyecto)
+    - [Objetivo Principal](#objetivo-principal)
+    - [Características Principales](#características-principales)
+    - [Flujo de Datos](#flujo-de-datos)
+  - [🏗 2. Arquitectura y Estructura](#-2-arquitectura-y-estructura)
+    - [Estructura de Directorios](#estructura-de-directorios)
+    - [Componentes Principales](#componentes-principales)
+      - [1. **Pipeline Core** (`src/arbocensus_pipeline/`)](#1-pipeline-core-srcarbocensus_pipeline)
+      - [2. **Runner Principal** (`run.py`)](#2-runner-principal-runpy)
+      - [3. **Visualizador Web** (`viewer/index.html`)](#3-visualizador-web-viewerindexhtml)
+      - [4. **Bbox Selector** (`bbox_selector/`)](#4-bbox-selector-bbox_selector)
+  - [⚙️ 3. Instalación y Configuración](#️-3-instalación-y-configuración)
+    - [Requisitos](#requisitos)
+    - [Instalación](#instalación)
+    - [Configuración de Base de Datos (Opcional)](#configuración-de-base-de-datos-opcional)
+  - [🚀 4. Uso del Sistema](#-4-uso-del-sistema)
+    - [Ejecución Rápida (Pipeline Completo)](#ejecución-rápida-pipeline-completo)
+    - [Parámetros del CLI](#parámetros-del-cli)
+      - [`input`](#input)
+      - [`filter`](#filter)
+      - [`graph`](#graph)
+      - [`cluster`](#cluster)
+      - [`tsp`](#tsp)
+      - [`export`](#export)
+  - [📦 5. Módulos del Pipeline](#-5-módulos-del-pipeline)
+    - [5.1 `input.py` — Carga de Datos](#51-inputpy--carga-de-datos)
+    - [5.2 `filter.py` — Filtrado de Árboles](#52-filterpy--filtrado-de-árboles)
+    - [5.3 `graph.py` — Construcción del Grafo](#53-graphpy--construcción-del-grafo)
+    - [5.4 `cluster.py` — Clustering Geográfico](#54-clusterpy--clustering-geográfico)
+    - [5.5 `tsp.py` — Optimización de Rutas](#55-tsppy--optimización-de-rutas)
+    - [5.6 `export.py` — Exportación GeoJSON](#56-exportpy--exportación-geojson)
+    - [5.7 `utils.py` — Utilidades Matemáticas](#57-utilspy--utilidades-matemáticas)
+    - [5.8 `io.py` — Gestión de I/O y Metadata](#58-iopy--gestión-de-io-y-metadata)
+    - [5.9 `cli.py` — Interfaz de Línea de Comandos](#59-clipy--interfaz-de-línea-de-comandos)
+  - [🗺 6. Visualización de Resultados](#-6-visualización-de-resultados)
+    - [Viewer Web (`viewer/index.html`)](#viewer-web-viewerindexhtml)
+  - [📡 7. Bbox Selector (Herramienta Auxiliar)](#-7-bbox-selector-herramienta-auxiliar)
+    - [Descripción](#descripción)
+    - [Instalación y Uso](#instalación-y-uso)
+      - [**Opción 1: Docker Compose (recomendado)**](#opción-1-docker-compose-recomendado)
+      - [**Opción 2: Local**](#opción-2-local)
+  - [🔬 8. Documentación Técnica](#-8-documentación-técnica)
+    - [8.1 Algoritmos Implementados](#81-algoritmos-implementados)
+      - [Clustering: Recursive Split](#clustering-recursive-split)
+      - [TSP: Nearest Neighbor + 2-opt](#tsp-nearest-neighbor--2-opt)
+    - [8.2 Métricas de Distancia](#82-métricas-de-distancia)
+      - [Haversine (Implementación Actual - P0)](#haversine-implementación-actual---p0)
+      - [Rutas Caminables Reales (Roadmap P1)](#rutas-caminables-reales-roadmap-p1)
+    - [8.3 Cálculo de Tiempos](#83-cálculo-de-tiempos)
+    - [8.4 Formato de Datos](#84-formato-de-datos)
+      - [Input JSON (`01_input.json`)](#input-json-01_inputjson)
+      - [Graph JSON (`03_graph.json`)](#graph-json-03_graphjson)
+      - [Routes JSON (`routes_by_cluster.json`)](#routes-json-routes_by_clusterjson)
+    - [8.5 Optimizaciones Futuras](#85-optimizaciones-futuras)
+      - [Min-Max Global](#min-max-global)
+      - [Cache de Distancias](#cache-de-distancias)
+      - [Paralelización](#paralelización)
+    - [8.6 Testing y Validación](#86-testing-y-validación)
+  - [📚 9. Referencias y Recursos](#-9-referencias-y-recursos)
+    - [Algoritmos](#algoritmos)
+    - [Herramientas](#herramientas)
+    - [Librerías Python](#librerías-python)
+  - [🤝 10. Contribución](#-10-contribución)
+    - [Estructura de Commits](#estructura-de-commits)
+    - [Workflow](#workflow)
+  - [📄 11. Licencia](#-11-licencia)
+  - [📞 12. Contacto y Soporte](#-12-contacto-y-soporte)
 
 ---
 
@@ -40,7 +102,7 @@ Generar rutas óptimas para el censo de árboles urbanos, distribuyendo equitati
 
 ### Flujo de Datos
 
-```
+```bash
 Input (JSON/DB) → Filtrado → Grafo → Clustering → TSP → Export (GeoJSON)
      ↓               ↓          ↓         ↓         ↓          ↓
 01_input.json → 02_filtered → 03_graph → 04_clusters → 05_routes → 06_output/
@@ -52,7 +114,7 @@ Input (JSON/DB) → Filtrado → Grafo → Clustering → TSP → Export (GeoJSO
 
 ### Estructura de Directorios
 
-```
+```bash
 mi_proyecto/
 ├── src/
 │   └── arbocensus_pipeline/          # Package principal del pipeline
@@ -214,11 +276,11 @@ python run.py export --graph artifacts/runs/demo/03_graph.json \
   --outdir artifacts/runs/demo/06_output --run-id demo
 
 # 7. Abrir viewer
-open viewer/index.html
-# (o servir con: python -m http.server 8000)
+python -m http.server 8000
+# open viewer/index.html # O abrir directamente (si el navegador lo permite)
 ```
 
-### Parametros del CLI
+### Parámetros del CLI
 
 #### `input`
 
@@ -542,7 +604,7 @@ App Flask para seleccionar áreas geográficas y exportar datos de árboles.
 
 ### Instalación y Uso
 
-**Opción 1: Docker Compose (recomendado)**
+#### **Opción 1: Docker Compose (recomendado)**
 
 ```bash
 cd bbox_selector
@@ -550,7 +612,7 @@ HOST_PORT=5001 docker compose up --build
 # Abrir: http://localhost:5001
 ```
 
-**Opción 2: Local**
+#### **Opción 2: Local**
 
 ```bash
 cd bbox_selector
@@ -588,9 +650,9 @@ python run.py input --bbox bbox_selector/saved_bbox.json
 
 ---
 
-## 🔬 7. Documentación Técnica
+## 🔬 8. Documentación Técnica
 
-### 7.1 Algoritmos Implementados
+### 8.1 Algoritmos Implementados
 
 #### Clustering: Recursive Split
 
@@ -646,13 +708,13 @@ python run.py input --bbox bbox_selector/saved_bbox.json
 
 ---
 
-### 7.2 Métricas de Distancia
+### 8.2 Métricas de Distancia
 
 #### Haversine (Implementación Actual - P0)
 
 **Fórmula:**
 
-```
+```bash
 a = sin²(Δφ/2) + cos φ₁ × cos φ₂ × sin²(Δλ/2)
 c = 2 × atan2(√a, √(1−a))
 d = R × c
@@ -703,11 +765,11 @@ Donde:
 
 ---
 
-### 7.3 Cálculo de Tiempos
+### 8.3 Cálculo de Tiempos
 
 **Fórmula del tiempo total por censante:**
 
-```
+```bash
 T_total = T_servicio + T_ruta
 
 Donde:
@@ -729,7 +791,7 @@ T_ruta = distancia_metros × (60 min/h) / (1000 m/km) / velocidad_kmh
 
 ---
 
-### 7.4 Formato de Datos
+### 8.4 Formato de Datos
 
 #### Input JSON (`01_input.json`)
 
@@ -795,7 +857,7 @@ T_ruta = distancia_metros × (60 min/h) / (1000 m/km) / velocidad_kmh
 
 ---
 
-### 7.5 Optimizaciones Futuras
+### 8.5 Optimizaciones Futuras
 
 #### Min-Max Global
 
@@ -857,7 +919,7 @@ with Pool(8) as p:
 
 ---
 
-### 7.6 Testing y Validación
+### 8.6 Testing y Validación
 
 **Checklist de validación:**
 
@@ -884,36 +946,6 @@ def test_tour_is_valid():
     assert len(route) == 4
     assert len(set(route)) == 4
 ```
-
----
-
-## 🚧 8. Roadmap y Próximas Mejoras
-
-### Versión Actual (P0) ✅
-
-- [x] Pipeline completo con 6 etapas
-- [x] Clustering recursivo geográfico
-- [x] TSP con NN + 2-opt
-- [x] Exportación GeoJSON
-- [x] Viewer web interactivo
-- [x] Soporte para DB PostgreSQL
-
-### Próxima Versión (P1) 🔜
-
-- [ ] Integración OSRM para distancias reales
-- [ ] Cache persistente de distancias
-- [ ] Optimización min-max con LNS
-- [ ] Tests automatizados (pytest)
-- [ ] CI/CD con GitHub Actions
-- [ ] Documentación API (Sphinx)
-
-### Versión Futura (P2) 💡
-
-- [ ] Interfaz web completa (React/Vue)
-- [ ] Exportación a formatos móviles (GPX, KML)
-- [ ] Comparación de múltiples estrategias
-- [ ] Visualización 3D de rutas
-- [ ] API REST para integración externa
 
 ---
 
@@ -944,7 +976,7 @@ def test_tour_is_valid():
 
 ### Estructura de Commits
 
-```
+```bash
 tipo(scope): descripción breve
 
 Descripción detallada (opcional)

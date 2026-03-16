@@ -7,7 +7,8 @@ Este directorio (`db_schemas`) contiene los esquemas de tres bases de datos util
 **URL de conexión:**  
 `ARBOCENSUS_DB_URL=jdbc:postgresql://cdsk218k5hcni6.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/d95dvg1udv7qqn`
 
-**Archivo:**  
+**Archivo:**
+
 - `arbocensus_schemas.csv`
 
 Este esquema corresponde al proyecto original de Arbocensus, que continúa en funcionamiento y mantiene información activa en su base de datos.
@@ -19,7 +20,8 @@ Este esquema corresponde al proyecto original de Arbocensus, que continúa en fu
 **URL de conexión:**  
 `ARBOCENSUS_API_DB_URL=jdbc:postgresql://arbocensus-dev.cwvglxcrsikm.us-east-2.rds.amazonaws.com:5432/arbocensus_api_dev`
 
-**Archivo:**  
+**Archivo:**
+
 - `arbocensus_api_schemas.csv`
 
 Este esquema representa la versión actualizada del proyecto, también en ejecución y con datos activos.
@@ -28,10 +30,12 @@ Este esquema representa la versión actualizada del proyecto, también en ejecuc
 
 ## 3. Arbocensus Gamification (Integración Opcional)
 
-**URL de conexión:**  
+**URL de conexión:**
+
 `ARBOCENSUS_GAMIFICATION_DB_URL=jdbc:postgresql://arbocensus-dev.cwvglxcrsikm.us-east-2.rds.amazonaws.com:5432/arbocensus_gamification_dev`
 
-**Archivo:**  
+**Archivo:**
+
 - `arbocensus_gamification_schemas.csv`
 
 Esta tercera integración permite asignar puntos a participantes dentro de una dinámica de gamificación basada en el escaneo de árboles.
