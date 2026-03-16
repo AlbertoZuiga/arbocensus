@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Visualizador de Rutas</title>
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -71,6 +71,13 @@
       display: flex; justify-content: space-between; align-items: center;
       cursor: pointer; margin-bottom: 10px;
     }
+    .header-btn {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      text-align: left;
+    }
     .header h1 { font-size: 16px; margin: 0; color: #333; }
     
     label { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 5px 0; cursor: pointer; }
@@ -101,12 +108,12 @@
 
   <div class="controls-container">
     <div class="panel" id="mainPanel">
-      <div class="header" onclick="togglePanel()">
+      <button type="button" class="header header-btn" id="panelToggle" aria-controls="panelContent" aria-expanded="true">
         <h1>🛠️ Debugger</h1>
         <span id="toggleIcon">−</span>
-      </div>
+      </button>
       
-      <div class="content">
+      <div class="content" id="panelContent">
         <strong>Capas</strong>
         <label><input type="checkbox" id="cb_bbox" checked> BBox</label>
         <label><input type="checkbox" id="cb_input"> Input</label>
@@ -119,19 +126,20 @@
 
         <strong>Etapas</strong>
         <div class="btn-grid">
-          <button class="stage-btn" onclick="setStage(1, this)">1. Input</button>
-          <button class="stage-btn" onclick="setStage(2, this)">2. Filtro</button>
-          <button class="stage-btn" onclick="setStage(3, this)">3. Grafo</button>
-          <button class="stage-btn" onclick="setStage(4, this)">4. Clusters</button>
-          <button class="stage-btn active" onclick="setStage(5, this)">5. Final</button>
+          <button type="button" class="stage-btn" data-stage="1">1. Input</button>
+          <button type="button" class="stage-btn" data-stage="2">2. Filtro</button>
+          <button type="button" class="stage-btn" data-stage="3">3. Grafo</button>
+          <button type="button" class="stage-btn" data-stage="4">4. Clusters</button>
+          <button type="button" class="stage-btn active" data-stage="5">5. Final</button>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
+  <script type="module">
     // 1. INICIALIZAR MAPA
+    const L = globalThis.L;
     const map = L.map('map', { zoomControl: false }).setView([-33.45, -70.66], 13);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     
@@ -165,7 +173,9 @@
         const data = await res.json();
         layers[key] = L.geoJSON(data, options);
         if (document.getElementById('cb_' + key).checked) layers[key].addTo(map);
-      } catch (e) { console.log(`No se cargó ${file}`); }
+      } catch (error) {
+        console.error(`No se cargó ${file}`, error);
+      }
     }
 
     async function init() {
@@ -227,6 +237,12 @@
       cb.addEventListener('change', e => toggleLayer(e.target.id.replace('cb_', ''), e.target.checked));
     });
 
+    document.querySelectorAll('.stage-btn').forEach(btn => {
+      btn.addEventListener('click', () => setStage(Number(btn.dataset.stage), btn));
+    });
+
+    document.getElementById('panelToggle').addEventListener('click', togglePanel);
+
     function setStage(n, btn) {
       document.querySelectorAll('.stage-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -241,12 +257,15 @@
     }
 
     function togglePanel() {
-      document.getElementById('mainPanel').classList.toggle('collapsed');
+      const panel = document.getElementById('mainPanel');
+      panel.classList.toggle('collapsed');
       const icon = document.getElementById('toggleIcon');
-      icon.innerText = icon.innerText === '−' ? '+' : '−';
+      const expanded = !panel.classList.contains('collapsed');
+      document.getElementById('panelToggle').setAttribute('aria-expanded', String(expanded));
+      icon.innerText = expanded ? '−' : '+';
     }
 
-    init();
+    await init();
   </script>
 </body>
 </html>
