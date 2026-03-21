@@ -33,7 +33,7 @@ def nn_route(
     unvisited.remove(start)
     curr = start
     while unvisited:
-        nxt = min(unvisited, key=lambda x: distances[curr][x])
+        nxt = min(unvisited, key=lambda x, curr=curr: distances[curr][x])
         route.append(nxt)
         unvisited.remove(nxt)
         curr = nxt
@@ -116,7 +116,7 @@ def estimate_euclidean_tsp(nodes: List[dict]) -> float:
         curr_lat, curr_lng = coords[curr_idx]
         nxt_idx = min(
             unvisited,
-            key=lambda idx: (coords[idx][0] - curr_lat) ** 2
+            key=lambda idx, curr_lat=curr_lat, curr_lng=curr_lng: (coords[idx][0] - curr_lat) ** 2
             + (coords[idx][1] - curr_lng) ** 2,
         )
         nxt_lat, nxt_lng = coords[nxt_idx]
