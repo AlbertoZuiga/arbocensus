@@ -2,7 +2,11 @@
 
 from typing import Any, Dict, List
 
-from .utils import nn_tour, tour_length, two_opt
+from .utils import (
+    nn_tour,
+    tour_length,
+    two_opt,
+)
 
 
 def compute_route_for_cluster(
@@ -12,6 +16,12 @@ def compute_route_for_cluster(
     walking_speed_kmh: float,
     haversine_multiplier: float = 1.0,
 ) -> Dict[str, Any]:
+    """
+    Compute route for a cluster using open-path TSP (Phase 1).
+    
+    The route is an open path: censante starts at one end and finishes at another,
+    without returning to the start point.
+    """
     if not members:
         return {
             "route": [],
