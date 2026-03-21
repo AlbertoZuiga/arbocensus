@@ -34,9 +34,9 @@ El pipeline actual (P0) implementa una versión simplificada e incorrecta del VR
 El archivo `pseudo-codigo.md` contiene cuatro versiones del algoritmo (V0–V3). La implementación debe seguir **V3** fielmente. Las funciones clave descritas en V3 son:
 
 - `find_routes` — Orquestador principal
-- `compute_open_route_time_with_cache` — Evaluación de tiempo con cache
-- `nearest_neighbor_open_path` — TSP heurístico abierto
-- `two_opt_open_path` — Mejora local en path abierto
+- `compute_route_time_with_cache` — Evaluación de tiempo con cache
+- `nearest_neighbor_path` — TSP heurístico abierto
+- `two_opt_path` — Mejora local en path abierto
 - `k_means_constrained` — Clustering balanceado
 - `build_kd_tree` / `build_sparse_graph_from_kdtree` — Grafo sparse
 - `relocate_nodes_between_routes` / `swap_nodes_between_routes` — Búsqueda local inter-ruta
@@ -117,9 +117,9 @@ Ninguno.
   - Este valor se usa en V3 para estimar `n_routes` inicial
 
 - [x] **1.5** Actualizar `compute_route_for_cluster` en `tsp.py`
-  - Reemplazar `nn_route` por `nn_open_path`
-  - Reemplazar `route_length` por `route_length_open`
-  - Reemplazar `two_opt` por `two_opt_open`
+  - Reemplazar `nn_route` por `nn_path`
+  - Reemplazar `route_length` por `route_length`
+  - Reemplazar `two_opt` por `two_opt`
   - La firma y estructura del dict retornado se mantienen idénticas
   - Los campos `route_meters` y `route_minutes` ahora reflejan camino abierto
 
@@ -130,20 +130,20 @@ Ninguno.
 ### Notas de implementación
 
 - Las funciones legacy (`route_length`, `nn_route`, `two_opt`) **no se eliminan**. Se mantienen para backward compatibility con el subcomando `tsp` existente.
-- Los tests de Phase 7 deben verificar que para un path lineal de 3 nodos `[A, B, C]`, `route_length_open` retorna `d(A,B) + d(B,C)` y **no** `d(A,B) + d(B,C) + d(C,A)`.
+- Los tests de Phase 7 deben verificar que para un path lineal de 3 nodos `[A, B, C]`, `route_length` retorna `d(A,B) + d(B,C)` y **no** `d(A,B) + d(B,C) + d(C,A)`.
 
 ### Criterios de aceptación
 
-1. `route_length_open([0, 1, 2], mat)` retorna la suma de solo 2 aristas (no 3)
-2. `nn_open_path` produce una ruta válida que visita todos los nodos exactamente una vez
-3. `two_opt_open` produce rutas de longitud abierta ≤ la del input
+1. `route_length([0, 1, 2], mat)` retorna la suma de solo 2 aristas (no 3)
+2. `nn_path` produce una ruta válida que visita todos los nodos exactamente una vez
+3. `two_opt` produce rutas de longitud abierta ≤ la del input
 4. `estimate_euclidean_tsp` retorna un valor en km mayor que 0 para un conjunto de nodos no trivial
 5. `compute_route_for_cluster` genera rutas abiertas (campo `route_meters` < valor anterior cerrado para mismos datos)
 6. El viewer muestra rutas sin segmento de cierre
 
 ### Riesgos
 
-- **Bajo**: Cambio puramente algorítmico sin dependencias externas. El mayor riesgo es un off-by-one en los rangos de iteración de `two_opt_open`.
+- **Bajo**: Cambio puramente algorítmico sin dependencias externas. El mayor riesgo es un off-by-one en los rangos de iteración de `two_opt`.
 
 ---
 
@@ -168,36 +168,36 @@ Ninguno.
 
 ### Tareas
 
-- [ ] **2.1** Agregar la función `build_kd_tree(nodes)` en `graph.py`
+- [x] **2.1** Agregar la función `build_kd_tree(nodes)` en `graph.py`
   - Recibe `nodes: List[Dict]` con campos `lat`, `lng`
   - Crea un array numpy con las coordenadas `[[lat, lng], ...]`
   - Retorna un objeto `scipy.spatial.KDTree` construido sobre ese array
   - Importar `scipy.spatial.KDTree`; agregar `scipy` a `requirements.txt` si no existe
 
-- [ ] **2.2** Agregar la función `build_sparse_graph_from_kdtree(nodes, kd_tree, k_neighbors=12)` en `graph.py`
+- [x] **2.2** Agregar la función `build_sparse_graph_from_kdtree(nodes, kd_tree, k_neighbors=12)` en `graph.py`
   - Para cada nodo `i`, consultar los `k_neighbors` vecinos más cercanos en el KD-tree
   - Calcular la distancia real Haversine para cada par (no la distancia euclidiana del KD-tree, que opera en grados)
   - Retornar un `dict[int, list[tuple[int, float]]]`: adjacency list donde la clave es el node_id y el valor es lista de `(neighbor_id, distance_meters)`
   - Asegurar simetría: si `i` es vecino de `j`, entonces `j` debe ser vecino de `i`
   - Nota: `KDTree.query(k=k_neighbors+1)` retorna el nodo mismo como primer vecino; descartarlo
 
-- [ ] **2.3** Agregar función `sparse_distance(graph, i, j)` en `utils.py`
+- [x] **2.3** Agregar función `sparse_distance(graph, i, j)` en `utils.py`
   - Busca la distancia entre nodos `i` y `j` en el grafo sparse
   - Si la arista `(i, j)` existe, retorna su peso
   - Si no existe (nodos no son vecinos en el grafo), calcula Haversine on-the-fly como fallback
   - Esto permite que NN y 2-opt funcionen con el grafo sparse sin requerir la matriz completa
 
-- [ ] **2.4** Agregar variantes de las funciones TSP que operen sobre el grafo sparse
-  - `nn_open_path_sparse(start, nodes, sparse_graph, all_nodes)` — usa `sparse_distance` como lookup de costo
-  - `two_opt_open_sparse(route, sparse_graph, all_nodes, max_iter=100)` — evalúa movimientos usando `sparse_distance`
-  - `route_length_open_sparse(route, sparse_graph, all_nodes)` — suma costos usando `sparse_distance`
+- [x] **2.4** Agregar variantes de las funciones TSP que operen sobre el grafo sparse
+  - `nn_path_sparse(start, nodes, sparse_graph, all_nodes)` — usa `sparse_distance` como lookup de costo
+  - `two_opt_sparse(route, sparse_graph, all_nodes, max_iter=100)` — evalúa movimientos usando `sparse_distance`
+  - `route_length_sparse(route, sparse_graph, all_nodes)` — suma costos usando `sparse_distance`
   - El parámetro `all_nodes` es la lista completa de nodos (para poder calcular Haversine como fallback)
 
-- [ ] **2.5** Marcar `compute_matrix` como deprecated
+- [x] **2.5** Marcar `compute_matrix` como deprecated
   - Agregar un docstring que indique: `"Deprecated: use build_kd_tree + build_sparse_graph for O(n·k) performance"`
   - No eliminar la función (el subcomando `graph` del CLI la usa)
 
-- [ ] **2.6** Agregar `scipy` a `requirements.txt` (si no está ya)
+- [x] **2.6** Agregar `scipy` a `requirements.txt` (si no está ya)
 
 ### Notas de implementación
 
@@ -211,7 +211,7 @@ Ninguno.
 2. `build_sparse_graph` retorna un dict con exactamente `len(nodes)` claves
 3. Cada nodo tiene entre `k_neighbors` y `2 * k_neighbors` vecinos (por simetría, puede tener más que k)
 4. `sparse_distance(graph, i, j)` retorna el mismo valor que `haversine_m(nodes[i], nodes[j])` para pares que existen en el grafo
-5. `nn_open_path_sparse` produce la misma ruta que `nn_open_path` con la matriz densa para k suficientemente grande (k ≥ n-1)
+5. `nn_path_sparse` produce la misma ruta que `nn_path` con la matriz densa para k suficientemente grande (k ≥ n-1)
 6. El uso de memoria del grafo sparse es < 5% del uso de la matriz densa para n=1000
 
 ### Riesgos
@@ -348,8 +348,8 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Si la key no existe o la request falla, retornar fallback Haversine × 1.3 / walking_speed. Log warning.
   - **Nunca llamar a Google dentro del loop de optimización** — solo en validación final (Phase 6 controla esto)
 
-- [ ] **4.4** Implementar la función `compute_open_route_time(route, f_route_time, cache, t_per_tree)` en `routing.py`
-  - Implementación directa de `compute_open_route_time_with_cache` del pseudocódigo V3
+- [ ] **4.4** Implementar la función `compute_route_time(route, f_route_time, cache, t_per_tree)` en `routing.py`
+  - Implementación directa de `compute_route_time_with_cache` del pseudocódigo V3
   - `route: List[Dict]` — lista ordenada de nodos (cada uno con `lat`, `lng`)
   - `f_route_time` — función callable que toma `(origin_dict, dest_dict, cache)` y retorna duración en segundos
   - Itera sobre pares consecutivos `route[i] → route[i+1]` (path abierto: no cierra)
@@ -386,7 +386,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
 2. `osm_route_time` retorna un valor > 0 para dos puntos dentro de Santiago
 3. `osm_route_time` retorna fallback Haversine cuando OSRM no responde
 4. `google_route_time` retorna un valor > 0 con una API key válida
-5. `compute_open_route_time` retorna la suma correcta de travel time + service time
+5. `compute_route_time` retorna la suma correcta de travel time + service time
 6. La segunda llamada a `osm_route_time` con los mismos puntos no genera una HTTP request (cache hit)
 7. El cache es thread-safe (no falla con acceso concurrente)
 
@@ -537,8 +537,8 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
     - `sparse_graph = build_sparse_graph_from_kdtree(locations, kd_tree, k_neighbors)`
   - **Step 3 — Loop principal** (`for iteration in range(max_iterations):`)
     - **3.1** `clusters = k_means_constrained(locations, n_clusters=n_routes)`
-    - **3.2** Para cada cluster: `route = nearest_neighbor_open_path(...)` → `route = two_opt_open_path(...)`
-    - **3.3** Evaluar duración por ruta con `compute_open_route_time_with_cache(..., f_osm_route_time, osm_cache, t_per_tree)`
+    - **3.2** Para cada cluster: `route = nearest_neighbor_path(...)` → `route = two_opt_path(...)`
+    - **3.3** Evaluar duración por ruta con `compute_route_time_with_cache(..., f_osm_route_time, osm_cache, t_per_tree)`
     - **3.4** Aplicar `relocate_nodes_between_routes(..., upper_bound)` y luego `swap_nodes_between_routes(..., upper_bound)`
     - **3.5** Recalcular duraciones OSM después de ajustes
     - **3.6** Métricas:
@@ -562,7 +562,7 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
       - Aplicar regla de amortiguación cuando cambia el sentido de ajuste (`last_direction`)
   - **Step 4 — Validación final con Google**
     - Elegir `final_routes = best_feasible_solution if best_feasible_solution else best_overall_solution`
-    - Para cada ruta en `final_routes`: llamar `compute_open_route_time_with_cache(..., f_google_route_time, google_cache, t_per_tree)`
+    - Para cada ruta en `final_routes`: llamar `compute_route_time_with_cache(..., f_google_route_time, google_cache, t_per_tree)`
     - Guardar caches a disco
     - Retornar `List[Tuple[route_nodes, duration_google]]`
 
@@ -646,7 +646,7 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
 
 ### Archivos a crear
 
-- `tests/test_utils_open_path.py`
+- `tests/test_utils_path.py`
 - `tests/test_sparse_graph.py`
 - `tests/test_clustering.py`
 - `tests/test_routing.py`
@@ -666,13 +666,13 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
   - `sample_distance_matrix(nodes)` — genera matriz Haversine densa para esos nodos
   - `sample_sparse_graph(nodes)` — genera grafo sparse con k=6
 
-- [ ] **7.2** Tests para Phase 1 — `tests/test_utils_open_path.py`
-  - `test_route_length_open_does_not_close` — verifica que no suma arista de cierre
-  - `test_route_length_open_single_node` — retorna 0
-  - `test_route_length_open_two_nodes` — retorna una sola arista
-  - `test_nn_open_path_visits_all` — todos los nodos presentes en output
-  - `test_nn_open_path_no_duplicates` — no repite nodos
-  - `test_two_opt_open_improves_or_maintains` — longitud abierta resultante ≤ input
+- [ ] **7.2** Tests para Phase 1 — `tests/test_utils_path.py`
+  - `test_route_length_does_not_close` — verifica que no suma arista de cierre
+  - `test_route_length_single_node` — retorna 0
+  - `test_route_length_two_nodes` — retorna una sola arista
+  - `test_nn_path_visits_all` — todos los nodos presentes en output
+  - `test_nn_path_no_duplicates` — no repite nodos
+  - `test_two_opt_improves_or_maintains` — longitud abierta resultante ≤ input
   - `test_estimate_euclidean_tsp_positive` — retorna km > 0
   - `test_estimate_euclidean_tsp_single_node` — retorna 0
 
@@ -695,7 +695,7 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
   - `test_routing_cache_put_and_get` — almacena y recupera correctamente
   - `test_routing_cache_miss` — retorna None para key inexistente
   - `test_routing_cache_save_load_disk` — persiste a JSON y recarga
-  - `test_compute_open_route_time_sum` — suma correcta de travel + service
+  - `test_compute_route_time_sum` — suma correcta de travel + service
   - `test_osm_route_time_with_mock` — usar `unittest.mock.patch` para simular respuesta OSRM
   - `test_osm_route_time_fallback_on_error` — retorna Haversine fallback si OSRM falla
   - `test_google_route_time_with_mock` — simular respuesta Google
