@@ -12,95 +12,100 @@ from . import input as inp
 from . import io as io_mod
 from . import tsp
 
+BBOX_DEFAULT_PATH = "saved_bbox.json"
 RUNS_DEFAULT_DIR = "artifacts/runs"
 LATEST_DEFAULT_DIR = f"{RUNS_DEFAULT_DIR}/latest"
-GRAPH_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/graph/graph.json"
 INPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/bbox_input/input.json"
+GRAPH_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/graph/graph.json"
 FILTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/filter/filtered.json"
 CLUSTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/cluster/clusters_by_censantes.json"
 ROUTES_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/tsp/routes_by_cluster.json"
 OUTPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/output"
 
-def run_stage_input(args):
-    # Use package helpers to load bbox and write the input JSON (with DB fallback)
+
+def resolve_output_path(args, default_path, stage_subdir=None):
+    out_path = getattr(args, "out", default_path)
+    run_id = getattr(args, "run_id", None)
+    outdir = getattr(args, "outdir", None)
+
+    if run_id or outdir:
+        run_dir = io_mod.make_run_dir(
+            base=outdir if outdir else RUNS_DEFAULT_DIR,
+            run_id=run_id,
+        )
+        target_dir = os.path.join(run_dir, stage_subdir) if stage_subdir else run_dir
+        os.makedirs(target_dir, exist_ok=True)
+        return os.path.join(target_dir, os.path.basename(out_path))
+
+    parent = os.path.dirname(out_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    return out_path
+
+def run_stage_input(args=None):
+    bbox_path = getattr(args, "bbox", BBOX_DEFAULT_PATH)
+    max_results = getattr(args, "max", None)
+    use_secrets = bool(getattr(args, "use_secrets", False))
+
     try:
         out_obj = inp.load_input(
-            bbox_path=args.bbox,
-            max_results=getattr(args, "max", None),
-            use_secrets=getattr(args, "use_secrets", False),
+            bbox_path=bbox_path,
+            max_results=max_results,
+            use_secrets=use_secrets,
         )
     except (ValueError, OSError, RuntimeError) as e:
         print("Failed to load input:", e)
         return
-    out_path = args.out
-    if getattr(args, "run_id", None) or getattr(args, "outdir", None):
-        run_dir = io_mod.make_run_dir(
-            base=args.outdir if getattr(args, "outdir", None) else RUNS_DEFAULT_DIR,
-            run_id=getattr(args, "run_id", None),
-        )
-        # preserve stage subdir structure
-        stage_sub = os.path.join(run_dir, "bbox_input")
-        os.makedirs(stage_sub, exist_ok=True)
-        out_path = os.path.join(stage_sub, os.path.basename(args.out))
-    io_mod.write_json(out_obj, out_path, params={"bbox": args.bbox})
+
+    out_path = resolve_output_path(args, INPUT_DEFAULT_PATH, stage_subdir="bbox_input")
+    io_mod.write_json(out_obj, out_path, params={"bbox": bbox_path})
     print(f'Wrote {len(out_obj.get("trees", []))} trees to {out_path}')
 
 
-def run_stage_filter(args):
-    # Read input JSON, apply in-package filter and write result
-    if not os.path.exists(args.inp):
-        print(f"Input file {args.inp} not found")
+def run_stage_filter(args=None):
+    inp_path = getattr(args, "inp", INPUT_DEFAULT_PATH)
+    if not os.path.exists(inp_path):
+        print(f"Input file {inp_path} not found")
         return
-    with open(args.inp, "r", encoding="utf-8") as f:
+    with open(inp_path, "r", encoding="utf-8") as f:
         obj = json.load(f)
     res = flt.filter_trees(obj)
-    out_path = args.out
-    if getattr(args, "run_id", None) or getattr(args, "outdir", None):
-        run_dir = io_mod.make_run_dir(
-            base=args.outdir if getattr(args, "outdir", None) else RUNS_DEFAULT_DIR,
-            run_id=getattr(args, "run_id", None),
-        )
-        out_path = os.path.join(run_dir, os.path.basename(args.out))
-    io_mod.write_json(res, out_path, params={"source": args.inp})
+    out_path = resolve_output_path(args, FILTER_DEFAULT_PATH, stage_subdir="filter")
+    io_mod.write_json(res, out_path, params={"source": inp_path})
     print(f"Wrote filtered output to {out_path}")
 
 
-def run_stage_graph(args):
-    if not os.path.exists(args.inp):
-        print(f"Input file {args.inp} not found")
+def run_stage_graph(args=None):
+    inp_path = getattr(args, "inp", FILTER_DEFAULT_PATH)
+    if not os.path.exists(inp_path):
+        print(f"Input file {inp_path} not found")
         return
-    with open(args.inp, "r", encoding="utf-8") as f:
+    with open(inp_path, "r", encoding="utf-8") as f:
         obj = json.load(f)
     trees = obj.get("trees", [])
     nodes = graph.build_nodes(trees)
     mat = graph.compute_matrix(nodes)
     out_obj = {"nodes": nodes, "distances": mat}
-    out_path = args.out
-    if getattr(args, "run_id", None) or getattr(args, "outdir", None):
-        run_dir = io_mod.make_run_dir(
-            base=args.outdir if getattr(args, "outdir", None) else RUNS_DEFAULT_DIR,
-            run_id=getattr(args, "run_id", None),
-        )
-        out_path = os.path.join(run_dir, os.path.basename(args.out))
+    out_path = resolve_output_path(args, GRAPH_DEFAULT_PATH, stage_subdir="graph")
     io_mod.write_json(
-        out_obj, out_path, params={"source": args.inp, "nodes": len(nodes)}
+        out_obj, out_path, params={"source": inp_path, "nodes": len(nodes)}
     )
     print(f"Wrote graph to {out_path} (nodes: {len(nodes)})")
 
 
-def run_stage_cluster(args):
-
-    if not os.path.exists(args.inp):
-        print(f"Graph file {args.inp} not found")
+def run_stage_cluster(args=None):
+    inp_path = getattr(args, "inp", GRAPH_DEFAULT_PATH)
+    if not os.path.exists(inp_path):
+        print(f"Graph file {inp_path} not found")
         return
-    with open(args.inp, "r", encoding="utf-8") as f:
+    with open(inp_path, "r", encoding="utf-8") as f:
         g = json.load(f)
     nodes = g.get("nodes", [])
     n = len(nodes)
     if n == 0:
         print("No nodes in graph")
         return
-    desired_k = max(1, int(args.num))
+    desired_k = max(1, int(getattr(args, "num", 8)))
     max_size = math.ceil(n / desired_k)
     clusters_list = cluster.make_clusters_recursive(nodes, max_size=max_size)
     clusters_out = []
@@ -108,30 +113,26 @@ def run_stage_cluster(args):
         clusters_out.append(
             {"cluster_id": cid, "member_node_indices": members, "size": len(members)}
         )
-    out_path = args.out
-    if getattr(args, "run_id", None) or getattr(args, "outdir", None):
-        run_dir = io_mod.make_run_dir(
-            base=args.outdir if getattr(args, "outdir", None) else RUNS_DEFAULT_DIR,
-            run_id=getattr(args, "run_id", None),
-        )
-        out_path = os.path.join(run_dir, os.path.basename(args.out))
+    out_path = resolve_output_path(args, CLUSTER_DEFAULT_PATH, stage_subdir="cluster")
     io_mod.write_json(
         {"clusters": clusters_out}, out_path, params={"k_target": desired_k}
     )
     print(f"Wrote {len(clusters_out)} clusters to {out_path}")
 
 
-def run_stage_tsp(args):
+def run_stage_tsp(args=None):
+    graph_path = getattr(args, "graph", GRAPH_DEFAULT_PATH)
+    clusters_path = getattr(args, "clusters", CLUSTER_DEFAULT_PATH)
 
-    if not os.path.exists(args.graph):
-        print(f"Graph file {args.graph} not found")
+    if not os.path.exists(graph_path):
+        print(f"Graph file {graph_path} not found")
         return
-    if not os.path.exists(args.clusters):
-        print(f"Clusters file {args.clusters} not found")
+    if not os.path.exists(clusters_path):
+        print(f"Clusters file {clusters_path} not found")
         return
-    with open(args.graph, "r", encoding="utf-8") as f:
+    with open(graph_path, "r", encoding="utf-8") as f:
         g = json.load(f)
-    with open(args.clusters, "r", encoding="utf-8") as f:
+    with open(clusters_path, "r", encoding="utf-8") as f:
         cobj = json.load(f)
     distances = g.get("distances", [])
     clusters = cobj.get("clusters") or cobj.get("cluster_list") or []
@@ -152,13 +153,7 @@ def run_stage_tsp(args):
         res["cluster_id"] = c.get("cluster_id")
         res["size"] = len(members)
         routes.append(res)
-    out_path = args.out
-    if getattr(args, "run_id", None) or getattr(args, "outdir", None):
-        run_dir = io_mod.make_run_dir(
-            base=args.outdir if getattr(args, "outdir", None) else RUNS_DEFAULT_DIR,
-            run_id=getattr(args, "run_id", None),
-        )
-        out_path = os.path.join(run_dir, os.path.basename(args.out))
+    out_path = resolve_output_path(args, ROUTES_DEFAULT_PATH, stage_subdir="tsp")
     io_mod.write_json(
         {"routes": routes},
         out_path,
@@ -234,15 +229,9 @@ def _get_export_paths(args):
     return {
         "graph": getattr(args, "graph", GRAPH_DEFAULT_PATH),
         "input": getattr(args, "input", INPUT_DEFAULT_PATH),
-        "filtered": getattr(
-            args, "filtered", FILTER_DEFAULT_PATH
-        ),
-        "clusters": getattr(
-            args, "clusters", CLUSTER_DEFAULT_PATH
-        ),
-        "routes": getattr(
-            args, "routes", ROUTES_DEFAULT_PATH
-        ),
+        "filtered": getattr(args, "filtered", FILTER_DEFAULT_PATH),
+        "clusters": getattr(args, "clusters", CLUSTER_DEFAULT_PATH),
+        "routes": getattr(args, "routes", ROUTES_DEFAULT_PATH),
         "out_dir": getattr(args, "outdir", OUTPUT_DEFAULT_PATH),
     }
 
@@ -261,7 +250,7 @@ def _export_cluster_data(nodes, clusters_map, clusters_list, out_dir):
         print(f"Wrote {polygons_path}")
 
 
-def run_export(args):
+def run_export(args=None):
     paths = _get_export_paths(args)
     os.makedirs(paths["out_dir"], exist_ok=True)
 
@@ -272,26 +261,30 @@ def run_export(args):
     with open(paths["graph"], "r", encoding="utf-8") as f:
         nodes = json.load(f).get("nodes", [])
 
-    # Export bbox and input points
     if os.path.exists(paths["input"]):
         with open(paths["input"], "r", encoding="utf-8") as f:
             _export_bbox_and_input_points(json.load(f), paths["out_dir"])
 
-    # Export filtered points
     _export_filtered_points(paths["filtered"], paths["out_dir"])
 
-    # Load clusters and export
     clusters_map, clusters_list = _load_clusters(paths["clusters"])
     _export_cluster_data(nodes, clusters_map, clusters_list, paths["out_dir"])
 
-    # Export routes
     _export_routes(paths["routes"], nodes, paths["out_dir"])
 
+
+def run_all():
+    run_stage_input()
+    run_stage_filter()
+    run_stage_graph()
+    run_stage_cluster()
+    run_stage_tsp()
+    run_export()
 
 def _setup_input_parser(subparsers):
     """Configure input subcommand parser."""
     si = subparsers.add_parser("input")
-    si.add_argument("--bbox", default="saved_bbox.json")
+    si.add_argument("--bbox", default=BBOX_DEFAULT_PATH)
     si.add_argument("--out", default=INPUT_DEFAULT_PATH)
 
 
@@ -349,7 +342,6 @@ def _setup_export_parser(subparsers):
 
 def main():
     p = argparse.ArgumentParser()
-    # global options controlling output/run directories
     p.add_argument(
         "--outdir",
         default=None,
@@ -382,6 +374,9 @@ def main():
         run_stage_tsp(args)
     elif args.cmd == "export":
         run_export(args)
+    elif args.cmd is None:
+        print("No command specified, running all stages sequentially")
+        run_all()
     else:
         p.print_help()
 
