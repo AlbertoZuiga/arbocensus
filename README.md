@@ -45,12 +45,7 @@ Este proyecto implementa un sistema completo para generar rutas óptimas de cens
     - [5.9 `cli.py` — Interfaz de Línea de Comandos](#59-clipy--interfaz-de-línea-de-comandos)
   - [🗺 6. Visualización de Resultados](#-6-visualización-de-resultados)
     - [Viewer Web (`viewer/index.html`)](#viewer-web-viewerindexhtml)
-  - [📡 7. Bbox Selector (Herramienta Auxiliar)](#-7-bbox-selector-herramienta-auxiliar)
-    - [Descripción](#descripción)
-    - [Instalación y Uso](#instalación-y-uso)
-      - [**Opción 1: Docker Compose (recomendado)**](#opción-1-docker-compose-recomendado)
-      - [**Opción 2: Local**](#opción-2-local)
-  - [🔬 8. Documentación Técnica](#-8-documentación-técnica)
+  - [🔬 7. Documentación Técnica](#-7-documentación-técnica)
     - [8.1 Algoritmos Implementados](#81-algoritmos-implementados)
       - [Clustering: Recursive Split](#clustering-recursive-split)
       - [TSP: Nearest Neighbor + 2-opt](#tsp-nearest-neighbor--2-opt)
@@ -67,15 +62,14 @@ Este proyecto implementa un sistema completo para generar rutas óptimas de cens
       - [Cache de Distancias](#cache-de-distancias)
       - [Paralelización](#paralelización)
     - [8.6 Testing y Validación](#86-testing-y-validación)
-  - [📚 9. Referencias y Recursos](#-9-referencias-y-recursos)
+  - [📚 8. Referencias y Recursos](#-8-referencias-y-recursos)
     - [Algoritmos](#algoritmos)
     - [Herramientas](#herramientas)
     - [Librerías Python](#librerías-python)
-  - [🤝 10. Contribución](#-10-contribución)
+  - [🤝 9. Contribución](#-9-contribución)
     - [Estructura de Commits](#estructura-de-commits)
     - [Workflow](#workflow)
-  - [📄 11. Licencia](#-11-licencia)
-  - [📞 12. Contacto y Soporte](#-12-contacto-y-soporte)
+  - [📞 10. Contacto y Soporte](#-10-contacto-y-soporte)
 
 ---
 
@@ -276,39 +270,39 @@ python -m http.server 5500
 
 #### `input`
 
-- `--bbox PATH`: Ruta al JSON con bbox y árboles
-- `--out PATH`: Archivo de salida
+- `--bbox PATH`: Ruta al JSON con bbox y árboles (default: `saved_bbox.json`)
+- `--out PATH`: Archivo de salida (default: `input.json`)
 - `--run-id ID`: Identificador de ejecución (crea `artifacts/runs/<ID>/`)
 - `--max N`: Máximo de árboles a cargar desde DB (default: 500)
 
 #### `filter`
 
-- `--inp PATH`: Archivo de entrada (01_input.json)
-- `--out PATH`: Archivo de salida
+- `--inp PATH`: Archivo de entrada (default: `input.json`)
+- `--out PATH`: Archivo de salida (default: `filtered.json`)
 
 #### `graph`
 
-- `--inp PATH`: Archivo filtrado (02_filtered.json)
-- `--out PATH`: Archivo de salida (03_graph.json)
+- `--inp PATH`: Archivo filtrado (default: `filtered.json`)
+- `--out PATH`: Archivo de salida (default: `graph.json`)
 
 #### `cluster`
 
-- `--inp PATH`: Grafo de entrada
-- `--out PATH`: Archivo de salida
+- `--inp PATH`: Grafo de entrada (default: `graph.json`)
+- `--out PATH`: Archivo de salida (default: `clusters_by_censantes.json`)
 - `--num N`: Número de censantes (default: 8)
 
 #### `tsp`
 
-- `--inp PATH`: Grafo
-- `--clusters PATH`: Archivo de clusters
-- `--out PATH`: Archivo de salida
+- `--inp PATH`: Grafo (default: `graph.json`)
+- `--clusters PATH`: Archivo de clusters (default: `clusters_by_censantes.json`)
+- `--out PATH`: Archivo de salida (default: `tsp.json`)
 - `--time-per-tree MINS`: Tiempo de censo por árbol (default: 5 min)
 - `--walking-speed KMH`: Velocidad caminata (default: 4 km/h)
 
 #### `export`
 
-- `--graph PATH`: Grafo con nodos
-- `--routes PATH`: Rutas TSP
+- `--graph PATH`: Grafo con nodos (default: `graph.json`)
+- `--routes PATH`: Rutas TSP (default: `cluster_by_censantes.json`)
 - `--outdir DIR`: Directorio de salida para GeoJSON
 
 ---
@@ -333,7 +327,7 @@ python -m http.server 5500
    - Consulta tablas de árboles y deduplica por ID
 3. Retorna dict con: `{"north", "south", "east", "west", "trees": [...]}`
 
-**Output:** `01_bbox_input/01_input.json`
+**Output:** `input.json`
 
 ---
 
@@ -350,7 +344,7 @@ python -m http.server 5500
 - Descarta árboles sin coordenadas válidas
 - (Opcional) Verifica que el punto esté dentro del polígono geográfico
 
-**Output:** `02_filtered.json`
+**Output:** `filtered.json`
 
 ---
 
@@ -367,7 +361,7 @@ python -m http.server 5500
 - Matriz simétrica: `M[i][j] = M[j][i]`
 - Complejidad: O(n²) para n árboles
 
-**Output:** `03_graph.json`
+**Output:** `graph.json`
 
 ```json
 {
@@ -521,12 +515,12 @@ python -m http.server 5500
 
 | Comando   | Descripción               | Inputs                | Output                       |
 | --------- | ------------------------- | --------------------- | ---------------------------- |
-| `input`   | Carga datos desde file/DB | `--bbox`, `--max`     | `01_input.json`              |
-| `filter`  | Filtra y deduplica        | `--inp`               | `02_filtered.json`           |
-| `graph`   | Construye grafo           | `--inp`               | `03_graph.json`              |
+| `input`   | Carga datos desde file/DB | `--bbox`, `--max`     | `input.json`                 |
+| `filter`  | Filtra y deduplica        | `--inp`               | `filtered.json`              |
+| `graph`   | Construye grafo           | `--inp`               | `graph.json`                 |
 | `cluster` | Crea clusters             | `--inp`, `--num`      | `clusters_by_censantes.json` |
 | `tsp`     | Resuelve rutas            | `--inp`, `--clusters` | `routes_by_cluster.json`     |
-| `export`  | Genera GeoJSON            | `--graph`, `--routes` | `06_output/*.geojson`        |
+| `export`  | Genera GeoJSON            | `--graph`, `--routes` | `output/*.geojson`           |
 
 **Flags globales:**
 
@@ -542,7 +536,7 @@ python -m http.server 5500
 **Características:**
 
 - ✅ Mapa Leaflet con tiles CartoDB Voyager
-- ✅ Carga automática desde `artifacts/runs/latest/06_output/`
+- ✅ Carga automática desde `artifacts/runs/latest/output/`
 - ✅ Controles de capa para cada etapa
 - ✅ Popups con información de nodos y rutas
 - ✅ Presets por etapa (botones 1-5)
@@ -561,12 +555,13 @@ python -m http.server 5500
 **Uso:**
 
 ```bash
+# Opción 2: Servir con HTTP server
+python -m http.server 5500
+
 # Opción 1: Abrir directamente (si el navegador permite file://)
 open viewer/index.html
 
-# Opción 2: Servir con HTTP server
-python -m http.server 8000
-# Luego abrir: http://localhost:8000/viewer/index.html
+# Luego abrir: http://localhost:5500/viewer/index.html
 ```
 
 **Presets de etapas:**
@@ -579,70 +574,7 @@ python -m http.server 8000
 
 ---
 
-## 📡 7. Bbox Selector (Herramienta Auxiliar)
-
-### Descripción
-
-App Flask para seleccionar áreas geográficas y exportar datos de árboles.
-
-**Ubicación:** `bbox_selector/`
-
-**Funcionalidades:**
-
-- Mapa interactivo Google Maps para dibujar bounding boxes
-- Consulta directa a base de datos PostgreSQL
-- Exportación de JSON compatible con el pipeline
-- Modo Docker y modo local
-
-### Instalación y Uso
-
-#### **Opción 1: Docker Compose (recomendado)**
-
-```bash
-cd bbox_selector
-HOST_PORT=5001 docker compose up --build
-# Abrir: http://localhost:5001
-```
-
-#### **Opción 2: Local**
-
-```bash
-cd bbox_selector
-./run.sh --local
-# Abrir: http://localhost:5000
-```
-
-**Configuración:**
-
-- Requiere `GOOGLE_API_KEY` en `bbox_selector/.env`
-- Credenciales de DB: `ARBOCENSUS_DB_URL` y `ARBOCENSUS_API_DB_URL`
-- Soporta formatos: `postgres://...` y `jdbc:postgresql://...`
-
-**Output:**
-Genera archivo JSON con:
-
-```json
-{
-  "polygon": {
-    "type": "Polygon",
-    "coordinates": [[[lng, lat], [lng, lat], ...]]
-  },
-  "trees": [
-    {"id": 123, "lat": -33.45, "lng": -70.66},
-    ...
-  ]
-}
-```
-
-Este archivo puede usarse directamente con:
-
-```bash
-./run.py input --bbox bbox_selector/saved_bbox.json
-```
-
----
-
-## 🔬 8. Documentación Técnica
+## 🔬 7. Documentación Técnica
 
 ### 8.1 Algoritmos Implementados
 
@@ -941,7 +873,7 @@ def test_tour_is_valid():
 
 ---
 
-## 📚 9. Referencias y Recursos
+## 📚 8. Referencias y Recursos
 
 ### Algoritmos
 
@@ -964,7 +896,7 @@ def test_tour_is_valid():
 
 ---
 
-## 🤝 10. Contribución
+## 🤝 9. Contribución
 
 ### Estructura de Commits
 
@@ -972,8 +904,6 @@ def test_tour_is_valid():
 tipo(scope): descripción breve
 
 Descripción detallada (opcional)
-
-Closes #123
 ```
 
 **Tipos:**
@@ -995,17 +925,11 @@ Closes #123
 
 ---
 
-## 📄 11. Licencia
+## 📞 10. Contacto y Soporte
 
-[Especificar licencia del proyecto]
-
----
-
-## 📞 12. Contacto y Soporte
-
-- **Issues:** [GitHub Issues](https://github.com/tu-repo/issues)
+- **Issues:** [GitHub Issues](https://github.com/AlbertoZuiga/arbocensus/issues)
 - **Documentación:** Este README y archivos en `docs/`
-- **Email:** [tu-email@ejemplo.com]
+- **Email:** [azuiga@miuandes.cl]
 
 ---
 
