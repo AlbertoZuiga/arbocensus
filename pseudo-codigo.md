@@ -316,7 +316,7 @@ def find_routes(
     # -------------------------------------------------
     walking_speed = 4.5 # km/h
     
-    # Estimación de tiempo de viaje (Euclidiana * factor de tortuosidad urbana)
+    # Estimación de tiempo de viaje
     total_euclidean_distance = estimate_euclidean_tsp(locations)
     travel_time_estimate = total_euclidean_distance / walking_speed
     
