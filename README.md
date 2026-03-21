@@ -215,18 +215,14 @@ App Flask para:
 
 ```bash
 # Clonar repositorio
-git clone <repo-url>
-cd mi_proyecto
+git clone https://github.com/AlbertoZuiga/arbocensus
+cd arbocensus
 
 # Crear entorno virtual
 python3 -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 
 # Instalar dependencias
-pip install psycopg2-binary python-dotenv
-
-# (Opcional) Para bbox_selector
-cd bbox_selector
 pip install -r requirements.txt
 ```
 
