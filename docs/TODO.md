@@ -17,10 +17,10 @@ El pipeline actual (P0) implementa una versión simplificada e incorrecta del VR
 | Distancias              | Matriz densa Haversine O(n²)                         | Grafo sparse KD-tree O(n·k)                                        |
 | Evaluación              | Una sola pasada Haversine                            | Multi-fidelidad: Euclidiana → OSM → Google                         |
 | Routing API             | Ninguna                                              | OSRM (loop de optimización) + Google Directions (validación final) |
-| Control loop            | Inexistente (`--num` fijo)                           | Ajuste dinámico de `n_routes` con criterio de convergencia         |
+| Control loop            | Inexistente (`--num` fijo)                           | Ajuste dinámico de `n_routes` con banda objetivo + histéresis      |
 | Optimización inter-ruta | Ninguna                                              | Operadores relocate + swap entre rutas                             |
 | Tiempo de servicio      | Calculado pero no influye en balanceo                | Incluido en duración total; impacta el ajuste de `n_routes`        |
-| Buffer de seguridad     | Ninguno                                              | 15% de descuento sobre `max_duration`                              |
+| Restricciones de tiempo | Ninguno                                              | Banda `lower/upper` + `hard_max_duration` opcional                 |
 
 ### Módulos que se mantienen sin cambios
 
@@ -56,7 +56,7 @@ src/arbocensus_pipeline/
 ├── graph.py         # modificado: agregar build_kd_tree, build_sparse_graph (Phase 2)
 ├── input.py         # sin cambios
 ├── io.py            # sin cambios
-├── optimize.py      # NUEVO: relocate, swap, find_routes_v3 (Phases 5 + 6)
+├── optimize.py      # NUEVO: relocate, swap, find_routes (V3) (Phases 5 + 6)
 ├── routing.py       # NUEVO: clientes OSM/Google, RoutingCache (Phase 4)
 ├── tsp.py           # modificado: usar open-path variants (Phase 1)
 └── utils.py         # modificado: agregar funciones open-path y estimate (Phase 1)
@@ -174,7 +174,7 @@ Ninguno.
   - Retorna un objeto `scipy.spatial.KDTree` construido sobre ese array
   - Importar `scipy.spatial.KDTree`; agregar `scipy` a `requirements.txt` si no existe
 
-- [ ] **2.2** Agregar la función `build_sparse_graph(nodes, kd_tree, k_neighbors=12)` en `graph.py`
+- [ ] **2.2** Agregar la función `build_sparse_graph_from_kdtree(nodes, kd_tree, k_neighbors=12)` en `graph.py`
   - Para cada nodo `i`, consultar los `k_neighbors` vecinos más cercanos en el KD-tree
   - Calcular la distancia real Haversine para cada par (no la distancia euclidiana del KD-tree, que opera en grados)
   - Retornar un `dict[int, list[tuple[int, float]]]`: adjacency list donde la clave es el node_id y el valor es lista de `(neighbor_id, distance_meters)`
@@ -203,7 +203,7 @@ Ninguno.
 
 - El KD-tree opera en coordenadas (lat, lng) que son grados, no metros. Los vecinos más cercanos en grados son una buena aproximación de los vecinos más cercanos en metros para zonas geográficas pequeñas (una ciudad). Para mayor precisión, se podrían proyectar a UTM, pero no es necesario para este proyecto.
 - El parámetro `k_neighbors=12` es el default de V3. Debe ser configurable desde el CLI.
-- El grafo sparse se construye **una sola vez** al inicio de `find_routes_v3` y se reutiliza en todas las iteraciones.
+- El grafo sparse se construye **una sola vez** al inicio de `find_routes` y se reutiliza en todas las iteraciones.
 
 ### Criterios de aceptación
 
@@ -428,12 +428,12 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Si es un nodo intermedio: savings = `sparse_distance(graph, route[idx-1], route[idx]) + sparse_distance(graph, route[idx], route[idx+1]) - sparse_distance(graph, route[idx-1], route[idx+1])`
   - Retorna `float` negativo (ahorro) o positivo (la ruta se acorta)
 
-- [ ] **5.3** Implementar `relocate_nodes_between_routes(routes, durations, sparse_graph, all_nodes, safe_max_duration)` en `optimize.py`
+- [ ] **5.3** Implementar `relocate_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Identifica la ruta con mayor duración (ruta fuente)
   - Para cada nodo en la ruta fuente:
     - Calcula el ahorro de removerlo
     - Para cada otra ruta (ruta destino):
-      - Si `durations[destino] + insertion_cost < safe_max_duration`:
+      - Si `durations[destino] + insertion_cost < upper_bound`:
         - Encuentra la mejor posición de inserción (menor `insertion_cost`)
         - Si el movimiento reduce `max(durations)`, ejecutarlo
   - Aplica movimientos greedily (uno por iteración)
@@ -441,19 +441,19 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Retorna `(routes_modified, durations_modified)` — las listas actualizadas
   - **No recalcular duración completa con OSM en cada movimiento**: usar los deltas de costo en sparse_graph como aproximación
 
-- [ ] **5.4** Implementar `swap_nodes_between_routes(routes, durations, sparse_graph, all_nodes, safe_max_duration)` en `optimize.py`
+- [ ] **5.4** Implementar `swap_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Para cada par de rutas `(r1, r2)`:
     - Para cada nodo `a` en `r1` y cada nodo `b` en `r2`:
       - Calcular delta de remover `a` de `r1` e insertar `b` en su lugar
       - Calcular delta de remover `b` de `r2` e insertar `a` en su lugar
-      - Si ambas rutas resultantes están bajo `safe_max_duration` y `max(duration_r1_new, duration_r2_new) < max(duration_r1, duration_r2)`:
+      - Si ambas rutas resultantes están bajo `upper_bound` y `max(duration_r1_new, duration_r2_new) < max(duration_r1, duration_r2)`:
         - Ejecutar el swap
   - Aplica swaps greedily
   - Repetir hasta que no se encuentre mejora o se alcancen 50 iteraciones
   - Retorna `(routes_modified, durations_modified)`
   - Optimización: solo evaluar swaps entre la ruta más larga y las demás (reduce de O(n²·m²) a O(n·m²))
 
-- [ ] **5.5** Implementar función wrapper `local_search_inter_route(routes, durations, sparse_graph, all_nodes, safe_max_duration)` en `optimize.py`
+- [ ] **5.5** Implementar función wrapper `local_search_inter_route(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Ejecuta `relocate_nodes_between_routes` seguido de `swap_nodes_between_routes`
   - Este es el punto de entrada que usará el orquestador V3
   - Retorna `(routes, durations)` mejorados
@@ -470,7 +470,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
 2. `swap_nodes_between_routes` reduce (o no cambia) la duración máxima
 3. Después de ambos operadores, todas las rutas siguen conteniendo los mismos nodos que antes (conservación)
 4. Ningún nodo aparece en más de una ruta después de la optimización
-5. Si todas las rutas están bajo `safe_max_duration`, los operadores retornan sin cambios
+5. Si todas las rutas están bajo `upper_bound`, los operadores retornan sin cambios
 6. Para un caso de 2 rutas donde una tiene 80% de carga y otra 120%, el relocate mueve nodos hasta equilibrar
 
 ### Riesgos
@@ -484,7 +484,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
 
 ### Objetivo
 
-Implementar la función principal `find_routes_v3` que orquesta todo el pipeline V3: estimación inicial → loop de optimización (clustering + TSP + evaluación OSM + local search + ajuste dinámico) → validación final con Google. También agregar el subcomando `route` al CLI.
+Implementar la función principal `find_routes` (V3) que orquesta todo el pipeline: estimación inicial → loop de optimización (clustering + open-path TSP + evaluación OSM + ajustes inter-ruta + ajuste dinámico de `n_routes` con histéresis) → validación final con Google. También agregar el subcomando `route` al CLI.
 
 ### Complejidad: Media
 
@@ -492,83 +492,110 @@ Implementar la función principal `find_routes_v3` que orquesta todo el pipeline
 
 ### Archivos a modificar
 
-- `src/arbocensus_pipeline/optimize.py` (agregar `find_routes_v3`)
+- `src/arbocensus_pipeline/optimize.py` (agregar `find_routes` V3; opcional alias backward-compatible `find_routes_v3`)
 - `src/arbocensus_pipeline/cli.py` (agregar subcomando `route`)
 
 ### Tareas
 
-- [ ] **6.1** Implementar `find_routes_v3` en `optimize.py`
+- [ ] **6.1** Implementar `find_routes` en `optimize.py` (V3)
   - Firma exacta:
 
     ```python
-    def find_routes_v3(
-        nodes: List[Dict],
-        max_duration_per_route: float,  # en segundos
-        t_per_tree: float,              # en segundos
-        f_osm_route_time: Callable,     # (origin, dest, cache) -> float
-        f_google_route_time: Callable,  # (origin, dest, cache) -> float
-        tolerance: float = 0.1,
+    def find_routes(
+        locations,
+        expected_duration_per_route,
+        t_per_tree,
+        f_google_route_time,
+        f_osm_route_time,
+        lower_factor=0.90,
+        upper_factor=1.10,
         k_neighbors: int = 12,
-        max_iterations: int = 10,
+        max_iterations: int = 14,
+        hysteresis_rounds: int = 2,
+        hard_max_duration: Optional[float] = None,
     ) -> List[Tuple[List[Dict], float]]:
     ```
 
   - **Step 0 — Inicialización**
     - Crear `osm_cache = RoutingCache()` y `google_cache = RoutingCache()`
-    - Intentar cargar caches previos de disco (si existen en el run directory)
-    - `best_solution = None`, `best_score = float('inf')`
-    - `safe_max_duration = max_duration_per_route * 0.85`
+    - Calcular `lower_bound = expected_duration_per_route * lower_factor`
+    - Calcular `upper_bound = expected_duration_per_route * upper_factor`
+    - Calcular `hard_upper_limit = hard_max_duration or upper_bound`
+    - Inicializar mejores soluciones:
+      - `best_feasible_solution = None`, `best_feasible_score = inf`
+      - `best_overall_solution = None`, `best_overall_gap = inf`
+    - Inicializar histéresis: `over_counter`, `under_counter`, `last_direction`
   - **Step 1 — Estimación inicial**
-    - `total_euclidean_km = estimate_euclidean_tsp(nodes)` (de Phase 1)
-    - `walking_speed_kmh = 4.5`
-    - `travel_time_s = (total_euclidean_km / walking_speed_kmh) * 3600`
-    - `service_time_s = len(nodes) * t_per_tree`
-    - `total_time_s = travel_time_s + service_time_s`
-    - `n_routes = math.ceil(total_time_s / safe_max_duration)`
+    - `total_euclidean_km = estimate_euclidean_tsp(locations)`
+    - `walking_speed_kmh = 4.0`
+    - `travel_time_estimate = (total_euclidean_km / walking_speed_kmh) * 3600`
+    - `service_time_estimate = len(locations) * t_per_tree`
+    - `total_time_estimate = travel_time_estimate + service_time_estimate`
+    - `n_routes = max(1, ceil(total_time_estimate / expected_duration_per_route))`
   - **Step 2 — Grafo sparse**
-    - `kd_tree = build_kd_tree(nodes)`
-    - `sparse_graph = build_sparse_graph(nodes, kd_tree, k_neighbors)`
+    - `kd_tree = build_kd_tree(locations)`
+    - `sparse_graph = build_sparse_graph_from_kdtree(locations, kd_tree, k_neighbors)`
   - **Step 3 — Loop principal** (`for iteration in range(max_iterations):`)
-    - **3.1** `clusters = k_means_constrained(nodes, n_clusters=n_routes)`
-    - **3.2** Para cada cluster: `route = nn_open_path_sparse(...)` → `route = two_opt_open_sparse(...)` → guardar
-    - **3.3** Para cada ruta: `duration = compute_open_route_time(route_nodes, f_osm_route_time, osm_cache, t_per_tree)`
-    - **3.4** `routes, durations = local_search_inter_route(routes, durations, sparse_graph, nodes, safe_max_duration)`
-    - **3.5** Recalcular duraciones OSM después del local search
-    - **3.6** Calcular métricas: `max_route = max(durations)`, `avg_route = mean(durations)`, `balance_score = max_route - min(durations)`, `score = max_route + 0.25 * balance_score`
-    - **3.7** Si `score < best_score`: guardar `best_solution = routes`, `best_score = score`
-    - **3.8** `deviation = (max_route - safe_max_duration) / safe_max_duration`; si `deviation <= tolerance`: break
-    - **3.9** Ajuste de `n_routes`: si `avg_route > safe_max_duration`: `factor = avg_route / safe_max_duration`, `n_routes += max(1, ceil(n_routes * (factor - 1)))`; else: `n_routes += 1`
+    - **3.1** `clusters = k_means_constrained(locations, n_clusters=n_routes)`
+    - **3.2** Para cada cluster: `route = nearest_neighbor_open_path(...)` → `route = two_opt_open_path(...)`
+    - **3.3** Evaluar duración por ruta con `compute_open_route_time_with_cache(..., f_osm_route_time, osm_cache, t_per_tree)`
+    - **3.4** Aplicar `relocate_nodes_between_routes(..., upper_bound)` y luego `swap_nodes_between_routes(..., upper_bound)`
+    - **3.5** Recalcular duraciones OSM después de ajustes
+    - **3.6** Métricas:
+      - `max_route = max(durations)`, `min_route = min(durations)`, `avg_route = mean(durations)`
+      - `spread = max_route - min_route`
+      - `over_gap = max(0, max_route - upper_bound)`
+      - `under_gap = max(0, lower_bound - min_route)`
+      - `band_gap = over_gap + under_gap`
+      - `feasible_score = avg_route + 0.25 * spread`
+    - **3.7** Guardar mejores soluciones:
+      - Si `band_gap < best_overall_gap`: actualizar `best_overall_solution`
+      - Si solución factible (`max_route <= upper_bound`, `min_route >= lower_bound`, `max_route <= hard_upper_limit`) y `feasible_score` mejora: actualizar `best_feasible_solution`
+    - **3.8** Convergencia: si factible, `break`
+    - **3.9** Ajuste de `n_routes` con histéresis:
+      - Si `max_route > upper_bound`: acumular `over_counter`
+      - Elif `min_route < lower_bound`: acumular `under_counter`
+      - Si `over_counter >= hysteresis_rounds`: aumentar `n_routes`
+        - Si `avg_route > upper_bound`: aumento proporcional `ceil(n_routes * (avg_route/expected_duration_per_route - 1))`
+        - Si no, aumentar en `+1`
+      - Elif `under_counter >= hysteresis_rounds`: disminuir `n_routes` en `1` (mínimo `1`)
+      - Aplicar regla de amortiguación cuando cambia el sentido de ajuste (`last_direction`)
   - **Step 4 — Validación final con Google**
-    - Para cada ruta en `best_solution`: llamar `compute_open_route_time(route, f_google_route_time, google_cache, t_per_tree)`
+    - Elegir `final_routes = best_feasible_solution if best_feasible_solution else best_overall_solution`
+    - Para cada ruta en `final_routes`: llamar `compute_open_route_time_with_cache(..., f_google_route_time, google_cache, t_per_tree)`
     - Guardar caches a disco
     - Retornar `List[Tuple[route_nodes, duration_google]]`
 
 - [ ] **6.2** Implementar función de logging para el loop
   - Al inicio de cada iteración: `print(f"Iteration {iteration+1}/{max_iterations}: n_routes={n_routes}")`
-  - Al final de cada iteración: `print(f"  max_route={max_route:.0f}s, avg={avg_route:.0f}s, deviation={deviation:.2%}, score={score:.0f}")`
-  - Al hacer break por convergencia: `print(f"Converged at iteration {iteration+1}")`
-  - Al terminar sin converger: `print(f"Warning: did not converge after {max_iterations} iterations, returning best solution with score={best_score:.0f}")`
+  - Al final de cada iteración: `print(f"  max={max_route:.0f}s min={min_route:.0f}s avg={avg_route:.0f}s band_gap={band_gap:.0f}s")`
+  - Al hacer break por convergencia: `print(f"Converged at iteration {iteration+1} (feasible solution found)")`
+  - Al terminar sin converger: `print(f"Warning: did not converge after {max_iterations} iterations, returning best available solution")`
 
 - [ ] **6.3** Agregar el subcomando `route` a `cli.py`
   - Registrar un nuevo subparser `route` en la función `main()`
   - Argumentos:
-    - `--inp` (default: `FILTER_DEFAULT_PATH`) — archivo de entrada con árboles filtrados
+    - `--inp` (default: `FILTER_DEFAULT_PATH`) — archivo de entrada
     - `--out` (default: `artifacts/runs/latest/route/routes.json`) — archivo de salida
     - `--max-duration` (float, required) — duración máxima por ruta en **minutos**
-    - `--time-per-tree` (float, default: `5.0`) — tiempo por árbol en **minutos**
-    - `--tolerance` (float, default: `0.1`) — tolerancia de convergencia (fracción)
+    - `--time-per-tree` (float, default: `2.0`) — tiempo por foto en **minutos**
+    - `--lower-factor` (float, default: `0.90`) — factor de banda inferior
+    - `--upper-factor` (float, default: `1.10`) — factor de banda superior
     - `--k-neighbors` (int, default: `12`) — vecinos para el grafo sparse
-    - `--max-iter` (int, default: `10`) — iteraciones máximas
-    - `--osm-url` (str, default: `None`) — URL base de OSRM (si None, usa público)
-    - `--use-google` (flag, default: `False`) — si activado, ejecuta validación con Google
-    - `--cache-dir` (str, default: `None`) — directorio para persistir caches de routing
+    - `--max-iter` (int, default: `14`) — iteraciones máximas
+    - `--hysteresis-rounds` (int, default: `2`) — rondas para confirmar ajuste de `n_routes`
+    - `--hard-max-duration` (float, default: `None`) — límite duro absoluto en **minutos** (opcional)
+    - `--osm-url` (str, default: `None`)
+    - `--use-google` (flag, default: `False`)
+    - `--cache-dir` (str, default: `None`)
   - Función `run_stage_route(args)`:
     - Cargar árboles desde `args.inp` (JSON con key `trees`)
     - Construir `nodes` con `graph.build_nodes(trees)`
-    - Convertir duraciones a segundos: `max_dur_s = args.max_duration * 60`, `tpt_s = args.time_per_tree * 60`
+    - Convertir duraciones a segundos: `expected_s = args.max_duration * 60`, `tpt_s = args.time_per_tree * 60`
+    - Si viene `hard_max_duration`: `hard_max_s = args.hard_max_duration * 60`
     - Crear callables parciales para `f_osm_route_time` y `f_google_route_time` usando las funciones de `routing.py`
     - Si `--use-google` no está activado, `f_google_route_time` = `haversine_fallback_route_time`
-    - Llamar `find_routes_v3(nodes, max_dur_s, tpt_s, f_osm, f_google, ...)`
+    - Llamar `find_routes(nodes, expected_s, tpt_s, f_google, f_osm, lower_factor=..., upper_factor=..., hysteresis_rounds=..., hard_max_duration=hard_max_s, ...)`
     - Convertir resultado a formato compatible con `export.py`:
 
       ```python
@@ -584,21 +611,21 @@ Implementar la función principal `find_routes_v3` que orquesta todo el pipeline
 
 ### Notas de implementación
 
-- Las duraciones internas de `find_routes_v3` se manejan en **segundos** (consistente con las APIs de routing). La conversión a minutos solo ocurre en la capa de CLI/output.
+- Las duraciones internas de `find_routes` se manejan en **segundos** (consistente con las APIs de routing). La conversión a minutos solo ocurre en la capa de CLI/output.
 - El parámetro `t_per_tree` en el CLI se expresa en **minutos** (más intuitivo para el usuario), pero se convierte a segundos antes de pasarlo al orquestador.
 - El orquestador no conoce la fuente de datos (no hace I/O); recibe nodos y funciones callable. Esto permite testear con mocks.
-- La función `find_routes_v3` es determinista si se fija el random seed de K-Means (que por default usa `random_state=42` en k-means-constrained).
+- La función `find_routes` es determinista si se fija el random seed de K-Means (que por default usa `random_state=42` en k-means-constrained).
 
 ### Criterios de aceptación
 
-1. `find_routes_v3` retorna una lista no vacía de `(route, duration)` tuples
+1. `find_routes` retorna una lista no vacía de `(route, duration)` tuples
 2. Todos los nodos de entrada aparecen exactamente una vez en las rutas de salida
-3. El loop se detiene si `deviation <= tolerance`
+3. El loop se detiene cuando encuentra una solución factible dentro de la banda (`lower_bound <= route <= upper_bound`) respetando `hard_upper_limit`
 4. El loop no excede `max_iterations`
 5. Si `--use-google` no está activado, no se hace ninguna request a Google
 6. El output JSON del subcomando `route` es cargable por `export.py` → `build_routes_geojson`
 7. El viewer muestra las rutas generadas por el nuevo subcomando correctamente
-8. `n_routes` se ajusta dinámicamente (se incrementa si el promedio supera `safe_max_duration`)
+8. `n_routes` se ajusta dinámicamente con histéresis (sube con exceso sostenido y baja con defecto sostenido)
 
 ### Riesgos
 
@@ -624,7 +651,7 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
 - `tests/test_clustering.py`
 - `tests/test_routing.py`
 - `tests/test_optimize.py`
-- `tests/test_find_routes_v3.py`
+- `tests/test_find_routes.py`
 - `tests/conftest.py` (fixtures compartidas)
 
 ### Archivos a modificar
@@ -682,15 +709,15 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
   - `test_swap_conserves_nodes` — mismos nodos antes y después
   - `test_swap_reduces_max_duration` — max(durations) no aumenta
 
-- [ ] **7.7** Test de integración end-to-end — `tests/test_find_routes_v3.py`
-  - `test_find_routes_v3_with_mock_routing` — ejecutar el loop completo con mocks de OSM y Google
+- [ ] **7.7** Test de integración end-to-end — `tests/test_find_routes.py`
+  - `test_find_routes_with_mock_routing` — ejecutar el loop completo con mocks de OSM y Google
     - Input: grilla 5×5 de nodos, max_duration=3600s, t_per_tree=120s
     - Mock `f_osm_route_time` → retorna `haversine_m(A, B) * 1.3 / 1.25` (simula camino real)
     - Mock `f_google_route_time` → retorna `haversine_m(A, B) * 1.4 / 1.25`
     - Verificar: retorna > 0 rutas, todos los 25 nodos están cubiertos, ningún nodo repetido
-  - `test_find_routes_v3_convergence` — verificar que el loop termina (no infinite loop)
-  - `test_find_routes_v3_n_routes_increases` — con max_duration muy corto, n_routes debe crecer
-  - `test_find_routes_v3_single_node` — edge case con 1 solo nodo
+  - `test_find_routes_convergence` — verificar que el loop termina (no infinite loop)
+  - `test_find_routes_n_routes_increases` — con max_duration muy corto, n_routes debe crecer
+  - `test_find_routes_single_node` — edge case con 1 solo nodo
 
 - [ ] **7.8** Test de comparación P0 vs V3
   - Ejecutar el pipeline P0 (recursive_split + closed TSP) y V3 sobre el mismo dataset
@@ -747,7 +774,7 @@ Requiere que Phases 1 y 2 estén completas (usa open-path TSP y sparse graph). I
 
 ### Step 4: Phase 6 (V3 Orchestrator)
 
-Wire-up final. Requiere que todas las fases anteriores estén completas. Implementar `find_routes_v3` y el subcomando `route` del CLI. Verificar ejecutando el pipeline completo con un dataset real.
+Wire-up final. Requiere que todas las fases anteriores estén completas. Implementar `find_routes` (V3) y el subcomando `route` del CLI. Verificar ejecutando el pipeline completo con un dataset real.
 
 ### Step 5: Phase 7 (Testing)
 
@@ -780,4 +807,4 @@ Phase 1
 
 ---
 
-**Última revisión:** 16 de marzo de 2026
+**Última revisión:** 21 de marzo de 2026
