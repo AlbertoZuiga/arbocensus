@@ -54,6 +54,26 @@ def route_length(
         s += distances[route[i]][route[i + 1]]
     return s
 
+
+def _first_improving_two_opt_move(
+    route: List[int],
+    current_len: float,
+    distances: List[List[float]]
+) -> tuple[List[int], float, bool]:
+    """
+    Return the first improving 2-opt move found (first-improvement strategy).
+    """
+    n = len(route)
+    for i in range(1, n - 2):
+        for j in range(i + 1, n - 1):
+            if j - i == 1:
+                continue
+            candidate = route[:i] + route[i : j + 1][::-1] + route[j + 1 :]
+            candidate_len = route_length(candidate, distances)
+            if candidate_len + 1e-9 < current_len:
+                return candidate, candidate_len, True
+    return route, current_len, False
+
 def two_opt(
     route: List[int], distances: List[List[float]], max_iter: int = 100
 ) -> List[int]:
@@ -66,26 +86,15 @@ def two_opt(
 
     best = route[:]
     best_len = route_length(best, distances)
-    improved = True
     it = 0
 
-    while improved and it < max_iter:
-        improved = False
+    while it < max_iter:
         it += 1
-        n = len(best)
-        for i in range(1, n - 2):
-            for j in range(i + 1, n - 1):
-                if j - i == 1:
-                    continue
-                new = best[:i] + best[i : j + 1][::-1] + best[j + 1 :]
-                nl = route_length(new, distances)
-                if nl + 1e-9 < best_len:
-                    best = new
-                    best_len = nl
-                    improved = True
-                    break
-            if improved:
-                break
+        best, best_len, improved = _first_improving_two_opt_move(
+            best, best_len, distances
+        )
+        if not improved:
+            break
 
     return best
 
