@@ -20,7 +20,6 @@ Este proyecto implementa un sistema completo para generar rutas óptimas de cens
       - [1. **Pipeline Core** (`src/arbocensus_pipeline/`)](#1-pipeline-core-srcarbocensus_pipeline)
       - [2. **Runner Principal** (`run.py`)](#2-runner-principal-runpy)
       - [3. **Visualizador Web** (`viewer/index.html`)](#3-visualizador-web-viewerindexhtml)
-      - [4. **Bbox Selector** (`bbox_selector/`)](#4-bbox-selector-bbox_selector)
   - [⚙️ 3. Instalación y Configuración](#️-3-instalación-y-configuración)
     - [Requisitos](#requisitos)
     - [Instalación](#instalación)
@@ -181,7 +180,7 @@ Script top-level que:
 - Permite ejecutar el pipeline sin configurar `PYTHONPATH`
 
 ```bash
-python run.py input --bbox saved_bbox.json --out artifacts/01_input.json
+./run.py input --bbox saved_bbox.json --out artifacts/01_input.json
 ```
 
 #### 3. **Visualizador Web** (`viewer/index.html`)
@@ -192,14 +191,6 @@ Aplicación Leaflet standalone que:
 - Muestra capas: bbox, input, filtered, clusters, routes
 - Permite alternar entre etapas del pipeline
 - Soporta hover, popups y controles de capa
-
-#### 4. **Bbox Selector** (`bbox_selector/`)
-
-App Flask para:
-
-- Seleccionar áreas geográficas usando Google Maps
-- Exportar JSON con polígono y lista de árboles
-- Probar consultas a la base de datos
 
 ---
 
@@ -224,6 +215,9 @@ source venv/bin/activate  # En Windows: venv\Scripts\activate
 
 # Instalar dependencias
 pip install -r requirements.txt
+
+# Convertir run.py en ejecutable (opcional: en caso de no realizar los comandos deberan realizarse con python run.py en lugar de ./run.py)
+chmod 744 run.py
 ```
 
 ### Configuración de Base de Datos (Opcional)
@@ -246,33 +240,35 @@ El pipeline intentará conectarse usando estas credenciales. Si fallan, usará e
 ### Ejecución Rápida (Pipeline Completo)
 
 ```bash
+# En caso de no pasar parametros a los comando se usaran los parametros por default
+
 # 1. Cargar datos de entrada
-python run.py input --bbox saved_bbox.json --out artifacts/01_input.json --run-id demo
+./run.py input --bbox saved_bbox.json --out artifacts/01_input.json --run-id demo
 
 # 2. Filtrar árboles
-python run.py filter --inp artifacts/runs/demo/01_bbox_input/01_input.json \
+./run.py filter --inp artifacts/runs/demo/01_bbox_input/01_input.json \
   --out 02_filtered.json --run-id demo
 
 # 3. Construir grafo
-python run.py graph --inp artifacts/runs/demo/02_filtered.json \
+./run.py graph --inp artifacts/runs/demo/02_filtered.json \
   --out 03_graph.json --run-id demo
 
 # 4. Clustering (8 censantes)
-python run.py cluster --inp artifacts/runs/demo/03_graph.json \
+./run.py cluster --inp artifacts/runs/demo/03_graph.json \
   --out clusters_by_censantes.json --num 8 --run-id demo
 
 # 5. Resolver TSP
-python run.py tsp --inp artifacts/runs/demo/03_graph.json \
+./run.py tsp --inp artifacts/runs/demo/03_graph.json \
   --clusters artifacts/runs/demo/clusters_by_censantes.json \
   --out routes_by_cluster.json --run-id demo
 
 # 6. Exportar GeoJSON
-python run.py export --graph artifacts/runs/demo/03_graph.json \
+./run.py export --graph artifacts/runs/demo/03_graph.json \
   --routes artifacts/runs/demo/routes_by_cluster.json \
   --outdir artifacts/runs/demo/06_output --run-id demo
 
 # 7. Abrir viewer
-python -m http.server 8000
+python -m http.server 5500
 # open viewer/index.html # O abrir directamente (si el navegador lo permite)
 ```
 
@@ -641,7 +637,7 @@ Genera archivo JSON con:
 Este archivo puede usarse directamente con:
 
 ```bash
-python run.py input --bbox bbox_selector/saved_bbox.json
+./run.py input --bbox bbox_selector/saved_bbox.json
 ```
 
 ---
