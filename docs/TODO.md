@@ -1,8 +1,8 @@
 # TODO — Routing Algorithm Migration
 
 **Objetivo:** Migrar el pipeline de generación de rutas P0 hacia la arquitectura V3 descrita en `pseudo-codigo.md`.  
-**Estado:** Planificación completa. Implementación pendiente.  
-**Última actualización:** 16 de marzo de 2026
+**Estado:** Implementación en progreso. Phase 1 completada.  
+**Última actualización:** 21 de marzo de 2026
 
 ---
 
@@ -13,7 +13,7 @@ El pipeline actual (P0) implementa una versión simplificada e incorrecta del VR
 | Componente              | P0 (actual)                                          | V3 (objetivo)                                                      |
 | ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------ |
 | Clustering              | Recursive bounding-box split (sin balanceo temporal) | K-Means Constrained (balanceo espacial, `n_clusters` dinámico)     |
-| TSP                     | NN + 2-opt en tour **cerrado**                       | NN + 2-opt en path **abierto**                                     |
+| TSP                     | NN + 2-opt en route **cerrado**                      | NN + 2-opt en path **abierto**                                     |
 | Distancias              | Matriz densa Haversine O(n²)                         | Grafo sparse KD-tree O(n·k)                                        |
 | Evaluación              | Una sola pasada Haversine                            | Multi-fidelidad: Euclidiana → OSM → Google                         |
 | Routing API             | Ninguna                                              | OSRM (loop de optimización) + Google Directions (validación final) |
@@ -66,9 +66,11 @@ src/arbocensus_pipeline/
 
 ## Phase 1 — Open-Path TSP
 
+**Estado:** Completada (21 de marzo de 2026)
+
 ### Objetivo
 
-Corregir el error algorítmico más crítico: el TSP actual genera tours cerrados (el último nodo se conecta con el primero). Las rutas de censo son caminos abiertos: el censante empieza en un extremo y termina en otro.
+Corregir el error algorítmico más crítico: el TSP actual genera routes cerrados (el último nodo se conecta con el primero). Las rutas de censo son caminos abiertos: el censante empieza en un extremo y termina en otro.
 
 ### Complejidad: Baja
 
@@ -85,55 +87,54 @@ Ninguno.
 
 ### Tareas
 
-- [ ] **1.1** Agregar la función `tour_length_open(tour, distances)` en `utils.py`
-  - Idéntica a `tour_length` pero **sin** sumar `distances[tour[-1]][tour[0]]`
-  - Solo suma las aristas `tour[i] → tour[i+1]` para `i` de `0` a `len(tour)-2`
+- [x] **1.1** Actualizar la función `route_length(route, distances)` en `utils.py`
+  - **Sin** sumar `distances[route[-1]][route[0]]`
+  - Solo suma las aristas `route[i] → route[i+1]` para `i` de `0` a `len(route)-2`
   - Retorna `float` con la distancia total del camino abierto en metros
-  - Si `tour` está vacío o tiene un solo nodo, retorna `0.0`
+  - Si `route` está vacío o tiene un solo nodo, retorna `0.0`
 
-- [ ] **1.2** Agregar la función `nn_open_path(start, nodes, distances)` en `utils.py`
-  - Algoritmo idéntico al `nn_tour` existente (greedy nearest neighbor)
+- [x] **1.2** Reemplazar la función `nn_route(...)` por `nn_path(start, nodes, distances)` en `utils.py`
+  - Algoritmo idéntico al `nn_route` existente (greedy nearest neighbor)
   - La diferencia conceptual es que se documenta como camino abierto (sin intención de cerrar)
   - Parámetros: `start: int` (nodo inicial), `nodes: List[int]` (nodos a visitar), `distances: List[List[float]]` (matriz)
   - Retorna `List[int]` con el orden de visita
   - El nodo `start` debe ser el primer elemento de la lista retornada
-  - Nota: la selección del mejor nodo de inicio puede hacerse externamente probando todos los nodos como `start` y quedándose con el `tour_length_open` más corto
+  - Nota: la selección del mejor nodo de inicio puede hacerse externamente probando todos los nodos como `start` y quedándose con el `route_length` más corto
 
-- [ ] **1.3** Agregar la función `two_opt_open(route, distances, max_iter=100)` en `utils.py`
+- [x] **1.3** Actualizar la función `two_opt(route, distances, max_iter=100)` en `utils.py`
   - Implementar 2-opt local search para **path abierto**
-  - Diferencia clave con `two_opt`: evaluar cada candidato con `tour_length_open` en vez de `tour_length`
   - El movimiento 2-opt revierte un segmento `route[i:j+1]` y compara longitudes
   - No se considera la arista de cierre `route[-1] → route[0]` en ningún cálculo de costo
   - Parámetros: `route: List[int]`, `distances: List[List[float]]`, `max_iter: int`
   - Retorna `List[int]` con la ruta mejorada
 
-- [ ] **1.4** Agregar la función `estimate_euclidean_tsp(nodes)` en `utils.py`
+- [x] **1.4** Agregar la función `estimate_euclidean_tsp(nodes)` en `utils.py`
   - Recibe `nodes: List[Dict]` donde cada dict tiene `lat` y `lng`
-  - Calcula un tour greedy NN sobre distancias Haversine entre todos los nodos
+  - Calcula un route greedy NN sobre distancias Haversine entre todos los nodos
   - Retorna `float` con la distancia total estimada en **kilómetros** (no metros)
   - Usar `haversine_m` existente, dividir resultado por 1000
   - Aplicar factor de tortuosidad urbana `1.3` (calles no son línea recta)
   - Este valor se usa en V3 para estimar `n_routes` inicial
 
-- [ ] **1.5** Actualizar `compute_route_for_cluster` en `tsp.py`
-  - Reemplazar `nn_tour` por `nn_open_path`
-  - Reemplazar `tour_length` por `tour_length_open`
+- [x] **1.5** Actualizar `compute_route_for_cluster` en `tsp.py`
+  - Reemplazar `nn_route` por `nn_open_path`
+  - Reemplazar `route_length` por `route_length_open`
   - Reemplazar `two_opt` por `two_opt_open`
   - La firma y estructura del dict retornado se mantienen idénticas
   - Los campos `route_meters` y `route_minutes` ahora reflejan camino abierto
 
-- [ ] **1.6** Verificar que `export.py` → `build_routes_geojson` funciona correctamente con rutas abiertas
+- [x] **1.6** Verificar que `export.py` → `build_routes_geojson` funciona correctamente con rutas abiertas
   - Las rutas abiertas siguen siendo listas de índices de nodo, por lo que `LineString` GeoJSON se genera igual
   - Confirmar visualmente en el viewer que las rutas no dibujan un segmento de cierre fantasma
 
 ### Notas de implementación
 
-- Las funciones legacy (`tour_length`, `nn_tour`, `two_opt`) **no se eliminan**. Se mantienen para backward compatibility con el subcomando `tsp` existente.
-- Los tests de Phase 7 deben verificar que para un path lineal de 3 nodos `[A, B, C]`, `tour_length_open` retorna `d(A,B) + d(B,C)` y **no** `d(A,B) + d(B,C) + d(C,A)`.
+- Las funciones legacy (`route_length`, `nn_route`, `two_opt`) **no se eliminan**. Se mantienen para backward compatibility con el subcomando `tsp` existente.
+- Los tests de Phase 7 deben verificar que para un path lineal de 3 nodos `[A, B, C]`, `route_length_open` retorna `d(A,B) + d(B,C)` y **no** `d(A,B) + d(B,C) + d(C,A)`.
 
 ### Criterios de aceptación
 
-1. `tour_length_open([0, 1, 2], mat)` retorna la suma de solo 2 aristas (no 3)
+1. `route_length_open([0, 1, 2], mat)` retorna la suma de solo 2 aristas (no 3)
 2. `nn_open_path` produce una ruta válida que visita todos los nodos exactamente una vez
 3. `two_opt_open` produce rutas de longitud abierta ≤ la del input
 4. `estimate_euclidean_tsp` retorna un valor en km mayor que 0 para un conjunto de nodos no trivial
@@ -189,7 +190,7 @@ Ninguno.
 - [ ] **2.4** Agregar variantes de las funciones TSP que operen sobre el grafo sparse
   - `nn_open_path_sparse(start, nodes, sparse_graph, all_nodes)` — usa `sparse_distance` como lookup de costo
   - `two_opt_open_sparse(route, sparse_graph, all_nodes, max_iter=100)` — evalúa movimientos usando `sparse_distance`
-  - `tour_length_open_sparse(tour, sparse_graph, all_nodes)` — suma costos usando `sparse_distance`
+  - `route_length_open_sparse(route, sparse_graph, all_nodes)` — suma costos usando `sparse_distance`
   - El parámetro `all_nodes` es la lista completa de nodos (para poder calcular Haversine como fallback)
 
 - [ ] **2.5** Marcar `compute_matrix` como deprecated
@@ -639,9 +640,9 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
   - `sample_sparse_graph(nodes)` — genera grafo sparse con k=6
 
 - [ ] **7.2** Tests para Phase 1 — `tests/test_utils_open_path.py`
-  - `test_tour_length_open_does_not_close` — verifica que no suma arista de cierre
-  - `test_tour_length_open_single_node` — retorna 0
-  - `test_tour_length_open_two_nodes` — retorna una sola arista
+  - `test_route_length_open_does_not_close` — verifica que no suma arista de cierre
+  - `test_route_length_open_single_node` — retorna 0
+  - `test_route_length_open_two_nodes` — retorna una sola arista
   - `test_nn_open_path_visits_all` — todos los nodos presentes en output
   - `test_nn_open_path_no_duplicates` — no repite nodos
   - `test_two_opt_open_improves_or_maintains` — longitud abierta resultante ≤ input
