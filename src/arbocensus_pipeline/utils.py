@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import Dict, List, Tuple
 
 EARTH_RADIUS_M = 6371000.0
 
@@ -53,6 +53,112 @@ def route_length(
     for i in range(len(route) - 1):
         s += distances[route[i]][route[i + 1]]
     return s
+
+
+def sparse_distance(
+    graph: Dict[int, List[Tuple[int, float]]],
+    i: int,
+    j: int,
+    nodes: List[dict] | None = None,
+) -> float:
+    for neighbor_id, d in graph.get(i, []):
+        if neighbor_id == j:
+            return d
+
+    if nodes is None:
+        raise ValueError("nodes is required for sparse_distance fallback")
+
+    return haversine_m(
+        float(nodes[i]["lat"]),
+        float(nodes[i]["lng"]),
+        float(nodes[j]["lat"]),
+        float(nodes[j]["lng"]),
+    )
+
+
+def route_length_sparse(
+    route: List[int],
+    graph: Dict[int, List[Tuple[int, float]]],
+    nodes: List[dict],
+) -> float:
+    if not route or len(route) == 1:
+        return 0.0
+
+    total = 0.0
+    for i in range(len(route) - 1):
+        total += sparse_distance(graph, route[i], route[i + 1], nodes)
+    return total
+
+
+def nn_path_sparse(
+    start: int,
+    nodes_idx: List[int],
+    graph: Dict[int, List[Tuple[int, float]]],
+    nodes: List[dict],
+) -> List[int]:
+    if not nodes_idx:
+        return []
+
+    unvisited = set(nodes_idx)
+    route = [start]
+    unvisited.remove(start)
+    curr = start
+
+    while unvisited:
+        nxt = min(
+            unvisited,
+            key=lambda x, curr=curr: sparse_distance(graph, curr, x, nodes),
+        )
+        route.append(nxt)
+        unvisited.remove(nxt)
+        curr = nxt
+
+    return route
+
+
+def _first_improving_two_opt_move_sparse(
+    route: List[int],
+    current_len: float,
+    graph: Dict[int, List[Tuple[int, float]]],
+    nodes: List[dict],
+) -> tuple[List[int], float, bool]:
+    n = len(route)
+    for i in range(1, n - 2):
+        for j in range(i + 1, n - 1):
+            if j - i == 1:
+                continue
+            candidate = route[:i] + route[i : j + 1][::-1] + route[j + 1 :]
+            candidate_len = route_length_sparse(candidate, graph, nodes)
+            if candidate_len + 1e-9 < current_len:
+                return candidate, candidate_len, True
+    return route, current_len, False
+
+
+def two_opt_sparse(
+    route: List[int],
+    graph: Dict[int, List[Tuple[int, float]]],
+    nodes: List[dict],
+    max_iter: int = 100,
+) -> List[int]:
+    if len(route) <= 2:
+        return route
+
+    best = route[:]
+    best_len = route_length_sparse(best, graph, nodes)
+    it = 0
+
+    while it < max_iter:
+        it += 1
+        best, best_len, improved = _first_improving_two_opt_move_sparse(
+            best,
+            best_len,
+            graph,
+            nodes,
+        )
+        if not improved:
+            break
+
+    return best
 
 
 def _first_improving_two_opt_move(
