@@ -1,6 +1,6 @@
 # 🌳 Generador de Rutas Óptimas para Censo de Árboles
 
-*Pipeline modular* — *Balanceo de carga* — *Clustering geográfico* — *Optimización TSP*
+_Pipeline modular_ — _Balanceo de carga_ — _Clustering geográfico_ — _Optimización TSP_
 
 Este proyecto implementa un sistema completo para generar rutas óptimas de censo de árboles dentro de un área urbana. El objetivo principal es distribuir equitativamente el trabajo entre múltiples censantes mediante clustering geográfico y algoritmos de optimización de rutas (TSP).
 
@@ -162,7 +162,7 @@ Módulos Python que implementan cada etapa del procesamiento:
 | `tsp.py`     | Resuelve TSP por cluster con Nearest Neighbor + 2-opt                      |
 | `export.py`  | Genera GeoJSON de puntos, rutas, bbox y polígonos de clusters              |
 | `io.py`      | Helpers para lectura/escritura con metadata automática                     |
-| `utils.py`   | Funciones matemáticas (haversine, NN, 2-opt, tour_length)                  |
+| `utils.py`   | Funciones matemáticas (haversine, NN, 2-opt, route_length)                 |
 | `cli.py`     | Interfaz de línea de comandos para ejecutar cada etapa                     |
 
 #### 2. **Runner Principal** (`run.py`)
@@ -410,8 +410,8 @@ python -m http.server 5500
 
 **Algoritmo:**
 
-1. **Nearest Neighbor (NN)**: Genera tour inicial greedy
-2. **2-opt**: Mejora el tour eliminando cruces
+1. **Nearest Neighbor (NN)**: Genera route inicial greedy
+2. **2-opt**: Mejora el route eliminando cruces
 3. Calcula métricas:
    - `route_meters`: Distancia total en metros
    - `route_minutes`: Tiempo caminando
@@ -468,9 +468,9 @@ python -m http.server 5500
 **Funciones principales:**
 
 - `haversine_m(lat1, lon1, lat2, lon2)`: Distancia entre dos puntos en metros
-- `nn_tour(start, nodes, distances)`: Genera tour con algoritmo Nearest Neighbor
-- `two_opt(route, distances, max_iter=100)`: Mejora tour eliminando cruces
-- `tour_length(tour, distances)`: Calcula longitud total de un tour (incluyendo retorno)
+- `nn_route(start, nodes, distances)`: Genera route con algoritmo Nearest Neighbor
+- `two_opt(route, distances, max_iter=100)`: Mejora route eliminando cruces
+- `route_length(route, distances)`: Calcula longitud total de un route (incluyendo retorno)
 
 **Detalles técnicos:**
 
@@ -616,9 +616,9 @@ open viewer/index.html
 
 **2-opt (Mejora local):**
 
-1. Tomar dos aristas del tour
+1. Tomar dos aristas del route
 2. Eliminarlas y reconectar de forma cruzada
-3. Si mejora el tour, aceptar cambio
+3. Si mejora el route, aceptar cambio
 4. Repetir hasta convergencia
 
 **Complejidad:** O(n² × iteraciones)
@@ -626,7 +626,7 @@ open viewer/index.html
 
 **Resultado combinado:**
 
-- NN da tour inicial rápido
+- NN da route inicial rápido
 - 2-opt refina eliminando ineficiencias
 - Calidad razonable para clusters de <200 nodos
 
@@ -669,12 +669,10 @@ Donde:
 **Opciones:**
 
 1. **Google Distance Matrix API**
-
    - Ventaja: Rutas reales, considerando calles
    - Desventaja: Costoso (0.01 USD/request), límites estrictos
 
 2. **OSRM (Open Source Routing Machine)**
-
    - Ventaja: Gratis, instalable localmente
    - Desventaja: Requiere servidor, datos OSM actualizados
 
@@ -848,7 +846,7 @@ with Pool(8) as p:
 **Checklist de validación:**
 
 - [ ] Todo árbol aparece exactamente una vez en los clusters
-- [ ] Tours no tienen duplicados (excepto inicio/fin)
+- [ ] routes no tienen duplicados (excepto inicio/fin)
 - [ ] Distancias son simétricas: `M[i][j] == M[j][i]`
 - [ ] Coordenadas están en rango válido (lat: -90 a 90, lng: -180 a 180)
 - [ ] GeoJSON es válido (validar con geojsonlint.com)
@@ -865,8 +863,8 @@ def test_all_nodes_assigned():
     assert len(set(all_members)) == len(nodes)
 
 # test_tsp.py
-def test_tour_is_valid():
-    route = nn_tour(0, [0,1,2,3], distances)
+def test_route_is_valid():
+    route = nn_route(0, [0,1,2,3], distances)
     assert len(route) == 4
     assert len(set(route)) == 4
 ```

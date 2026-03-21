@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Tuple
 
-from .utils import nn_tour, two_opt
+from .utils import nn_route, two_opt
 
 
 def bounding_box(nodes: List[Dict[str, Any]]) -> Tuple[float, float, float, float]:
@@ -59,7 +59,7 @@ def reorder_by_nn(
 ) -> List[int]:
     if not cluster_members:
         return []
-    tour = nn_tour(cluster_members[0], cluster_members, distances)
-    if len(tour) > 2:
-        tour = two_opt(tour, distances, max_iter=50)
-    return tour
+    route = nn_route(cluster_members[0], cluster_members, distances)
+    if len(route) > 2:
+        route = two_opt(route, distances, max_iter=50)
+    return route
