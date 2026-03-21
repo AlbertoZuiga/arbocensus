@@ -17,7 +17,7 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return EARTH_RADIUS_M * c
 
 
-def nn_tour(
+def nn_route(
     start: int,
     nodes: List[int],
     distances: List[List[float]]
@@ -29,29 +29,29 @@ def nn_tour(
     if not nodes:
         return []
     unvisited = set(nodes)
-    tour = [start]
+    route = [start]
     unvisited.remove(start)
     curr = start
     while unvisited:
         nxt = min(unvisited, key=lambda x: distances[curr][x])
-        tour.append(nxt)
+        route.append(nxt)
         unvisited.remove(nxt)
         curr = nxt
-    return tour
+    return route
 
-def tour_length(
-    tour: List[int],
+def route_length(
+    route: List[int],
     distances: List[List[float]]
 ) -> float:
     """
     Calculate the total length of an open path (does not return to start).
-    Unlike tour_length, this does NOT add the distance from last node to first.
+    Unlike route_length, this does NOT add the distance from last node to first.
     """
-    if not tour or len(tour) == 1:
+    if not route or len(route) == 1:
         return 0.0
     s = 0.0
-    for i in range(len(tour) - 1):
-        s += distances[tour[i]][tour[i + 1]]
+    for i in range(len(route) - 1):
+        s += distances[route[i]][route[i + 1]]
     return s
 
 def two_opt(
@@ -65,7 +65,7 @@ def two_opt(
         return route
 
     best = route[:]
-    best_len = tour_length(best, distances)
+    best_len = route_length(best, distances)
     improved = True
     it = 0
 
@@ -78,7 +78,7 @@ def two_opt(
                 if j - i == 1:
                     continue
                 new = best[:i] + best[i : j + 1][::-1] + best[j + 1 :]
-                nl = tour_length(new, distances)
+                nl = route_length(new, distances)
                 if nl + 1e-9 < best_len:
                     best = new
                     best_len = nl
@@ -92,7 +92,7 @@ def two_opt(
 
 def estimate_euclidean_tsp(nodes: List[dict]) -> float:
     """
-    Estimate the total distance of a TSP tour using Euclidean distance.
+    Estimate the total distance of a TSP route using Euclidean distance.
     Nodes should be dicts with 'lat' and 'lng' fields.
     Returns distance in kilometers.
     
