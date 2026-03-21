@@ -929,8 +929,8 @@ Descripción detallada (opcional)
 
 - **Issues:** [GitHub Issues](https://github.com/AlbertoZuiga/arbocensus/issues)
 - **Documentación:** Este README y archivos en `docs/`
-- **Email:** [azuiga@miuandes.cl]
+- **Email:** [azuiga@miuandes.cl](azuiga@miuandes.cl)
 
 ---
 
-**Última actualización:** 2 de diciembre de 2025
+**Última actualización:** 21 de marzo de 2026
