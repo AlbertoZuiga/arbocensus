@@ -1,8 +1,8 @@
 # TODO — Routing Algorithm Migration
 
 **Objetivo:** Migrar el pipeline de generación de rutas P0 hacia la arquitectura V3 descrita en `pseudo-codigo.md`.  
-**Estado:** Planificación completa. Implementación pendiente.  
-**Última actualización:** 16 de marzo de 2026
+**Estado:** Implementación en progreso. Phase 1 completada.  
+**Última actualización:** 21 de marzo de 2026
 
 ---
 
@@ -66,6 +66,8 @@ src/arbocensus_pipeline/
 
 ## Phase 1 — Open-Path TSP
 
+**Estado:** Completada (21 de marzo de 2026)
+
 ### Objetivo
 
 Corregir el error algorítmico más crítico: el TSP actual genera routes cerrados (el último nodo se conecta con el primero). Las rutas de censo son caminos abiertos: el censante empieza en un extremo y termina en otro.
@@ -85,29 +87,28 @@ Ninguno.
 
 ### Tareas
 
-- [ ] **1.1** Agregar la función `route_length_open(route, distances)` en `utils.py`
-  - Idéntica a `route_length` pero **sin** sumar `distances[route[-1]][route[0]]`
+- [x] **1.1** Actualizar la función `route_length(route, distances)` en `utils.py`
+  - **Sin** sumar `distances[route[-1]][route[0]]`
   - Solo suma las aristas `route[i] → route[i+1]` para `i` de `0` a `len(route)-2`
   - Retorna `float` con la distancia total del camino abierto en metros
   - Si `route` está vacío o tiene un solo nodo, retorna `0.0`
 
-- [ ] **1.2** Agregar la función `nn_open_path(start, nodes, distances)` en `utils.py`
+- [x] **1.2** Reemplazar la función `nn_route(...)` por `nn_path(start, nodes, distances)` en `utils.py`
   - Algoritmo idéntico al `nn_route` existente (greedy nearest neighbor)
   - La diferencia conceptual es que se documenta como camino abierto (sin intención de cerrar)
   - Parámetros: `start: int` (nodo inicial), `nodes: List[int]` (nodos a visitar), `distances: List[List[float]]` (matriz)
   - Retorna `List[int]` con el orden de visita
   - El nodo `start` debe ser el primer elemento de la lista retornada
-  - Nota: la selección del mejor nodo de inicio puede hacerse externamente probando todos los nodos como `start` y quedándose con el `route_length_open` más corto
+  - Nota: la selección del mejor nodo de inicio puede hacerse externamente probando todos los nodos como `start` y quedándose con el `route_length` más corto
 
-- [ ] **1.3** Agregar la función `two_opt_open(route, distances, max_iter=100)` en `utils.py`
+- [x] **1.3** Actualizar la función `two_opt(route, distances, max_iter=100)` en `utils.py`
   - Implementar 2-opt local search para **path abierto**
-  - Diferencia clave con `two_opt`: evaluar cada candidato con `route_length_open` en vez de `route_length`
   - El movimiento 2-opt revierte un segmento `route[i:j+1]` y compara longitudes
   - No se considera la arista de cierre `route[-1] → route[0]` en ningún cálculo de costo
   - Parámetros: `route: List[int]`, `distances: List[List[float]]`, `max_iter: int`
   - Retorna `List[int]` con la ruta mejorada
 
-- [ ] **1.4** Agregar la función `estimate_euclidean_tsp(nodes)` en `utils.py`
+- [x] **1.4** Agregar la función `estimate_euclidean_tsp(nodes)` en `utils.py`
   - Recibe `nodes: List[Dict]` donde cada dict tiene `lat` y `lng`
   - Calcula un route greedy NN sobre distancias Haversine entre todos los nodos
   - Retorna `float` con la distancia total estimada en **kilómetros** (no metros)
@@ -115,14 +116,14 @@ Ninguno.
   - Aplicar factor de tortuosidad urbana `1.3` (calles no son línea recta)
   - Este valor se usa en V3 para estimar `n_routes` inicial
 
-- [ ] **1.5** Actualizar `compute_route_for_cluster` en `tsp.py`
+- [x] **1.5** Actualizar `compute_route_for_cluster` en `tsp.py`
   - Reemplazar `nn_route` por `nn_open_path`
   - Reemplazar `route_length` por `route_length_open`
   - Reemplazar `two_opt` por `two_opt_open`
   - La firma y estructura del dict retornado se mantienen idénticas
   - Los campos `route_meters` y `route_minutes` ahora reflejan camino abierto
 
-- [ ] **1.6** Verificar que `export.py` → `build_routes_geojson` funciona correctamente con rutas abiertas
+- [x] **1.6** Verificar que `export.py` → `build_routes_geojson` funciona correctamente con rutas abiertas
   - Las rutas abiertas siguen siendo listas de índices de nodo, por lo que `LineString` GeoJSON se genera igual
   - Confirmar visualmente en el viewer que las rutas no dibujan un segmento de cierre fantasma
 
