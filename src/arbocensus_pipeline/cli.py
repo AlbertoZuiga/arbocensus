@@ -93,6 +93,51 @@ def run_stage_graph(args=None):
     print(f"Wrote graph to {out_path} (nodes: {len(nodes)})")
 
 
+def run_stage_graph_v3(args=None):
+    """Build sparse graph using KD-tree nearest neighbors (v3)."""
+    inp_path = getattr(args, "inp", FILTER_DEFAULT_PATH)
+    if not os.path.exists(inp_path):
+        print(f"Input file {inp_path} not found")
+        return
+
+    with open(inp_path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+
+    trees = obj.get("trees", [])
+    nodes = graph.build_nodes(trees)
+    kd_tree = graph.build_kd_tree(nodes)
+    k_neighbors = 12
+    adjacency = graph.build_sparse_graph_from_kdtree(
+        nodes,
+        kd_tree,
+        k_neighbors=k_neighbors,
+    )
+
+    out_obj = {
+        "nodes": nodes,
+        "adjacency": adjacency,
+        "graph_mode": "sparse_kdtree_v3",
+        "k_neighbors": k_neighbors,
+    }
+    out_path = resolve_output_path(args, GRAPH_DEFAULT_PATH, stage_subdir="graph")
+    io_mod.write_json(
+        out_obj,
+        out_path,
+        params={
+            "source": inp_path,
+            "nodes": len(nodes),
+            "graph_mode": "sparse_kdtree_v3",
+            "k_neighbors": k_neighbors,
+        },
+    )
+
+    edge_count = sum(len(nbrs) for nbrs in adjacency.values()) // 2
+    print(
+        f"Wrote v3 sparse graph to {out_path} "
+        f"(nodes: {len(nodes)}, undirected_edges: {edge_count}, k_neighbors: {k_neighbors})"
+    )
+
+
 def run_stage_cluster(args=None):
     inp_path = getattr(args, "inp", GRAPH_DEFAULT_PATH)
     if not os.path.exists(inp_path):
@@ -273,10 +318,13 @@ def run_export(args=None):
     _export_routes(paths["routes"], nodes, paths["out_dir"])
 
 
-def run_all():
+def run_all(args=None):
     run_stage_input()
     run_stage_filter()
-    run_stage_graph()
+    if getattr(args, "v3", False):
+        run_stage_graph_v3(args)
+    else:
+        run_stage_graph(args)
     run_stage_cluster()
     run_stage_tsp()
     run_export()
@@ -352,6 +400,11 @@ def main():
         default=None,
         help="Optional run id; if omitted a timestamped id is created",
     )
+    p.add_argument(
+        "--v3",
+        action="store_true",
+        help="Use v3 graph builder"
+    )
     sub = p.add_subparsers(dest="cmd")
 
     _setup_input_parser(sub)
@@ -367,7 +420,11 @@ def main():
     elif args.cmd == "filter":
         run_stage_filter(args)
     elif args.cmd == "graph":
-        run_stage_graph(args)
+        if getattr(args, "v3", False):
+            print("Running graph stage with v3 KD-tree sparse graph builder")
+            run_stage_graph_v3(args)
+        else:
+            run_stage_graph(args)
     elif args.cmd == "cluster":
         run_stage_cluster(args)
     elif args.cmd == "tsp":
@@ -376,7 +433,7 @@ def main():
         run_export(args)
     elif args.cmd is None:
         print("No command specified, running all stages sequentially")
-        run_all()
+        run_all(args)
     else:
         p.print_help()
 
