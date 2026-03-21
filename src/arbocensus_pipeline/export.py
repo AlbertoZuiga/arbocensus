@@ -111,8 +111,8 @@ def build_routes_geojson(
 ) -> Dict[str, Any]:
     features = []
     for r in routes:
-        tour = r.get("route", [])
-        coords = [[nodes[i]["lng"], nodes[i]["lat"]] for i in tour]
+        route = r.get("route", [])
+        coords = [[nodes[i]["lng"], nodes[i]["lat"]] for i in route]
         feat = {
             "type": "Feature",
             "geometry": {"type": "LineString", "coordinates": coords},
