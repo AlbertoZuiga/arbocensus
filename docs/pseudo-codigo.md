@@ -290,86 +290,93 @@ import math
 
 def find_routes(
     locations,
-    max_duration_per_route,
+    expected_duration_per_route,
     t_per_tree,
     f_google_route_time,
     f_osm_route_time,
-    tolerance=0.1,
+    lower_factor=0.90,
+    upper_factor=1.10,
     k_neighbors=12,
-    max_iterations=10
+    max_iterations=14,
+    hysteresis_rounds=2,
+    hard_max_duration=None,
 ):
 
     # -------------------------------------------------
-    # 0. Inicialización y Buffer de Seguridad
+    # 0. Inicialización
     # -------------------------------------------------
     google_cache = {}
     osm_cache = {}
 
-    best_solution = None
-    best_score = float('inf')
+    lower_bound = expected_duration_per_route * lower_factor
+    upper_bound = expected_duration_per_route * upper_factor
 
-    # Aplicamos un buffer del 15% para proteger la batería y contingencias
-    safe_max_duration = max_duration_per_route * 0.85
+    # Si existe un límite duro externo, se aplica aquí
+    if hard_max_duration is None:
+        hard_upper_limit = upper_bound
+    else:
+        hard_upper_limit = hard_max_duration
+
+    best_feasible_solution = None
+    best_feasible_score = float('inf')
+
+    # Mejor solución global (aunque no sea factible)
+    best_overall_solution = None
+    best_overall_gap = float('inf')
+
+    # Para evitar oscilación de n_routes
+    over_counter = 0
+    under_counter = 0
+    last_direction = 0   # +1 subimos rutas, -1 bajamos rutas, 0 sin cambio
 
     # -------------------------------------------------
-    # 1. Estimación inicial inteligente
+    # 1. Estimación inicial de número de rutas
     # -------------------------------------------------
-    walking_speed = 4.5 # km/h
-    
-    # Estimación de tiempo de viaje
+    walking_speed = 4.0
     total_euclidean_distance = estimate_euclidean_tsp(locations)
     travel_time_estimate = total_euclidean_distance / walking_speed
-    
-    # Estimación de tiempo de servicio (Fotos)
     service_time_estimate = len(locations) * t_per_tree
-    
     total_time_estimate = travel_time_estimate + service_time_estimate
 
-    # Calculamos rutas usando el tiempo seguro, no el máximo absoluto
-    n_routes = math.ceil(total_time_estimate / safe_max_duration)
+    n_routes = max(1, math.ceil(total_time_estimate / expected_duration_per_route))
 
     # -------------------------------------------------
-    # 2. Construcción de grafo sparse (KD-Tree)
+    # 2. Estructuras de vecindad
     # -------------------------------------------------
     kd_tree = build_kd_tree(locations)
     sparse_graph = build_sparse_graph_from_kdtree(locations, kd_tree, k_neighbors)
 
     # -------------------------------------------------
-    # 3. Loop principal de optimización
+    # 3. Loop principal
     # -------------------------------------------------
     for iteration in range(max_iterations):
 
-        # 3.1 Clustering espacial
+        # 3.1 Clustering (warm start opcional en implementación real)
         clusters = k_means_constrained(locations, n_clusters=n_routes)
 
         routes = []
         durations = []
 
-        # 3.2 Generación de rutas iniciales (ABIERTAS)
+        # 3.2 Construcción y mejora de rutas abiertas
         for cluster in clusters:
-            # nearest_neighbor_open_path debe iniciar en uno de los extremos del cluster
             route = nearest_neighbor_open_path(cluster, sparse_graph)
-            
-            # two_opt_open_path NO debe evaluar el costo de conectar el último nodo con el primero
             route = two_opt_open_path(route, sparse_graph)
 
             duration = compute_open_route_time_with_cache(
                 route, f_osm_route_time, osm_cache, t_per_tree
             )
-
             routes.append(route)
             durations.append(duration)
 
-        # 3.3 Local search inter-cluster
-        # Se evalúa contra el safe_max_duration
+        # 3.3 Ajustes inter-ruta
         routes = relocate_nodes_between_routes(
-            routes, durations, sparse_graph, safe_max_duration
+            routes, durations, sparse_graph, upper_bound
         )
         routes = swap_nodes_between_routes(
-            routes, durations, sparse_graph, safe_max_duration
+            routes, durations, sparse_graph, upper_bound
         )
 
-        # 3.4 Recalcular duración con OSM
+        # 3.4 Recalcular duraciones después de ajustes
         durations = []
         for route in routes:
             duration = compute_open_route_time_with_cache(
@@ -377,40 +384,100 @@ def find_routes(
             )
             durations.append(duration)
 
-        # 3.5 Métricas de evaluación
+        # 3.5 Métricas
         max_route = max(durations)
+        min_route = min(durations)
         avg_route = mean(durations)
-        balance_score = max_route - min(durations)
+        spread = max_route - min_route
 
-        deviation = (max_route - safe_max_duration) / safe_max_duration
-        score = max_route + 0.25 * balance_score
+        # Gap total a la banda: 0 significa que ya estamos dentro
+        over_gap = max(0, max_route - upper_bound)
+        under_gap = max(0, lower_bound - min_route)
+        band_gap = over_gap + under_gap
 
-        if score < best_score:
-            best_score = score
-            best_solution = routes
+        # Score factible: prioriza balance cuando la solución ya cumple banda
+        feasible_score = avg_route + 0.25 * spread
 
-        # 3.6 Criterio de parada
-        if deviation <= tolerance:
+        # Guardar mejor global
+        if band_gap < best_overall_gap:
+            best_overall_gap = band_gap
+            best_overall_solution = routes
+
+        # Guardar mejor factible (dentro de banda y sin romper límite duro)
+        feasible = (
+            (max_route <= upper_bound) and
+            (min_route >= lower_bound) and
+            (max_route <= hard_upper_limit)
+        )
+
+        if feasible and feasible_score < best_feasible_score:
+            best_feasible_score = feasible_score
+            best_feasible_solution = routes
+
+        # 3.6 Criterio de convergencia
+        if feasible:
             break
 
-        # 3.7 Ajuste dinámico de número de rutas
-        if avg_route > safe_max_duration:
-            factor = avg_route / safe_max_duration
-            n_routes += max(1, math.ceil(n_routes * (factor - 1)))
+        # 3.7 Histéresis para evitar ping-pong de n_routes
+        if max_route > upper_bound:
+            over_counter += 1
+            under_counter = 0
+        elif min_route < lower_bound:
+            under_counter += 1
+            over_counter = 0
         else:
-            n_routes += 1
+            over_counter = 0
+            under_counter = 0
+
+        change_direction = 0
+
+        # Exceso sostenido: agregar rutas
+        if over_counter >= hysteresis_rounds:
+            if avg_route > upper_bound:
+                factor = avg_route / expected_duration_per_route
+                delta_n = max(1, math.ceil(n_routes * (factor - 1)))
+            else:
+                delta_n = 1
+            n_routes += delta_n
+            change_direction = +1
+            over_counter = 0
+
+        # Defecto sostenido: quitar rutas
+        elif under_counter >= hysteresis_rounds:
+            delta_n = 1
+            n_routes = max(1, n_routes - delta_n)
+            change_direction = -1
+            under_counter = 0
+
+        # Si no cumplió umbral de histéresis, no se cambia n_routes
+
+        # Regla de amortiguación: si intenta cambiar al sentido opuesto,
+        # exigimos una iteración extra de evidencia
+        if change_direction != 0 and (last_direction * change_direction < 0):
+            if change_direction > 0:
+                over_counter = 1
+            else:
+                under_counter = 1
+
+        if change_direction != 0:
+            last_direction = change_direction
 
     # -------------------------------------------------
-    # 4. Validación final con Google API
+    # 4. Selección final
     # -------------------------------------------------
-    final_routes = []
-    for route in best_solution:
+    final_routes = best_feasible_solution if best_feasible_solution is not None else best_overall_solution
+
+    # -------------------------------------------------
+    # 5. Validación final con Google API
+    # -------------------------------------------------
+    validated = []
+    for route in final_routes:
         duration_google = compute_open_route_time_with_cache(
             route, f_google_route_time, google_cache, t_per_tree
         )
-        final_routes.append((route, duration_google))
+        validated.append((route, duration_google))
 
-    return final_routes
+    return validated
 
 # -----------------------------------------------------
 # Función auxiliar de evaluación de tiempo
