@@ -246,7 +246,7 @@ Ninguno.
 
 ### Tareas
 
-- [ ] **3.0** Agregar dependencias a `requirements.txt`
+- [x] **3.0** Agregar dependencias a `requirements.txt`
   - `k-means-constrained>=0.7.0`
   - `scikit-learn>=1.0` (dependencia de k-means-constrained, pero listarla explícitamente)
   - `numpy>=1.21`
