@@ -151,8 +151,11 @@ def run_stage_cluster(args=None):
         print("No nodes in graph")
         return
     desired_k = max(1, int(getattr(args, "num", 8)))
-    max_size = math.ceil(n / desired_k)
-    clusters_list = cluster.make_clusters_recursive(nodes, max_size=max_size)
+    if getattr(args, "v3", False):
+        clusters_list = cluster.k_means_constrained(nodes, desired_k)
+    else: # TODO: Remove legacy once --v3 becomes the default
+        max_size = math.ceil(n / desired_k)
+        clusters_list = cluster.make_clusters_recursive(nodes, max_size=max_size)
     clusters_out = []
     for cid, members in enumerate(clusters_list):
         clusters_out.append(
@@ -325,7 +328,7 @@ def run_all(args=None):
         run_stage_graph_v3(args)
     else:
         run_stage_graph(args)
-    run_stage_cluster()
+    run_stage_cluster(args)
     run_stage_tsp()
     run_export()
 
@@ -403,7 +406,7 @@ def main():
     p.add_argument(
         "--v3",
         action="store_true",
-        help="Use v3 graph builder"
+        help="Use v3 version of routing"
     )
     sub = p.add_subparsers(dest="cmd")
 
