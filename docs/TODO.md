@@ -323,7 +323,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
 
 - [x] **4.0** Agregar `Requests==2.32.5` a `requirements.txt`
 
-- [ ] **4.1** Crear la clase `RoutingCache` en `routing.py`
+- [x] **4.1** Crear la clase `RoutingCache` en `routing.py`
   - Almacena resultados de queries de routing para evitar llamadas repetidas a APIs
   - Estructura interna: `dict` con clave `(origin_lat_round7, origin_lng_round7, dest_lat_round7, dest_lng_round7, mode)` y valor `{"distance_m": float, "duration_s": float, "source": str}`
   - `mode` es string: `"walking"`, `"driving"`, etc.
