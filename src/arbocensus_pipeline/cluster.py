@@ -7,6 +7,9 @@ import numpy as np
 
 from k_means_constrained import KMeansConstrained
 
+from .utils import haversine_m
+
+
 def bounding_box(nodes: List[Dict[str, Any]]) -> Tuple[float, float, float, float]:
     lats = [n["lat"] for n in nodes]
     lngs = [n["lng"] for n in nodes]
@@ -109,3 +112,29 @@ def k_means_constrained(nodes: List[Dict[str, Any]], n_clusters: int) -> List[Li
     )
     labels = model.fit_predict(coords)
     return _labels_to_clusters(labels, n_clusters)
+
+def cluster_diameter(cluster_indices: List[int], nodes: List[Dict[str, Any]]) -> float:
+    if len(cluster_indices) <= 1:
+        return 0.0
+
+    max_distance = 0.0
+    for i in range(len(cluster_indices) - 1):
+        a = nodes[cluster_indices[i]]
+        for j in range(i + 1, len(cluster_indices)):
+            b = nodes[cluster_indices[j]]
+            d = haversine_m(
+                float(a["lat"]),
+                float(a["lng"]),
+                float(b["lat"]),
+                float(b["lng"]),
+            )
+            if d > max_distance:
+                max_distance = d
+    return max_distance
+
+
+def cluster_balance_score(clusters: List[List[int]]) -> float:
+    if not clusters:
+        return 0.0
+    sizes = [len(c) for c in clusters]
+    return float(max(sizes) - min(sizes))
