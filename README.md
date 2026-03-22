@@ -23,6 +23,7 @@ Este proyecto implementa un sistema completo para generar rutas óptimas de cens
   - [⚙️ 3. Instalación y Configuración](#️-3-instalación-y-configuración)
     - [Requisitos](#requisitos)
     - [Instalación](#instalación)
+    - [Formateo y Hooks Locales](#formateo-y-hooks-locales)
     - [Configuración de Base de Datos (Opcional)](#configuración-de-base-de-datos-opcional)
   - [🚀 4. Uso del Sistema](#-4-uso-del-sistema)
     - [Ejecución Rápida (Pipeline Completo)](#ejecución-rápida-pipeline-completo)
@@ -67,6 +68,7 @@ Este proyecto implementa un sistema completo para generar rutas óptimas de cens
     - [Herramientas](#herramientas)
     - [Librerías Python](#librerías-python)
   - [🤝 9. Contribución](#-9-contribución)
+    - [🌐 Convenciones de Idioma](#-convenciones-de-idioma)
     - [Estructura de Commits](#estructura-de-commits)
     - [Workflow](#workflow)
   - [📞 10. Contacto y Soporte](#-10-contacto-y-soporte)
@@ -192,7 +194,9 @@ Aplicación Leaflet standalone que:
 
 ### Requisitos
 
-- Python 3.10+
+- Python 3.12.11
+- `venv` con nombre `venv/` en la raíz del proyecto
+- Node.js + npm (para Husky y Commitlint)
 - PostgreSQL (opcional, para lectura directa de DB)
 - Navegador moderno (para el viewer)
 
@@ -207,11 +211,41 @@ cd arbocensus
 python3 -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 
-# Instalar dependencias
+# Instalar dependencias del pipeline
 pip install -r requirements.txt
+
+# Instalar herramientas de formato/lint
+pip install -r requirements-linters.txt
+
+# Instalar hooks de git (Husky + Commitlint)
+npm install
 
 # Convertir run.py en ejecutable (opcional: en caso de no realizar los comandos deberan realizarse con python run.py en lugar de ./run.py)
 chmod 744 run.py
+```
+
+### Formateo y Hooks Locales
+
+Se agrega una capa de validación automática para mantener estilo y mensajes de commit consistentes:
+
+- `black` e `isort` para formateo y orden de imports en Python
+- `pre-commit` ejecutado desde `.husky/pre-commit`
+- `commitlint` ejecutado desde `.husky/commit-msg`
+- workflow de GitHub Actions que valida formato en cada Pull Request hacia `main`
+
+Comandos útiles:
+
+```bash
+# Formatear archivos Python
+black .
+isort .
+
+# Verificar sin modificar archivos
+black --check .
+isort --check-only .
+
+# Ejecutar los hooks manualmente sobre todo el repo
+./venv/bin/python -m pre_commit run --all-files
 ```
 
 ### Configuración de Base de Datos (Opcional)
@@ -851,6 +885,21 @@ with Pool(8) as p:
 - [ ] Coordenadas están en rango válido (lat: -90 a 90, lng: -180 a 180)
 - [ ] GeoJSON es válido (validar con geojsonlint.com)
 - [ ] Metadata contiene timestamp y versión
+- [ ] `black --check .` no reporta cambios pendientes
+- [ ] `isort --check-only .` no reporta imports desordenados
+
+**Validación automática disponible en el repositorio:**
+
+```bash
+# Ejecutar chequeos de formato localmente antes de abrir un PR
+black --check .
+isort --check-only .
+
+# Ejecutar los hooks de pre-commit sobre todo el proyecto
+./venv/bin/python -m pre_commit run --all-files
+```
+
+En Pull Requests hacia `main`, GitHub Actions replica estos chequeos usando la versión de Python definida en `.python-version`.
 
 **Tests unitarios sugeridos:**
 
@@ -896,6 +945,26 @@ def test_route_is_valid():
 
 ## 🤝 9. Contribución
 
+### 🌐 Convenciones de Idioma
+
+Para mantener consistencia en el proyecto:
+
+- **Código (Python, JS, etc.)**: todo en inglés (nombres de variables, funciones, clases, comentarios técnicos breves).
+- **Commits**: en inglés, siguiendo Conventional Commits.
+- **Branches**: en inglés (ej: `feat/add-clustering-heuristic`, `fix/tsp-bug`).
+- **Pull Requests (título y descripción)**: en inglés.
+- **Documentación (README, docs/, explicaciones extensas)**: en español.
+
+**Resumen:**
+
+- Inglés → ejecución (código + workflow técnico)
+- Español → comunicación y documentación
+
+Esto permite:
+
+- Mejor compatibilidad con tooling y comunidad global
+- Mayor claridad para el equipo local en documentación
+
 ### Estructura de Commits
 
 ```bash
@@ -910,16 +979,26 @@ Descripción detallada (opcional)
 - `fix`: Corrección de bug
 - `refactor`: Refactorización sin cambio funcional
 - `docs`: Cambios en documentación
-- `test`: Agregar/modificar tests
 - `perf`: Mejora de performance
+
+Los hooks del repositorio validan estos mensajes con `commitlint`. Un ejemplo válido:
+
+```bash
+git commit -m "docs(readme): documenta formateo y hooks locales"
+```
+
+> ⚠️ Todos los commits deben estar en inglés.
 
 ### Workflow
 
 1. Fork del repositorio
-2. Crear branch: `git checkout -b feat/mi-feature`
-3. Commits con mensajes descriptivos
-4. Push: `git push origin feat/mi-feature`
-5. Crear Pull Request
+2. Crear branch (en inglés): `git checkout -b feat/my-feature`
+3. Crear y activar `venv`, luego instalar dependencias Python y `npm install`
+4. Trabajar normalmente; el hook `pre-commit` formatea/valida Python antes de cada commit
+5. Hacer commits en inglés usando tipos permitidos por `commitlint`
+6. Verificar localmente con `black --check .` e `isort --check-only .`
+7. Push: `git push origin feat/my-feature`
+8. Crear Pull Request (en inglés) hacia `main`
 
 ---
 
@@ -931,4 +1010,4 @@ Descripción detallada (opcional)
 
 ---
 
-**Última actualización:** 21 de marzo de 2026
+**Última actualización:** 22 de marzo de 2026
