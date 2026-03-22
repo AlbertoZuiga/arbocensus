@@ -17,11 +17,7 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return EARTH_RADIUS_M * c
 
 
-def nn_route(
-    start: int,
-    nodes: List[int],
-    distances: List[List[float]]
-) -> List[int]:
+def nn_route(start: int, nodes: List[int], distances: List[List[float]]) -> List[int]:
     """
     Nearest neighbor algorithm for open path (census route).
     Starts at 'start' and visits all nodes exactly once, but does not return to start.
@@ -39,10 +35,8 @@ def nn_route(
         curr = nxt
     return route
 
-def route_length(
-    route: List[int],
-    distances: List[List[float]]
-) -> float:
+
+def route_length(route: List[int], distances: List[List[float]]) -> float:
     """
     Calculate the total length of an open path (does not return to start).
     Unlike route_length, this does NOT add the distance from last node to first.
@@ -162,9 +156,7 @@ def two_opt_sparse(
 
 
 def _first_improving_two_opt_move(
-    route: List[int],
-    current_len: float,
-    distances: List[List[float]]
+    route: List[int], current_len: float, distances: List[List[float]]
 ) -> tuple[List[int], float, bool]:
     """
     Return the first improving 2-opt move found (first-improvement strategy).
@@ -179,6 +171,7 @@ def _first_improving_two_opt_move(
             if candidate_len + 1e-9 < current_len:
                 return candidate, candidate_len, True
     return route, current_len, False
+
 
 def two_opt(
     route: List[int], distances: List[List[float]], max_iter: int = 100
@@ -210,7 +203,7 @@ def estimate_euclidean_tsp(nodes: List[dict]) -> float:
     Estimate the total distance of a TSP route using Euclidean distance.
     Nodes should be dicts with 'lat' and 'lng' fields.
     Returns distance in kilometers.
-    
+
     Uses a simple heuristic: 1D version of nearest neighbor on 2D points.
     """
     if not nodes:
@@ -231,14 +224,15 @@ def estimate_euclidean_tsp(nodes: List[dict]) -> float:
         curr_lat, curr_lng = coords[curr_idx]
         nxt_idx = min(
             unvisited,
-            key=lambda idx, curr_lat=curr_lat, curr_lng=curr_lng: (coords[idx][0] - curr_lat) ** 2
+            key=lambda idx, curr_lat=curr_lat, curr_lng=curr_lng: (
+                coords[idx][0] - curr_lat
+            )
+            ** 2
             + (coords[idx][1] - curr_lng) ** 2,
         )
         nxt_lat, nxt_lng = coords[nxt_idx]
         # Euclidean distance in degrees
-        dist_deg = math.sqrt(
-            (nxt_lat - curr_lat) ** 2 + (nxt_lng - curr_lng) ** 2
-        )
+        dist_deg = math.sqrt((nxt_lat - curr_lat) ** 2 + (nxt_lng - curr_lng) ** 2)
         total_dist_deg += dist_deg
         curr_idx = nxt_idx
         unvisited.remove(curr_idx)

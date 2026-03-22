@@ -42,6 +42,7 @@ def resolve_output_path(args, default_path, stage_subdir=None):
         os.makedirs(parent, exist_ok=True)
     return out_path
 
+
 def run_stage_input(args=None):
     bbox_path = getattr(args, "bbox", BBOX_DEFAULT_PATH)
     max_results = getattr(args, "max", None)
@@ -153,7 +154,7 @@ def run_stage_cluster(args=None):
     desired_k = max(1, int(getattr(args, "num", 8)))
     if getattr(args, "v3", False):
         clusters_list = cluster.k_means_constrained(nodes, desired_k)
-    else: # TODO: Remove legacy once --v3 becomes the default
+    else:  # TODO: Remove legacy once --v3 becomes the default
         max_size = math.ceil(n / desired_k)
         clusters_list = cluster.make_clusters_recursive(nodes, max_size=max_size)
     clusters_out = []
@@ -326,11 +327,12 @@ def run_all(args=None):
     run_stage_filter()
     if getattr(args, "v3", False):
         run_stage_graph_v3(args)
-    else: # TODO: Remove legacy once --v3 becomes the default
+    else:  # TODO: Remove legacy once --v3 becomes the default
         run_stage_graph(args)
     run_stage_cluster(args)
     run_stage_tsp()
     run_export()
+
 
 def _setup_input_parser(subparsers):
     """Configure input subcommand parser."""
@@ -357,9 +359,7 @@ def _setup_cluster_parser(subparsers):
     """Configure cluster subcommand parser."""
     sc = subparsers.add_parser("cluster")
     sc.add_argument("--inp", default=GRAPH_DEFAULT_PATH)
-    sc.add_argument(
-        "--out", default=CLUSTER_DEFAULT_PATH
-    )
+    sc.add_argument("--out", default=CLUSTER_DEFAULT_PATH)
     sc.add_argument("--num", type=int, default=8)
     sc.add_argument("--time", type=float, default=1.5)
 
@@ -368,9 +368,7 @@ def _setup_tsp_parser(subparsers):
     """Configure tsp subcommand parser."""
     st = subparsers.add_parser("tsp")
     st.add_argument("--graph", default=GRAPH_DEFAULT_PATH)
-    st.add_argument(
-        "--clusters", default=CLUSTER_DEFAULT_PATH
-    )
+    st.add_argument("--clusters", default=CLUSTER_DEFAULT_PATH)
     st.add_argument("--out", default=ROUTES_DEFAULT_PATH)
     st.add_argument("--time-per-tree", type=float, default=1.5)
     st.add_argument("--walking-kmh", type=float, default=5.0)
@@ -382,12 +380,8 @@ def _setup_export_parser(subparsers):
     se.add_argument("--graph", default=GRAPH_DEFAULT_PATH)
     se.add_argument("--input", default=INPUT_DEFAULT_PATH)
     se.add_argument("--filtered", default=FILTER_DEFAULT_PATH)
-    se.add_argument(
-        "--clusters", default=CLUSTER_DEFAULT_PATH
-    )
-    se.add_argument(
-        "--routes", default=ROUTES_DEFAULT_PATH
-    )
+    se.add_argument("--clusters", default=CLUSTER_DEFAULT_PATH)
+    se.add_argument("--routes", default=ROUTES_DEFAULT_PATH)
     se.add_argument("--outdir", default=OUTPUT_DEFAULT_PATH)
 
 
@@ -403,11 +397,7 @@ def main():
         default=None,
         help="Optional run id; if omitted a timestamped id is created",
     )
-    p.add_argument(
-        "--v3",
-        action="store_true",
-        help="Use v3 version of routing"
-    )
+    p.add_argument("--v3", action="store_true", help="Use v3 version of routing")
     sub = p.add_subparsers(dest="cmd")
 
     _setup_input_parser(sub)
@@ -423,7 +413,9 @@ def main():
     elif args.cmd == "filter":
         run_stage_filter(args)
     elif args.cmd == "graph":
-        if getattr(args, "v3", False): # TODO: Remove legacy once --v3 becomes the default
+        if getattr(
+            args, "v3", False
+        ):  # TODO: Remove legacy once --v3 becomes the default
             print("Running graph stage with v3 KD-tree sparse graph builder")
             run_stage_graph_v3(args)
         else:

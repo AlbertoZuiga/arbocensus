@@ -4,22 +4,21 @@ import math
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
-
 from k_means_constrained import KMeansConstrained
 
 from .utils import haversine_m
 
 
-def bounding_box( # TODO: Remove legacy once --v3 becomes the default
-    nodes: List[Dict[str, Any]]
+def bounding_box(  # TODO: Remove legacy once --v3 becomes the default
+    nodes: List[Dict[str, Any]],
 ) -> Tuple[float, float, float, float]:
     lats = [n["lat"] for n in nodes]
     lngs = [n["lng"] for n in nodes]
     return min(lats), max(lats), min(lngs), max(lngs)
 
 
-def longest_axis( # TODO: Remove legacy once --v3 becomes the default
-    nodes: List[Dict[str, Any]]
+def longest_axis(  # TODO: Remove legacy once --v3 becomes the default
+    nodes: List[Dict[str, Any]],
 ) -> str:
     min_lat, max_lat, min_lng, max_lng = bounding_box(nodes)
     lat_span = max_lat - min_lat
@@ -27,7 +26,7 @@ def longest_axis( # TODO: Remove legacy once --v3 becomes the default
     return "lat" if lat_span >= lng_span else "lng"
 
 
-def recursive_split( # TODO: Remove legacy once --v3 becomes the default
+def recursive_split(  # TODO: Remove legacy once --v3 becomes the default
     node_list: List[int],
     nodes: List[Dict[str, Any]],
     max_size: int,
@@ -51,7 +50,7 @@ def recursive_split( # TODO: Remove legacy once --v3 becomes the default
     recursive_split(right, nodes, max_size, out_clusters)
 
 
-def make_clusters_recursive( # TODO: Remove legacy once --v3 becomes the default
+def make_clusters_recursive(  # TODO: Remove legacy once --v3 becomes the default
     nodes: List[Dict[str, Any]], max_size: int = 100
 ) -> List[List[int]]:
     n = len(nodes)
@@ -93,7 +92,9 @@ def _labels_to_clusters(labels: np.ndarray, n_clusters: int) -> List[List[int]]:
     return _ensure_exact_cluster_count(clusters, n_clusters)
 
 
-def k_means_constrained(nodes: List[Dict[str, Any]], n_clusters: int) -> List[List[int]]:
+def k_means_constrained(
+    nodes: List[Dict[str, Any]], n_clusters: int
+) -> List[List[int]]:
     n = len(nodes)
     if n == 0:
         return []
@@ -116,6 +117,7 @@ def k_means_constrained(nodes: List[Dict[str, Any]], n_clusters: int) -> List[Li
     )
     labels = model.fit_predict(coords)
     return _labels_to_clusters(labels, n_clusters)
+
 
 def cluster_diameter(cluster_indices: List[int], nodes: List[Dict[str, Any]]) -> float:
     if len(cluster_indices) <= 1:
