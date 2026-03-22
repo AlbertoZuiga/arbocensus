@@ -340,7 +340,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Se usa como fallback cuando OSM y Google no están disponibles
   - Guarda en cache con `source="haversine_fallback"`
 
-- [ ] **4.3** Agregar variables a `.env.example`
+- [x] **4.3** Agregar variables a `.env.example`
 
   ```bash
   OSRM_BASE_URL=http://router.project-osrm.org
