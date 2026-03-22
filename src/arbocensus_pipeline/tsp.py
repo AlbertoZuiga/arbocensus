@@ -18,7 +18,7 @@ def compute_route_for_cluster(
 ) -> Dict[str, Any]:
     """
     Compute route for a cluster using open-path TSP (Phase 1).
-    
+
     The route is an open path: censante starts at one end and finishes at another,
     without returning to the start point.
     """
