@@ -7,6 +7,8 @@ module.exports = {
       'docs',
       'refactor',
       'perf',
+      'chore',
+      'test',
     ]],
     'body-leading-blank': [2, 'always', { ignoreEmpty: true }]
   }
