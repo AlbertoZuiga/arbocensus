@@ -1,9 +1,11 @@
-"""Clustering helpers: recursive split and capacity assignment"""
+"""Clustering helpers: recursive split and balanced K-Means clustering."""
 
+import math
 from typing import Any, Dict, List, Tuple
 
-from .utils import nn_route, two_opt
+import numpy as np
 
+from k_means_constrained import KMeansConstrained
 
 def bounding_box(nodes: List[Dict[str, Any]]) -> Tuple[float, float, float, float]:
     lats = [n["lat"] for n in nodes]
@@ -54,12 +56,56 @@ def make_clusters_recursive(
     return clusters
 
 
-def reorder_by_nn(
-    cluster_members: List[int], distances: List[List[float]]
-) -> List[int]:
-    if not cluster_members:
+def _coords_from_nodes(nodes: List[Dict[str, Any]]) -> np.ndarray:
+    return np.array([[float(n["lat"]), float(n["lng"])] for n in nodes], dtype=float)
+
+
+def _ensure_exact_cluster_count(
+    clusters: List[List[int]],
+    n_clusters: int,
+) -> List[List[int]]:
+    if len(clusters) >= n_clusters:
+        return clusters
+
+    missing = n_clusters - len(clusters)
+    clusters = [c[:] for c in clusters]
+    for _ in range(missing):
+        largest_idx = max(range(len(clusters)), key=lambda i: len(clusters[i]))
+        if len(clusters[largest_idx]) <= 1:
+            break
+        moved = clusters[largest_idx].pop()
+        clusters.append([moved])
+    return clusters
+
+
+def _labels_to_clusters(labels: np.ndarray, n_clusters: int) -> List[List[int]]:
+    buckets: List[List[int]] = [[] for _ in range(n_clusters)]
+    for idx, label in enumerate(labels.tolist()):
+        buckets[int(label)].append(idx)
+    clusters = [c for c in buckets if c]
+    return _ensure_exact_cluster_count(clusters, n_clusters)
+
+
+def k_means_constrained(nodes: List[Dict[str, Any]], n_clusters: int) -> List[List[int]]:
+    n = len(nodes)
+    if n == 0:
         return []
-    route = nn_route(cluster_members[0], cluster_members, distances)
-    if len(route) > 2:
-        route = two_opt(route, distances, max_iter=50)
-    return route
+    if n_clusters <= 0:
+        raise ValueError("n_clusters must be > 0")
+    if n_clusters >= n:
+        return [[i] for i in range(n)]
+    if n_clusters == 1:
+        return [list(range(n))]
+
+    coords = _coords_from_nodes(nodes)
+    min_size = int(math.floor(n / n_clusters))
+    max_size = int(math.ceil(n / n_clusters) + 1)
+
+    model = KMeansConstrained(
+        n_clusters=n_clusters,
+        size_min=min_size,
+        size_max=max_size,
+        random_state=42,
+    )
+    labels = model.fit_predict(coords)
+    return _labels_to_clusters(labels, n_clusters)

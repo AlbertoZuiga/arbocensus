@@ -251,7 +251,7 @@ Ninguno.
   - `scikit-learn>=1.0` (dependencia de k-means-constrained, pero listarla explícitamente)
   - `numpy>=1.21`
 
-- [ ] **3.1** Agregar la función `k_means_constrained(nodes, n_clusters)` en `cluster.py`
+- [x] **3.1** Agregar la función `k_means_constrained(nodes, n_clusters)` en `cluster.py`
   - Recibe `nodes: List[Dict]` con campos `lat`, `lng` y `n_clusters: int`
   - Extraer coordenadas en un array numpy `[[lat, lng], ...]`
   - Usar la librería `k-means-constrained` (PyPI: `k_means_constrained`): `KMeansConstrained(n_clusters=n_clusters, size_min=min_size, size_max=max_size)`
@@ -260,7 +260,7 @@ Ninguno.
   - Retornar `List[List[int]]` donde cada sub-lista contiene los índices de nodos del cluster
   - **Mismo formato de salida** que `make_clusters_recursive` para compatibilidad
 
-- [ ] **3.2** Implementar fallback para edge cases
+- [x] **3.2** Implementar fallback para edge cases
   - Si `n_clusters >= len(nodes)`: retornar un cluster por nodo (cada cluster es `[[i]]`)
   - Si `n_clusters <= 0`: levantar `ValueError`
   - Si `n_clusters == 1`: retornar `[list(range(len(nodes)))]`
