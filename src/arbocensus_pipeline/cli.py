@@ -326,7 +326,7 @@ def run_all(args=None):
     run_stage_filter()
     if getattr(args, "v3", False):
         run_stage_graph_v3(args)
-    else:
+    else: # TODO: Remove legacy once --v3 becomes the default
         run_stage_graph(args)
     run_stage_cluster(args)
     run_stage_tsp()
@@ -423,7 +423,7 @@ def main():
     elif args.cmd == "filter":
         run_stage_filter(args)
     elif args.cmd == "graph":
-        if getattr(args, "v3", False):
+        if getattr(args, "v3", False): # TODO: Remove legacy once --v3 becomes the default
             print("Running graph stage with v3 KD-tree sparse graph builder")
             run_stage_graph_v3(args)
         else:
