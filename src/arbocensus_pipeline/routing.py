@@ -4,6 +4,8 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from .utils import haversine_m
+
 Coord = Dict[str, Any]
 CacheValue = Dict[str, float | str]
 CacheKey = Tuple[float, float, float, float, str]
@@ -94,3 +96,37 @@ class RoutingCache:
 
         with self._lock:
             self._cache = loaded
+
+
+def haversine_fallback_route_time(
+    origin: Coord,
+    dest: Coord,
+    cache: RoutingCache,
+    walking_speed_kmh: float = 4.5,
+    multiplier: float = 1.3,
+) -> float:
+    mode = "walking"
+    cached = cache.get(origin, dest, mode)
+    if cached is not None:
+        return float(cached["duration_s"])
+
+    distance_m = float(
+        haversine_m(
+            float(origin["lat"]),
+            float(origin["lng"]),
+            float(dest["lat"]),
+            float(dest["lng"]),
+        )
+    )
+    speed_m_per_s = float(walking_speed_kmh) * 1000.0 / 3600.0
+    duration_s = (
+        (distance_m * float(multiplier)) / speed_m_per_s if speed_m_per_s > 0 else 0.0
+    )
+
+    result = {
+        "distance_m": distance_m,
+        "duration_s": float(duration_s),
+        "source": "haversine_fallback",
+    }
+    cache.put(origin, dest, mode, result)
+    return float(duration_s)

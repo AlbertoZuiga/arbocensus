@@ -334,7 +334,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Las coordenadas se redondean a 7 decimales para el key (precisión ~1cm)
   - El cache debe ser thread-safe: usar `threading.Lock` en `get` y `put`
 
-- [ ] **4.2** Implementar la función `haversine_fallback_route_time(origin, dest, cache, walking_speed_kmh=4.5, multiplier=1.3)` en `routing.py`
+- [x] **4.2** Implementar la función `haversine_fallback_route_time(origin, dest, cache, walking_speed_kmh=4.5, multiplier=1.3)` en `routing.py`
   - Calcula duración usando `haversine_m(origin, dest) * multiplier / (walking_speed_kmh * 1000 / 3600)`
   - No hace ninguna llamada de red
   - Se usa como fallback cuando OSM y Google no están disponibles
