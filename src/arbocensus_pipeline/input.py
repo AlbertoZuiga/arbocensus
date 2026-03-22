@@ -146,7 +146,7 @@ def _safe_close_connection(connection):
 
 def _query_api_db(bounds, max_results, results, seen):
     """Query ARBOCENSUS_API_DB_URL database.
-    
+
     Args:
         bounds: Tuple of (south, north, west, east)
         max_results: Maximum number of results
@@ -165,9 +165,7 @@ def _query_api_db(bounds, max_results, results, seen):
                  FROM arbocensus_api_app_sample
                  WHERE tree_latitude BETWEEN %s AND %s
                    AND tree_longitude BETWEEN %s AND %s
-                """ + _build_sql_query(
-            max_results
-        )
+                """ + _build_sql_query(max_results)
         params = _build_query_params(south, north, west, east, max_results)
         cur.execute(sql, params)
 
@@ -189,7 +187,7 @@ def _query_api_db(bounds, max_results, results, seen):
 
 def _query_main_db(bounds, max_results, results, seen):
     """Query ARBOCENSUS_DB_URL database.
-    
+
     Args:
         bounds: Tuple of (south, north, west, east)
         max_results: Maximum number of results
@@ -208,9 +206,7 @@ def _query_main_db(bounds, max_results, results, seen):
                  FROM arbocensus_app_sample
                  WHERE latitude BETWEEN %s AND %s
                    AND longitude BETWEEN %s AND %s
-                """ + _build_sql_query(
-            max_results
-        )
+                """ + _build_sql_query(max_results)
         params = _build_query_params(south, north, west, east, max_results)
         cur.execute(sql, params)
 

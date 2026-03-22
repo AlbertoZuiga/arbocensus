@@ -2,11 +2,13 @@
 """
 Simple runner for stages pipeline (skeleton).
 """
+
 import os
 import sys
 from importlib import import_module
 
 ROOT = os.path.dirname(__file__)
+
 
 def main():
     try:
@@ -21,6 +23,7 @@ def main():
             "Ensure the repository layout is intact (a `src/arbocensus_pipeline` package)."
         )
         sys.exit(2)
+
 
 if __name__ == "__main__":
     main()

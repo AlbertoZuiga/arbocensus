@@ -58,8 +58,8 @@ def build_nodes(trees: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return nodes
 
 
-def compute_matrix( # TODO: Remove legacy once --v3 becomes the default
-    nodes: List[Dict[str, Any]]
+def compute_matrix(  # TODO: Remove legacy once --v3 becomes the default
+    nodes: List[Dict[str, Any]],
 ) -> List[List[float]]:
     n = len(nodes)
     mat = [[0.0] * n for _ in range(n)]
