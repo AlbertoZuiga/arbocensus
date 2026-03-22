@@ -266,7 +266,7 @@ Ninguno.
   - Si `n_clusters == 1`: retornar `[list(range(len(nodes)))]`
   - ~~Si `k-means-constrained` no converge (excepciones): hacer fallback a `sklearn.cluster.KMeans` estándar sin constraints~~
 
-- [ ] **3.3** Agregar funciones de métricas de calidad de clustering
+- [x] **3.3** Agregar funciones de métricas de calidad de clustering
   - `cluster_diameter(cluster_indices, nodes)` → `float`: distancia máxima (Haversine) entre cualquier par de nodos del cluster
   - `cluster_balance_score(clusters)` → `float`: `max(sizes) - min(sizes)` donde `sizes = [len(c) for c in clusters]`; un score de 0 es perfectamente balanceado
 
