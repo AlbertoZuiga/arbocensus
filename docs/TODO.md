@@ -197,7 +197,12 @@ Ninguno.
   - Agregar un docstring que indique: `"Deprecated: use build_kd_tree + build_sparse_graph for O(n·k) performance"`
   - No eliminar la función (el subcomando `graph` del CLI la usa)
 
-- [x] **2.6** Agregar `scipy` a `requirements.txt` (si no está ya)
+- [x] **2.6** Introducir flag global `--v3` en el CLI
+  - Controla el uso de la nueva implementación de grafo (`run_stage_graph_v3`)
+  - Default: desactivado (usa matriz densa legacy)
+  - Objetivo: permitir migración incremental sin romper pipelines existentes. Este flag debe propagarse hasta el orquestador V3 (Phase 6) para activar todo el pipeline nuevo (clustering, grafo sparse, routing y optimización inter-ruta).
+
+- [x] **2.7** Agregar `scipy` a `requirements.txt` (si no está ya)
 
 ### Notas de implementación
 
@@ -493,7 +498,7 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
 ### Archivos a modificar
 
 - `src/arbocensus_pipeline/optimize.py` (agregar `find_routes` V3; opcional alias backward-compatible `find_routes_v3`)
-- `src/arbocensus_pipeline/cli.py` (agregar subcomando `route`)
+- `src/arbocensus_pipeline/cli.py` (agregar subcomando `route` y soportar flag global `--v3`)
 
 ### Tareas
 
@@ -589,6 +594,7 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
     - `--use-google` (flag, default: `False`)
     - `--cache-dir` (str, default: `None`)
   - Función `run_stage_route(args)`:
+  - El flag global `--v3` debe activar este subcomando como implementación preferida y permitir, en el futuro, redirigir otros subcomandos (`tsp`, `cluster`) hacia las implementaciones V3 sin romper compatibilidad.
     - Cargar árboles desde `args.inp` (JSON con key `trees`)
     - Construir `nodes` con `graph.build_nodes(trees)`
     - Convertir duraciones a segundos: `expected_s = args.max_duration * 60`, `tpt_s = args.time_per_tree * 60`
@@ -758,6 +764,8 @@ Implementar primero porque es la base algorítmica de todo lo demás. No tiene d
 
 **Resultado verificable:** Ejecutar el pipeline P0 existente con las funciones open-path y confirmar que `route_meters` disminuye (ya no se cuenta la arista de cierre).
 
+Durante esta etapa, el flag `--v3` aún no tiene efecto funcional, pero debe mantenerse como feature flag para habilitar progresivamente las fases siguientes sin afectar el comportamiento legacy.
+
 ### Step 2: Phases 2, 3, 4 (en paralelo)
 
 Estas tres fases son independientes entre sí:
@@ -775,6 +783,7 @@ Requiere que Phases 1 y 2 estén completas (usa open-path TSP y sparse graph). I
 ### Step 4: Phase 6 (V3 Orchestrator)
 
 Wire-up final. Requiere que todas las fases anteriores estén completas. Implementar `find_routes` (V3) y el subcomando `route` del CLI. Verificar ejecutando el pipeline completo con un dataset real.
+En este punto, el flag `--v3` debe activar completamente el nuevo pipeline end-to-end.
 
 ### Step 5: Phase 7 (Testing)
 
