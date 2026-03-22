@@ -1,0 +1,30 @@
+{
+  "name": "mi_proyecto",
+  "version": "1.0.0",
+  "description": "_Pipeline modular_ — _Balanceo de carga_ — _Clustering geográfico_ — _Optimización TSP_",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlbertoZuiga/arbocensus.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AlbertoZuiga/arbocensus/issues"
+  },
+  "homepage": "https://github.com/AlbertoZuiga/arbocensus#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "husky": "^9.1.7"
+  }
+}
