@@ -1,15 +1,21 @@
 venv
+.venv/
 
 # Local env
 .env
+.env.*
 
 # Cache for distance matrix and other runtime caches
 .cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Secrets collected from other projects (do not commit)
 secrets/
 
 .DS_Store
+node_modules/
 
 .pylintrc
 archive/
