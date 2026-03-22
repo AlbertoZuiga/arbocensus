@@ -270,7 +270,7 @@ Ninguno.
   - `cluster_diameter(cluster_indices, nodes)` → `float`: distancia máxima (Haversine) entre cualquier par de nodos del cluster
   - `cluster_balance_score(clusters)` → `float`: `max(sizes) - min(sizes)` donde `sizes = [len(c) for c in clusters]`; un score de 0 es perfectamente balanceado
 
-- [ ] **3.4** Marcar `make_clusters_recursive` y `recursive_split` como deprecated
+- [x] **3.4** Marcar `make_clusters_recursive` y `recursive_split` como deprecated
   - Agregar docstring: `"Deprecated: use k_means_constrained for balanced spatial clustering"`
   - No eliminar (el subcomando `cluster` del CLI las usa)
 
