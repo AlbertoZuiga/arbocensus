@@ -274,7 +274,7 @@ Ninguno.
   - Agregar docstring: `"Deprecated: use k_means_constrained for balanced spatial clustering"`
   - No eliminar (el subcomando `cluster` del CLI las usa)
 
-- [ ] **3.5** Integrar la ejecución de `k_means_constrained` bajo el flag `--v3`
+- [x] **3.5** Integrar la ejecución de `k_means_constrained` bajo el flag `--v3`
   - Asegurar que, cuando el flag `--v3` esté activado, el pipeline utilice `k_means_constrained` en lugar de `make_clusters_recursive`
   - Mantener el comportamiento actual (legacy) como default cuando `--v3` esté desactivado
   - Preparar la integración para que el orquestador **V3** (Phase 6) controle dinámicamente `n_clusters`
