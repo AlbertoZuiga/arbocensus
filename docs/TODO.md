@@ -246,6 +246,11 @@ Ninguno.
 
 ### Tareas
 
+- [ ] **3.0** Agregar dependencias a `requirements.txt`
+  - `k-means-constrained>=0.7.0`
+  - `scikit-learn>=1.0` (dependencia de k-means-constrained, pero listarla explícitamente)
+  - `numpy>=1.21`
+
 - [ ] **3.1** Agregar la función `k_means_constrained(nodes, n_clusters)` en `cluster.py`
   - Recibe `nodes: List[Dict]` con campos `lat`, `lng` y `n_clusters: int`
   - Extraer coordenadas en un array numpy `[[lat, lng], ...]`
@@ -259,7 +264,7 @@ Ninguno.
   - Si `n_clusters >= len(nodes)`: retornar un cluster por nodo (cada cluster es `[[i]]`)
   - Si `n_clusters <= 0`: levantar `ValueError`
   - Si `n_clusters == 1`: retornar `[list(range(len(nodes)))]`
-  - Si `k-means-constrained` no converge (excepciones): hacer fallback a `sklearn.cluster.KMeans` estándar sin constraints
+  - ~~Si `k-means-constrained` no converge (excepciones): hacer fallback a `sklearn.cluster.KMeans` estándar sin constraints~~
 
 - [ ] **3.3** Agregar funciones de métricas de calidad de clustering
   - `cluster_diameter(cluster_indices, nodes)` → `float`: distancia máxima (Haversine) entre cualquier par de nodos del cluster
@@ -269,10 +274,10 @@ Ninguno.
   - Agregar docstring: `"Deprecated: use k_means_constrained for balanced spatial clustering"`
   - No eliminar (el subcomando `cluster` del CLI las usa)
 
-- [ ] **3.5** Agregar dependencias a `requirements.txt`
-  - `k-means-constrained>=0.7.0`
-  - `scikit-learn>=1.0` (dependencia de k-means-constrained, pero listarla explícitamente)
-  - `numpy>=1.21`
+- [ ] **3.5** Integrar la ejecución de `k_means_constrained` bajo el flag `--v3`
+  - Asegurar que, cuando el flag `--v3` esté activado, el pipeline utilice `k_means_constrained` en lugar de `make_clusters_recursive`
+  - Mantener el comportamiento actual (legacy) como default cuando `--v3` esté desactivado
+  - Preparar la integración para que el orquestador **V3** (Phase 6) controle dinámicamente `n_clusters`
 
 ### Notas de implementación
 
@@ -315,6 +320,8 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
 - `.env.example` (documentar variables de entorno requeridas)
 
 ### Tareas
+
+- [ ] **4.0** Agregar `requests>=2.28` a `requirements.txt`
 
 - [ ] **4.1** Crear la clase `RoutingCache` en `routing.py`
   - Almacena resultados de queries de routing para evitar llamadas repetidas a APIs
@@ -375,8 +382,6 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   GOOGLE_MAPS_API_KEY=your-api-key-here
   OSRM_RATE_LIMIT_MS=100
   ```
-
-- [ ] **4.7** Agregar `requests>=2.28` a `requirements.txt`
 
 ### Notas de implementación
 
@@ -666,6 +671,17 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
 
 ### Tareas
 
+- [ ] **7.0** Configurar pytest
+  - Agregar `pytest.ini` o sección en `pyproject.toml`:
+
+    ```ini
+    [pytest]
+    testpaths = tests
+    python_files = test_*.py
+    ```
+
+  - Verificar que `python -m pytest tests/` ejecuta todos los tests correctamente
+
 - [ ] **7.1** Crear `tests/conftest.py` con fixtures compartidas
   - `sample_nodes_grid()` — genera una grilla de 5×5 = 25 nodos con coordenadas equiespaciadas alrededor de (-33.45, -70.65) (Santiago)
   - `sample_nodes_linear()` — genera 10 nodos en línea recta
@@ -729,17 +745,6 @@ Crear un suite de tests que valide cada componente individualmente y el sistema 
   - Ejecutar el pipeline P0 (recursive_split + closed TSP) y V3 sobre el mismo dataset
   - Comparar métricas: `max(total_minutes)`, `std(total_minutes)`, número de rutas
   - Este no es un test automatizado de pass/fail, sino un script de benchmark en `tests/benchmark_p0_vs_v3.py`
-
-- [ ] **7.9** Configurar pytest
-  - Agregar `pytest.ini` o sección en `pyproject.toml`:
-
-    ```ini
-    [pytest]
-    testpaths = tests
-    python_files = test_*.py
-    ```
-
-  - Verificar que `python -m pytest tests/` ejecuta todos los tests correctamente
 
 ### Criterios de aceptación
 
