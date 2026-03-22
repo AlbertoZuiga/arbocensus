@@ -321,7 +321,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
 
 ### Tareas
 
-- [ ] **4.0** Agregar `requests>=2.28` a `requirements.txt`
+- [x] **4.0** Agregar `Requests==2.32.5` a `requirements.txt`
 
 - [ ] **4.1** Crear la clase `RoutingCache` en `routing.py`
   - Almacena resultados de queries de routing para evitar llamadas repetidas a APIs
