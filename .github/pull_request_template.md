@@ -14,10 +14,10 @@ Explain how this PR solves the problem or improves the existing functionality.
 
 Provide clear steps to reproduce and verify the changes:
 
-- Step 1
-- Step 2
-- Step 3
+- List item 1
+- List item 2
+- List item 3
 
-## 🖼️ Screenshots (optional)
+## Screenshots (optional)
 
 Include screenshots or GIFs if the change affects UI or has visible behavior.
