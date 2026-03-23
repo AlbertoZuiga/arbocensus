@@ -186,3 +186,62 @@ def osm_route_time(
     except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
         print("Warning: OSRM failed, using haversine fallback")
         return float(haversine_fallback_route_time(origin, dest, cache))
+
+
+def google_route_time(
+    origin: Coord,
+    dest: Coord,
+    cache: RoutingCache,
+    api_key: Optional[str] = None,
+) -> float:
+    mode = "walking"
+    cached = cache.get(origin, dest, mode)
+    if cached is not None:
+        return float(cached["duration_s"])
+
+    key = api_key or os.getenv("GOOGLE_MAPS_API_KEY")
+    if not key:
+        return float(haversine_fallback_route_time(origin, dest, cache))
+
+    try:
+        lat1 = float(origin["lat"])
+        lng1 = float(origin["lng"])
+        lat2 = float(dest["lat"])
+        lng2 = float(dest["lng"])
+    except (KeyError, TypeError, ValueError):
+        return float(haversine_fallback_route_time(origin, dest, cache))
+
+    if lat1 == lat2 and lng1 == lng2:
+        return float(haversine_fallback_route_time(origin, dest, cache))
+
+    params = {
+        "origin": f"{lat1},{lng1}",
+        "destination": f"{lat2},{lng2}",
+        "mode": "walking",
+        "key": key,
+    }
+
+    try:
+        resp = requests.get(
+            "https://maps.googleapis.com/maps/api/directions/json",
+            params=params,
+            timeout=5,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        leg = data["routes"][0]["legs"][0]
+        duration_s = float(leg["duration"]["value"])
+        distance_m = float(leg.get("distance", {}).get("value", 0.0))
+        cache.put(
+            origin,
+            dest,
+            mode,
+            {
+                "distance_m": distance_m,
+                "duration_s": duration_s,
+                "source": "google",
+            },
+        )
+        return duration_s
+    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
+        return float(haversine_fallback_route_time(origin, dest, cache))

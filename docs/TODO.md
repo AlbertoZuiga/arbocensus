@@ -362,7 +362,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Timeout de request: 5 segundos
   - Rate limiting: implementar un `time.sleep(0.1)` entre requests consecutivos (para el API público; desactivable para instancias locales)
 
-- [ ] **4.5** Implementar la función `google_route_time(origin, dest, cache, api_key=None)` en `routing.py`
+- [x] **4.5** Implementar la función `google_route_time(origin, dest, cache, api_key=None)` en `routing.py`
   - Primero busca en `cache`; si existe, retorna `duration_s`
   - Si no está en cache, hace request a Google Directions API:
     - Endpoint: `https://maps.googleapis.com/maps/api/directions/json`
