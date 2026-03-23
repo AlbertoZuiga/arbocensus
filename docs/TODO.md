@@ -431,7 +431,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Si `0 < position < len(route)`: costo = `sparse_distance(graph, route[position-1], node) + sparse_distance(graph, node, route[position]) - sparse_distance(graph, route[position-1], route[position])`
   - Retorna `float` con el delta de distancia
 
-- [ ] **5.2** Implementar la función auxiliar `removal_cost(node_index_in_route, route, sparse_graph, all_nodes)` en `optimize.py`
+- [x] **5.2** Implementar la función auxiliar `removal_cost(node_index_in_route, route, sparse_graph, all_nodes)` en `optimize.py`
   - Calcula el costo delta de remover el nodo en posición `node_index_in_route` de `route`
   - Si es el primer nodo: savings = `sparse_distance(graph, route[0], route[1])`
   - Si es el último nodo: savings = `sparse_distance(graph, route[-2], route[-1])`
