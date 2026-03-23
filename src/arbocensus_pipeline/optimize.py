@@ -38,3 +38,34 @@ def insertion_cost(
         + sparse_distance(sparse_graph, node, right, all_nodes)
         - sparse_distance(sparse_graph, left, right, all_nodes)
     )
+
+
+def removal_cost(
+    node_index_in_route: int,
+    route: List[int],
+    sparse_graph: SparseGraph,
+    all_nodes: List[dict],
+) -> float:
+    """Return savings obtained by removing a node from an open route.
+
+    A positive value means the route becomes shorter by that amount.
+    """
+    n = len(route)
+    if n <= 1:
+        return 0.0
+
+    idx = node_index_in_route
+    if idx <= 0:
+        return sparse_distance(sparse_graph, route[0], route[1], all_nodes)
+
+    if idx >= n - 1:
+        return sparse_distance(sparse_graph, route[-2], route[-1], all_nodes)
+
+    prev_node = route[idx - 1]
+    node = route[idx]
+    next_node = route[idx + 1]
+    return (
+        sparse_distance(sparse_graph, prev_node, node, all_nodes)
+        + sparse_distance(sparse_graph, node, next_node, all_nodes)
+        - sparse_distance(sparse_graph, prev_node, next_node, all_nodes)
+    )
