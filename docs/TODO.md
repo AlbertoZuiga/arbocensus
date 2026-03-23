@@ -507,7 +507,7 @@ Implementar la función principal `find_routes` que orquesta todo el pipeline: e
 
 ### Tareas
 
-- [ ] **6.1** Implementar `find_routes` en `optimize.py`
+- [x] **6.1** Implementar `find_routes` en `optimize.py`
   - Firma exacta:
 
     ```python
@@ -526,7 +526,7 @@ Implementar la función principal `find_routes` que orquesta todo el pipeline: e
     ) -> List[Tuple[List[Dict], float]]:
     ```
 
-  - [ ] **Step 0 — Inicialización**
+  - [x] **Step 0 — Inicialización**
     - Crear `osm_cache = RoutingCache()` y `google_cache = RoutingCache()`
     - Calcular `lower_bound = expected_duration_per_route * lower_factor`
     - Calcular `upper_bound = expected_duration_per_route * upper_factor`
@@ -535,17 +535,17 @@ Implementar la función principal `find_routes` que orquesta todo el pipeline: e
       - `best_feasible_solution = None`, `best_feasible_score = inf`
       - `best_overall_solution = None`, `best_overall_gap = inf`
     - Inicializar histéresis: `over_counter`, `under_counter`, `last_direction`
-  - [ ] **Step 1 — Estimación inicial**
+  - [x] **Step 1 — Estimación inicial**
     - `total_euclidean_km = estimate_euclidean_tsp(locations)`
     - `walking_speed_kmh = 4.0`
     - `travel_time_estimate = (total_euclidean_km / walking_speed_kmh) * 3600`
     - `service_time_estimate = len(locations) * t_per_tree`
     - `total_time_estimate = travel_time_estimate + service_time_estimate`
     - `n_routes = max(1, ceil(total_time_estimate / expected_duration_per_route))`
-  - [ ] **Step 2 — Grafo sparse**
+  - [x] **Step 2 — Grafo sparse**
     - `kd_tree = build_kd_tree(locations)`
     - `sparse_graph = build_sparse_graph_from_kdtree(locations, kd_tree, k_neighbors)`
-  - [ ] **Step 3 — Loop principal** (`for iteration in range(max_iterations):`)
+  - [x] **Step 3 — Loop principal** (`for iteration in range(max_iterations):`)
     - **3.1** `clusters = k_means_constrained(locations, n_clusters=n_routes)`
     - **3.2** Para cada cluster: `route = nearest_neighbor_path(...)` → `route = two_opt_path(...)`
     - **3.3** Evaluar duración por ruta con `compute_route_time_with_cache(..., f_osm_route_time, osm_cache, t_per_tree)`
@@ -570,13 +570,13 @@ Implementar la función principal `find_routes` que orquesta todo el pipeline: e
         - Si no, aumentar en `+1`
       - Elif `under_counter >= hysteresis_rounds`: disminuir `n_routes` en `1` (mínimo `1`)
       - Aplicar regla de amortiguación cuando cambia el sentido de ajuste (`last_direction`)
-  - [ ] **Step 4 — Validación final con Google**
+  - [x] **Step 4 — Validación final con Google**
     - Elegir `final_routes = best_feasible_solution if best_feasible_solution else best_overall_solution`
     - Para cada ruta en `final_routes`: llamar `compute_route_time_with_cache(..., f_google_route_time, google_cache, t_per_tree)`
     - Guardar caches a disco
     - Retornar `List[Tuple[route_nodes, duration_google]]`
 
-- [ ] **6.2** Implementar función de logging para el loop
+- [x] **6.2** Implementar función de logging para el loop
   - Al inicio de cada iteración: `print(f"Iteration {iteration+1}/{max_iterations}: n_routes={n_routes}")`
   - Al final de cada iteración: `print(f"  max={max_route:.0f}s min={min_route:.0f}s avg={avg_route:.0f}s band_gap={band_gap:.0f}s")`
   - Al hacer break por convergencia: `print(f"Converged at iteration {iteration+1} (feasible solution found)")`
