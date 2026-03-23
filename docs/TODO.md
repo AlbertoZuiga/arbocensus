@@ -348,7 +348,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   OSRM_RATE_LIMIT_MS=100
   ```
 
-- [ ] **4.4** Implementar la función `osm_route_time(origin, dest, cache, base_url=None)` en `routing.py`
+- [x] **4.4** Implementar la función `osm_route_time(origin, dest, cache, base_url=None)` en `routing.py`
   - `origin` y `dest` son dicts con `lat` y `lng`
   - Primero busca en `cache`; si existe, retorna `duration_s` directamente
   - Si no está en cache, hace request HTTP GET a OSRM:
