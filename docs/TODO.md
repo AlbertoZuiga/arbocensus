@@ -424,7 +424,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
 
 ### Tareas
 
-- [ ] **5.1** Implementar la función auxiliar `insertion_cost(node, route, position, sparse_graph, all_nodes)` en `optimize.py`
+- [x] **5.1** Implementar la función auxiliar `insertion_cost(node, route, position, sparse_graph, all_nodes)` en `optimize.py`
   - Calcula el costo delta de insertar `node` en `route` en la posición `position`
   - Si `position == 0`: costo = `sparse_distance(graph, node, route[0])`
   - Si `position == len(route)`: costo = `sparse_distance(graph, route[-1], node)`
