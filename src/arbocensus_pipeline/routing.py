@@ -3,7 +3,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import requests
 
@@ -245,3 +245,20 @@ def google_route_time(
         return duration_s
     except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
         return float(haversine_fallback_route_time(origin, dest, cache))
+
+
+def compute_route_time(
+    route: List[Coord],
+    f_route_time: Callable[[Coord, Coord, RoutingCache], float],
+    cache: RoutingCache,
+    t_per_tree: float,
+) -> float:
+    if not route:
+        return 0.0
+
+    total_travel_time = 0.0
+    for i in range(len(route) - 1):
+        total_travel_time += float(f_route_time(route[i], route[i + 1], cache))
+
+    total_service_time = float(len(route)) * float(t_per_tree)
+    return float(total_travel_time + total_service_time)
