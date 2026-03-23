@@ -582,7 +582,7 @@ Implementar la función principal `find_routes` que orquesta todo el pipeline: e
   - Al hacer break por convergencia: `print(f"Converged at iteration {iteration+1} (feasible solution found)")`
   - Al terminar sin converger: `print(f"Warning: did not converge after {max_iterations} iterations, returning best available solution")`
 
-- [ ] **6.3** Agregar el subcomando `route` a `cli.py`
+- [x] **6.3** Agregar el subcomando `route` a `cli.py`
   - Registrar un nuevo subparser `route` en la función `main()`
   - Argumentos:
     - `--inp` (default: `FILTER_DEFAULT_PATH`) — archivo de entrada
