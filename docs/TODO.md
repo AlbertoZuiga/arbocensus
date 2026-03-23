@@ -424,21 +424,21 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
 
 ### Tareas
 
-- [ ] **5.1** Implementar la función auxiliar `insertion_cost(node, route, position, sparse_graph, all_nodes)` en `optimize.py`
+- [x] **5.1** Implementar la función auxiliar `insertion_cost(node, route, position, sparse_graph, all_nodes)` en `optimize.py`
   - Calcula el costo delta de insertar `node` en `route` en la posición `position`
   - Si `position == 0`: costo = `sparse_distance(graph, node, route[0])`
   - Si `position == len(route)`: costo = `sparse_distance(graph, route[-1], node)`
   - Si `0 < position < len(route)`: costo = `sparse_distance(graph, route[position-1], node) + sparse_distance(graph, node, route[position]) - sparse_distance(graph, route[position-1], route[position])`
   - Retorna `float` con el delta de distancia
 
-- [ ] **5.2** Implementar la función auxiliar `removal_cost(node_index_in_route, route, sparse_graph, all_nodes)` en `optimize.py`
+- [x] **5.2** Implementar la función auxiliar `removal_cost(node_index_in_route, route, sparse_graph, all_nodes)` en `optimize.py`
   - Calcula el costo delta de remover el nodo en posición `node_index_in_route` de `route`
   - Si es el primer nodo: savings = `sparse_distance(graph, route[0], route[1])`
   - Si es el último nodo: savings = `sparse_distance(graph, route[-2], route[-1])`
   - Si es un nodo intermedio: savings = `sparse_distance(graph, route[idx-1], route[idx]) + sparse_distance(graph, route[idx], route[idx+1]) - sparse_distance(graph, route[idx-1], route[idx+1])`
   - Retorna `float` negativo (ahorro) o positivo (la ruta se acorta)
 
-- [ ] **5.3** Implementar `relocate_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
+- [x] **5.3** Implementar `relocate_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Identifica la ruta con mayor duración (ruta fuente)
   - Para cada nodo en la ruta fuente:
     - Calcula el ahorro de removerlo
@@ -451,7 +451,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Retorna `(routes_modified, durations_modified)` — las listas actualizadas
   - **No recalcular duración completa con OSM en cada movimiento**: usar los deltas de costo en sparse_graph como aproximación
 
-- [ ] **5.4** Implementar `swap_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
+- [x] **5.4** Implementar `swap_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Para cada par de rutas `(r1, r2)`:
     - Para cada nodo `a` en `r1` y cada nodo `b` en `r2`:
       - Calcular delta de remover `a` de `r1` e insertar `b` en su lugar
@@ -463,7 +463,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Retorna `(routes_modified, durations_modified)`
   - Optimización: solo evaluar swaps entre la ruta más larga y las demás (reduce de O(n²·m²) a O(n·m²))
 
-- [ ] **5.5** Implementar función wrapper `local_search_inter_route(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
+- [x] **5.5** Implementar función wrapper `local_search_inter_route(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Ejecuta `relocate_nodes_between_routes` seguido de `swap_nodes_between_routes`
   - Este es el punto de entrada que usará el orquestador V3
   - Retorna `(routes, durations)` mejorados
