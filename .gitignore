@@ -3,7 +3,7 @@ venv
 
 # Local env
 .env
-.env.*
+.env*.local
 
 # Cache for distance matrix and other runtime caches
 .cache/

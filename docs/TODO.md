@@ -321,9 +321,9 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
 
 ### Tareas
 
-- [ ] **4.0** Agregar `requests>=2.28` a `requirements.txt`
+- [x] **4.0** Agregar `Requests==2.32.5` a `requirements.txt`
 
-- [ ] **4.1** Crear la clase `RoutingCache` en `routing.py`
+- [x] **4.1** Crear la clase `RoutingCache` en `routing.py`
   - Almacena resultados de queries de routing para evitar llamadas repetidas a APIs
   - Estructura interna: `dict` con clave `(origin_lat_round7, origin_lng_round7, dest_lat_round7, dest_lng_round7, mode)` y valor `{"distance_m": float, "duration_s": float, "source": str}`
   - `mode` es string: `"walking"`, `"driving"`, etc.
@@ -334,7 +334,21 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Las coordenadas se redondean a 7 decimales para el key (precisión ~1cm)
   - El cache debe ser thread-safe: usar `threading.Lock` en `get` y `put`
 
-- [ ] **4.2** Implementar la función `osm_route_time(origin, dest, cache, base_url=None)` en `routing.py`
+- [x] **4.2** Implementar la función `haversine_fallback_route_time(origin, dest, cache, walking_speed_kmh=4.5, multiplier=1.3)` en `routing.py`
+  - Calcula duración usando `haversine_m(origin, dest) * multiplier / (walking_speed_kmh * 1000 / 3600)`
+  - No hace ninguna llamada de red
+  - Se usa como fallback cuando OSM y Google no están disponibles
+  - Guarda en cache con `source="haversine_fallback"`
+
+- [x] **4.3** Agregar variables a `.env.example`
+
+  ```bash
+  OSRM_BASE_URL=http://router.project-osrm.org
+  GOOGLE_MAPS_API_KEY=your-api-key-here
+  OSRM_RATE_LIMIT_MS=100
+  ```
+
+- [x] **4.4** Implementar la función `osm_route_time(origin, dest, cache, base_url=None)` en `routing.py`
   - `origin` y `dest` son dicts con `lat` y `lng`
   - Primero busca en `cache`; si existe, retorna `duration_s` directamente
   - Si no está en cache, hace request HTTP GET a OSRM:
@@ -348,7 +362,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Timeout de request: 5 segundos
   - Rate limiting: implementar un `time.sleep(0.1)` entre requests consecutivos (para el API público; desactivable para instancias locales)
 
-- [ ] **4.3** Implementar la función `google_route_time(origin, dest, cache, api_key=None)` en `routing.py`
+- [x] **4.5** Implementar la función `google_route_time(origin, dest, cache, api_key=None)` en `routing.py`
   - Primero busca en `cache`; si existe, retorna `duration_s`
   - Si no está en cache, hace request a Google Directions API:
     - Endpoint: `https://maps.googleapis.com/maps/api/directions/json`
@@ -360,7 +374,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Si la key no existe o la request falla, retornar fallback Haversine × 1.3 / walking_speed. Log warning.
   - **Nunca llamar a Google dentro del loop de optimización** — solo en validación final (Phase 6 controla esto)
 
-- [ ] **4.4** Implementar la función `compute_route_time(route, f_route_time, cache, t_per_tree)` en `routing.py`
+- [x] **4.6** Implementar la función `compute_route_time(route, f_route_time, cache, t_per_tree)` en `routing.py`
   - Implementación directa de `compute_route_time_with_cache` del pseudocódigo V3
   - `route: List[Dict]` — lista ordenada de nodos (cada uno con `lat`, `lng`)
   - `f_route_time` — función callable que toma `(origin_dict, dest_dict, cache)` y retorna duración en segundos
@@ -368,20 +382,6 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Suma `total_travel_time` (en segundos) de todos los pares
   - Suma `total_service_time = len(route) * t_per_tree` (en segundos)
   - Retorna `total_travel_time + total_service_time` en **segundos**
-
-- [ ] **4.5** Implementar la función `haversine_fallback_route_time(origin, dest, cache, walking_speed_kmh=4.5, multiplier=1.3)` en `routing.py`
-  - Calcula duración usando `haversine_m(origin, dest) * multiplier / (walking_speed_kmh * 1000 / 3600)`
-  - No hace ninguna llamada de red
-  - Se usa como fallback cuando OSM y Google no están disponibles
-  - Guarda en cache con `source="haversine_fallback"`
-
-- [ ] **4.6** Agregar variables a `.env.example`
-
-  ```bash
-  OSRM_BASE_URL=http://router.project-osrm.org
-  GOOGLE_MAPS_API_KEY=your-api-key-here
-  OSRM_RATE_LIMIT_MS=100
-  ```
 
 ### Notas de implementación
 
