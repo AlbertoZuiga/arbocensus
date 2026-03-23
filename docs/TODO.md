@@ -463,7 +463,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Retorna `(routes_modified, durations_modified)`
   - Optimización: solo evaluar swaps entre la ruta más larga y las demás (reduce de O(n²·m²) a O(n·m²))
 
-- [ ] **5.5** Implementar función wrapper `local_search_inter_route(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
+- [x] **5.5** Implementar función wrapper `local_search_inter_route(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Ejecuta `relocate_nodes_between_routes` seguido de `swap_nodes_between_routes`
   - Este es el punto de entrada que usará el orquestador V3
   - Retorna `(routes, durations)` mejorados

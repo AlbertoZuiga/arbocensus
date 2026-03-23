@@ -350,3 +350,28 @@ def swap_nodes_between_routes(
         raise ValueError("Empty route produced after swap operation")
 
     return routes, durations
+
+
+def local_search_inter_route(
+    routes: List[List[int]],
+    durations: List[float],
+    sparse_graph: SparseGraph,
+    all_nodes: List[dict],
+    upper_bound: float,
+) -> Tuple[List[List[int]], List[float]]:
+    """Run inter-route local search (relocate first, then swap)."""
+    routes, durations = relocate_nodes_between_routes(
+        routes,
+        durations,
+        sparse_graph,
+        all_nodes,
+        upper_bound,
+    )
+    routes, durations = swap_nodes_between_routes(
+        routes,
+        durations,
+        sparse_graph,
+        all_nodes,
+        upper_bound,
+    )
+    return routes, durations
