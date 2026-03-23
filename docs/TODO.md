@@ -438,7 +438,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Si es un nodo intermedio: savings = `sparse_distance(graph, route[idx-1], route[idx]) + sparse_distance(graph, route[idx], route[idx+1]) - sparse_distance(graph, route[idx-1], route[idx+1])`
   - Retorna `float` negativo (ahorro) o positivo (la ruta se acorta)
 
-- [ ] **5.3** Implementar `relocate_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
+- [x] **5.3** Implementar `relocate_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Identifica la ruta con mayor duración (ruta fuente)
   - Para cada nodo en la ruta fuente:
     - Calcula el ahorro de removerlo
