@@ -374,7 +374,7 @@ Implementar los dos backends de routing externos que V3 requiere: un cliente OSR
   - Si la key no existe o la request falla, retornar fallback Haversine × 1.3 / walking_speed. Log warning.
   - **Nunca llamar a Google dentro del loop de optimización** — solo en validación final (Phase 6 controla esto)
 
-- [ ] **4.6** Implementar la función `compute_route_time(route, f_route_time, cache, t_per_tree)` en `routing.py`
+- [x] **4.6** Implementar la función `compute_route_time(route, f_route_time, cache, t_per_tree)` en `routing.py`
   - Implementación directa de `compute_route_time_with_cache` del pseudocódigo V3
   - `route: List[Dict]` — lista ordenada de nodos (cada uno con `lat`, `lng`)
   - `f_route_time` — función callable que toma `(origin_dict, dest_dict, cache)` y retorna duración en segundos
