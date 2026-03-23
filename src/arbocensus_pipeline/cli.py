@@ -4,13 +4,14 @@ import argparse
 import json
 import math
 import os
+from functools import partial
 
 from . import cluster, export
 from . import filter as flt
 from . import graph
 from . import input as inp
 from . import io as io_mod
-from . import tsp
+from . import optimize, routing, tsp
 
 BBOX_DEFAULT_PATH = "saved_bbox.json"
 RUNS_DEFAULT_DIR = "artifacts/runs"
@@ -19,7 +20,8 @@ INPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/bbox_input/input.json"
 GRAPH_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/graph/graph.json"
 FILTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/filter/filtered.json"
 CLUSTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/cluster/clusters_by_censantes.json"
-ROUTES_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/tsp/routes_by_cluster.json"
+TSP_ROUTE_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/route/routes_by_cluster.json"
+ROUTE_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/route/routes.json"
 OUTPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/output"
 
 
@@ -202,13 +204,115 @@ def run_stage_tsp(args=None):
         res["cluster_id"] = c.get("cluster_id")
         res["size"] = len(members)
         routes.append(res)
-    out_path = resolve_output_path(args, ROUTES_DEFAULT_PATH, stage_subdir="tsp")
+    out_path = resolve_output_path(args, TSP_ROUTE_DEFAULT_PATH, stage_subdir="route")
     io_mod.write_json(
         {"routes": routes},
         out_path,
         params={"time_per_tree": time_per_tree, "walking_kmh": walking_kmh},
     )
     print(f"Wrote routes for {len(routes)} clusters to {out_path}")
+
+
+def _make_cached_routing_callables(args, cache_dir):
+    """Create routing callables and attach cache paths used by optimize.find_routes."""
+    osm_callable = partial(
+        routing.osm_route_time, base_url=getattr(args, "osm_url", None)
+    )
+    google_callable = partial(routing.google_route_time)
+
+    setattr(osm_callable, "cache_path", os.path.join(cache_dir, "osm_cache.json"))
+    setattr(
+        google_callable,
+        "cache_path",
+        os.path.join(cache_dir, "google_cache.json"),
+    )
+
+    return osm_callable, google_callable
+
+
+def run_stage_route(args=None):
+    """Run routing orchestrator and write export-compatible route output."""
+    inp_path = getattr(args, "inp", FILTER_DEFAULT_PATH)
+    if not os.path.exists(inp_path):
+        print(f"Input file {inp_path} not found")
+        return
+
+    with open(inp_path, "r", encoding="utf-8") as f:
+        obj = json.load(f)
+
+    trees = obj.get("trees", [])
+    nodes = graph.build_nodes(trees)
+    if not nodes:
+        print("No nodes available for route optimization")
+        out_path = resolve_output_path(args, ROUTE_DEFAULT_PATH, stage_subdir="route")
+        io_mod.write_json({"routes": []}, out_path, params={"source": inp_path})
+        print(f"Wrote empty route output to {out_path}")
+        return
+
+    expected_s = float(getattr(args, "expected_duration")) * 60.0
+    tpt_s = float(getattr(args, "time_per_tree", 2.0)) * 60.0
+    hard_max_min = getattr(args, "hard_max_duration", None)
+    hard_max_s = float(hard_max_min) * 60.0 if hard_max_min is not None else None
+
+    out_path = resolve_output_path(args, ROUTE_DEFAULT_PATH, stage_subdir="route")
+    default_cache_dir = os.path.join(os.path.dirname(out_path), "cache")
+    cache_dir = getattr(args, "cache_dir", None) or default_cache_dir
+    os.makedirs(cache_dir, exist_ok=True)
+
+    f_osm, f_google = _make_cached_routing_callables(args, cache_dir)
+
+    validated_routes = optimize.find_routes(
+        nodes,
+        tpt_s,
+        f_google,
+        f_osm,
+        expected_s,
+        lower_factor=float(getattr(args, "lower_factor", 0.90)),
+        upper_factor=float(getattr(args, "upper_factor", 1.10)),
+        k_neighbors=int(getattr(args, "k_neighbors", 12)),
+        max_iterations=int(getattr(args, "max_iter", 14)),
+        hysteresis_rounds=int(getattr(args, "hysteresis_rounds", 2)),
+        hard_max_duration=hard_max_s,
+    )
+
+    route_items = []
+
+    for i, (route_nodes, total_seconds) in enumerate(validated_routes):
+        route_indices = [int(n.get("id", -1)) for n in route_nodes]
+        service_seconds = len(route_indices) * tpt_s
+        travel_seconds = max(0.0, float(total_seconds) - float(service_seconds))
+        route_items.append(
+            {
+                "route": route_indices,
+                "cluster_id": i,
+                "size": len(route_indices),
+                "total_minutes": float(total_seconds) / 60.0,
+                "travel_seconds": float(travel_seconds),
+                "service_seconds": float(service_seconds),
+                "total_seconds": float(total_seconds),
+                "validated_by": "google",
+            }
+        )
+
+    io_mod.write_json(
+        {"routes": route_items},
+        out_path,
+        params={
+            "source": inp_path,
+            "expected_duration_minutes": float(getattr(args, "expected_duration")),
+            "time_per_tree_minutes": float(getattr(args, "time_per_tree", 2.0)),
+            "lower_factor": float(getattr(args, "lower_factor", 0.90)),
+            "upper_factor": float(getattr(args, "upper_factor", 1.10)),
+            "k_neighbors": int(getattr(args, "k_neighbors", 12)),
+            "max_iter": int(getattr(args, "max_iter", 14)),
+            "hysteresis_rounds": int(getattr(args, "hysteresis_rounds", 2)),
+            "hard_max_duration_minutes": hard_max_min,
+            "osm_url": getattr(args, "osm_url", None),
+            "cache_dir": cache_dir,
+            "validated_by": "google",
+        },
+    )
+    print(f"Wrote {len(route_items)} optimized routes to {out_path}")
 
 
 def _export_bbox_and_input_points(bbox_data, out_dir):
@@ -280,7 +384,7 @@ def _get_export_paths(args):
         "input": getattr(args, "input", INPUT_DEFAULT_PATH),
         "filtered": getattr(args, "filtered", FILTER_DEFAULT_PATH),
         "clusters": getattr(args, "clusters", CLUSTER_DEFAULT_PATH),
-        "routes": getattr(args, "routes", ROUTES_DEFAULT_PATH),
+        "routes": getattr(args, "routes", TSP_ROUTE_DEFAULT_PATH),
         "out_dir": getattr(args, "outdir", OUTPUT_DEFAULT_PATH),
     }
 
@@ -330,7 +434,10 @@ def run_all(args=None):
     else:  # TODO: Remove legacy once --v3 becomes the default
         run_stage_graph(args)
     run_stage_cluster(args)
-    run_stage_tsp()
+    if getattr(args, "v3", False):
+        run_stage_route(args)
+    else:  # TODO: Remove legacy once --v3 becomes the default
+        run_stage_tsp()
     run_export()
 
 
@@ -369,9 +476,27 @@ def _setup_tsp_parser(subparsers):
     st = subparsers.add_parser("tsp")
     st.add_argument("--graph", default=GRAPH_DEFAULT_PATH)
     st.add_argument("--clusters", default=CLUSTER_DEFAULT_PATH)
-    st.add_argument("--out", default=ROUTES_DEFAULT_PATH)
+    st.add_argument("--out", default=TSP_ROUTE_DEFAULT_PATH)
     st.add_argument("--time-per-tree", type=float, default=1.5)
     st.add_argument("--walking-kmh", type=float, default=5.0)
+
+
+def _setup_route_parser(subparsers):
+    """Configure route subcommand parser."""
+    sr = subparsers.add_parser("route")
+    sr.add_argument("--inp", default=FILTER_DEFAULT_PATH)
+    sr.add_argument("--out", default=ROUTE_DEFAULT_PATH)
+    sr.add_argument("--expected-duration", type=float, default=150.0)
+    sr.add_argument("--time-per-tree", type=float, default=2.0)
+    sr.add_argument("--lower-factor", type=float, default=0.90)
+    sr.add_argument("--upper-factor", type=float, default=1.10)
+    sr.add_argument("--k-neighbors", type=int, default=12)
+    sr.add_argument("--max-iter", type=int, default=14)
+    sr.add_argument("--hysteresis-rounds", type=int, default=2)
+    sr.add_argument("--hard-max-duration", type=float, default=None)
+    sr.add_argument("--osm-url", default=None)
+    sr.add_argument("--use-google", action="store_true")
+    sr.add_argument("--cache-dir", default=None)
 
 
 def _setup_export_parser(subparsers):
@@ -381,7 +506,7 @@ def _setup_export_parser(subparsers):
     se.add_argument("--input", default=INPUT_DEFAULT_PATH)
     se.add_argument("--filtered", default=FILTER_DEFAULT_PATH)
     se.add_argument("--clusters", default=CLUSTER_DEFAULT_PATH)
-    se.add_argument("--routes", default=ROUTES_DEFAULT_PATH)
+    se.add_argument("--routes", default=TSP_ROUTE_DEFAULT_PATH)
     se.add_argument("--outdir", default=OUTPUT_DEFAULT_PATH)
 
 
@@ -404,7 +529,8 @@ def main():
     _setup_filter_parser(sub)
     _setup_graph_parser(sub)
     _setup_cluster_parser(sub)
-    _setup_tsp_parser(sub)
+    _setup_tsp_parser(sub)  # TODO: Remove legacy once --v3 becomes the default
+    _setup_route_parser(sub)
     _setup_export_parser(sub)
 
     args = p.parse_args()
@@ -422,8 +548,11 @@ def main():
             run_stage_graph(args)
     elif args.cmd == "cluster":
         run_stage_cluster(args)
-    elif args.cmd == "tsp":
-        run_stage_tsp(args)
+    elif args.cmd == "route":
+        if getattr(args, "v3", False):
+            run_stage_route(args)
+        else:  # TODO: Remove legacy once --v3 becomes the default
+            run_stage_tsp(args)
     elif args.cmd == "export":
         run_export(args)
     elif args.cmd is None:
