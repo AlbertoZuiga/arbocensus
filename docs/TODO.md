@@ -451,7 +451,7 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
   - Retorna `(routes_modified, durations_modified)` — las listas actualizadas
   - **No recalcular duración completa con OSM en cada movimiento**: usar los deltas de costo en sparse_graph como aproximación
 
-- [ ] **5.4** Implementar `swap_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
+- [x] **5.4** Implementar `swap_nodes_between_routes(routes, durations, sparse_graph, all_nodes, upper_bound)` en `optimize.py`
   - Para cada par de rutas `(r1, r2)`:
     - Para cada nodo `a` en `r1` y cada nodo `b` en `r2`:
       - Calcular delta de remover `a` de `r1` e insertar `b` en su lugar

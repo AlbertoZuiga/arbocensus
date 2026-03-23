@@ -160,6 +160,118 @@ def _apply_relocate_move(routes: List[List[int]], durations: List[float], move) 
     durations[dest_idx] = dst_dur
 
 
+def _evaluate_swap_candidate(
+    routes: List[List[int]],
+    durations: List[float],
+    sparse_graph: SparseGraph,
+    all_nodes: List[dict],
+    upper_bound: float,
+    long_idx: int,
+    other_idx: int,
+    idx_a: int,
+    idx_b: int,
+    global_max: float,
+):
+    long_route = routes[long_idx]
+    other_route = routes[other_idx]
+
+    node_a = long_route[idx_a]
+    node_b = other_route[idx_b]
+
+    saved_a = removal_cost(idx_a, long_route, sparse_graph, all_nodes)
+    saved_b = removal_cost(idx_b, other_route, sparse_graph, all_nodes)
+
+    long_wo_a = long_route[:idx_a] + long_route[idx_a + 1 :]
+    other_wo_b = other_route[:idx_b] + other_route[idx_b + 1 :]
+
+    ins_a_pos = min(idx_a, len(long_wo_a))
+    ins_b_pos = min(idx_b, len(other_wo_b))
+
+    insert_b_in_long = insertion_cost(
+        node_b,
+        long_wo_a,
+        ins_a_pos,
+        sparse_graph,
+        all_nodes,
+    )
+    insert_a_in_other = insertion_cost(
+        node_a,
+        other_wo_b,
+        ins_b_pos,
+        sparse_graph,
+        all_nodes,
+    )
+
+    long_new_duration = durations[long_idx] - saved_a + insert_b_in_long
+    other_new_duration = durations[other_idx] - saved_b + insert_a_in_other
+
+    if long_new_duration > upper_bound + EPS or other_new_duration > upper_bound + EPS:
+        return None
+
+    candidate_durations = durations[:]
+    candidate_durations[long_idx] = long_new_duration
+    candidate_durations[other_idx] = other_new_duration
+    if max(candidate_durations) + EPS >= global_max:
+        return None
+
+    new_long_route = long_wo_a[:ins_a_pos] + [node_b] + long_wo_a[ins_a_pos:]
+    new_other_route = other_wo_b[:ins_b_pos] + [node_a] + other_wo_b[ins_b_pos:]
+    return (
+        long_idx,
+        other_idx,
+        new_long_route,
+        new_other_route,
+        long_new_duration,
+        other_new_duration,
+    )
+
+
+def _find_first_swap_move(
+    routes: List[List[int]],
+    durations: List[float],
+    sparse_graph: SparseGraph,
+    all_nodes: List[dict],
+    upper_bound: float,
+):
+    long_idx = max(range(len(durations)), key=lambda i: durations[i])
+    long_route = routes[long_idx]
+    if not long_route:
+        return None
+
+    global_max = max(durations)
+
+    for other_idx, other_route in enumerate(routes):
+        if other_idx == long_idx or not other_route:
+            continue
+
+        for idx_a in range(len(long_route)):
+            for idx_b in range(len(other_route)):
+                move = _evaluate_swap_candidate(
+                    routes,
+                    durations,
+                    sparse_graph,
+                    all_nodes,
+                    upper_bound,
+                    long_idx,
+                    other_idx,
+                    idx_a,
+                    idx_b,
+                    global_max,
+                )
+                if move is not None:
+                    return move
+
+    return None
+
+
+def _apply_swap_move(routes: List[List[int]], durations: List[float], move) -> None:
+    long_idx, other_idx, new_long_route, new_other_route, long_dur, other_dur = move
+    routes[long_idx] = new_long_route
+    routes[other_idx] = new_other_route
+    durations[long_idx] = long_dur
+    durations[other_idx] = other_dur
+
+
 def relocate_nodes_between_routes(
     routes: List[List[int]],
     durations: List[float],
@@ -196,5 +308,45 @@ def relocate_nodes_between_routes(
 
     if any(len(route) == 0 for route in routes):
         raise ValueError("Empty route produced after relocate operation")
+
+    return routes, durations
+
+
+def swap_nodes_between_routes(
+    routes: List[List[int]],
+    durations: List[float],
+    sparse_graph: SparseGraph,
+    all_nodes: List[dict],
+    upper_bound: float,
+) -> Tuple[List[List[int]], List[float]]:
+    """Greedy swap moves between the longest route and all others.
+
+    Each candidate swap uses only local deltas around affected positions.
+    """
+    if not routes or len(routes) <= 1:
+        return routes, durations
+
+    if _all_routes_under_upper_bound(durations, upper_bound):
+        return routes, durations
+
+    baseline_nodes = _routes_node_multiset(routes)
+
+    for _ in range(MAX_LOCAL_ITER):
+        move = _find_first_swap_move(
+            routes,
+            durations,
+            sparse_graph,
+            all_nodes,
+            upper_bound,
+        )
+        if move is None:
+            break
+        _apply_swap_move(routes, durations, move)
+
+    if _routes_node_multiset(routes) != baseline_nodes:
+        raise ValueError("Node conservation violated after swap operation")
+
+    if any(len(route) == 0 for route in routes):
+        raise ValueError("Empty route produced after swap operation")
 
     return routes, durations
