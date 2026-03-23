@@ -490,11 +490,11 @@ Implementar operadores de búsqueda local que mueven o intercambian nodos entre 
 
 ---
 
-## Phase 6 — V3 Routing Orchestrator
+## Phase 6 — Routing Orchestrator
 
 ### Objetivo
 
-Implementar la función principal `find_routes` (V3) que orquesta todo el pipeline: estimación inicial → loop de optimización (clustering + open-path TSP + evaluación OSM + ajustes inter-ruta + ajuste dinámico de `n_routes` con histéresis) → validación final con Google. También agregar el subcomando `route` al CLI.
+Implementar la función principal `find_routes` que orquesta todo el pipeline: estimación inicial → loop de optimización (clustering + open-path TSP + evaluación OSM + ajustes inter-ruta + ajuste dinámico de `n_routes` con histéresis) → validación final con Google. También agregar el subcomando `route` al CLI.
 
 ### Complejidad: Media
 
@@ -502,12 +502,12 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
 
 ### Archivos a modificar
 
-- `src/arbocensus_pipeline/optimize.py` (agregar `find_routes` V3; opcional alias backward-compatible `find_routes_v3`)
+- `src/arbocensus_pipeline/optimize.py` (agregar `find_routes`)
 - `src/arbocensus_pipeline/cli.py` (agregar subcomando `route` y soportar flag global `--v3`)
 
 ### Tareas
 
-- [ ] **6.1** Implementar `find_routes` en `optimize.py` (V3)
+- [ ] **6.1** Implementar `find_routes` en `optimize.py`
   - Firma exacta:
 
     ```python
@@ -526,7 +526,7 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
     ) -> List[Tuple[List[Dict], float]]:
     ```
 
-  - **Step 0 — Inicialización**
+  - [ ] **Step 0 — Inicialización**
     - Crear `osm_cache = RoutingCache()` y `google_cache = RoutingCache()`
     - Calcular `lower_bound = expected_duration_per_route * lower_factor`
     - Calcular `upper_bound = expected_duration_per_route * upper_factor`
@@ -535,17 +535,17 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
       - `best_feasible_solution = None`, `best_feasible_score = inf`
       - `best_overall_solution = None`, `best_overall_gap = inf`
     - Inicializar histéresis: `over_counter`, `under_counter`, `last_direction`
-  - **Step 1 — Estimación inicial**
+  - [ ] **Step 1 — Estimación inicial**
     - `total_euclidean_km = estimate_euclidean_tsp(locations)`
     - `walking_speed_kmh = 4.0`
     - `travel_time_estimate = (total_euclidean_km / walking_speed_kmh) * 3600`
     - `service_time_estimate = len(locations) * t_per_tree`
     - `total_time_estimate = travel_time_estimate + service_time_estimate`
     - `n_routes = max(1, ceil(total_time_estimate / expected_duration_per_route))`
-  - **Step 2 — Grafo sparse**
+  - [ ] **Step 2 — Grafo sparse**
     - `kd_tree = build_kd_tree(locations)`
     - `sparse_graph = build_sparse_graph_from_kdtree(locations, kd_tree, k_neighbors)`
-  - **Step 3 — Loop principal** (`for iteration in range(max_iterations):`)
+  - [ ] **Step 3 — Loop principal** (`for iteration in range(max_iterations):`)
     - **3.1** `clusters = k_means_constrained(locations, n_clusters=n_routes)`
     - **3.2** Para cada cluster: `route = nearest_neighbor_path(...)` → `route = two_opt_path(...)`
     - **3.3** Evaluar duración por ruta con `compute_route_time_with_cache(..., f_osm_route_time, osm_cache, t_per_tree)`
@@ -570,7 +570,7 @@ Implementar la función principal `find_routes` (V3) que orquesta todo el pipeli
         - Si no, aumentar en `+1`
       - Elif `under_counter >= hysteresis_rounds`: disminuir `n_routes` en `1` (mínimo `1`)
       - Aplicar regla de amortiguación cuando cambia el sentido de ajuste (`last_direction`)
-  - **Step 4 — Validación final con Google**
+  - [ ] **Step 4 — Validación final con Google**
     - Elegir `final_routes = best_feasible_solution if best_feasible_solution else best_overall_solution`
     - Para cada ruta en `final_routes`: llamar `compute_route_time_with_cache(..., f_google_route_time, google_cache, t_per_tree)`
     - Guardar caches a disco
