@@ -1,8 +1,11 @@
 import json
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+
+import requests
 
 from .utils import haversine_m
 
@@ -130,3 +133,56 @@ def haversine_fallback_route_time(
     }
     cache.put(origin, dest, mode, result)
     return float(duration_s)
+
+
+def osm_route_time(
+    origin: Coord,
+    dest: Coord,
+    cache: RoutingCache,
+    base_url: Optional[str] = None,
+) -> float:
+    mode = "walking"
+    cached = cache.get(origin, dest, mode)
+    if cached is not None:
+        return float(cached["duration_s"])
+
+    try:
+        lat1 = float(origin["lat"])
+        lng1 = float(origin["lng"])
+        lat2 = float(dest["lat"])
+        lng2 = float(dest["lng"])
+    except (KeyError, TypeError, ValueError):
+        print("Warning: OSRM failed, using haversine fallback")
+        return float(haversine_fallback_route_time(origin, dest, cache))
+
+    if lat1 == lat2 and lng1 == lng2:
+        return float(haversine_fallback_route_time(origin, dest, cache))
+
+    root = (base_url or "http://router.project-osrm.org").rstrip("/")
+    url = f"{root}/route/v1/foot/{lng1},{lat1};{lng2},{lat2}?overview=false"
+
+    # Keep the public OSRM API usage polite by spacing requests.
+    if base_url is None or "router.project-osrm.org" in root:
+        time.sleep(0.1)
+
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        route = data["routes"][0]
+        duration_s = float(route["duration"])
+        distance_m = float(route.get("distance", 0.0))
+        cache.put(
+            origin,
+            dest,
+            mode,
+            {
+                "distance_m": distance_m,
+                "duration_s": duration_s,
+                "source": "osrm",
+            },
+        )
+        return duration_s
+    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
+        print("Warning: OSRM failed, using haversine fallback")
+        return float(haversine_fallback_route_time(origin, dest, cache))
