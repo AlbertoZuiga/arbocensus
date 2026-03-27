@@ -379,13 +379,24 @@ def _export_routes(routes_path, nodes, out_dir):
 
 def _get_export_paths(args):
     """Extract all file paths from args for export stage."""
+    graph_path = getattr(args, "graph", None) or GRAPH_DEFAULT_PATH
+    input_path = getattr(args, "input", None) or INPUT_DEFAULT_PATH
+    filtered_path = getattr(args, "filtered", None) or FILTER_DEFAULT_PATH
+    clusters_path = getattr(args, "clusters", None) or CLUSTER_DEFAULT_PATH
+    out_dir = getattr(args, "outdir", None) or OUTPUT_DEFAULT_PATH
+
+    default_routes = (
+        ROUTE_DEFAULT_PATH if getattr(args, "v3", False) else TSP_ROUTE_DEFAULT_PATH
+    )
+    routes_path = getattr(args, "routes", None) or default_routes
+
     return {
-        "graph": getattr(args, "graph", GRAPH_DEFAULT_PATH),
-        "input": getattr(args, "input", INPUT_DEFAULT_PATH),
-        "filtered": getattr(args, "filtered", FILTER_DEFAULT_PATH),
-        "clusters": getattr(args, "clusters", CLUSTER_DEFAULT_PATH),
-        "routes": getattr(args, "routes", TSP_ROUTE_DEFAULT_PATH),
-        "out_dir": getattr(args, "outdir", OUTPUT_DEFAULT_PATH),
+        "graph": graph_path,
+        "input": input_path,
+        "filtered": filtered_path,
+        "clusters": clusters_path,
+        "routes": routes_path,
+        "out_dir": out_dir,
     }
 
 
@@ -438,7 +449,12 @@ def run_all(args=None):
         run_stage_route(args)
     else:  # TODO: Remove legacy once --v3 becomes the default
         run_stage_tsp()
-    run_export()
+
+    export_args = args
+    if args is not None and getattr(args, "v3", False) and not hasattr(args, "routes"):
+        export_args = argparse.Namespace(**vars(args))
+        setattr(export_args, "routes", ROUTE_DEFAULT_PATH)
+    run_export(export_args)
 
 
 def _setup_input_parser(subparsers):
