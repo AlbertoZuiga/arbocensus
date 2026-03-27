@@ -135,12 +135,7 @@ def haversine_fallback_route_time(
     return float(duration_s)
 
 
-def osm_route_time(
-    origin: Coord,
-    dest: Coord,
-    cache: RoutingCache,
-    base_url: Optional[str] = None,
-) -> float:
+def osm_route_time(origin: Coord, dest: Coord, cache: RoutingCache) -> float:
     mode = "walking"
     cached = cache.get(origin, dest, mode)
     if cached is not None:
@@ -158,6 +153,7 @@ def osm_route_time(
     if lat1 == lat2 and lng1 == lng2:
         return float(haversine_fallback_route_time(origin, dest, cache))
 
+    base_url = os.getenv("OSRM_BASE_URL")
     root = (base_url or "http://router.project-osrm.org").rstrip("/")
     url = f"{root}/route/v1/foot/{lng1},{lat1};{lng2},{lat2}?overview=false"
 

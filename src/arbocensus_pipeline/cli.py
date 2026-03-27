@@ -213,11 +213,9 @@ def run_stage_tsp(args=None):
     print(f"Wrote routes for {len(routes)} clusters to {out_path}")
 
 
-def _make_cached_routing_callables(args, cache_dir):
+def _make_cached_routing_callables(cache_dir):
     """Create routing callables and attach cache paths used by optimize.find_routes."""
-    osm_callable = partial(
-        routing.osm_route_time, base_url=getattr(args, "osm_url", None)
-    )
+    osm_callable = partial(routing.osm_route_time)
     google_callable = partial(routing.google_route_time)
 
     setattr(osm_callable, "cache_path", os.path.join(cache_dir, "osm_cache.json"))
@@ -249,7 +247,7 @@ def run_stage_route(args=None):
         print(f"Wrote empty route output to {out_path}")
         return
 
-    expected_s = float(getattr(args, "expected_duration")) * 60.0
+    expected_s = float(getattr(args, "expected_duration", 150.0)) * 60.0
     tpt_s = float(getattr(args, "time_per_tree", 2.0)) * 60.0
     hard_max_min = getattr(args, "hard_max_duration", None)
     hard_max_s = float(hard_max_min) * 60.0 if hard_max_min is not None else None
@@ -259,7 +257,7 @@ def run_stage_route(args=None):
     cache_dir = getattr(args, "cache_dir", None) or default_cache_dir
     os.makedirs(cache_dir, exist_ok=True)
 
-    f_osm, f_google = _make_cached_routing_callables(args, cache_dir)
+    f_osm, f_google = _make_cached_routing_callables(cache_dir)
 
     validated_routes = optimize.find_routes(
         nodes,
@@ -299,7 +297,9 @@ def run_stage_route(args=None):
         out_path,
         params={
             "source": inp_path,
-            "expected_duration_minutes": float(getattr(args, "expected_duration")),
+            "expected_duration_minutes": float(
+                getattr(args, "expected_duration", 150.0)
+            ),
             "time_per_tree_minutes": float(getattr(args, "time_per_tree", 2.0)),
             "lower_factor": float(getattr(args, "lower_factor", 0.90)),
             "upper_factor": float(getattr(args, "upper_factor", 1.10)),
