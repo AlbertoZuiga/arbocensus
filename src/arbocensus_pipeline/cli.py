@@ -275,8 +275,12 @@ def run_stage_route(args=None):
 
     route_items = []
 
-    for i, (route_nodes, total_seconds) in enumerate(validated_routes):
-        route_indices = [int(n.get("id", -1)) for n in route_nodes]
+    for i, (route_indices, total_seconds) in enumerate(validated_routes):
+        route_indices = [
+            int(idx)
+            for idx in route_indices
+            if isinstance(idx, (int, float)) and 0 <= int(idx) < len(nodes)
+        ]
         service_seconds = len(route_indices) * tpt_s
         travel_seconds = max(0.0, float(total_seconds) - float(service_seconds))
         route_items.append(
@@ -364,6 +368,41 @@ def _load_clusters(clusters_path):
     return clusters_map, clusters_list
 
 
+def _load_clusters_from_routes(routes_path, node_count):
+    """Build clusters_map/clusters_list directly from route assignments (V3 source of truth)."""
+    clusters_map = {}
+    clusters_list = []
+    if not os.path.exists(routes_path):
+        return clusters_map, clusters_list
+
+    with open(routes_path, "r", encoding="utf-8") as f:
+        robj = json.load(f)
+
+    for idx, route_obj in enumerate(robj.get("routes", [])):
+        cluster_id = route_obj.get("cluster_id", idx)
+        members = []
+        for node_idx in route_obj.get("route", []):
+            try:
+                node_i = int(node_idx)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= node_i < node_count:
+                members.append(node_i)
+
+        clusters_list.append(
+            {
+                "cluster_id": cluster_id,
+                "member_node_indices": members,
+                "size": len(members),
+            }
+        )
+
+        for node_i in members:
+            clusters_map[node_i] = cluster_id
+
+    return clusters_map, clusters_list
+
+
 def _export_routes(routes_path, nodes, out_dir):
     """Export routes.geojson."""
     if not os.path.exists(routes_path):
@@ -431,7 +470,19 @@ def run_export(args=None):
 
     _export_filtered_points(paths["filtered"], paths["out_dir"])
 
-    clusters_map, clusters_list = _load_clusters(paths["clusters"])
+    if getattr(args, "v3", False):
+        # In V3, route assignments are the final cluster definition after optimization.
+        clusters_map, clusters_list = _load_clusters_from_routes(
+            paths["routes"], len(nodes)
+        )
+        if not clusters_list:
+            print(
+                "Warning: no valid route-based clusters found for V3 export; "
+                "writing empty cluster layers"
+            )
+    else:
+        clusters_map, clusters_list = _load_clusters(paths["clusters"])
+
     _export_cluster_data(nodes, clusters_map, clusters_list, paths["out_dir"])
 
     _export_routes(paths["routes"], nodes, paths["out_dir"])
@@ -522,7 +573,7 @@ def _setup_export_parser(subparsers):
     se.add_argument("--input", default=INPUT_DEFAULT_PATH)
     se.add_argument("--filtered", default=FILTER_DEFAULT_PATH)
     se.add_argument("--clusters", default=CLUSTER_DEFAULT_PATH)
-    se.add_argument("--routes", default=TSP_ROUTE_DEFAULT_PATH)
+    se.add_argument("--routes", default=None)
     se.add_argument("--outdir", default=OUTPUT_DEFAULT_PATH)
 
 
