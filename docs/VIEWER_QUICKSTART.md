@@ -25,9 +25,22 @@ python -m http.server 8000
 
 # Luego abrir en navegador:
 # http://localhost:8000/viewer/index.html
+# http://localhost:8000/viewer/index_v3.html
 
 # Opción 2: Abrir directamente (si el navegador lo permite)
 open viewer/index.html
+open viewer/index_v3.html
+
+## Viewer V3
+
+`viewer/index_v3.html` es una copia del viewer base adaptada para el pipeline `--v3`.
+
+Incluye:
+
+- fallback de rutas de salida (`output` y `06_output`)
+- lectura de métricas de routing desde `artifacts/runs/latest/route/routes.json`
+- popups enriquecidos con `travel_seconds`, `service_seconds`, `total_seconds` y `validated_by`
+- panel de resumen con métricas agregadas por ruta
 ```
 
 ## Controles del Viewer
