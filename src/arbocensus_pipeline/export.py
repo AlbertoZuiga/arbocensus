@@ -112,7 +112,16 @@ def build_routes_geojson(
     features = []
     for r in routes:
         route = r.get("route", [])
-        coords = [[nodes[i]["lng"], nodes[i]["lat"]] for i in route]
+        coords = []
+        for node_idx in route:
+            try:
+                i = int(node_idx)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= i < len(nodes):
+                coords.append([nodes[i]["lng"], nodes[i]["lat"]])
+        if len(coords) < 2:
+            continue
         feat = {
             "type": "Feature",
             "geometry": {"type": "LineString", "coordinates": coords},
