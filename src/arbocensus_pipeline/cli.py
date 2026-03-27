@@ -433,7 +433,7 @@ def run_all(args=None):
         run_stage_graph_v3(args)
     else:  # TODO: Remove legacy once --v3 becomes the default
         run_stage_graph(args)
-    run_stage_cluster(args)
+        run_stage_cluster(args)
     if getattr(args, "v3", False):
         run_stage_route(args)
     else:  # TODO: Remove legacy once --v3 becomes the default
