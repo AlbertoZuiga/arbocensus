@@ -3,16 +3,15 @@
 import argparse
 import glob
 import json
-import math
 import os
 from functools import partial
 
-from . import cluster, export
+from . import export
 from . import filter as flt
 from . import graph
 from . import input as inp
 from . import io as io_mod
-from . import optimize, routing, tsp
+from . import optimize, routing
 
 BBOX_DEFAULT_DIR = "bbox"
 RUNS_DEFAULT_DIR = "artifacts/runs"
@@ -20,8 +19,6 @@ LATEST_DEFAULT_DIR = f"{RUNS_DEFAULT_DIR}/latest"
 INPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/bbox_input/input.json"
 GRAPH_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/graph/graph.json"
 FILTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/filter/filtered.json"
-CLUSTER_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/cluster/clusters_by_censantes.json"
-TSP_ROUTE_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/route/routes_by_cluster.json"
 ROUTE_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/route/routes.json"
 OUTPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/output"
 
@@ -112,24 +109,6 @@ def run_stage_filter(args=None):
     print(f"Wrote filtered output to {out_path}")
 
 
-def run_stage_graph(args=None):
-    inp_path = getattr(args, "inp", FILTER_DEFAULT_PATH)
-    if not os.path.exists(inp_path):
-        print(f"Input file {inp_path} not found")
-        return
-    with open(inp_path, "r", encoding="utf-8") as f:
-        obj = json.load(f)
-    trees = obj.get("trees", [])
-    nodes = graph.build_nodes(trees)
-    mat = graph.compute_matrix(nodes)
-    out_obj = {"nodes": nodes, "distances": mat}
-    out_path = resolve_output_path(args, GRAPH_DEFAULT_PATH, stage_subdir="graph")
-    io_mod.write_json(
-        out_obj, out_path, params={"source": inp_path, "nodes": len(nodes)}
-    )
-    print(f"Wrote graph to {out_path} (nodes: {len(nodes)})")
-
-
 def run_stage_graph_v3(args=None):
     """Build sparse graph using KD-tree nearest neighbors (v3)."""
     inp_path = getattr(args, "inp", FILTER_DEFAULT_PATH)
@@ -173,78 +152,6 @@ def run_stage_graph_v3(args=None):
         f"Wrote v3 sparse graph to {out_path} "
         f"(nodes: {len(nodes)}, undirected_edges: {edge_count}, k_neighbors: {k_neighbors})"
     )
-
-
-def run_stage_cluster(args=None):
-    inp_path = getattr(args, "inp", GRAPH_DEFAULT_PATH)
-    if not os.path.exists(inp_path):
-        print(f"Graph file {inp_path} not found")
-        return
-    with open(inp_path, "r", encoding="utf-8") as f:
-        g = json.load(f)
-    nodes = g.get("nodes", [])
-    n = len(nodes)
-    if n == 0:
-        print("No nodes in graph")
-        return
-    desired_k = max(1, int(getattr(args, "num", 8)))
-    if getattr(args, "v3", False):
-        clusters_list = cluster.k_means_constrained(nodes, desired_k)
-    else:  # TODO: Remove legacy once --v3 becomes the default
-        max_size = math.ceil(n / desired_k)
-        clusters_list = cluster.make_clusters_recursive(nodes, max_size=max_size)
-    clusters_out = []
-    for cid, members in enumerate(clusters_list):
-        clusters_out.append(
-            {"cluster_id": cid, "member_node_indices": members, "size": len(members)}
-        )
-    out_path = resolve_output_path(args, CLUSTER_DEFAULT_PATH, stage_subdir="cluster")
-    io_mod.write_json(
-        {"clusters": clusters_out}, out_path, params={"k_target": desired_k}
-    )
-    print(f"Wrote {len(clusters_out)} clusters to {out_path}")
-
-
-def run_stage_tsp(args=None):
-    graph_path = getattr(args, "graph", GRAPH_DEFAULT_PATH)
-    clusters_path = getattr(args, "clusters", CLUSTER_DEFAULT_PATH)
-
-    if not os.path.exists(graph_path):
-        print(f"Graph file {graph_path} not found")
-        return
-    if not os.path.exists(clusters_path):
-        print(f"Clusters file {clusters_path} not found")
-        return
-    with open(graph_path, "r", encoding="utf-8") as f:
-        g = json.load(f)
-    with open(clusters_path, "r", encoding="utf-8") as f:
-        cobj = json.load(f)
-    distances = g.get("distances", [])
-    clusters = cobj.get("clusters") or cobj.get("cluster_list") or []
-    routes = []
-    # sensible defaults
-    time_per_tree = getattr(args, "time_per_tree", 1.5)
-    walking_kmh = getattr(args, "walking_kmh", 5.0)
-    for c in clusters:
-        members = c.get("member_node_indices", [])
-        if not members:
-            continue
-        res = tsp.compute_route_for_cluster(
-            members,
-            distances,
-            time_per_tree=time_per_tree,
-            walking_speed_kmh=walking_kmh,
-        )
-        res["cluster_id"] = c.get("cluster_id")
-        res["size"] = len(members)
-        routes.append(res)
-    out_path = resolve_output_path(args, TSP_ROUTE_DEFAULT_PATH, stage_subdir="route")
-    io_mod.write_json(
-        {"routes": routes},
-        out_path,
-        params={"time_per_tree": time_per_tree, "walking_kmh": walking_kmh},
-    )
-    print(f"Wrote routes for {len(routes)} clusters to {out_path}")
 
 
 def _make_cached_routing_callables(cache_dir):
@@ -387,21 +294,6 @@ def _export_filtered_points(filtered_path, out_dir):
         print(f"Wrote {filtered_pts_path}")
 
 
-def _load_clusters(clusters_path):
-    """Load clusters and return clusters_map and clusters_list."""
-    clusters_map = {}
-    clusters_list = []
-    if not os.path.exists(clusters_path):
-        return clusters_map, clusters_list
-    with open(clusters_path, "r", encoding="utf-8") as f:
-        cobj = json.load(f)
-    clusters_list = cobj.get("clusters", [])
-    for c in clusters_list:
-        for i in c.get("member_node_indices", []):
-            clusters_map[i] = c.get("cluster_id")
-    return clusters_map, clusters_list
-
-
 def _load_clusters_from_routes(routes_path, node_count):
     """Build clusters_map/clusters_list directly from route assignments (V3 source of truth)."""
     clusters_map = {}
@@ -455,19 +347,13 @@ def _get_export_paths(args):
     graph_path = getattr(args, "graph", None) or GRAPH_DEFAULT_PATH
     input_path = getattr(args, "input", None) or INPUT_DEFAULT_PATH
     filtered_path = getattr(args, "filtered", None) or FILTER_DEFAULT_PATH
-    clusters_path = getattr(args, "clusters", None) or CLUSTER_DEFAULT_PATH
     out_dir = getattr(args, "outdir", None) or OUTPUT_DEFAULT_PATH
-
-    default_routes = (
-        ROUTE_DEFAULT_PATH if getattr(args, "v3", False) else TSP_ROUTE_DEFAULT_PATH
-    )
-    routes_path = getattr(args, "routes", None) or default_routes
+    routes_path = getattr(args, "routes", None) or ROUTE_DEFAULT_PATH
 
     return {
         "graph": graph_path,
         "input": input_path,
         "filtered": filtered_path,
-        "clusters": clusters_path,
         "routes": routes_path,
         "out_dir": out_dir,
     }
@@ -504,18 +390,15 @@ def run_export(args=None):
 
     _export_filtered_points(paths["filtered"], paths["out_dir"])
 
-    if getattr(args, "v3", False):
-        # In V3, route assignments are the final cluster definition after optimization.
-        clusters_map, clusters_list = _load_clusters_from_routes(
-            paths["routes"], len(nodes)
+    # Route assignments are the source of truth for cluster layers.
+    clusters_map, clusters_list = _load_clusters_from_routes(
+        paths["routes"], len(nodes)
+    )
+    if not clusters_list:
+        print(
+            "Warning: no valid route-based clusters found for export; "
+            "writing empty cluster layers"
         )
-        if not clusters_list:
-            print(
-                "Warning: no valid route-based clusters found for V3 export; "
-                "writing empty cluster layers"
-            )
-    else:
-        clusters_map, clusters_list = _load_clusters(paths["clusters"])
 
     _export_cluster_data(nodes, clusters_map, clusters_list, paths["out_dir"])
 
@@ -525,21 +408,9 @@ def run_export(args=None):
 def run_all(args=None):
     run_stage_input()
     run_stage_filter()
-    if getattr(args, "v3", False):
-        run_stage_graph_v3(args)
-    else:  # TODO: Remove legacy once --v3 becomes the default
-        run_stage_graph(args)
-        run_stage_cluster(args)
-    if getattr(args, "v3", False):
-        run_stage_route(args)
-    else:  # TODO: Remove legacy once --v3 becomes the default
-        run_stage_tsp()
-
-    export_args = args
-    if args is not None and getattr(args, "v3", False) and not hasattr(args, "routes"):
-        export_args = argparse.Namespace(**vars(args))
-        setattr(export_args, "routes", ROUTE_DEFAULT_PATH)
-    run_export(export_args)
+    run_stage_graph_v3(args)
+    run_stage_route(args)
+    run_export(args)
 
 
 def _setup_input_parser(subparsers):
@@ -567,25 +438,6 @@ def _setup_graph_parser(subparsers):
     sg.add_argument("--out", default=GRAPH_DEFAULT_PATH)
 
 
-def _setup_cluster_parser(subparsers):
-    """Configure cluster subcommand parser."""
-    sc = subparsers.add_parser("cluster")
-    sc.add_argument("--inp", default=GRAPH_DEFAULT_PATH)
-    sc.add_argument("--out", default=CLUSTER_DEFAULT_PATH)
-    sc.add_argument("--num", type=int, default=8)
-    sc.add_argument("--time", type=float, default=1.5)
-
-
-def _setup_tsp_parser(subparsers):
-    """Configure tsp subcommand parser."""
-    st = subparsers.add_parser("tsp")
-    st.add_argument("--graph", default=GRAPH_DEFAULT_PATH)
-    st.add_argument("--clusters", default=CLUSTER_DEFAULT_PATH)
-    st.add_argument("--out", default=TSP_ROUTE_DEFAULT_PATH)
-    st.add_argument("--time-per-tree", type=float, default=1.5)
-    st.add_argument("--walking-kmh", type=float, default=5.0)
-
-
 def _setup_route_parser(subparsers):
     """Configure route subcommand parser."""
     sr = subparsers.add_parser("route")
@@ -610,8 +462,7 @@ def _setup_export_parser(subparsers):
     se.add_argument("--graph", default=GRAPH_DEFAULT_PATH)
     se.add_argument("--input", default=INPUT_DEFAULT_PATH)
     se.add_argument("--filtered", default=FILTER_DEFAULT_PATH)
-    se.add_argument("--clusters", default=CLUSTER_DEFAULT_PATH)
-    se.add_argument("--routes", default=None)
+    se.add_argument("--routes", default=ROUTE_DEFAULT_PATH)
     se.add_argument("--outdir", default=OUTPUT_DEFAULT_PATH)
 
 
@@ -627,14 +478,11 @@ def main():
         default=None,
         help="Optional run id; if omitted a timestamped id is created",
     )
-    p.add_argument("--v3", action="store_true", help="Use v3 version of routing")
     sub = p.add_subparsers(dest="cmd")
 
     _setup_input_parser(sub)
     _setup_filter_parser(sub)
     _setup_graph_parser(sub)
-    _setup_cluster_parser(sub)
-    _setup_tsp_parser(sub)  # TODO: Remove legacy once --v3 becomes the default
     _setup_route_parser(sub)
     _setup_export_parser(sub)
 
@@ -644,20 +492,10 @@ def main():
     elif args.cmd == "filter":
         run_stage_filter(args)
     elif args.cmd == "graph":
-        if getattr(
-            args, "v3", False
-        ):  # TODO: Remove legacy once --v3 becomes the default
-            print("Running graph stage with v3 KD-tree sparse graph builder")
-            run_stage_graph_v3(args)
-        else:
-            run_stage_graph(args)
-    elif args.cmd == "cluster":
-        run_stage_cluster(args)
+        print("Running graph stage with v3 KD-tree sparse graph builder")
+        run_stage_graph_v3(args)
     elif args.cmd == "route":
-        if getattr(args, "v3", False):
-            run_stage_route(args)
-        else:  # TODO: Remove legacy once --v3 becomes the default
-            run_stage_tsp(args)
+        run_stage_route(args)
     elif args.cmd == "export":
         run_export(args)
     elif args.cmd is None:
