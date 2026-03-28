@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Visualizador de Rutas V3</title>
+  <title>Visualizador de Rutas</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -84,17 +84,6 @@
 
     .header h1 { font-size: 16px; margin: 0; color: #333; }
 
-    .v3-tag {
-      display: inline-block;
-      margin-top: 6px;
-      font-size: 11px;
-      color: var(--primary);
-      border: 1px solid #bfdbfe;
-      background: #eff6ff;
-      border-radius: 999px;
-      padding: 3px 8px;
-    }
-
     label {
       display: flex;
       align-items: center;
@@ -173,8 +162,6 @@
         <label><input type="checkbox" id="cb_clusters" checked> Clusters</label>
         <label><input type="checkbox" id="cb_routes" checked> Rutas</label>
 
-        <span class="v3-tag">Modo exclusivo V3</span>
-
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
 
         <strong>Etapas</strong>
@@ -187,7 +174,7 @@
         </div>
 
         <div class="summary" id="summary">
-          <div class="muted">Resumen V3 no disponible aún</div>
+          <div class="muted">Resumen no disponible aún</div>
         </div>
       </div>
     </div>
@@ -301,7 +288,7 @@
       const summary = document.getElementById('summary');
       const items = [...routeDetailsByCluster.values()];
       if (!items.length) {
-        summary.innerHTML = '<div class="muted">No se encontraron métricas V3 en route/routes.json</div>';
+        summary.innerHTML = '<div class="muted">No se encontraron métricas en route/routes.json</div>';
         return;
       }
 
@@ -362,7 +349,7 @@
         }),
         onEachFeature: (f, l) => {
           const popupProps = mergeRouteProps(f.properties || {});
-          l.bindPopup(createPopup('Ruta V3', popupProps));
+          l.bindPopup(createPopup('Ruta', popupProps));
           l.on('mouseover', e => e.target.setStyle({ weight: 7 }));
           l.on('mouseout', e => e.target.setStyle({ weight: 4 }));
         }
