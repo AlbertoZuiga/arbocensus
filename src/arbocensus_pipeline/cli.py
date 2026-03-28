@@ -406,8 +406,8 @@ def run_export(args=None):
 
 
 def run_all(args=None):
-    run_stage_input()
-    run_stage_filter()
+    run_stage_input(args)
+    run_stage_filter(args)
     run_stage_graph_v3(args)
     run_stage_route(args)
     run_export(args)
