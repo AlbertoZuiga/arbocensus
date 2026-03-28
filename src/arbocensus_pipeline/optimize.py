@@ -651,8 +651,8 @@ def _validate_final_routes(
     t_per_tree: float,
     f_google_route_time: Callable[[dict, dict, RoutingCache], float],
     google_cache: RoutingCache,
-) -> List[Tuple[List[Dict], float]]:
-    validated: List[Tuple[List[Dict], float]] = []
+) -> List[Tuple[List[int], float]]:
+    validated: List[Tuple[List[int], float]] = []
     for route_idx in final_routes_idx:
         duration_google = compute_route_time_with_cache(
             route_idx,
@@ -661,7 +661,7 @@ def _validate_final_routes(
             google_cache,
             float(t_per_tree),
         )
-        validated.append(([locations[i] for i in route_idx], duration_google))
+        validated.append((route_idx[:], duration_google))
     return validated
 
 
@@ -677,7 +677,7 @@ def find_routes(
     max_iterations: int = 14,
     hysteresis_rounds: int = 2,
     hard_max_duration: Optional[float] = None,
-) -> List[Tuple[List[Dict], float]]:
+) -> List[Tuple[List[int], float]]:
     """route orchestrator with dynamic cluster count and multi-fidelity routing."""
     if not locations:
         return []

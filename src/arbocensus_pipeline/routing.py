@@ -139,6 +139,7 @@ def osm_route_time(origin: Coord, dest: Coord, cache: RoutingCache) -> float:
     mode = "walking"
     cached = cache.get(origin, dest, mode)
     if cached is not None:
+        print("Cache hit (OSRM)")
         return float(cached["duration_s"])
 
     try:
@@ -146,12 +147,12 @@ def osm_route_time(origin: Coord, dest: Coord, cache: RoutingCache) -> float:
         lng1 = float(origin["lng"])
         lat2 = float(dest["lat"])
         lng2 = float(dest["lng"])
-    except (KeyError, TypeError, ValueError):
-        print("Warning: OSRM failed, using haversine fallback")
-        return float(haversine_fallback_route_time(origin, dest, cache))
+    except (KeyError, TypeError, ValueError) as e:
+        raise ValueError(f"Invalid coordinates: origin={origin}, dest={dest}") from e
 
     if lat1 == lat2 and lng1 == lng2:
-        return float(haversine_fallback_route_time(origin, dest, cache))
+        print("Warning: Origin and destination are the same, returning 0 duration")
+        return 0.0
 
     base_url = os.getenv("OSRM_BASE_URL")
     root = (base_url or "http://router.project-osrm.org").rstrip("/")
@@ -159,7 +160,10 @@ def osm_route_time(origin: Coord, dest: Coord, cache: RoutingCache) -> float:
 
     # Keep the public OSRM API usage polite by spacing requests.
     if base_url is None or "router.project-osrm.org" in root:
+        print("Calling public OSRM API (please be patient)...")
         time.sleep(0.1)
+    else:
+        print("Calling OSRM API...")
 
     try:
         resp = requests.get(url, timeout=5)
@@ -179,8 +183,14 @@ def osm_route_time(origin: Coord, dest: Coord, cache: RoutingCache) -> float:
             },
         )
         return duration_s
-    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
-        print("Warning: OSRM failed, using haversine fallback")
+    except (
+        requests.RequestException,
+        ValueError,
+        KeyError,
+        IndexError,
+        TypeError,
+    ) as e:
+        print("Warning: OSRM failed, using haversine fallback\nError:", e)
         return float(haversine_fallback_route_time(origin, dest, cache))
 
 
@@ -193,22 +203,24 @@ def google_route_time(
     mode = "walking"
     cached = cache.get(origin, dest, mode)
     if cached is not None:
+        print("Cache hit (Google Maps)")
         return float(cached["duration_s"])
 
     key = api_key or os.getenv("GOOGLE_MAPS_API_KEY")
     if not key:
-        return float(haversine_fallback_route_time(origin, dest, cache))
+        raise ValueError("Google Maps API key not provided")
 
     try:
         lat1 = float(origin["lat"])
         lng1 = float(origin["lng"])
         lat2 = float(dest["lat"])
         lng2 = float(dest["lng"])
-    except (KeyError, TypeError, ValueError):
-        return float(haversine_fallback_route_time(origin, dest, cache))
+    except (KeyError, TypeError, ValueError) as e:
+        raise ValueError(f"Invalid coordinates: origin={origin}, dest={dest}") from e
 
     if lat1 == lat2 and lng1 == lng2:
-        return float(haversine_fallback_route_time(origin, dest, cache))
+        print("Warning: Origin and destination are the same, returning 0 duration")
+        return 0.0
 
     params = {
         "origin": f"{lat1},{lng1}",
@@ -216,6 +228,8 @@ def google_route_time(
         "mode": "walking",
         "key": key,
     }
+
+    print("Calling Google Maps API...")
 
     try:
         resp = requests.get(
@@ -239,8 +253,15 @@ def google_route_time(
             },
         )
         return duration_s
-    except (requests.RequestException, ValueError, KeyError, IndexError, TypeError):
-        return float(haversine_fallback_route_time(origin, dest, cache))
+    except (
+        requests.RequestException,
+        ValueError,
+        KeyError,
+        IndexError,
+        TypeError,
+    ) as e:
+        print("Warning: Google Maps API failed, using OSRM fallback\nError:", e)
+        return float(osm_route_time(origin, dest, cache))
 
 
 def compute_route_time(
