@@ -1,6 +1,6 @@
 """Arbocensus pipeline package
 
-Exposes modular functions for stages: input, filter, graph, cluster, tsp, export
+Exposes modular functions for stages: input, filter, graph, cluster, export
 """
 
 __all__ = [
@@ -8,7 +8,6 @@ __all__ = [
     "filter",
     "graph",
     "cluster",
-    "tsp",
     "export",
     "utils",
     "optimize",
