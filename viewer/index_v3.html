@@ -169,11 +169,11 @@
         <label><input type="checkbox" id="cb_bbox" checked> BBox</label>
         <label><input type="checkbox" id="cb_input"> Input</label>
         <label><input type="checkbox" id="cb_filtered"> Filtered</label>
-        <label><input type="checkbox" id="cb_graph" checked> Nodos</label>
+        <label><input type="checkbox" id="cb_graph"> Nodos</label>
         <label><input type="checkbox" id="cb_clusters" checked> Clusters</label>
         <label><input type="checkbox" id="cb_routes" checked> Rutas</label>
 
-        <span class="v3-tag">Compatibilidad Routing V3</span>
+        <span class="v3-tag">Modo exclusivo V3</span>
 
         <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
 
@@ -225,14 +225,9 @@
 
     const layers = {};
     const routeDetailsByCluster = new Map();
-    const outputBaseCandidates = [
-      '/artifacts/runs/latest/output',
-      '/artifacts/runs/latest/06_output'
-    ];
-    const routeDetailsPathCandidates = [
-      '/artifacts/runs/latest/route/routes.json',
-      '/artifacts/runs/latest/route/routes_by_cluster.json'
-    ];
+    const routeClusterIds = new Set();
+    const outputBase = '/artifacts/runs/latest/output';
+    const routeDetailsPath = '/artifacts/runs/latest/route/routes.json';
 
     async function fetchJsonFromCandidates(candidates) {
       for (const path of candidates) {
@@ -248,8 +243,7 @@
     }
 
     async function fetchLayerGeoJSON(fileName) {
-      const candidates = outputBaseCandidates.map(base => `${base}/${fileName}`);
-      return fetchJsonFromCandidates(candidates);
+      return fetchJsonFromCandidates([`${outputBase}/${fileName}`]);
     }
 
     function indexRouteDetails(routeData) {
@@ -257,15 +251,23 @@
       for (const route of routes) {
         const clusterId = route?.cluster_id;
         if (clusterId === undefined || clusterId === null) continue;
-        routeDetailsByCluster.set(Number(clusterId), route);
+        const normalizedId = Number(clusterId);
+        routeDetailsByCluster.set(normalizedId, route);
+        routeClusterIds.add(normalizedId);
       }
     }
 
     async function loadRouteDetails() {
-      const res = await fetchJsonFromCandidates(routeDetailsPathCandidates);
+      const res = await fetchJsonFromCandidates([routeDetailsPath]);
       if (!res || !res.data) return;
       indexRouteDetails(res.data);
       updateSummary();
+    }
+
+    function includeOnlyRouteClusters(feature) {
+      if (!routeClusterIds.size) return true;
+      const clusterId = Number(feature?.properties?.cluster_id);
+      return routeClusterIds.has(clusterId);
     }
 
     async function loadLayer(key, file, options) {
@@ -335,6 +337,7 @@
       });
 
       await loadLayer('graph', 'clusters.geojson', {
+        filter: includeOnlyRouteClusters,
         pointToLayer: (f, ll) => L.circleMarker(ll, {
           radius: 5,
           color: '#fff',
@@ -346,11 +349,13 @@
       });
 
       await loadLayer('clusters', 'cluster_polygons.geojson', {
+        filter: includeOnlyRouteClusters,
         style: f => ({ color: getColor(f.properties?.cluster_id), weight: 1, fillOpacity: 0.1 }),
         onEachFeature: (f, l) => l.bindPopup(`Cluster ${f.properties?.cluster_id}`)
       });
 
       await loadLayer('routes', 'routes.geojson', {
+        filter: includeOnlyRouteClusters,
         style: f => ({
           color: getColor(f.properties?.cluster_id),
           weight: 4
@@ -400,7 +405,7 @@
         2: [1, 0, 1, 0, 0, 0],
         3: [1, 0, 0, 1, 0, 0],
         4: [0, 0, 0, 1, 1, 0],
-        5: [0, 0, 0, 1, 1, 1],
+        5: [0, 0, 0, 0, 1, 1],
       }[n];
 
       const keys = ['bbox', 'input', 'filtered', 'graph', 'clusters', 'routes'];
