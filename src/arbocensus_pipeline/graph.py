@@ -1,4 +1,4 @@
-"""Graph stage: build nodes, dense matrix, and sparse KD-tree graph."""
+"""Graph stage: build nodes and sparse KD-tree graph."""
 
 from typing import Any, Dict, List
 
@@ -56,23 +56,6 @@ def build_nodes(trees: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             }
         )
     return nodes
-
-
-def compute_matrix(  # TODO: Remove legacy once --v3 becomes the default
-    nodes: List[Dict[str, Any]],
-) -> List[List[float]]:
-    n = len(nodes)
-    mat = [[0.0] * n for _ in range(n)]
-    for i in range(n):
-        lat1 = nodes[i]["lat"]
-        lon1 = nodes[i]["lng"]
-        for j in range(i + 1, n):
-            lat2 = nodes[j]["lat"]
-            lon2 = nodes[j]["lng"]
-            d = haversine_m(lat1, lon1, lat2, lon2)
-            mat[i][j] = d
-            mat[j][i] = d
-    return mat
 
 
 def build_kd_tree(nodes: List[Dict[str, Any]]) -> KDTree:

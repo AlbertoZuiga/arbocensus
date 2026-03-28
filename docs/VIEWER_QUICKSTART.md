@@ -1,61 +1,54 @@
-# 🗺 Visualizador - Guía Rápida
+# Visualizador - Guia Rapida
 
-## Generar GeoJSON para el Viewer
+## 1) Generar GeoJSON
 
-Después de ejecutar el pipeline completo, debes generar los archivos GeoJSON:
+Despues de ejecutar el pipeline (o al menos `graph`, `route` y `export`), genera las capas:
 
 ```bash
 python run.py export
 ```
 
-Esto genera en `artifacts/runs/latest/06_output/`:
+Se escriben en `artifacts/runs/latest/output/`:
 
-- `bbox.geojson` - Límites del área
-- `input_points.geojson` - Árboles originales
-- `filtered_points.geojson` - Árboles filtrados
-- `clusters.geojson` - Nodos por cluster
-- `cluster_polygons.geojson` - Polígonos de clusters
-- `routes.geojson` - Rutas TSP
+- `bbox.geojson`
+- `input_points.geojson`
+- `filtered_points.geojson`
+- `clusters.geojson`
+- `cluster_polygons.geojson`
+- `routes.geojson`
 
-## Abrir el Viewer
+## 2) Abrir el viewer
 
 ```bash
-# Opción 1: Servidor HTTP simple
 python -m http.server 8000
+```
 
-# Luego abrir en navegador:
-# http://localhost:8000/viewer/index.html
-# http://localhost:8000/viewer/index_v3.html
+URLs:
 
-# Opción 2: Abrir directamente (si el navegador lo permite)
-open viewer/index.html
-open viewer/index_v3.html
+- `http://localhost:8000/viewer/index.html`
 
-## Viewer V3
-
-`viewer/index_v3.html` es una copia del viewer base adaptada para el pipeline `--v3`.
+## Viewer
 
 Incluye:
 
-- fallback de rutas de salida (`output` y `06_output`)
-- lectura de métricas de routing desde `artifacts/runs/latest/route/routes.json`
-- popups enriquecidos con `travel_seconds`, `service_seconds`, `total_seconds` y `validated_by`
-- panel de resumen con métricas agregadas por ruta
-```
+- carga de capas desde `artifacts/runs/latest/output/`
+- lectura de metricas de rutas desde `artifacts/runs/latest/route/routes.json`
+- popups con `travel_seconds`, `service_seconds`, `total_seconds`, `validated_by`
 
-## Controles del Viewer
+## Controles
 
-- **Checkboxes**: Activar/desactivar capas
-- **Botones Stage 1-5**: Presets de visualización por etapa
-- **Click en rutas**: Ver detalles del cluster
-- **Hover en rutas**: Resaltar ruta
+- checkboxes para activar/desactivar capas
+- botones de etapas para presets de visualizacion
+- click y hover sobre rutas para inspeccion
 
 ## Troubleshooting
 
-**Problema:** El viewer está vacío
+Problema: el mapa aparece vacio.
 
-**Solución:** Ejecutar `python run.py export` para regenerar GeoJSON
+- Ejecuta `python run.py export` para regenerar capas.
+- Verifica que existan archivos en `artifacts/runs/latest/output/`.
 
-**Problema:** Error 404 al cargar archivos
+Problema: errores 404 al cargar GeoJSON.
 
-**Solución:** Servir con HTTP server (no abrir directamente el archivo HTML)
+- Sirve el proyecto con `python -m http.server 8000`.
+- Abre el viewer por `http://localhost:8000/...` en lugar de `file://`.
