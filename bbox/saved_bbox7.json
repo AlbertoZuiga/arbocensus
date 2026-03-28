@@ -1,0 +1,1313 @@
+{
+  "north": -33.3980658,
+  "south": -33.4013127,
+  "east": -70.5530373,
+  "west": -70.5567495,
+  "trees": [
+    {
+      "lat": -33.4003479,
+      "lng": -70.5554555,
+      "meta": {
+        "id": 3145,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004193,
+      "lng": -70.5558642,
+      "meta": {
+        "id": 3165,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004321,
+      "lng": -70.5557082,
+      "meta": {
+        "id": 3168,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4006352,
+      "lng": -70.5556217,
+      "meta": {
+        "id": 3157,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4006805,
+      "lng": -70.5555181,
+      "meta": {
+        "id": 3152,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4003325,
+      "lng": -70.5553335,
+      "meta": {
+        "id": 3151,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004274,
+      "lng": -70.5556318,
+      "meta": {
+        "id": 3162,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002498,
+      "lng": -70.5555631,
+      "meta": {
+        "id": 3160,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4003602,
+      "lng": -70.5556753,
+      "meta": {
+        "id": 3147,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4003669,
+      "lng": -70.5558858,
+      "meta": {
+        "id": 3167,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004633,
+      "lng": -70.55566,
+      "meta": {
+        "id": 3166,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002072,
+      "lng": -70.5558254,
+      "meta": {
+        "id": 3175,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004113,
+      "lng": -70.5557248,
+      "meta": {
+        "id": 3171,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002591,
+      "lng": -70.5558283,
+      "meta": {
+        "id": 3174,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4003636,
+      "lng": -70.5556482,
+      "meta": {
+        "id": 3148,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4005268,
+      "lng": -70.5556011,
+      "meta": {
+        "id": 3144,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004983,
+      "lng": -70.5555067,
+      "meta": {
+        "id": 3146,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.400415,
+      "lng": -70.5555767,
+      "meta": {
+        "id": 3149,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002438,
+      "lng": -70.5551753,
+      "meta": {
+        "id": 3156,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004317,
+      "lng": -70.5555733,
+      "meta": {
+        "id": 3150,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004283,
+      "lng": -70.5556067,
+      "meta": {
+        "id": 3159,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002561,
+      "lng": -70.555404,
+      "meta": {
+        "id": 3158,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.400205,
+      "lng": -70.5556149,
+      "meta": {
+        "id": 3163,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004465,
+      "lng": -70.5556452,
+      "meta": {
+        "id": 3164,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002109,
+      "lng": -70.5558509,
+      "meta": {
+        "id": 3177,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999989,
+      "lng": -70.5559225,
+      "meta": {
+        "id": 3191,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399852,
+      "lng": -70.5559879,
+      "meta": {
+        "id": 3202,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999098,
+      "lng": -70.5559574,
+      "meta": {
+        "id": 3201,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3998443,
+      "lng": -70.5559132,
+      "meta": {
+        "id": 3207,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992954,
+      "lng": -70.5563238,
+      "meta": {
+        "id": 3221,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991494,
+      "lng": -70.5566401,
+      "meta": {
+        "id": 3227,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399068,
+      "lng": -70.5560674,
+      "meta": {
+        "id": 3235,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3990329,
+      "lng": -70.5559043,
+      "meta": {
+        "id": 3239,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4003183,
+      "lng": -70.5558788,
+      "meta": {
+        "id": 3170,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004357,
+      "lng": -70.5557198,
+      "meta": {
+        "id": 3169,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004499,
+      "lng": -70.5558594,
+      "meta": {
+        "id": 3173,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4003233,
+      "lng": -70.5558,
+      "meta": {
+        "id": 3172,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002455,
+      "lng": -70.5560177,
+      "meta": {
+        "id": 3176,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4000811,
+      "lng": -70.5558949,
+      "meta": {
+        "id": 3181,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4000656,
+      "lng": -70.5559082,
+      "meta": {
+        "id": 3183,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999824,
+      "lng": -70.5559607,
+      "meta": {
+        "id": 3190,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999139,
+      "lng": -70.5559941,
+      "meta": {
+        "id": 3195,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999015,
+      "lng": -70.555935,
+      "meta": {
+        "id": 3199,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999909,
+      "lng": -70.5559421,
+      "meta": {
+        "id": 3205,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3998389,
+      "lng": -70.5559779,
+      "meta": {
+        "id": 3206,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.400132,
+      "lng": -70.5558802,
+      "meta": {
+        "id": 3179,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3998443,
+      "lng": -70.5559301,
+      "meta": {
+        "id": 3208,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4002283,
+      "lng": -70.5560067,
+      "meta": {
+        "id": 3189,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3998286,
+      "lng": -70.5560004,
+      "meta": {
+        "id": 3209,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3998941,
+      "lng": -70.5558985,
+      "meta": {
+        "id": 3210,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993197,
+      "lng": -70.5562109,
+      "meta": {
+        "id": 3216,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992806,
+      "lng": -70.5563113,
+      "meta": {
+        "id": 3215,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992711,
+      "lng": -70.5563403,
+      "meta": {
+        "id": 3217,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999684,
+      "lng": -70.5559436,
+      "meta": {
+        "id": 3182,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993897,
+      "lng": -70.5557675,
+      "meta": {
+        "id": 3219,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4000554,
+      "lng": -70.5559327,
+      "meta": {
+        "id": 3197,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993049,
+      "lng": -70.5562249,
+      "meta": {
+        "id": 3220,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991023,
+      "lng": -70.5563944,
+      "meta": {
+        "id": 3222,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992724,
+      "lng": -70.556386,
+      "meta": {
+        "id": 3223,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3990793,
+      "lng": -70.5562879,
+      "meta": {
+        "id": 3224,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991995,
+      "lng": -70.5565064,
+      "meta": {
+        "id": 3228,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993305,
+      "lng": -70.556062,
+      "meta": {
+        "id": 3231,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4004696,
+      "lng": -70.5560005,
+      "meta": {
+        "id": 3193,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3990414,
+      "lng": -70.5560799,
+      "meta": {
+        "id": 3232,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994078,
+      "lng": -70.5558064,
+      "meta": {
+        "id": 3238,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3989129,
+      "lng": -70.5558495,
+      "meta": {
+        "id": 3242,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3988514,
+      "lng": -70.5558945,
+      "meta": {
+        "id": 3243,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999484,
+      "lng": -70.5558775,
+      "meta": {
+        "id": 3198,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999617,
+      "lng": -70.5559558,
+      "meta": {
+        "id": 3192,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999802,
+      "lng": -70.5559357,
+      "meta": {
+        "id": 3196,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3998831,
+      "lng": -70.5559533,
+      "meta": {
+        "id": 3200,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993407,
+      "lng": -70.5563361,
+      "meta": {
+        "id": 3213,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3997556,
+      "lng": -70.5560238,
+      "meta": {
+        "id": 3211,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993426,
+      "lng": -70.5557269,
+      "meta": {
+        "id": 3212,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3996099,
+      "lng": -70.5558664,
+      "meta": {
+        "id": 3214,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992506,
+      "lng": -70.5557622,
+      "meta": {
+        "id": 3218,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993147,
+      "lng": -70.5562847,
+      "meta": {
+        "id": 3226,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992181,
+      "lng": -70.5565095,
+      "meta": {
+        "id": 3225,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399205,
+      "lng": -70.5558665,
+      "meta": {
+        "id": 3229,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.39927,
+      "lng": -70.5557119,
+      "meta": {
+        "id": 3233,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3989194,
+      "lng": -70.5560018,
+      "meta": {
+        "id": 3246,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991446,
+      "lng": -70.5558684,
+      "meta": {
+        "id": 3234,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3987957,
+      "lng": -70.5559275,
+      "meta": {
+        "id": 3247,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991393,
+      "lng": -70.5559855,
+      "meta": {
+        "id": 3236,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991864,
+      "lng": -70.5562116,
+      "meta": {
+        "id": 3237,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3987864,
+      "lng": -70.5558771,
+      "meta": {
+        "id": 3248,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3989884,
+      "lng": -70.5559575,
+      "meta": {
+        "id": 3241,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3988198,
+      "lng": -70.5559645,
+      "meta": {
+        "id": 3245,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994154,
+      "lng": -70.5547417,
+      "meta": {
+        "id": 3666,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993734,
+      "lng": -70.554669,
+      "meta": {
+        "id": 3671,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994355,
+      "lng": -70.5540838,
+      "meta": {
+        "id": 3678,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994218,
+      "lng": -70.5542927,
+      "meta": {
+        "id": 3680,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399574,
+      "lng": -70.5534106,
+      "meta": {
+        "id": 3689,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994644,
+      "lng": -70.553865,
+      "meta": {
+        "id": 3683,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994192,
+      "lng": -70.553523,
+      "meta": {
+        "id": 3686,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399754,
+      "lng": -70.5536207,
+      "meta": {
+        "id": 3693,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3999854,
+      "lng": -70.5534908,
+      "meta": {
+        "id": 3696,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992107,
+      "lng": -70.5539999,
+      "meta": {
+        "id": 3675,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992464,
+      "lng": -70.5534829,
+      "meta": {
+        "id": 3700,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993488,
+      "lng": -70.5534394,
+      "meta": {
+        "id": 3713,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4012464,
+      "lng": -70.5547443,
+      "meta": {
+        "id": 3720,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993603,
+      "lng": -70.5543402,
+      "meta": {
+        "id": 3673,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993986,
+      "lng": -70.5548609,
+      "meta": {
+        "id": 3667,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993174,
+      "lng": -70.5545151,
+      "meta": {
+        "id": 3674,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994063,
+      "lng": -70.5542408,
+      "meta": {
+        "id": 3677,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994182,
+      "lng": -70.5547171,
+      "meta": {
+        "id": 3669,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993051,
+      "lng": -70.5547559,
+      "meta": {
+        "id": 3668,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993111,
+      "lng": -70.5543685,
+      "meta": {
+        "id": 3676,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993342,
+      "lng": -70.5545701,
+      "meta": {
+        "id": 3672,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994745,
+      "lng": -70.554094,
+      "meta": {
+        "id": 3679,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3995671,
+      "lng": -70.5541718,
+      "meta": {
+        "id": 3681,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399308,
+      "lng": -70.5546769,
+      "meta": {
+        "id": 3670,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994759,
+      "lng": -70.5537811,
+      "meta": {
+        "id": 3682,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3995406,
+      "lng": -70.5537768,
+      "meta": {
+        "id": 3684,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3996306,
+      "lng": -70.5535678,
+      "meta": {
+        "id": 3690,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399875,
+      "lng": -70.5535205,
+      "meta": {
+        "id": 3694,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.399347,
+      "lng": -70.5535018,
+      "meta": {
+        "id": 3699,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992088,
+      "lng": -70.5534107,
+      "meta": {
+        "id": 3703,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3990163,
+      "lng": -70.5533827,
+      "meta": {
+        "id": 3704,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3989624,
+      "lng": -70.5532108,
+      "meta": {
+        "id": 3705,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993,
+      "lng": -70.5536587,
+      "meta": {
+        "id": 3707,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991009,
+      "lng": -70.5533066,
+      "meta": {
+        "id": 3708,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991061,
+      "lng": -70.5532574,
+      "meta": {
+        "id": 3710,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991594,
+      "lng": -70.5533361,
+      "meta": {
+        "id": 3715,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.398917,
+      "lng": -70.5531243,
+      "meta": {
+        "id": 3717,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994318,
+      "lng": -70.5535672,
+      "meta": {
+        "id": 3697,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3996414,
+      "lng": -70.5535895,
+      "meta": {
+        "id": 3691,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3997432,
+      "lng": -70.5534686,
+      "meta": {
+        "id": 3692,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994729,
+      "lng": -70.5537967,
+      "meta": {
+        "id": 3685,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3995836,
+      "lng": -70.5535912,
+      "meta": {
+        "id": 3688,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.39939,
+      "lng": -70.5536792,
+      "meta": {
+        "id": 3687,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3998194,
+      "lng": -70.5533987,
+      "meta": {
+        "id": 3695,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3993393,
+      "lng": -70.553501,
+      "meta": {
+        "id": 3702,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994283,
+      "lng": -70.5535666,
+      "meta": {
+        "id": 3698,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3994175,
+      "lng": -70.553513,
+      "meta": {
+        "id": 3701,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3990374,
+      "lng": -70.5532019,
+      "meta": {
+        "id": 3706,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3991422,
+      "lng": -70.5533177,
+      "meta": {
+        "id": 3711,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3992664,
+      "lng": -70.5533727,
+      "meta": {
+        "id": 3714,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3988482,
+      "lng": -70.5532466,
+      "meta": {
+        "id": 3716,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4008672,
+      "lng": -70.5548144,
+      "meta": {
+        "id": 3719,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4010114,
+      "lng": -70.5549424,
+      "meta": {
+        "id": 3722,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.400507,
+      "lng": -70.5557316,
+      "meta": {
+        "id": 3155,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.4000314,
+      "lng": -70.5559257,
+      "meta": {
+        "id": 3180,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3990182,
+      "lng": -70.555837,
+      "meta": {
+        "id": 3244,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    },
+    {
+      "lat": -33.3989287,
+      "lng": -70.5559714,
+      "meta": {
+        "id": 3240,
+        "source": "arbocensus_api",
+        "tree_id": "0"
+      }
+    }
+  ]
+}

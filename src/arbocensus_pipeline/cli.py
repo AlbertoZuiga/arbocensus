@@ -1,6 +1,7 @@
 """Simple CLI runner for pipeline stages"""
 
 import argparse
+import glob
 import json
 import math
 import os
@@ -13,7 +14,7 @@ from . import input as inp
 from . import io as io_mod
 from . import optimize, routing, tsp
 
-BBOX_DEFAULT_PATH = "saved_bbox.json"
+BBOX_DEFAULT_DIR = "bbox"
 RUNS_DEFAULT_DIR = "artifacts/runs"
 LATEST_DEFAULT_DIR = f"{RUNS_DEFAULT_DIR}/latest"
 INPUT_DEFAULT_PATH = f"{LATEST_DEFAULT_DIR}/bbox_input/input.json"
@@ -46,7 +47,40 @@ def resolve_output_path(args, default_path, stage_subdir=None):
 
 
 def run_stage_input(args=None):
-    bbox_path = getattr(args, "bbox", BBOX_DEFAULT_PATH)
+    bbox_arg = getattr(args, "bbox", None)
+
+    if bbox_arg and os.path.isdir(bbox_arg):
+        bbox_files = glob.glob(os.path.join(bbox_arg, "*.json"))
+        if not bbox_files:
+            print(f"No JSON files found in directory {bbox_arg}")
+            return
+        print("Available bbox files:")
+        for i, f in enumerate(bbox_files):
+            print(f"[{i}] {os.path.basename(f)}")
+        try:
+            choice = int(input("Select a bbox file by index: "))
+            bbox_path = bbox_files[choice]
+        except (ValueError, IndexError):
+            print("Invalid selection")
+            return
+    elif bbox_arg:
+        bbox_path = bbox_arg
+    else:
+        # fallback to default directory
+        bbox_files = glob.glob(os.path.join(BBOX_DEFAULT_DIR, "*.json"))
+        if not bbox_files:
+            print(f"No JSON files found in default directory {BBOX_DEFAULT_DIR}")
+            return
+        print("Available bbox files:")
+        for i, f in enumerate(bbox_files):
+            print(f"[{i}] {os.path.basename(f)}")
+        try:
+            choice = int(input("Select a bbox file by index: "))
+            bbox_path = bbox_files[choice]
+        except (ValueError, IndexError):
+            print("Invalid selection")
+            return
+
     max_results = getattr(args, "max", None)
     use_secrets = bool(getattr(args, "use_secrets", False))
 
@@ -511,7 +545,11 @@ def run_all(args=None):
 def _setup_input_parser(subparsers):
     """Configure input subcommand parser."""
     si = subparsers.add_parser("input")
-    si.add_argument("--bbox", default=BBOX_DEFAULT_PATH)
+    si.add_argument(
+        "--bbox",
+        default=None,
+        help="Path to bbox file or directory containing bbox JSON files",
+    )
     si.add_argument("--out", default=INPUT_DEFAULT_PATH)
 
 
