@@ -132,7 +132,7 @@ def run_stage_graph(args=None):
     out_obj = {
         "nodes": nodes,
         "adjacency": adjacency,
-        "graph_mode": "sparse_kdtree_v3",
+        "graph_mode": "sparse_kdtree",
         "k_neighbors": k_neighbors,
     }
     out_path = resolve_output_path(args, GRAPH_DEFAULT_PATH, stage_subdir="graph")
@@ -142,7 +142,7 @@ def run_stage_graph(args=None):
         params={
             "source": inp_path,
             "nodes": len(nodes),
-            "graph_mode": "sparse_kdtree_v3",
+            "graph_mode": "sparse_kdtree",
             "k_neighbors": k_neighbors,
         },
     )
@@ -295,7 +295,7 @@ def _export_filtered_points(filtered_path, out_dir):
 
 
 def _load_clusters_from_routes(routes_path, node_count):
-    """Build clusters_map/clusters_list directly from route assignments (V3 source of truth)."""
+    """Build clusters_map/clusters_list directly from route assignments."""
     clusters_map = {}
     clusters_list = []
     if not os.path.exists(routes_path):
