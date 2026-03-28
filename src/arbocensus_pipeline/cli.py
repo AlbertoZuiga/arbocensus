@@ -109,8 +109,8 @@ def run_stage_filter(args=None):
     print(f"Wrote filtered output to {out_path}")
 
 
-def run_stage_graph_v3(args=None):
-    """Build sparse graph using KD-tree nearest neighbors (v3)."""
+def run_stage_graph(args=None):
+    """Build sparse graph using KD-tree nearest neighbors."""
     inp_path = getattr(args, "inp", FILTER_DEFAULT_PATH)
     if not os.path.exists(inp_path):
         print(f"Input file {inp_path} not found")
@@ -149,7 +149,7 @@ def run_stage_graph_v3(args=None):
 
     edge_count = sum(len(nbrs) for nbrs in adjacency.values()) // 2
     print(
-        f"Wrote v3 sparse graph to {out_path} "
+        f"Wrote sparse graph to {out_path} "
         f"(nodes: {len(nodes)}, undirected_edges: {edge_count}, k_neighbors: {k_neighbors})"
     )
 
@@ -408,7 +408,7 @@ def run_export(args=None):
 def run_all(args=None):
     run_stage_input(args)
     run_stage_filter(args)
-    run_stage_graph_v3(args)
+    run_stage_graph(args)
     run_stage_route(args)
     run_export(args)
 
@@ -492,8 +492,8 @@ def main():
     elif args.cmd == "filter":
         run_stage_filter(args)
     elif args.cmd == "graph":
-        print("Running graph stage with v3 KD-tree sparse graph builder")
-        run_stage_graph_v3(args)
+        print("Running graph stage with KD-tree sparse graph builder")
+        run_stage_graph(args)
     elif args.cmd == "route":
         run_stage_route(args)
     elif args.cmd == "export":
