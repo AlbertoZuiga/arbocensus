@@ -86,6 +86,57 @@ El pipeline intentará conectarse usando estas credenciales. Si fallan, usará e
 
 ---
 
+## Web Application (Django)
+
+The backend is a Django application that exposes a REST API backed by PostgreSQL.
+
+### Running with Docker Compose
+
+```bash
+# Copy and configure environment variables
+cp .env.example .env
+# Edit .env to set a strong SECRET_KEY
+
+# Start all services (database + Django + OSRM)
+docker compose up
+```
+
+The API will be available at `http://localhost:8000/`.
+
+### Apply Migrations
+
+```bash
+docker compose exec web python manage.py migrate
+```
+
+### Create a Superuser
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+Access the Django admin at `http://localhost:8000/admin/`.
+
+### Backend Structure
+
+```
+backend/
+├── manage.py
+├── Dockerfile
+├── requirements.txt
+├── config/
+│   ├── settings/
+│   │   ├── base.py          # Shared settings
+│   │   └── development.py   # Development overrides
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── asgi.py
+└── apps/
+    └── api/                 # Main API app (models, views, admin)
+```
+
+---
+
 ## CLI
 
 Ayuda general:
