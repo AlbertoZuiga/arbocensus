@@ -9,6 +9,7 @@ from .models import (
     Campaign,
     Institution,
     Participant,
+    PipelineRun,
     Sample,
     Sponsor,
     Step,
@@ -128,3 +129,25 @@ class AnswerAdmin(admin.ModelAdmin):
 
     list_display = ("id", "sample", "step", "date")
     list_filter = ("step",)
+
+
+@admin.register(PipelineRun)
+class PipelineRunAdmin(admin.ModelAdmin):
+    """Admin configuration for PipelineRun."""
+
+    list_display = (
+        "id",
+        "status",
+        "tree_count",
+        "route_count",
+        "created_at",
+        "completed_at",
+    )
+    list_filter = ("status",)
+    readonly_fields = (
+        "created_at",
+        "completed_at",
+        "routes_geojson",
+        "clusters_geojson",
+        "error_message",
+    )

@@ -273,3 +273,45 @@ class Answer(models.Model):
 
     class Meta:
         db_table = "arbocensus_api_app_answer"
+
+
+class PipelineRun(models.Model):
+    """Tracks a complete execution of the tree census pipeline."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        RUNNING = "running", "Running"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+
+    # Bounding box input
+    bbox_north = models.FloatField()
+    bbox_south = models.FloatField()
+    bbox_east = models.FloatField()
+    bbox_west = models.FloatField()
+
+    # Pipeline parameters
+    expected_duration_min = models.FloatField(default=150.0)
+    time_per_tree_min = models.FloatField(default=2.0)
+
+    # Metadata
+    tree_count = models.IntegerField(null=True, blank=True)
+    route_count = models.IntegerField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+
+    # Results stored as JSON
+    routes_geojson = models.JSONField(null=True, blank=True)
+    clusters_geojson = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"PipelineRun #{self.pk} ({self.status})"
+
+    class Meta:
+        ordering = ["-created_at"]

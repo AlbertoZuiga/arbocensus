@@ -8,9 +8,8 @@ Pipeline para generar rutas de censo de arboles y exportar capas GeoJSON para vi
   - [Requisitos](#requisitos)
     - [Formateo y Hooks Locales](#formateo-y-hooks-locales)
     - [Configuración de Base de Datos (Opcional)](#configuración-de-base-de-datos-opcional)
-  - [CLI](#cli)
-  - [Uso rapido](#uso-rapido)
-  - [Artefactos por defecto](#artefactos-por-defecto)
+  - [Web Application (Django)](#web-application-django)
+  - [API](#api)
   - [Viewer](#viewer)
   - [Desarrollo](#desarrollo)
   - [Modulos legacy](#modulos-legacy)
@@ -21,18 +20,17 @@ Pipeline para generar rutas de censo de arboles y exportar capas GeoJSON para vi
 ## Estado actual
 
 - El flujo principal es: input -> filter -> graph -> route -> export.
-- `route/routes.json` es la fuente para la asignacion de clusters en export.
+- El pipeline se ejecuta a través de la API REST del backend Django.
 
 ## Estructura relevante
 
-- `run.py`: entrypoint del CLI.
-- `src/arbocensus_pipeline/cli.py`: comandos del pipeline.
 - `src/arbocensus_pipeline/input.py`: carga de datos desde bbox o DB.
 - `src/arbocensus_pipeline/filter.py`: limpieza y filtrado.
 - `src/arbocensus_pipeline/graph.py`: grafo sparse via KD-tree.
 - `src/arbocensus_pipeline/optimize.py`: optimizacion de rutas.
 - `src/arbocensus_pipeline/routing.py`: tiempos de viaje y cache.
 - `src/arbocensus_pipeline/export.py`: exportacion GeoJSON.
+- `backend/apps/api/services/pipeline.py`: orquestación del pipeline.
 - `viewer/index_v3.html`: viewer recomendado.
 
 ## Requisitos
@@ -57,9 +55,6 @@ pip install -r requirements-linters.txt
 
 # Instalar hooks de git (Husky + Commitlint)
 npm install
-
-# Convertir run.py en ejecutable (opcional: en caso de no realizar los comandos deberan realizarse con python run.py en lugar de ./run.py)
-chmod 744 run.py
 ```
 
 ### Formateo y Hooks Locales
@@ -88,7 +83,7 @@ El pipeline intentará conectarse usando estas credenciales. Si fallan, usará e
 
 ## Web Application (Django)
 
-The backend is a Django application that exposes a REST API backed by PostgreSQL.
+The backend is a Django application that exposes a REST API backed by PostgreSQL. The pipeline is now triggered via the API — the CLI entry point has been replaced by the web API.
 
 ### Running with Docker Compose
 
@@ -132,77 +127,70 @@ backend/
 │   ├── wsgi.py
 │   └── asgi.py
 └── apps/
-    └── api/                 # Main API app (models, views, admin)
+    └── api/                 # Main API app (models, views, admin, services)
+        ├── models.py        # Includes PipelineRun model
+        ├── views.py
+        ├── admin.py
+        ├── urls.py
+        └── services/
+            └── pipeline.py  # Pipeline orchestration service
 ```
 
 ---
 
-## CLI
+## API
 
-Ayuda general:
+### Endpoints
 
-```bash
-python run.py --help
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/` | API root — lists available endpoints |
+| GET | `/api/health/` | Health check |
+| GET | `/api/runs/` | List all pipeline runs |
+| POST | `/api/runs/` | Create and start a new pipeline run |
+| GET | `/api/runs/{id}/` | Get run status and summary |
+| GET | `/api/runs/{id}/routes.geojson` | Get routes GeoJSON (completed runs only) |
+| GET | `/api/runs/{id}/clusters.geojson` | Get clusters GeoJSON (completed runs only) |
 
-Subcomandos disponibles:
-
-- `input`
-- `filter`
-- `graph`
-- `route`
-- `export`
-
-Flags globales:
-
-- `--run-id`: identifica un run.
-- `--outdir`: directorio base de runs.
-
-## Uso rapido
-
-Pipeline completo:
+### Starting a Pipeline Run
 
 ```bash
-python run.py
+curl -X POST http://localhost:8000/api/runs/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "north": -33.40,
+    "south": -33.45,
+    "east": -70.60,
+    "west": -70.65,
+    "expected_duration_min": 150.0,
+    "time_per_tree_min": 2.0
+  }'
 ```
 
-Pipeline por etapas:
+### Retrieving Results
 
 ```bash
-python run.py input --bbox bbox/saved_bbox.json
-python run.py filter
-python run.py graph
-python run.py route
-python run.py export
+# Get run status
+curl http://localhost:8000/api/runs/1/
+
+# Get routes GeoJSON (once completed)
+curl http://localhost:8000/api/runs/1/routes.geojson
+
+# Get clusters GeoJSON (once completed)
+curl http://localhost:8000/api/runs/1/clusters.geojson
 ```
-
-## Artefactos por defecto
-
-Por default los outputs van a `artifacts/runs/latest/`:
-
-- `bbox_input/input.json`
-- `filter/filtered.json`
-- `graph/graph.json`
-- `route/routes.json`
-- `output/bbox.geojson`
-- `output/input_points.geojson`
-- `output/filtered_points.geojson`
-- `output/clusters.geojson`
-- `output/cluster_polygons.geojson`
-- `output/routes.geojson`
 
 ## Viewer
 
-Generar capas y servir archivos:
+Fetch routes GeoJSON from the API and serve the viewer:
 
 ```bash
-python run.py export
-python -m http.server 8000
+python -m http.server 8001
 ```
 
 Abrir en navegador:
 
-- `http://localhost:8000/viewer/index.html`
+- `http://localhost:8001/viewer/index.html`
 
 ## Desarrollo
 
@@ -218,8 +206,8 @@ isort --check-only .
 
 ## Modulos legacy
 
-- `tsp.py` permanece en el repositorio por compatibilidad historica, pero no participa del flujo CLI actual.
-- El flujo activo usa `optimize.py` + `routing.py`.
+- `tsp.py` permanece en el repositorio por compatibilidad historica, pero no participa del flujo activo.
+- El flujo activo usa `optimize.py` + `routing.py`, orquestados por `backend/apps/api/services/pipeline.py`.
 
 ## Documentacion adicional
 
