@@ -1,181 +1,133 @@
-# 🌳 Arbocensus: Generador de Rutas Óptimas para Censo de Árboles
+# Arbocensus: Optimización de Rutas para Censo de Árboles Urbanos
 
-Pipeline para generar rutas de censo de arboles y exportar capas GeoJSON para visualizacion.
+Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 
-- [🌳 Arbocensus: Generador de Rutas Óptimas para Censo de Árboles](#-arbocensus-generador-de-rutas-óptimas-para-censo-de-árboles)
-  - [Estado actual](#estado-actual)
-  - [Estructura relevante](#estructura-relevante)
-  - [Requisitos](#requisitos)
-    - [Formateo y Hooks Locales](#formateo-y-hooks-locales)
-    - [Configuración de Base de Datos (Opcional)](#configuración-de-base-de-datos-opcional)
-  - [CLI](#cli)
-  - [Uso rapido](#uso-rapido)
-  - [Artefactos por defecto](#artefactos-por-defecto)
-  - [Viewer](#viewer)
-  - [Desarrollo](#desarrollo)
-  - [Modulos legacy](#modulos-legacy)
-  - [Documentacion adicional](#documentacion-adicional)
-  - [Soporte](#soporte)
+## Problema de Investigación
 
+En trabajos previos de censo de árboles urbanos, equipos en terreno recorrieron
+sectores de la ciudad para recopilar fotografías e información técnica de los
+árboles. El objetivo principal de estos censos es contribuir a la seguridad
+vial mediante el monitoreo y seguimiento del estado de árboles urbanos.
 
-## Estado actual
+Los datos recopilados conforman una base inicial de información que podrá ser
+utilizada en futuras etapas para apoyar el entrenamiento de modelos de
+Inteligencia Artificial orientados a la clasificación y análisis de árboles
+urbanos.
 
-- El flujo principal es: input -> filter -> graph -> route -> export.
-- `route/routes.json` es la fuente para la asignacion de clusters en export.
+Actualmente, el proyecto se encuentra en una nueva etapa: realizar un
+re-censo de las zonas previamente censadas. El objetivo es actualizar la
+información existente, generar nuevos registros y mantener consistencia entre
+los datos históricos y los nuevos datos recopilados en terreno mediante la
+planificación eficiente de rutas para equipos de censadores.
 
-## Estructura relevante
+Para esto, se cuenta con bases de datos previas que contienen:
 
-- `run.py`: entrypoint del CLI.
-- `src/arbocensus_pipeline/cli.py`: comandos del pipeline.
-- `src/arbocensus_pipeline/input.py`: carga de datos desde bbox o DB.
-- `src/arbocensus_pipeline/filter.py`: limpieza y filtrado.
-- `src/arbocensus_pipeline/graph.py`: grafo sparse via KD-tree.
-- `src/arbocensus_pipeline/optimize.py`: optimizacion de rutas.
-- `src/arbocensus_pipeline/routing.py`: tiempos de viaje y cache.
-- `src/arbocensus_pipeline/export.py`: exportacion GeoJSON.
-- `viewer/index_v3.html`: viewer recomendado.
+- Fotografías de árboles urbanos
+- Geolocalización de cada árbol
+- Información técnica recopilada en censos anteriores
 
-## Requisitos
+Sin embargo, estas fuentes de información se encuentran distribuidas en bases
+separadas y heterogéneas. El proyecto busca utilizar dichos datos como entrada
+para planificar recorridos eficientes de los censadores y facilitar futuras
+integraciones con nuevas bases de datos.
 
-- Python 3.12
-- Entorno virtual (`venv`)
+La tarea de re-censo presenta desafíos importantes:
 
-Instalacion:
+- **Ineficiencia en rutas**: Los censadores deben recorrer zonas extensas,
+  visitando árboles previamente registrados y nuevos puntos de interés
+- **Balance de carga**: Es necesario distribuir equitativamente el trabajo
+  entre equipos de terreno considerando restricciones temporales por ruta
+- **Actualización de información**: Se debe garantizar consistencia entre los
+  datos históricos y los nuevos registros
+- **Complejidad combinatoria**: Encontrar rutas eficientes para múltiples
+  censadores corresponde a un problema NP-difícil
+- **Costo operacional**: Reducir tiempos y costos de desplazamiento disminuye
+  costos operacionales y fatiga del personal
 
-```bash
-# Clonar repositorio
-git clone https://github.com/AlbertoZuiga/arbocensus
-cd arbocensus
+## Contexto
 
-# Crear entorno virtual
-python3 -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+El catastro y monitoreo de árboles urbanos es una tarea relevante principalmente
+para la seguridad vial y la prevención de riesgos asociados a la caída de
+árboles en zonas urbanas.
 
-# Instalar dependencias del pipeline
-pip install -r requirements.txt
-pip install -r requirements-linters.txt
+En etapas anteriores del proyecto, se realizaron censos en distintas zonas
+urbanas para recopilar información visual y técnica de árboles. Estos datos
+constituyen una base preliminar que permitirá, en etapas futuras, desarrollar
+modelos de IA orientados a la clasificación y análisis de árboles urbanos.
 
-# Instalar hooks de git (Husky + Commitlint)
-npm install
+En esta nueva etapa, se requiere volver a recorrer las zonas ya censadas para:
 
-# Convertir run.py en ejecutable (opcional: en caso de no realizar los comandos deberan realizarse con python run.py en lugar de ./run.py)
-chmod 744 run.py
-```
+- Actualizar información existente
+- Verificar el estado actual de los árboles
+- Obtener nuevas fotografías y registros
+- Generar información más completa y consistente para futuros procesos de clasificación mediante IA
 
-### Formateo y Hooks Locales
+El proyecto utilizará información proveniente de bases de datos existentes,
+aunque también considera la posibilidad de integrar nuevas fuentes de datos en
+el futuro.
 
-Se agrega una capa de validación automática para mantener estilo y mensajes de commit consistentes:
+La ausencia de rutas optimizadas para el re-censo puede generar jornadas de
+trabajo extensas, desbalance entre equipos, aumento de costos operacionales y
+menor eficiencia en la recolección de información en terreno.
 
-- `black` e `isort` para formateo y orden de imports en Python
-- `pre-commit` ejecutado desde `.husky/pre-commit`
-- `commitlint` ejecutado desde `.husky/commit-msg`
-- workflow de GitHub Actions que valida formato en cada Pull Request hacia `main`
+## Enfoques de Solución Posibles
 
-### Configuración de Base de Datos (Opcional)
+El problema puede modelarse como una variante de un problema de optimización
+combinatoria sobre grafos, relacionado con el Multiple Traveling Salesman
+Problem (mTSP) y problemas de routing con restricciones temporales y balance de
+carga.
 
-Si quieres cargar árboles directamente desde PostgreSQL:
+Dada la magnitud esperada del problema, una estrategia basada en optimización
+exacta mediante solvers de programación matemática resulta especialmente
+atractiva, permitiendo obtener soluciones óptimas o cercanas al óptimo sin
+necesidad inmediata de heurísticas complejas.
 
-Crea archivo `.env` en la raíz:
+### 1. Optimización Exacta mediante Solver
 
-```bash
-ARBOCENSUS_DB_URL=postgres://user:pass@host:5432/db_name
-ARBOCENSUS_API_DB_URL=postgres://user:pass@host:5432/api_db
-```
+El problema puede formularse como un modelo de optimización combinatoria
+entera-mixta (MILP), donde las variables representan asignaciones y recorridos
+entre puntos.
 
-El pipeline intentará conectarse usando estas credenciales. Si fallan, usará el archivo `saved_bbox.json` como fallback.
+Este enfoque permite incorporar restricciones temporales, balance de carga y
+minimización de costos de desplazamiento utilizando solvers especializados como
+OR-Tools, Gurobi, CBC o SCIP.
 
----
+- **Ventajas**:
+  - Soluciones óptimas o cercanas al óptimo
+  - Modelamiento formal del problema
+  - Fácil incorporación de restricciones
 
-## CLI
+- **Desventajas**:
+  - Escalabilidad limitada en instancias grandes
+  - Mayor costo computacional en problemas de gran tamaño
 
-Ayuda general:
+### 2. Clustering Balanceado + Routing Local
 
-```bash
-python run.py --help
-```
+- **Fase 1**: Particionar el área en clusters usando K-means o algoritmos
+  geográficos
+- **Fase 2**: Resolver rutas locales dentro de cada cluster
+- **Ventajas**: Simple, escalable
+- **Desventajas**: Soluciones locales, no optimiza globalmente
 
-Subcomandos disponibles:
+### 3. Meta-heurísticas
 
-- `input`
-- `filter`
-- `graph`
-- `route`
-- `export`
+Búsqueda global con capacidad de escapar de óptimos locales (Genetic
+Algorithm, Simulated Annealing, Ant Colony):
 
-Flags globales:
+- **Ventajas**: Potencialmente mejores soluciones
+- **Desventajas**: Mayor tiempo computacional, mayor complejidad
 
-- `--run-id`: identifica un run.
-- `--outdir`: directorio base de runs.
+### 4. Algoritmos Exactos
 
-## Uso rapido
+Garantía de optimalidad en instancias pequeñas (Branch & Bound, Dynamic
+Programming):
 
-Pipeline completo:
+- **Ventajas**: Optimalidad garantizada
+- **Desventajas**: Impracticable para grandes instancias
 
-```bash
-python run.py
-```
+### 5. Enfoque Híbrido
 
-Pipeline por etapas:
+Combinación de clustering, heurísticas y refinamiento local:
 
-```bash
-python run.py input --bbox bbox/saved_bbox.json
-python run.py filter
-python run.py graph
-python run.py route
-python run.py export
-```
-
-## Artefactos por defecto
-
-Por default los outputs van a `artifacts/runs/latest/`:
-
-- `bbox_input/input.json`
-- `filter/filtered.json`
-- `graph/graph.json`
-- `route/routes.json`
-- `output/bbox.geojson`
-- `output/input_points.geojson`
-- `output/filtered_points.geojson`
-- `output/clusters.geojson`
-- `output/cluster_polygons.geojson`
-- `output/routes.geojson`
-
-## Viewer
-
-Generar capas y servir archivos:
-
-```bash
-python run.py export
-python -m http.server 8000
-```
-
-Abrir en navegador:
-
-- `http://localhost:8000/viewer/index.html`
-
-## Desarrollo
-
-Comandos de formato y chequeo:
-
-```bash
-black .
-isort .
-black --check .
-isort --check-only .
-./venv/bin/python -m pre_commit run --all-files
-```
-
-## Modulos legacy
-
-- `tsp.py` permanece en el repositorio por compatibilidad historica, pero no participa del flujo CLI actual.
-- El flujo activo usa `optimize.py` + `routing.py`.
-
-## Documentacion adicional
-
-- `docs/VIEWER_QUICKSTART.md`
-- `docs/pseudo-codigo.md`
-- `docs/TODO.md`
-
-## Soporte
-
-- Issues: [GitHub Issues](https://github.com/AlbertoZuiga/arbocensus/issues)
+- **Ventajas**: Balance entre calidad y escalabilidad
+- **Desventajas**: Mayor complejidad de implementación
