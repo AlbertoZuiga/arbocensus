@@ -3,13 +3,13 @@ repos:
     hooks:
       - id: isort
         name: isort
-        entry: ./venv/bin/python -m isort
+        entry: ./.venv/bin/python -m isort
         language: system
         types: [python]
         args: ["--filter-files"]
 
       - id: black
         name: black
-        entry: ./venv/bin/python -m black
+        entry: ./.venv/bin/python -m black
         language: system
         types: [python]

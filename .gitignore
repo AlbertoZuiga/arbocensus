@@ -1,44 +1,41 @@
-venv
+# Virtual environments
+venv/
 .venv/
+env/
 
-# Local env
+# Local environment variables
 .env
 .env*.local
 
-# Cache for distance matrix and other runtime caches
+# IDE and editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.eggs/
+dist/
+build/
+
+# Cache directories
 .cache/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# Secrets collected from other projects (do not commit)
-secrets/
-
+# OS
 .DS_Store
+Thumbs.db
+
+# Node
 node_modules/
 
-.pylintrc
-archive/
+# IDE config (version-controlled)
+# .vscode/ is in git but .vscode/settings.json can be ignored
+.vscode/settings.json
 
-# Generated data and artifacts (do not commit large or changing outputs)
-artifacts/
-data/
-
-# Common GIS output formats (optional — keep small examples in `examples/` if needed)
-*.geojson
-*.geojson.gz
-*.ndjson
-
-# Local run directories
-artifacts/latest
-
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.pdb
-*.egg-info/
-*.eggs/
-*.whl
-
-.vscode/
