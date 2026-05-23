@@ -1,181 +1,227 @@
-# 🌳 Arbocensus: Generador de Rutas Óptimas para Censo de Árboles
+# Arbocensus: Optimización de Rutas para Censo de Árboles Urbanos
 
-Pipeline para generar rutas de censo de arboles y exportar capas GeoJSON para visualizacion.
+Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 
-- [🌳 Arbocensus: Generador de Rutas Óptimas para Censo de Árboles](#-arbocensus-generador-de-rutas-óptimas-para-censo-de-árboles)
-  - [Estado actual](#estado-actual)
-  - [Estructura relevante](#estructura-relevante)
-  - [Requisitos](#requisitos)
-    - [Formateo y Hooks Locales](#formateo-y-hooks-locales)
-    - [Configuración de Base de Datos (Opcional)](#configuración-de-base-de-datos-opcional)
-  - [CLI](#cli)
-  - [Uso rapido](#uso-rapido)
-  - [Artefactos por defecto](#artefactos-por-defecto)
-  - [Viewer](#viewer)
-  - [Desarrollo](#desarrollo)
-  - [Modulos legacy](#modulos-legacy)
-  - [Documentacion adicional](#documentacion-adicional)
-  - [Soporte](#soporte)
+- [Arbocensus: Optimización de Rutas para Censo de Árboles Urbanos](#arbocensus-optimización-de-rutas-para-censo-de-árboles-urbanos)
+  - [Desarrollo Rápido](#desarrollo-rápido)
+    - [Configuración Inicial](#configuración-inicial)
+    - [Comandos Comunes](#comandos-comunes)
+    - [Estructura del Proyecto](#estructura-del-proyecto)
+    - [Stack Técnico](#stack-técnico)
+  - [Problema de Investigación](#problema-de-investigación)
+  - [Contexto](#contexto)
+  - [Enfoques de Solución Posibles](#enfoques-de-solución-posibles)
+    - [1. Optimización Exacta mediante Solver](#1-optimización-exacta-mediante-solver)
+    - [2. Clustering Balanceado + Routing Local](#2-clustering-balanceado--routing-local)
+    - [3. Meta-heurísticas](#3-meta-heurísticas)
+    - [4. Algoritmos Exactos](#4-algoritmos-exactos)
+    - [5. Enfoque Híbrido](#5-enfoque-híbrido)
 
+## Desarrollo Rápido
 
-## Estado actual
-
-- El flujo principal es: input -> filter -> graph -> route -> export.
-- `route/routes.json` es la fuente para la asignacion de clusters en export.
-
-## Estructura relevante
-
-- `run.py`: entrypoint del CLI.
-- `src/arbocensus_pipeline/cli.py`: comandos del pipeline.
-- `src/arbocensus_pipeline/input.py`: carga de datos desde bbox o DB.
-- `src/arbocensus_pipeline/filter.py`: limpieza y filtrado.
-- `src/arbocensus_pipeline/graph.py`: grafo sparse via KD-tree.
-- `src/arbocensus_pipeline/optimize.py`: optimizacion de rutas.
-- `src/arbocensus_pipeline/routing.py`: tiempos de viaje y cache.
-- `src/arbocensus_pipeline/export.py`: exportacion GeoJSON.
-- `viewer/index_v3.html`: viewer recomendado.
-
-## Requisitos
-
-- Python 3.12
-- Entorno virtual (`venv`)
-
-Instalacion:
+### Configuración Inicial
 
 ```bash
-# Clonar repositorio
-git clone https://github.com/AlbertoZuiga/arbocensus
+# 1. Clonar el repositorio
+git clone https://github.com/AlbertoZuiga/arbocensus.git
 cd arbocensus
 
-# Crear entorno virtual
-python3 -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+# 2. Crear virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
 
-# Instalar dependencias del pipeline
-pip install -r requirements.txt
-pip install -r requirements-linters.txt
+# 3. Instalar dependencias
+pip install -r requirements.txt      # Runtime dependencies
+pip install -r tools/requirements-dev.txt  # Development tools
+npm install                          # Node.js dependencies
 
-# Instalar hooks de git (Husky + Commitlint)
-npm install
-
-# Convertir run.py en ejecutable (opcional: en caso de no realizar los comandos deberan realizarse con python run.py en lugar de ./run.py)
-chmod 744 run.py
+# 4. Instalar pre-commit hooks
+pre-commit install
 ```
 
-### Formateo y Hooks Locales
-
-Se agrega una capa de validación automática para mantener estilo y mensajes de commit consistentes:
-
-- `black` e `isort` para formateo y orden de imports en Python
-- `pre-commit` ejecutado desde `.husky/pre-commit`
-- `commitlint` ejecutado desde `.husky/commit-msg`
-- workflow de GitHub Actions que valida formato en cada Pull Request hacia `main`
-
-### Configuración de Base de Datos (Opcional)
-
-Si quieres cargar árboles directamente desde PostgreSQL:
-
-Crea archivo `.env` en la raíz:
+### Comandos Comunes
 
 ```bash
-ARBOCENSUS_DB_URL=postgres://user:pass@host:5432/db_name
-ARBOCENSUS_API_DB_URL=postgres://user:pass@host:5432/api_db
+# Linting
+npm run lint              # Ejecutar todos los linters
+npm run lint:py          # Linting Python (ruff)
+npm run lint:js          # Linting JavaScript/Markdown
+
+# Formateo
+npm run format           # Formatear código Python
+npm run format:check     # Verificar formato sin cambiar
+
+# Type checking
+npm run type-check      # Verificar tipos con pyright
+
+# Testing
+npm run test            # Ejecutar tests con pytest
+npm run test:watch      # Tests en modo watch
+npm run test:cov        # Tests con reporte de cobertura
 ```
 
-El pipeline intentará conectarse usando estas credenciales. Si fallan, usará el archivo `saved_bbox.json` como fallback.
-
----
-
-## CLI
-
-Ayuda general:
+### Estructura del Proyecto
 
 ```bash
-python run.py --help
+.
+├── src/                    # Código fuente Python (si aplica)
+├── tests/                  # Tests
+├── tools/
+│   ├── scripts/           # Scripts auxiliares (lint, format, test)
+│   └── requirements-dev.txt  # Dependencias de desarrollo
+├── docs/                  # Documentación
+├── .github/              # Workflows de CI/CD
+├── .husky/               # Git hooks
+├── pyproject.toml        # Configuración Python (ruff, pytest, pyright, coverage)
+├── package.json          # Configuración Node.js
+├── requirements.txt      # Dependencias runtime
+└── README.md            # Este archivo
 ```
 
-Subcomandos disponibles:
+### Stack Técnico
 
-- `input`
-- `filter`
-- `graph`
-- `route`
-- `export`
+**Python:**
 
-Flags globales:
+- **Linting & Formatting:** [Ruff](https://github.com/astral-sh/ruff) - Linter y formatter modernísimo (10-100x más rápido que black/isort/pylint)
+- **Type Checking:** [Pyright](https://github.com/microsoft/pyright) - Type checker estático de Microsoft
+- **Testing:** [Pytest](https://pytest.org/) - Framework de testing flexible y poderoso
+- **Coverage:** [Coverage.py](https://coverage.readthedocs.io/) - Reporte de cobertura de tests
 
-- `--run-id`: identifica un run.
-- `--outdir`: directorio base de runs.
+**Node.js:**
 
-## Uso rapido
+- **Commit Linting:** [Commitlint](https://commitlint.js.org/) - Validación de mensajes de commit
+- **Pre-commit Hooks:** [Husky](https://typicode.github.io/husky/) - Gestión de hooks Git
 
-Pipeline completo:
+**Markdown:**
 
-```bash
-python run.py
-```
+- [Markdownlint-CLI](https://github.com/igorshubovych/markdownlint-cli) - Linting de Markdown
 
-Pipeline por etapas:
+## Problema de Investigación
 
-```bash
-python run.py input --bbox bbox/saved_bbox.json
-python run.py filter
-python run.py graph
-python run.py route
-python run.py export
-```
+En trabajos previos de censo de árboles urbanos, equipos en terreno recorrieron
+sectores de la ciudad para recopilar fotografías e información técnica de los
+árboles. El objetivo principal de estos censos es contribuir a la seguridad
+vial mediante el monitoreo y seguimiento del estado de árboles urbanos.
 
-## Artefactos por defecto
+Los datos recopilados conforman una base inicial de información que podrá ser
+utilizada en futuras etapas para apoyar el entrenamiento de modelos de
+Inteligencia Artificial orientados a la clasificación y análisis de árboles
+urbanos.
 
-Por default los outputs van a `artifacts/runs/latest/`:
+Actualmente, el proyecto se encuentra en una nueva etapa: realizar un
+re-censo de las zonas previamente censadas. El objetivo es actualizar la
+información existente, generar nuevos registros y mantener consistencia entre
+los datos históricos y los nuevos datos recopilados en terreno mediante la
+planificación eficiente de rutas para equipos de censadores.
 
-- `bbox_input/input.json`
-- `filter/filtered.json`
-- `graph/graph.json`
-- `route/routes.json`
-- `output/bbox.geojson`
-- `output/input_points.geojson`
-- `output/filtered_points.geojson`
-- `output/clusters.geojson`
-- `output/cluster_polygons.geojson`
-- `output/routes.geojson`
+Para esto, se cuenta con bases de datos previas que contienen:
 
-## Viewer
+- Fotografías de árboles urbanos
+- Geolocalización de cada árbol
+- Información técnica recopilada en censos anteriores
 
-Generar capas y servir archivos:
+Sin embargo, estas fuentes de información se encuentran distribuidas en bases
+separadas y heterogéneas. El proyecto busca utilizar dichos datos como entrada
+para planificar recorridos eficientes de los censadores y facilitar futuras
+integraciones con nuevas bases de datos.
 
-```bash
-python run.py export
-python -m http.server 8000
-```
+La tarea de re-censo presenta desafíos importantes:
 
-Abrir en navegador:
+- **Ineficiencia en rutas**: Los censadores deben recorrer zonas extensas,
+  visitando árboles previamente registrados y nuevos puntos de interés
+- **Balance de carga**: Es necesario distribuir equitativamente el trabajo
+  entre equipos de terreno considerando restricciones temporales por ruta
+- **Actualización de información**: Se debe garantizar consistencia entre los
+  datos históricos y los nuevos registros
+- **Complejidad combinatoria**: Encontrar rutas eficientes para múltiples
+  censadores corresponde a un problema NP-difícil
+- **Costo operacional**: Reducir tiempos y costos de desplazamiento disminuye
+  costos operacionales y fatiga del personal
 
-- `http://localhost:8000/viewer/index.html`
+## Contexto
 
-## Desarrollo
+El catastro y monitoreo de árboles urbanos es una tarea relevante principalmente
+para la seguridad vial y la prevención de riesgos asociados a la caída de
+árboles en zonas urbanas.
 
-Comandos de formato y chequeo:
+En etapas anteriores del proyecto, se realizaron censos en distintas zonas
+urbanas para recopilar información visual y técnica de árboles. Estos datos
+constituyen una base preliminar que permitirá, en etapas futuras, desarrollar
+modelos de IA orientados a la clasificación y análisis de árboles urbanos.
 
-```bash
-black .
-isort .
-black --check .
-isort --check-only .
-./venv/bin/python -m pre_commit run --all-files
-```
+En esta nueva etapa, se requiere volver a recorrer las zonas ya censadas para:
 
-## Modulos legacy
+- Actualizar información existente
+- Verificar el estado actual de los árboles
+- Obtener nuevas fotografías y registros
+- Generar información más completa y consistente para futuros procesos de clasificación mediante IA
 
-- `tsp.py` permanece en el repositorio por compatibilidad historica, pero no participa del flujo CLI actual.
-- El flujo activo usa `optimize.py` + `routing.py`.
+El proyecto utilizará información proveniente de bases de datos existentes,
+aunque también considera la posibilidad de integrar nuevas fuentes de datos en
+el futuro.
 
-## Documentacion adicional
+La ausencia de rutas optimizadas para el re-censo puede generar jornadas de
+trabajo extensas, desbalance entre equipos, aumento de costos operacionales y
+menor eficiencia en la recolección de información en terreno.
 
-- `docs/VIEWER_QUICKSTART.md`
-- `docs/pseudo-codigo.md`
-- `docs/TODO.md`
+## Enfoques de Solución Posibles
 
-## Soporte
+El problema puede modelarse como una variante de un problema de optimización
+combinatoria sobre grafos, relacionado con el Multiple Traveling Salesman
+Problem (mTSP) y problemas de routing con restricciones temporales y balance de
+carga.
 
-- Issues: [GitHub Issues](https://github.com/AlbertoZuiga/arbocensus/issues)
+Dada la magnitud esperada del problema, una estrategia basada en optimización
+exacta mediante solvers de programación matemática resulta especialmente
+atractiva, permitiendo obtener soluciones óptimas o cercanas al óptimo sin
+necesidad inmediata de heurísticas complejas.
+
+### 1. Optimización Exacta mediante Solver
+
+El problema puede formularse como un modelo de optimización combinatoria
+entera-mixta (MILP), donde las variables representan asignaciones y recorridos
+entre puntos.
+
+Este enfoque permite incorporar restricciones temporales, balance de carga y
+minimización de costos de desplazamiento utilizando solvers especializados como
+OR-Tools, Gurobi, CBC o SCIP.
+
+- **Ventajas**:
+  - Soluciones óptimas o cercanas al óptimo
+  - Modelamiento formal del problema
+  - Fácil incorporación de restricciones
+
+- **Desventajas**:
+  - Escalabilidad limitada en instancias grandes
+  - Mayor costo computacional en problemas de gran tamaño
+
+### 2. Clustering Balanceado + Routing Local
+
+- **Fase 1**: Particionar el área en clusters usando K-means o algoritmos
+  geográficos
+- **Fase 2**: Resolver rutas locales dentro de cada cluster
+- **Ventajas**: Simple, escalable
+- **Desventajas**: Soluciones locales, no optimiza globalmente
+
+### 3. Meta-heurísticas
+
+Búsqueda global con capacidad de escapar de óptimos locales (Genetic
+Algorithm, Simulated Annealing, Ant Colony):
+
+- **Ventajas**: Potencialmente mejores soluciones
+- **Desventajas**: Mayor tiempo computacional, mayor complejidad
+
+### 4. Algoritmos Exactos
+
+Garantía de optimalidad en instancias pequeñas (Branch & Bound, Dynamic
+Programming):
+
+- **Ventajas**: Optimalidad garantizada
+- **Desventajas**: Impracticable para grandes instancias
+
+### 5. Enfoque Híbrido
+
+Combinación de clustering, heurísticas y refinamiento local:
+
+- **Ventajas**: Balance entre calidad y escalabilidad
+- **Desventajas**: Mayor complejidad de implementación

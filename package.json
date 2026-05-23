@@ -1,22 +1,36 @@
 {
-  "name": "mi_proyecto",
-  "version": "1.0.0",
-  "description": "_Pipeline modular_ — _Balanceo de carga_ — _Clustering geográfico_ — _Optimización TSP_",
-  "main": "index.js",
+  "name": "arbocensus-thesis",
+  "version": "0.1.0",
+  "description": "Optimización de rutas de censo de árboles urbanos mediante algoritmos de clustering y traveling salesman problem",
+  "private": true,
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "prepare": "husky",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "npm run lint:js && npm run lint:py",
+    "lint:js": "npx markdownlint-cli '**/*.md' --ignore node_modules",
+    "lint:py": "ruff check . --fix",
+    "format": "ruff format .",
+    "format:check": "ruff format . --check",
+    "type-check": "pyright .",
+    "test": "pytest",
+    "test:watch": "pytest --watch",
+    "test:cov": "pytest --cov=src --cov-report=html"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/AlbertoZuiga/arbocensus.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "optimization",
+    "routing",
+    "clustering",
+    "tsp",
+    "urban-trees"
+  ],
+  "author": "Alberto Zuñiga",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/AlbertoZuiga/arbocensus/issues"
@@ -25,6 +39,7 @@
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "markdownlint-cli": "^0.48.0"
   }
 }
