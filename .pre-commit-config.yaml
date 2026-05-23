@@ -1,15 +1,28 @@
 repos:
+  # Ruff: Modern Python linter and formatter (replaces black, isort, pylint)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.5.0"
+    hooks:
+      - id: ruff
+        name: ruff lint
+        args: ["check", "--fix"]
+      - id: ruff-format
+        name: ruff format
+        stages: ["pre-commit"]
+
+  # Pyright: Static type checking for Python
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.407
+    hooks:
+      - id: pyright
+        name: pyright
+        stages: ["manual"] # Run manually: pre-commit run pyright --all-files
+
+  # Commitlint: Validate commit messages
   - repo: local
     hooks:
-      - id: isort
-        name: isort
-        entry: ./venv/bin/python -m isort
+      - id: commitlint
+        name: commitlint
+        entry: commitlint --edit
         language: system
-        types: [python]
-        args: ["--filter-files"]
-
-      - id: black
-        name: black
-        entry: ./venv/bin/python -m black
-        language: system
-        types: [python]
+        stages: ["commit-msg"]
