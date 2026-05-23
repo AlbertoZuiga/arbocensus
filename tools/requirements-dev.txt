@@ -1,0 +1,20 @@
+# Development dependencies for Python tooling and testing
+# Install with: pip install -r tools/requirements-dev.txt
+
+# Linting and Formatting (modern alternative to black/isort/pylint)
+ruff==0.5.0
+
+# Type checking
+pyright==1.1.363
+
+# Testing framework
+pytest==8.2.0
+pytest-cov==5.0.0
+
+# Coverage reporting
+coverage==7.5.1
+
+# Additional testing utilities (optional, uncomment if needed)
+# pytest-watch==4.2.0  # For --watch mode
+# pytest-mock==3.14.0  # For mocking
+# pytest-asyncio==0.23.0  # For async tests

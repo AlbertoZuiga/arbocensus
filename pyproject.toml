@@ -1,15 +1,82 @@
-[tool.black]
-line-length = 88
-target-version = ["py312"]
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.isort]
-profile = "black"
-py_version = 312
+[project]
+name = "arbocensus"
+version = "0.1.0"
+description = "Optimización de rutas de censo de árboles urbanos mediante algoritmos de clustering y traveling salesman problem"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Alberto Zuñiga"}]
+requires-python = ">=3.12"
+keywords = ["optimization", "routing", "clustering", "tsp", "urban-trees"]
+
+# Modern Python linting and formatting with ruff
+# Replaces black, isort, pylint, flake8 with a single, fast tool
+[tool.ruff]
 line-length = 88
-multi_line_output = 3
-include_trailing_comma = true
-use_parentheses = true
-ensure_newline_before_comments = true
-skip_gitignore = true
+target-version = "py312"
+extend-include = ["*.pyi"]
+
+[tool.ruff.lint]
+# Enable pycodestyle (E/W), pyflakes (F), isort (I), and common best practices
+select = ["E", "W", "F", "I", "N", "UP", "B", "A"]
+ignore = [
+    "E501",  # Line too long (ruff format handles this)
+    "D100",  # Missing module docstring
+    "D101",  # Missing class docstring
+    "D102",  # Missing method docstring
+    "D103",  # Missing function docstring
+]
+
+[tool.ruff.format]
+# Use same style as black for maximum compatibility
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+
+# Testing configuration
+[tool.pytest.ini_options]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+# Type checking with pyright
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["**/node_modules", "**/__pycache__", "**/.*"]
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+reportOptionalCallOperand = false
+
+# Coverage reporting
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+precision = 2
 
 

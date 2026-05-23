@@ -8,7 +8,15 @@
   },
   "scripts": {
     "prepare": "husky",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "npm run lint:js && npm run lint:py",
+    "lint:js": "npx markdownlint-cli '**/*.md' --ignore node_modules",
+    "lint:py": "ruff check . --fix",
+    "format": "ruff format .",
+    "format:check": "ruff format . --check",
+    "type-check": "pyright .",
+    "test": "pytest",
+    "test:watch": "pytest --watch",
+    "test:cov": "pytest --cov=src --cov-report=html"
   },
   "repository": {
     "type": "git",

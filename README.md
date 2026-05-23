@@ -2,6 +2,100 @@
 
 Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 
+- [Arbocensus: Optimización de Rutas para Censo de Árboles Urbanos](#arbocensus-optimización-de-rutas-para-censo-de-árboles-urbanos)
+  - [Desarrollo Rápido](#desarrollo-rápido)
+    - [Configuración Inicial](#configuración-inicial)
+    - [Comandos Comunes](#comandos-comunes)
+    - [Estructura del Proyecto](#estructura-del-proyecto)
+    - [Stack Técnico](#stack-técnico)
+  - [Problema de Investigación](#problema-de-investigación)
+  - [Contexto](#contexto)
+  - [Enfoques de Solución Posibles](#enfoques-de-solución-posibles)
+    - [1. Optimización Exacta mediante Solver](#1-optimización-exacta-mediante-solver)
+    - [2. Clustering Balanceado + Routing Local](#2-clustering-balanceado--routing-local)
+    - [3. Meta-heurísticas](#3-meta-heurísticas)
+    - [4. Algoritmos Exactos](#4-algoritmos-exactos)
+    - [5. Enfoque Híbrido](#5-enfoque-híbrido)
+
+## Desarrollo Rápido
+
+### Configuración Inicial
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/AlbertoZuiga/arbocensus.git
+cd arbocensus
+
+# 2. Crear virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
+# 3. Instalar dependencias
+pip install -r requirements.txt      # Runtime dependencies
+pip install -r tools/requirements-dev.txt  # Development tools
+npm install                          # Node.js dependencies
+
+# 4. Instalar pre-commit hooks
+pre-commit install
+```
+
+### Comandos Comunes
+
+```bash
+# Linting
+npm run lint              # Ejecutar todos los linters
+npm run lint:py          # Linting Python (ruff)
+npm run lint:js          # Linting JavaScript/Markdown
+
+# Formateo
+npm run format           # Formatear código Python
+npm run format:check     # Verificar formato sin cambiar
+
+# Type checking
+npm run type-check      # Verificar tipos con pyright
+
+# Testing
+npm run test            # Ejecutar tests con pytest
+npm run test:watch      # Tests en modo watch
+npm run test:cov        # Tests con reporte de cobertura
+```
+
+### Estructura del Proyecto
+
+```bash
+.
+├── src/                    # Código fuente Python (si aplica)
+├── tests/                  # Tests
+├── tools/
+│   ├── scripts/           # Scripts auxiliares (lint, format, test)
+│   └── requirements-dev.txt  # Dependencias de desarrollo
+├── docs/                  # Documentación
+├── .github/              # Workflows de CI/CD
+├── .husky/               # Git hooks
+├── pyproject.toml        # Configuración Python (ruff, pytest, pyright, coverage)
+├── package.json          # Configuración Node.js
+├── requirements.txt      # Dependencias runtime
+└── README.md            # Este archivo
+```
+
+### Stack Técnico
+
+**Python:**
+
+- **Linting & Formatting:** [Ruff](https://github.com/astral-sh/ruff) - Linter y formatter modernísimo (10-100x más rápido que black/isort/pylint)
+- **Type Checking:** [Pyright](https://github.com/microsoft/pyright) - Type checker estático de Microsoft
+- **Testing:** [Pytest](https://pytest.org/) - Framework de testing flexible y poderoso
+- **Coverage:** [Coverage.py](https://coverage.readthedocs.io/) - Reporte de cobertura de tests
+
+**Node.js:**
+
+- **Commit Linting:** [Commitlint](https://commitlint.js.org/) - Validación de mensajes de commit
+- **Pre-commit Hooks:** [Husky](https://typicode.github.io/husky/) - Gestión de hooks Git
+
+**Markdown:**
+
+- [Markdownlint-CLI](https://github.com/igorshubovych/markdownlint-cli) - Linting de Markdown
+
 ## Problema de Investigación
 
 En trabajos previos de censo de árboles urbanos, equipos en terreno recorrieron
