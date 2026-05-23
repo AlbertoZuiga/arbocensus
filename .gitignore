@@ -24,9 +24,14 @@ build/
 
 # Cache directories
 .cache/
+.local/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.pyright/
+.coverage
+.coverage.*
+htmlcov/
 
 # OS
 .DS_Store
