@@ -1,0 +1,60 @@
+\chapter{RESULTADOS OBTENIDOS Y POSIBLES MEJORAS}
+
+\section{RESULTADOS OBTENIDOS}
+\subsection{Métricas de Calidad de Rutas}
+
+% TODO (copilot-prompts.md → §3.1.1):
+% Reportar: número de rutas generadas, distribución de tiempos por ruta,
+% desviación estándar (target < 15% del promedio), cumplimiento de T_max,
+% tiempo de cómputo. Usar dataset real de la tesis.
+% Presentar en tabla (Tabla \ref{tab:metricas}).
+
+% \begin{table}[H]
+%   \centering
+%   \caption{Métricas de calidad de rutas — dataset de N árboles.}
+%   \label{tab:metricas}
+%   \begin{tabularx}{\textwidth}{lXX}
+%     \toprule
+%     Métrica & Valor & Criterio \\
+%     \midrule
+%     Número de rutas $k$ & -- & mínimo posible \\
+%     Tiempo promedio por ruta & -- & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
+%     Desviación estándar & -- & $< 15\%$ del promedio \\
+%     Rutas que exceden $T_{\max}$ & -- & $= 0$ \\
+%     Tiempo de cómputo (solver) & -- & $< 5$ min \\
+%     \bottomrule
+%   \end{tabularx}
+% \end{table}
+
+% ---- 3.1.2 ------------------------------------------------------
+\subsection{Comparación con Solución Greedy}
+
+% TODO (copilot-prompts.md → §3.1.2):
+% Comparar Arbocensus (OR-Tools VRP) vs baseline greedy (vecino más cercano).
+% Métricas: tiempo total de desplazamiento, balance (std dev), N de rutas.
+% El baseline se genera programáticamente con el mismo dataset.
+
+Como referencia de comparación se implementa una solución \textit{greedy} basada
+en el heurístico del vecino más cercano, generada programáticamente sobre el mismo
+dataset y con los mismos parámetros temporales.
+
+% TODO: completar tabla comparativa y análisis una vez que el motor esté validado
+%        con el dataset real.
+
+% ---- 3.2 -------------------------------------------------------
+\section{POSIBLES MEJORAS}
+
+% TODO (copilot-prompts.md → §3.2):
+% Describir las mejoras V2 identificadas: portal del censador mobile-first,
+% importación GeoJSON y legacy DB, chunking OSRM para datasets >500 puntos,
+% análisis de sensibilidad del tiempo de solver, Playwright E2E.
+
+Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
+
+\begin{itemize}
+  \item \textbf{Portal del censador}: interfaz \textit{mobile-first} para navegación en terreno con integración Google Maps y capacidad parcial de operación sin conexión.
+  \item \textbf{Importación de formatos adicionales}: soporte GeoJSON e importación directa desde bases de datos legadas del sistema Arbocensus previo.
+  \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para datasets que superen los 500 puntos activos.
+  \item \textbf{Análisis de sensibilidad}: estudio sistemático de la relación entre el tiempo límite del solver y la calidad de la solución.
+\end{itemize}
+

@@ -1,0 +1,89 @@
+% ============================================================
+% PORTADA (Diseño con ambos bloques perfectamente centrados)
+% ============================================================
+\begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay]
+
+% Márgenes alrededor del logo
+\def\LeftMargin{1cm}
+\def\TopMargin{1cm}
+\def\RightMargin{1cm}
+\def\BottomMargin{1cm}
+
+\path ([xshift=\LeftMargin,yshift=-\TopMargin]current page.north west) coordinate (PageNW);
+\path ([xshift=-\RightMargin,yshift=-\TopMargin]current page.north east) coordinate (PageNE);
+\path ([xshift=\LeftMargin,yshift=\BottomMargin]current page.south west) coordinate (PageSW);
+\path ([xshift=-\RightMargin,yshift=\BottomMargin]current page.south east) coordinate (PageSE);
+
+\def\LogoPadding{8mm}
+
+\node (logo)
+[
+  anchor=north west,
+  inner sep=\LogoPadding
+]
+at ([xshift=\LeftMargin,yshift=-\TopMargin]current page.north west)
+{\includegraphics{media/logo.png}};
+
+% Línea vertical
+\node (vline)
+[anchor=north west, inner sep=0pt]
+at (logo.north east)
+{\includegraphics[height=\dimexpr\paperheight-\TopMargin\relax]{media/linea 1.png}};
+
+% Línea horizontal
+\node (hline)
+[anchor=north west, inner sep=0pt]
+at (logo.south west)
+{\includegraphics[width=\dimexpr\paperwidth-\LeftMargin-\RightMargin\relax]{media/linea 2.png}};
+
+
+% ============================================================
+% TEXTO SUPERIOR DERECHO (Centrado perfecto en su cuadrante)
+% ============================================================
+\coordinate (HeaderCenter) at ($(vline.east |- PageNE)!0.5!(PageNE |- hline.north)$);
+
+\node[
+  anchor=center,
+  inner sep=0pt,
+  text width=12cm,
+  align=center,
+  font=\Large
+]
+at (HeaderCenter)
+{
+UNIVERSIDAD DE LOS ANDES\\
+FACULTAD DE INGENIERÍA Y\\
+CIENCIAS APLICADAS
+};
+
+
+% ============================================================
+% TEXTO PRINCIPAL INFERIOR DERECHO (Centrado perfecto en su cuadrante)
+% ============================================================
+\coordinate (MainCenter) at ($(vline.east |- hline.south)!0.5!(PageSE)$);
+
+\node[
+  anchor=center,
+  inner sep=0pt,
+  text width=13cm,
+  align=center
+]
+at (MainCenter)
+{
+{\fontsize{16}{20}\selectfont
+PLATAFORMA DE OPTIMIZACIÓN DE RUTAS\\
+PARA CENSO DE ÁRBOLES URBANOS}\\[2.5cm] 
+
+{\large ALBERTO ZÚÑIGA}\\[1.2cm]
+
+TRABAJO DE TITULACIÓN DE TIPO\\PRODUCTO PARA OPTAR AL TÍTULO DE\\[0.4cm]
+INGENIERO CIVIL EN CIENCIAS DE LA COMPUTACIÓN\\[1.8cm]
+
+PROFESOR GUÍA: MATIAS RECABARREN\\[1.8cm]
+
+SANTIAGO, SEPTIEMBRE DE 2026
+};
+
+\end{tikzpicture}
+\end{titlepage}

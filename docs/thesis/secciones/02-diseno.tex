@@ -1,0 +1,211 @@
+\chapter{DISEÑO DEL PRODUCTO}
+
+\section{ARQUITECTURA DEL SISTEMA}
+La arquitectura del sistema sigue el patrón de monolito modular: un único servicio
+Django con módulos claramente separados por dominio
+(\texttt{accounts}, \texttt{datasets}, \texttt{optimization}, \texttt{routes}).
+
+Las tareas de optimización se ejecutan de forma asíncrona mediante Celery con Redis
+como broker, dado que el proceso de construcción de la matriz de costos y la
+ejecución del solver pueden tardar varios minutos para conjuntos de cien o más
+puntos.
+
+El motor de ruteo peatonal (OSRM) se despliega localmente en Docker, procesando
+datos de OpenStreetMap de Chile, lo que elimina costos de API y dependencias de red
+durante la optimización.
+
+% TODO: incluir diagrama de arquitectura (Figura \ref{fig:arquitectura}).
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=0.9\textwidth]{img/arquitectura.png}
+%   \caption{Arquitectura del sistema Arbocensus.}
+%   \label{fig:arquitectura}
+% \end{figure}
+
+% ---- 2.2 -------------------------------------------------------
+\section{MODELO DE DATOS}
+
+% TODO (copilot-prompts.md → §2.2):
+% Describir las entidades principales: Dataset, Tree, RoutingConfig, OptimizationJob,
+% RoutingSolution, Route, RouteStop, DistanceMatrix. Resaltar decisiones de diseño:
+% DistanceMatrix con SHA256 para caché, RouteStop como fuente de verdad del orden.
+
+Los modelos de dominio centrales son los siguientes:
+
+\begin{itemize}
+  \item \textbf{Dataset}: agrupa un conjunto de árboles importados desde CSV.
+  \item \textbf{Tree}: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}.
+  \item \textbf{RoutingConfig}: parámetros de una sesión de optimización ($T_{\min}$, $T_{\max}$, $s$).
+  \item \textbf{OptimizationJob}: tarea de optimización con estado (\texttt{queued}, \texttt{running}, \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
+  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob}: $k$ rutas con métricas de balance.
+  \item \textbf{Route}: ruta individual asignada a un censador con tiempos estimados.
+  \item \textbf{RouteStop}: visita de un árbol en una ruta, con número de secuencia y estado de visita.
+  \item \textbf{DistanceMatrix}: caché persistente de la matriz $n \times n$ de tiempos OSRM, indexada por un hash SHA-256 de los IDs de árboles activos.
+\end{itemize}
+
+El orden de visita de cada ruta se deriva de \texttt{RouteStop.sequence};
+no existe un campo redundante de secuencia en \texttt{Route}.
+
+% TODO: incluir diagrama ER simplificado.
+
+% ---- 2.3 -------------------------------------------------------
+\section{MOTOR DE OPTIMIZACIÓN}
+
+% ---- 2.3.1 ------------------------------------------------------
+\subsection{Formulación del Problema}
+
+% TODO (copilot-prompts.md → §2.3.1):
+% Formalizar el Open mTSP con restricciones de tiempo. Usar la notación del
+% PROBLEM_STATEMENT.md. Definir P, c(pi,pj), s, Tmin, Tmax, Tr.
+
+El problema se define formalmente sobre un conjunto de puntos
+$P = \{p_1, p_2, \ldots, p_n\}$ correspondientes a las ubicaciones geográficas
+de los árboles a censar.
+
+La función de costo $c(p_i, p_j)$ representa el tiempo de caminata entre los
+puntos $p_i$ y $p_j$, calculado sobre la red vial peatonal real mediante OSRM.
+
+El tiempo total de una ruta $R_r$ se define como:
+\begin{equation}
+  T_r = \sum_{(p_i, p_j) \in R_r} c(p_i, p_j) + m_r \cdot s
+  \label{eq:route_time}
+\end{equation}
+donde $m_r$ es el número de árboles asignados a la ruta $r$ y $s$ es el tiempo de
+servicio constante por árbol.
+
+Las restricciones temporales por ruta son:
+\begin{equation}
+  T_{\min} \leq T_r \leq T_{\max}, \quad \forall r \in \{1, \ldots, k\}
+  \label{eq:time_constraints}
+\end{equation}
+con valores por defecto $T_{\min} = 2\,\text{h}$ y $T_{\max} = 3\,\text{h}$,
+parametrizables por el administrador.
+
+Los objetivos del problema son:
+\begin{enumerate}
+  \item Minimizar el número de rutas $k$ (minimizar equipos necesarios).
+  \item Minimizar el tiempo total de desplazamiento entre el conjunto de rutas.
+  \item Balancear la carga de trabajo entre rutas (minimizar la desviación estándar de $T_r$).
+\end{enumerate}
+
+Las rutas son abiertas: no existe un punto de inicio ni de término predefinido.
+
+% ---- 2.3.2 ------------------------------------------------------
+\subsection{Construcción de la Matriz de Costos}
+
+% TODO (copilot-prompts.md → §2.3.2):
+% Describir OSRMCostMatrixBuilder: endpoint /table/v1/foot, orden lon,lat,
+% reemplazo de nulls por penalización, caché SHA-256.
+
+La matriz de costos $C \in \mathbb{R}^{n \times n}$ se construye consultando el
+endpoint \texttt{/table/v1/foot} de OSRM, que devuelve los tiempos de caminata
+reales entre todos los pares de puntos en una única solicitud HTTP.
+
+Para evitar recomputaciones costosas, la matriz se persiste en el modelo
+\texttt{DistanceMatrix} asociado al dataset.
+La clave de caché es un hash SHA-256 calculado sobre los identificadores de los
+árboles activos ordenados; si el conjunto de árboles cambia, el hash no coincide
+y la matriz se recalcula automáticamente.
+
+Los nodos inalcanzables (devueltos como \texttt{null} por OSRM) se reemplazan por
+una penalización de $9\,999\,999$ segundos, garantizando la viabilidad numérica del
+solver sin alterar la topología de la solución.
+
+% ---- 2.3.3 ------------------------------------------------------
+\subsection{Estimación del Número de Rutas}
+
+% TODO (copilot-prompts.md → §2.3.3):
+% Describir estimate_max_vehicles: N_max como techo generoso para OR-Tools,
+% estrategia de fixed vehicle cost para minimización interna.
+
+En lugar de determinar $k$ mediante iteración externa (enfoque frágil con OR-Tools),
+el sistema calcula un techo generoso $N_{\max}$ a partir del tiempo total estimado
+de servicio y el tiempo promedio de desplazamiento entre pares de árboles:
+
+\begin{equation}
+  N_{\max} = \left\lceil \frac{n \cdot s + (n-1) \cdot \bar{c}}{T_{\min}} \right\rceil + 5
+\end{equation}
+
+donde $\bar{c}$ es el promedio del triángulo superior de la matriz de costos.
+
+El solver recibe $N_{\max}$ vehículos disponibles y usa un costo fijo por vehículo
+activo de $100\,000$ segundos para penalizar el uso innecesario de rutas,
+llevando al solver a minimizar $k$ de forma interna sin iteración externa.
+
+% ---- 2.3.4 ------------------------------------------------------
+\subsection{Solver VRP con OR-Tools}
+
+% TODO (copilot-prompts.md → §2.3.4):
+% Describir ArbocensusVRPSolver: dummy depot, AddDimension Time con T_max hard,
+% SetCumulVarSoftLowerBound para T_min, SetCumulVarSoftUpperBound para balance,
+% Guided Local Search + PATH_CHEAPEST_ARC.
+
+La formulación en OR-Tools usa el modelo de ruteo vehicular (\textit{Vehicle Routing
+Problem}) con las siguientes características:
+
+\begin{itemize}
+  \item \textbf{Rutas abiertas}: se introduce un depósito ficticio (\textit{dummy depot})
+        en el nodo 0 con costo de tránsito cero hacia todos los nodos reales.
+        Los nodos reales se indexan de $1$ a $n$.
+  \item \textbf{Cota superior de tiempo ($T_{\max}$, restricción dura)}:
+        implementada mediante \texttt{AddDimension} con capacidad máxima $T_{\max}$.
+        Ninguna ruta puede superar este valor.
+  \item \textbf{Cota inferior de tiempo ($T_{\min}$, restricción blanda)}:
+        implementada mediante \texttt{SetCumulVarSoftLowerBound} en el nodo terminal
+        de cada vehículo, con coeficiente de penalización $10\,000$.
+        Las restricciones duras de cota inferior tienden a generar infactibilidad;
+        la formulación blanda permite al solver explorar el espacio de búsqueda con
+        mayor robustez.
+  \item \textbf{Balance de rutas}:
+        \texttt{SetCumulVarSoftUpperBound} dirige las rutas hacia el punto medio
+        $(T_{\min} + T_{\max})/2$, reduciendo la varianza entre rutas.
+  \item \textbf{Minimización de rutas activas}:
+        costo fijo de $100\,000$ por vehículo descarta vehículos innecesarios.
+  \item \textbf{Búsqueda local}:
+        estrategia \textit{Guided Local Search} (GLS) con solución inicial
+        \textit{PATH\_CHEAPEST\_ARC}, con tiempo límite configurable
+        (por defecto 180 segundos).
+\end{itemize}
+
+% ---- 2.4 -------------------------------------------------------
+\section{API REST}
+
+% TODO (copilot-prompts.md → §2.4):
+% Describir los endpoints principales agrupados por recurso: auth, datasets,
+% optimization, routes. Mencionar autenticación JWT, roles Admin/Surveyor,
+% polling de estado del job.
+
+La API REST se implementa con Django REST Framework y expone los siguientes
+grupos de recursos:
+
+\begin{itemize}
+  \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de tokens JWT mediante \textit{djangorestframework-simplejwt}.
+  \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV con detección automática de columnas de coordenadas, consulta de estadísticas y exportación de árboles como \textit{GeoJSON FeatureCollection}.
+  \item \textbf{Optimización} (\texttt{/api/optimization/}): creación de trabajos de optimización, consulta de estado (para \textit{polling} desde el frontend) y acceso a métricas de la solución.
+  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica y registro de visitas en terreno.
+\end{itemize}
+
+El sistema implementa dos roles: \textbf{Administrador} (acceso completo) y
+\textbf{Censador} (solo lectura de ruta asignada y registro de visitas).
+
+% ---- 2.5 -------------------------------------------------------
+\section{INTERFAZ DE USUARIO}
+
+% TODO (copilot-prompts.md → §2.5):
+% Describir el panel de administración: flujo CSV → optimización → mapa Leaflet.
+% Mencionar React 18 + Vite, Zustand, React Query (polling), shadcn/ui.
+
+La interfaz de administración se implementa como una \textit{Single Page Application}
+con React 18 y Vite.
+El flujo principal comprende tres etapas: importación de datos (CSV), configuración
+y lanzamiento de la optimización, y visualización de las rutas resultantes sobre
+un mapa Leaflet con datos de OpenStreetMap.
+
+El estado de los trabajos de optimización se monitorea mediante \textit{polling}
+automático con React Query, que consulta el endpoint de estado cada 3 segundos
+mientras el trabajo se encuentra en estado \texttt{queued} o \texttt{running}, y
+detiene las consultas automáticamente al alcanzar un estado terminal.
+
+% TODO: incluir capturas de pantalla de las vistas principales (Figura \ref{fig:ui_datasets},
+%        \ref{fig:ui_optimization}, \ref{fig:ui_routes}).
