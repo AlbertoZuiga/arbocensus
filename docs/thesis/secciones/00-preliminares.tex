@@ -1,0 +1,55 @@
+\pagenumbering{roman}
+\setcounter{page}{2}
+
+\chapter*{AGRADECIMIENTOS}
+\addcontentsline{toc}{chapter}{AGRADECIMIENTOS}
+% TODO: Escribir agradecimientos o dedicatoria.
+\newpage
+
+\tableofcontents
+\newpage
+
+\listoftables
+\addcontentsline{toc}{chapter}{ÍNDICE DE TABLAS}
+\newpage
+
+\listoffigures
+\addcontentsline{toc}{chapter}{ÍNDICE DE ILUSTRACIONES}
+\newpage
+
+\chapter*{RESUMEN}
+\addcontentsline{toc}{chapter}{RESUMEN}
+
+El presente trabajo de titulación constituye la continuación del proyecto Arbocensus,
+iniciado previamente con un enfoque en medición de cobertura de censos urbanos de árboles
+en ciudades como Santiago y Valparaíso. Este trabajo se concentra en el diseño e implementación
+de una plataforma web para la optimización automática de rutas de censo, permitiendo que los
+equipos de censadores ejecuten sus jornadas de forma eficiente y balanceada.
+
+El problema se formula como un \textit{Open Multiple Travelling Salesman Problem}
+(Open mTSP) con restricciones temporales globales por ruta, resuelto mediante el solver
+de ruteo vehicular de OR-Tools de Google. Las distancias de desplazamiento se calculan
+a partir de OpenStreetMap mediante el motor OSRM, eliminando costos de APIs externas
+y garantizando reproducibilidad en ambientes sin conexión a internet.
+
+La plataforma integra: (a) un backend Django 4.2 con PostgreSQL/PostGIS para
+almacenamiento geoespacial; (b) un motor de optimización asíncrono con Celery y Redis
+para procesar grandes conjuntos de árboles; (c) una API REST con autenticación JWT que
+expone endpoints de importación de datasets, optimización y visualización de rutas;
+(d) una interfaz de administración en React 18 + Vite que permite importar datos,
+configurar parámetros y visualizar rutas optimizadas sobre mapas Leaflet. En el MVP,
+la plataforma se enfoca en la interfaz de administración; el portal del censador y
+funcionalidades adicionales están planificadas para versiones futuras.
+
+La solución aborda restricciones operacionales reales: (1) minimización automática del
+número de rutas necesarias, (2) cumplimiento de jornadas acotadas por ruta (2--3 horas
+por defecto, configurables), (3) balance de carga entre equipos, (4) rutas abiertas
+sin depósito obligatorio, y (5) cálculos de distancia sobre redes viales reales.
+
+Se espera que Arbocensus resuelva instancias de censos urbanos típicos
+(cientos de árboles) en tiempos computacionales prácticos ($< 5$ minutos), con mejoras
+significativas respecto a heurísticos greedy en términos de número de rutas, tiempo de
+desplazamiento y balance de carga. La sección \ref{cap:resultados} presenta resultados
+experimentales concretos que validan estos objetivos.
+
+\newpage
