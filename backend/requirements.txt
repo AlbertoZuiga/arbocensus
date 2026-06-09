@@ -1,0 +1,17 @@
+Django==4.2.13
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+psycopg[binary]==3.18.0
+celery==5.3.4
+redis==5.0.1
+ortools==9.8.3296
+GDAL==3.8.4
+requests==2.31.0
+python-dotenv==1.0.0
+gunicorn==21.2.0
+Pillow==10.1.0
+factory-boy==3.3.0
+pytest==7.4.3
+pytest-django==4.7.0
+pytest-cov==4.1.0
+ruff==0.1.8

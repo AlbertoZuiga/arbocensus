@@ -4,39 +4,70 @@ Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 
 - [Arbocensus: Optimización de Rutas para Censo de Árboles Urbanos](#arbocensus-optimización-de-rutas-para-censo-de-árboles-urbanos)
   - [Desarrollo Rápido](#desarrollo-rápido)
-    - [Configuración Inicial](#configuración-inicial)
+    - [Con Docker (recomendado)](#con-docker-recomendado)
+    - [Desarrollo Local](#desarrollo-local)
     - [Comandos Comunes](#comandos-comunes)
     - [Estructura del Proyecto](#estructura-del-proyecto)
     - [Stack Técnico](#stack-técnico)
   - [Problema de Investigación](#problema-de-investigación)
   - [Contexto](#contexto)
-  - [Enfoques de Solución Posibles](#enfoques-de-solución-posibles)
-    - [1. Optimización Exacta mediante Solver](#1-optimización-exacta-mediante-solver)
-    - [2. Clustering Balanceado + Routing Local](#2-clustering-balanceado--routing-local)
-    - [3. Meta-heurísticas](#3-meta-heurísticas)
-    - [4. Algoritmos Exactos](#4-algoritmos-exactos)
-    - [5. Enfoque Híbrido](#5-enfoque-híbrido)
+  - [Enfoque de Solución](#enfoque-de-solución)
+
+---
 
 ## Desarrollo Rápido
 
-### Configuración Inicial
+### Con Docker (recomendado)
 
 ```bash
 # 1. Clonar el repositorio
 git clone https://github.com/AlbertoZuiga/arbocensus.git
 cd arbocensus
 
-# 2. Crear virtual environment
+# 2. Configurar variables de entorno
+cp .env.example .env
+
+# 3. Descargar datos OSM para OSRM (primera vez, ~800 MB)
+mkdir -p data/osm
+curl -L https://download.geofabrik.de/south-america/chile-latest.osm.pbf \
+     -o data/osm/chile-latest.osm.pbf
+
+# 4. Levantar servicios
+docker compose up
+```
+
+OSRM procesa el PBF en el primer inicio (~10–15 min). Posterior a eso levanta en segundos.
+
+Servicios disponibles:
+
+| Servicio   | URL                                            |
+| ---------- | ---------------------------------------------- |
+| API Django | [http://localhost:8000](http://localhost:8000) |
+| PostgreSQL | localhost:5432                                 |
+| Redis      | localhost:6379                                 |
+| OSRM       | [http://localhost:5000](http://localhost:5000) |
+
+### Desarrollo Local
+
+```bash
+# 1. Crear virtual environment e instalar dependencias
 python3 -m venv .venv
-source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+source .venv/bin/activate
 
-# 3. Instalar dependencias
-pip install -r requirements.txt      # Runtime dependencies
-pip install -r tools/requirements-dev.txt  # Development tools
-npm install                          # Node.js dependencies
+pip install -r backend/requirements.txt
+pip install -r tools/requirements-dev.txt
+npm install
 
-# 4. Instalar pre-commit hooks
+# 2. Instalar pre-commit hooks
 pre-commit install
+
+# 3. Levantar solo la base de datos y Redis con Docker
+docker compose up db redis
+
+# 4. Aplicar migraciones y levantar el servidor
+cd backend
+python manage.py migrate
+python manage.py runserver
 ```
 
 ### Comandos Comunes
@@ -44,57 +75,75 @@ pre-commit install
 ```bash
 # Linting
 npm run lint              # Ejecutar todos los linters
-npm run lint:py          # Linting Python (ruff)
-npm run lint:js          # Linting JavaScript/Markdown
+npm run lint:py           # Linting Python (ruff)
+npm run lint:js           # Linting JavaScript/Markdown
 
 # Formateo
-npm run format           # Formatear código Python
-npm run format:check     # Verificar formato sin cambiar
+npm run format            # Formatear código Python
+npm run format:check      # Verificar formato sin cambiar
 
 # Type checking
-npm run type-check      # Verificar tipos con pyright
+npm run type-check        # Verificar tipos con pyright
 
 # Testing
-npm run test            # Ejecutar tests con pytest
-npm run test:watch      # Tests en modo watch
-npm run test:cov        # Tests con reporte de cobertura
+npm run test              # Ejecutar tests con pytest
+npm run test:watch        # Tests en modo watch
+npm run test:cov          # Tests con reporte de cobertura
+
+# Django (desde backend/)
+python manage.py migrate
+python manage.py createsuperuser
+celery -A config worker --loglevel=info
 ```
 
 ### Estructura del Proyecto
 
 ```bash
 .
-├── src/                    # Código fuente Python (si aplica)
-├── tests/                  # Tests
+├── backend/                  # Django + PostGIS API
+│   ├── apps/
+│   │   ├── accounts/         # Auth, CustomUser, roles
+│   │   ├── datasets/         # Importación y gestión de árboles
+│   │   ├── optimization/     # OR-Tools VRP solver, Celery jobs
+│   │   └── routes/           # Soluciones y RouteStops
+│   ├── config/               # Django settings, URLs, Celery
+│   ├── Dockerfile
+│   └── requirements.txt
+├── data/osm/                 # PBF para OSRM (ignorado en git)
+├── docs/                     # Documentación y tesis
 ├── tools/
-│   ├── scripts/           # Scripts auxiliares (lint, format, test)
-│   └── requirements-dev.txt  # Dependencias de desarrollo
-├── docs/                  # Documentación
-├── .github/              # Workflows de CI/CD
-├── .husky/               # Git hooks
-├── pyproject.toml        # Configuración Python (ruff, pytest, pyright, coverage)
-├── package.json          # Configuración Node.js
-├── requirements.txt      # Dependencias runtime
-└── README.md            # Este archivo
+│   ├── scripts/              # Scripts de lint, format, test
+│   └── requirements-dev.txt
+├── .github/                  # Workflows CI/CD
+├── .husky/                   # Git hooks
+├── docker-compose.yml
+├── pyproject.toml            # Ruff, pytest, pyright, coverage
+└── package.json              # Commitlint, Husky, scripts npm
 ```
 
 ### Stack Técnico
 
-**Python:**
+**Backend (en desarrollo):**
 
-- **Linting & Formatting:** [Ruff](https://github.com/astral-sh/ruff) - Linter y formatter modernísimo (10-100x más rápido que black/isort/pylint)
-- **Type Checking:** [Pyright](https://github.com/microsoft/pyright) - Type checker estático de Microsoft
-- **Testing:** [Pytest](https://pytest.org/) - Framework de testing flexible y poderoso
-- **Coverage:** [Coverage.py](https://coverage.readthedocs.io/) - Reporte de cobertura de tests
+- [Django 4.2](https://docs.djangoproject.com/) + [GeoDjango](https://docs.djangoproject.com/en/4.2/ref/contrib/gis/) — API REST con soporte geoespacial
+- [PostGIS 3.3](https://postgis.net/) sobre PostgreSQL 15 — almacenamiento de geometrías
+- [OR-Tools](https://developers.google.com/optimization) — solver VRP para optimización de rutas
+- [Celery](https://docs.celeryq.dev/) + [Redis 7](https://redis.io/) — ejecución asíncrona de jobs de optimización
+- [OSRM](http://project-osrm.org/) — matriz de costos de routing peatonal
 
-**Node.js:**
+**Frontend (en desarrollo):**
 
-- **Commit Linting:** [Commitlint](https://commitlint.js.org/) - Validación de mensajes de commit
-- **Pre-commit Hooks:** [Husky](https://typicode.github.io/husky/) - Gestión de hooks Git
+- [React 18](https://react.dev/) + [Vite](https://vitejs.dev/) — interfaz de usuario
+- [Leaflet](https://leafletjs.com/) — visualización de rutas y árboles en mapa
 
-**Markdown:**
+**Herramientas de desarrollo:**
 
-- [Markdownlint-CLI](https://github.com/igorshubovych/markdownlint-cli) - Linting de Markdown
+- [Ruff](https://github.com/astral-sh/ruff) — linting y formateo Python
+- [Pyright](https://github.com/microsoft/pyright) — type checking estático
+- [Pytest](https://pytest.org/) + [Coverage.py](https://coverage.readthedocs.io/) — testing
+- [Commitlint](https://commitlint.js.org/) + [Husky](https://typicode.github.io/husky/) — validación de commits
+
+---
 
 ## Problema de Investigación
 
@@ -156,72 +205,15 @@ En esta nueva etapa, se requiere volver a recorrer las zonas ya censadas para:
 - Obtener nuevas fotografías y registros
 - Generar información más completa y consistente para futuros procesos de clasificación mediante IA
 
-El proyecto utilizará información proveniente de bases de datos existentes,
-aunque también considera la posibilidad de integrar nuevas fuentes de datos en
-el futuro.
+## Enfoque de Solución
 
-La ausencia de rutas optimizadas para el re-censo puede generar jornadas de
-trabajo extensas, desbalance entre equipos, aumento de costos operacionales y
-menor eficiencia en la recolección de información en terreno.
+El problema se modela como una variante del Multiple Traveling Salesman Problem
+(mTSP) con restricciones temporales y balance de carga, resuelto mediante
+programación con restricciones usando OR-Tools VRP.
 
-## Enfoques de Solución Posibles
+El pipeline de optimización:
 
-El problema puede modelarse como una variante de un problema de optimización
-combinatoria sobre grafos, relacionado con el Multiple Traveling Salesman
-Problem (mTSP) y problemas de routing con restricciones temporales y balance de
-carga.
-
-Dada la magnitud esperada del problema, una estrategia basada en optimización
-exacta mediante solvers de programación matemática resulta especialmente
-atractiva, permitiendo obtener soluciones óptimas o cercanas al óptimo sin
-necesidad inmediata de heurísticas complejas.
-
-### 1. Optimización Exacta mediante Solver
-
-El problema puede formularse como un modelo de optimización combinatoria
-entera-mixta (MILP), donde las variables representan asignaciones y recorridos
-entre puntos.
-
-Este enfoque permite incorporar restricciones temporales, balance de carga y
-minimización de costos de desplazamiento utilizando solvers especializados como
-OR-Tools, Gurobi, CBC o SCIP.
-
-- **Ventajas**:
-  - Soluciones óptimas o cercanas al óptimo
-  - Modelamiento formal del problema
-  - Fácil incorporación de restricciones
-
-- **Desventajas**:
-  - Escalabilidad limitada en instancias grandes
-  - Mayor costo computacional en problemas de gran tamaño
-
-### 2. Clustering Balanceado + Routing Local
-
-- **Fase 1**: Particionar el área en clusters usando K-means o algoritmos
-  geográficos
-- **Fase 2**: Resolver rutas locales dentro de cada cluster
-- **Ventajas**: Simple, escalable
-- **Desventajas**: Soluciones locales, no optimiza globalmente
-
-### 3. Meta-heurísticas
-
-Búsqueda global con capacidad de escapar de óptimos locales (Genetic
-Algorithm, Simulated Annealing, Ant Colony):
-
-- **Ventajas**: Potencialmente mejores soluciones
-- **Desventajas**: Mayor tiempo computacional, mayor complejidad
-
-### 4. Algoritmos Exactos
-
-Garantía de optimalidad en instancias pequeñas (Branch & Bound, Dynamic
-Programming):
-
-- **Ventajas**: Optimalidad garantizada
-- **Desventajas**: Impracticable para grandes instancias
-
-### 5. Enfoque Híbrido
-
-Combinación de clustering, heurísticas y refinamiento local:
-
-- **Ventajas**: Balance entre calidad y escalabilidad
-- **Desventajas**: Mayor complejidad de implementación
+1. **Importación**: carga de árboles georreferenciados desde CSV o base de datos existente
+2. **Matriz de costos**: consulta a OSRM para obtener tiempos de desplazamiento peatonal reales entre pares de árboles
+3. **Solver VRP**: OR-Tools resuelve el ruteo multi-agente con restricciones de tiempo máximo por ruta y balance de carga
+4. **Resultado**: conjunto de rutas asignadas a censadores, visualizadas en mapa con Leaflet
