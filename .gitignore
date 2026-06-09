@@ -52,3 +52,4 @@ node_modules/
 # GitHub Copilot domain instructions — local only, source of truth in .claude/rules/
 .github/instructions/
 
+data/osm

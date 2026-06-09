@@ -1,0 +1,85 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: arbocensus
+      POSTGRES_USER: arbocensus
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-arbocensus_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arbocensus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  osrm:
+    image: osrm/osrm-backend
+    volumes:
+      - ./data/osm:/data
+    command: >
+      sh -c "
+        if [ ! -f /data/chile-latest.osrm ]; then
+          echo 'Processing OSM data (first run, ~10-15 min)...' &&
+          osrm-extract -p /opt/foot.lua /data/chile-latest.osm.pbf &&
+          osrm-contract /data/chile-latest.osrm;
+        fi &&
+        osrm-routed --algorithm ch /data/chile-latest.osrm --max-table-size 5000 --port 5000
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    ports:
+      - "5001:5000"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD:-arbocensus_dev}@db/arbocensus
+      REDIS_URL: redis://redis:6379/0
+      OSRM_URL: http://osrm:5000
+      SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
+      DEBUG: "True"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    command: python manage.py runserver 0.0.0.0:8000
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD:-arbocensus_dev}@db/arbocensus
+      REDIS_URL: redis://redis:6379/0
+      OSRM_URL: http://osrm:5000
+      SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
+      DEBUG: "True"
+    depends_on:
+      - backend
+      - redis
+    volumes:
+      - ./backend:/app
+    command: celery -A config worker --loglevel=info --concurrency=2
+
+volumes:
+  postgres_data:
+  redis_data:
