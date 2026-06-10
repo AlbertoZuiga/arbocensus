@@ -15,3 +15,6 @@ factory-boy>=3.3
 
 # Code quality
 ruff>=0.1
+
+# Type checking
+django-stubs>=4.2
