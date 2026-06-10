@@ -49,7 +49,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD:-arbocensus_dev}@db/arbocensus
+      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD}@db/arbocensus
       REDIS_URL: redis://redis:6379/0
       OSRM_URL: http://osrm:5000
       SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}
@@ -68,7 +68,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD:-arbocensus_dev}@db/arbocensus
+      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD}@db/arbocensus
       REDIS_URL: redis://redis:6379/0
       OSRM_URL: http://osrm:5000
       SECRET_KEY: ${DJANGO_SECRET_KEY:-dev-secret-key-change-in-production}

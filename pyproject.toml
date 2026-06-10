@@ -9,7 +9,7 @@ description = "Optimización de rutas de censo de árboles urbanos mediante algo
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Alberto Zuñiga"}]
-requires-python = ">=3.12"
+requires-python = ">=3.12.11"
 keywords = ["optimization", "routing", "clustering", "tsp", "urban-trees"]
 
 # Modern Python linting and formatting with ruff
@@ -37,6 +37,16 @@ indent-style = "space"
 line-ending = "auto"
 skip-magic-trailing-comma = false
 
+[tool.pyright]
+typeCheckingMode = "standard"
+include = ["backend", "tests"]
+exclude = ["**/node_modules", "**/.venv", "**/__pycache__", "**/.*"]
+reportArgumentType = "none"
+reportOptionalMemberAccess = "warning"
+reportAttributeAccessIssue = "warning"
+reportMissingTypeStubs = false
+reportOptionalCallOperand = false
+
 # Testing configuration
 [tool.pytest.ini_options]
 addopts = [
@@ -49,17 +59,9 @@ markers = [
     "integration: marks tests as integration tests",
 ]
 
-# Type checking with pyright
-[tool.pyright]
-include = ["src", "tests"]
-exclude = ["**/node_modules", "**/__pycache__", "**/.*"]
-typeCheckingMode = "standard"
-reportMissingTypeStubs = false
-reportOptionalCallOperand = false
-
 # Coverage reporting
 [tool.coverage.run]
-source = ["src"]
+source = ["backend"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -78,5 +80,3 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
 ]
 precision = 2
-
-

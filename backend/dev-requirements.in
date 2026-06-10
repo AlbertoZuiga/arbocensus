@@ -1,0 +1,17 @@
+# Development dependencies for Arbocensus backend
+# These should not be used in production
+# Generated with pip-tools: pip-compile dev-requirements.in
+
+# Include production deps
+-r requirements.in
+
+# Testing
+pytest>=7.4
+pytest-django>=4.7
+pytest-cov>=4.1
+
+# Test fixtures
+factory-boy>=3.3
+
+# Code quality
+ruff>=0.1

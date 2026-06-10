@@ -1,0 +1,29 @@
+# Production dependencies for Arbocensus backend
+# Generated with pip-tools: pip-compile requirements.in
+
+# Web framework and REST API
+Django>=4.2
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
+django-cors-headers>=4.3
+
+# Configuration
+django-environ>=0.11
+python-dotenv>=1.0
+
+# Database
+psycopg2-binary>=2.9
+
+# Task queue
+celery>=5.3
+redis>=5.0
+
+# Optimization and routing
+ortools>=9.15
+
+# HTTP client
+requests>=2.31
+
+# Server and utilities
+gunicorn>=21.2
+Pillow>=11.0
