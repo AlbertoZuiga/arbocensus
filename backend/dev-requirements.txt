@@ -38,12 +38,18 @@ django==6.0.6
     # via
     #   -r requirements.in
     #   django-cors-headers
+    #   django-stubs
+    #   django-stubs-ext
     #   djangorestframework
     #   djangorestframework-simplejwt
 django-cors-headers==4.9.0
     # via -r requirements.in
 django-environ==0.13.0
     # via -r requirements.in
+django-stubs==6.0.5
+    # via -r dev-requirements.in
+django-stubs-ext==6.0.5
+    # via django-stubs
 djangorestframework==3.17.1
     # via
     #   -r requirements.in
@@ -118,8 +124,13 @@ six==1.17.0
     # via python-dateutil
 sqlparse==0.5.5
     # via django
+types-pyyaml==6.0.12.20260518
+    # via django-stubs
 typing-extensions==4.15.0
-    # via ortools
+    # via
+    #   django-stubs
+    #   django-stubs-ext
+    #   ortools
 tzdata==2026.2
     # via kombu
 tzlocal==5.3.1
