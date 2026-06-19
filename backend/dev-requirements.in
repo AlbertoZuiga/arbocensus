@@ -18,3 +18,4 @@ ruff>=0.1
 
 # Type checking
 django-stubs>=4.2
+pyright>=1.1
