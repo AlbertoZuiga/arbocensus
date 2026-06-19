@@ -50,24 +50,27 @@ Servicios disponibles:
 ### Desarrollo Local
 
 ```bash
-# 1. Crear virtual environment e instalar dependencias
-python3 -m venv .venv
+# 1. Instalar dependencias (Python + Node + hooks de git)
+./scripts/setup.sh
 source .venv/bin/activate
 
-pip install -r backend/requirements.txt
-pip install -r tools/requirements-dev.txt
-npm install
-
-# 2. Instalar pre-commit hooks
-pre-commit install
-
-# 3. Levantar solo la base de datos y Redis con Docker
+# 2. Levantar solo la base de datos y Redis con Docker
 docker compose up db redis
 
-# 4. Aplicar migraciones y levantar el servidor
+# 3. Aplicar migraciones y levantar el servidor
 cd backend
 python manage.py migrate
 python manage.py runserver
+```
+
+El script crea el `.venv`, instala `backend/dev-requirements.txt` (prod + dev) y ejecuta `npm install` (que configura Husky automáticamente).
+
+Para agregar o actualizar dependencias Python, editar el `.in` correspondiente en `backend/` y recompilar:
+
+```bash
+cd backend
+pip-compile requirements.in -o requirements.txt
+pip-compile dev-requirements.in -o dev-requirements.txt
 ```
 
 ### Comandos Comunes
@@ -111,9 +114,9 @@ celery -A config worker --loglevel=info
 │   └── requirements.txt
 ├── data/osm/                 # PBF para OSRM (ignorado en git)
 ├── docs/                     # Documentación y tesis
+├── scripts/                  # Scripts de setup y utilidades
 ├── tools/
-│   ├── scripts/              # Scripts de lint, format, test
-│   └── requirements-dev.txt
+│   └── scripts/              # Scripts de lint, format, test
 ├── .github/                  # Workflows CI/CD
 ├── .husky/                   # Git hooks
 ├── docker-compose.yml
