@@ -33,9 +33,10 @@ services:
         if [ ! -f /data/chile-latest.osrm ]; then
           echo 'Processing OSM data (first run, ~10-15 min)...' &&
           osrm-extract -p /opt/foot.lua /data/chile-latest.osm.pbf &&
-          osrm-contract /data/chile-latest.osrm;
+          osrm-partition /data/chile-latest.osrm &&
+          osrm-customize /data/chile-latest.osrm;
         fi &&
-        osrm-routed --algorithm ch /data/chile-latest.osrm --max-table-size 5000 --port 5000
+        osrm-routed --algorithm mld /data/chile-latest.osrm --max-table-size 5000 --port 5000
       "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
