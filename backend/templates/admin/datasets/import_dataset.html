@@ -1,0 +1,58 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Import Dataset" %} — {{ site_title }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static "admin/css/forms.css" %}">
+{% endblock %}
+
+{% block coltype %}colM{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans "Home" %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_label|capfirst }}</a>
+  &rsaquo; <a href="{% url 'admin:datasets_dataset_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; {% trans "Import Dataset" %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{% trans "Import Dataset" %}</h1>
+
+{% if errors %}
+<p class="errornote">{% trans "Please correct the errors below." %}</p>
+<ul class="errorlist">
+  {% for error in errors %}
+  <li>{{ error }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" id="dataset_import_form" novalidate>
+  {% csrf_token %}
+  <fieldset class="module aligned">
+    <div class="form-row field-name">
+      <label for="id_name" class="required">{% trans "Name" %}:</label>
+      <input type="text" name="name" id="id_name" class="vTextField" value="{{ form_data.name }}" required maxlength="255">
+    </div>
+    <div class="form-row field-description">
+      <label for="id_description">{% trans "Description" %}:</label>
+      <textarea name="description" id="id_description" class="vLargeTextField" rows="3">{{ form_data.description }}</textarea>
+    </div>
+    <div class="form-row field-dataset_file">
+      <label for="id_dataset_file" class="required">{% trans "File (.csv or .json)" %}:</label>
+      <input type="file" name="dataset_file" id="id_dataset_file" accept=".csv,.json" required>
+      <div class="help">
+        CSV: {% trans "columns" %} <code>lat/latitude/latitud</code> {% trans "and" %} <code>lon/lng/longitude/longitud</code>.<br>
+        JSON: <code>{"trees": [{"lat": ..., "lng": ...}, ...]}</code>
+      </div>
+    </div>
+  </fieldset>
+  <div class="submit-row">
+    <input type="submit" value="{% trans "Import" %}" class="default">
+    <a href="{% url 'admin:datasets_dataset_changelist' %}" class="button">{% trans "Cancel" %}</a>
+  </div>
+</form>
+{% endblock %}
