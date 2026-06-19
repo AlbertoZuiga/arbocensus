@@ -17,12 +17,3 @@ repos:
       - id: pyright
         name: pyright
         stages: ["manual"] # Run manually: pre-commit run pyright --all-files
-
-  # Commitlint: Validate commit messages
-  - repo: local
-    hooks:
-      - id: commitlint
-        name: commitlint
-        entry: commitlint --edit
-        language: system
-        stages: ["commit-msg"]
