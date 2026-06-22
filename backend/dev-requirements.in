@@ -16,6 +16,7 @@ requests-mock>=1.11
 
 # Code quality
 ruff>=0.1
+pre-commit>=3.5
 
 # Type checking
 django-stubs>=4.2
