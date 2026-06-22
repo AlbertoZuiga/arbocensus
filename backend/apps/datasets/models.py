@@ -31,7 +31,7 @@ class Tree(models.Model):
         ]
 
     def __str__(self):
-        return f"Tree {self.id[:8]} in {self.dataset.name}"
+        return f"Tree {str(self.id)[:8]} in {self.dataset.name}"
 
 
 class DistanceMatrix(models.Model):
