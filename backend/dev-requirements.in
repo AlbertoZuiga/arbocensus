@@ -12,6 +12,7 @@ pytest-cov>=4.1
 
 # Test fixtures
 factory-boy>=3.3
+requests-mock>=1.11
 
 # Code quality
 ruff>=0.1

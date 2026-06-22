@@ -121,7 +121,11 @@ python-dotenv==1.2.2
 redis==8.0.0
     # via -r /Users/albertozuniga/orca/arbocensus-setup-cleanup/backend/requirements.in
 requests==2.34.2
-    # via -r /Users/albertozuniga/orca/arbocensus-setup-cleanup/backend/requirements.in
+    # via
+    #   -r /Users/albertozuniga/orca/arbocensus-setup-cleanup/backend/requirements.in
+    #   requests-mock
+requests-mock==1.12.1
+    # via -r /Users/albertozuniga/orca/arbocensus-setup-cleanup/backend/dev-requirements.in
 ruff==0.15.16
     # via -r /Users/albertozuniga/orca/arbocensus-setup-cleanup/backend/dev-requirements.in
 six==1.17.0
