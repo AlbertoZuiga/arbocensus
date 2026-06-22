@@ -1,6 +1,7 @@
 services:
   db:
     image: postgis/postgis:15-3.3
+    platform: linux/amd64
     env_file:
       - .env
     environment:
@@ -26,6 +27,7 @@ services:
 
   osrm:
     image: osrm/osrm-backend
+    platform: linux/amd64
     volumes:
       - ./data/osm:/data
     command: >
@@ -59,6 +61,10 @@ services:
       OSRM_URL: http://osrm:5000
       SECRET_KEY: ${DJANGO_SECRET_KEY}
       DEBUG: "True"
+      RUN_MIGRATIONS: "true"
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@arbocensus.cl}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-admin}
     depends_on:
       db:
         condition: service_healthy
@@ -80,6 +86,7 @@ services:
       OSRM_URL: http://osrm:5000
       SECRET_KEY: ${DJANGO_SECRET_KEY}
       DEBUG: "True"
+      RUN_MIGRATIONS: "false"
     depends_on:
       - backend
       - redis

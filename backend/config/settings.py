@@ -4,10 +4,9 @@ from pathlib import Path
 import environ
 
 env = environ.Env(DEBUG=(bool, False))
-env_file = Path(__file__).resolve().parent.parent / ".env"
-environ.Env.read_env(str(env_file))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+environ.Env.read_env(str(BASE_DIR.parent / ".env"))
 
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG", default=True)
