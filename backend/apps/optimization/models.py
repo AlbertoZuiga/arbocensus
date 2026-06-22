@@ -1,20 +1,46 @@
 import uuid
 
 from apps.datasets.models import Dataset
+from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import F, Q
 from django.utils import timezone
 
 
 class RoutingConfig(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE)
-    min_route_time_sec = models.IntegerField(default=7200)
-    max_route_time_sec = models.IntegerField(default=10800)
-    service_time_sec = models.IntegerField(default=300)
+    min_route_time_sec = models.IntegerField(
+        default=7200, validators=[MinValueValidator(1)]
+    )
+    max_route_time_sec = models.IntegerField(
+        default=10800, validators=[MinValueValidator(1)]
+    )
+    service_time_sec = models.IntegerField(
+        default=300, validators=[MinValueValidator(1)]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(min_route_time_sec__gte=1),
+                name="routingconfig_min_route_time_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(max_route_time_sec__gte=1),
+                name="routingconfig_max_route_time_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(service_time_sec__gte=1),
+                name="routingconfig_service_time_positive",
+            ),
+            models.CheckConstraint(
+                condition=Q(max_route_time_sec__gte=F("min_route_time_sec")),
+                name="routingconfig_max_route_time_gte_min",
+            ),
+        ]
 
     def __str__(self):
         return f"RoutingConfig {self.dataset.name}"
