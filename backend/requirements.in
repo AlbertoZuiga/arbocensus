@@ -2,7 +2,7 @@
 # Generated with pip-tools: pip-compile requirements.in
 
 # Web framework and REST API
-Django>=4.2
+Django>=6.0,<6.1
 djangorestframework>=3.14
 djangorestframework-simplejwt>=5.3
 django-cors-headers>=4.3

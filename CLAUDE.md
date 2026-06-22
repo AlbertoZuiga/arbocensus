@@ -1,7 +1,7 @@
 # Arbocensus — Claude Code Instructions
 
 Plataforma de optimización de rutas para censo de árboles urbanos.
-Stack: Django 4.2 + PostGIS · OR-Tools · Celery + Redis · OSRM · React 18 + Vite · Leaflet.
+Stack: Django 6.0 + PostGIS · OR-Tools · Celery + Redis · OSRM · React 18 + Vite · Leaflet.
 
 ---
 
