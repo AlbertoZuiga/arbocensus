@@ -1,23 +1,13 @@
 import numpy as np
 import pytest
-from apps.datasets.models import Dataset, DistanceMatrix, Tree
+from apps.datasets.models import DistanceMatrix
 from apps.optimization.cost_matrix import UNREACHABLE_PENALTY, OSRMCostMatrixBuilder
-from django.contrib.gis.geos import Point
 from requests_mock import ANY
 
 pytestmark = pytest.mark.django_db
 
 
-def make_dataset_with_trees(coords):
-    dataset = Dataset.objects.create(name="test", total_trees=len(coords))
-    trees = [
-        Tree.objects.create(dataset=dataset, location=Point(lon, lat))
-        for lon, lat in coords
-    ]
-    return dataset, trees
-
-
-def test_build_returns_n_by_n_shape(requests_mock):
+def test_build_returns_n_by_n_shape(requests_mock, make_dataset_with_trees):
     dataset, trees = make_dataset_with_trees(
         [(-70.65, -33.45), (-70.66, -33.46), (-70.67, -33.47)]
     )
@@ -31,7 +21,7 @@ def test_build_returns_n_by_n_shape(requests_mock):
     assert matrix.shape == (3, 3)
 
 
-def test_null_durations_become_penalty(requests_mock):
+def test_null_durations_become_penalty(requests_mock, make_dataset_with_trees):
     dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     requests_mock.get(
         ANY,
@@ -44,7 +34,7 @@ def test_null_durations_become_penalty(requests_mock):
     assert matrix[1][0] == UNREACHABLE_PENALTY
 
 
-def test_cache_hit_skips_osrm(requests_mock):
+def test_cache_hit_skips_osrm(requests_mock, make_dataset_with_trees):
     dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     builder = OSRMCostMatrixBuilder()
     sorted_trees = sorted(trees, key=lambda tree: tree.id)
@@ -62,7 +52,7 @@ def test_cache_hit_skips_osrm(requests_mock):
     np.testing.assert_array_equal(matrix, np.array([[0, 5], [5, 0]], dtype=float))
 
 
-def test_matrix_order_deterministic_by_tree_id(requests_mock):
+def test_matrix_order_deterministic_by_tree_id(requests_mock, make_dataset_with_trees):
     dataset, trees = make_dataset_with_trees(
         [(-70.65, -33.45), (-70.66, -33.46), (-70.67, -33.47)]
     )
