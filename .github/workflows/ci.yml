@@ -62,6 +62,29 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_DB: arbocensus
+          POSTGRES_USER: arbocensus
+          POSTGRES_PASSWORD: arbocensus
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arbocensus"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-test-secret
+      DB_NAME: arbocensus
+      DB_USER: arbocensus
+      DB_PASSWORD: arbocensus
+      DB_HOST: localhost
+      DB_PORT: 5432
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -75,6 +98,11 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Install GDAL system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev libgeos-dev libproj-dev
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -82,5 +110,6 @@ jobs:
           if [ -f tools/requirements-dev.txt ]; then pip install -r tools/requirements-dev.txt; fi
 
       - name: Run tests with Pytest
-        run: pytest -v || [ $? -eq 5 ]
+        working-directory: backend
+        run: pytest -v
 

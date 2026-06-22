@@ -88,16 +88,20 @@ npm run format:check      # Verificar formato sin cambiar
 # Type checking
 npm run type-check        # Verificar tipos con pyright
 
-# Testing
-npm run test              # Ejecutar tests con pytest
-npm run test:watch        # Tests en modo watch
-npm run test:cov          # Tests con reporte de cobertura
+# Testing (dentro del contenedor backend — requiere GDAL + PostGIS)
+make -C backend test                      # Todos los tests
+make -C backend test ARGS="apps/optimization/tests"  # Subconjunto
 
 # Django (desde backend/)
 python manage.py migrate
 python manage.py createsuperuser
 celery -A config worker --loglevel=info
 ```
+
+> Los tests corren **dentro del contenedor backend**, no en el host. Los modelos
+> geográficos (`PointField`) requieren GDAL y una base PostGIS, ambos provistos por
+> la imagen `dev` y el servicio `db`. `make -C backend test` construye el target
+> `dev` (con las dependencias de testing) y ejecuta pytest contra `db`.
 
 ### Estructura del Proyecto
 

@@ -1,7 +1,10 @@
-.PHONY: install install-dev compile compile-upgrade clean
+.PHONY: install install-dev compile compile-upgrade clean test
 
 install:
 	pip install -r requirements.txt
+
+test:
+	cd .. && docker compose run --rm --build -e RUN_MIGRATIONS=false backend pytest $(ARGS)
 
 install-dev:
 	pip install -r dev-requirements.txt
