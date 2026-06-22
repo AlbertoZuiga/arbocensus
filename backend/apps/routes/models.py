@@ -45,4 +45,4 @@ class RouteStop(models.Model):
         unique_together = ("route", "tree")
 
     def __str__(self):
-        return f"Stop {self.sequence} - Tree {self.tree.id[:8]}"
+        return f"Stop {self.sequence} - Tree {str(self.tree.id)[:8]}"
