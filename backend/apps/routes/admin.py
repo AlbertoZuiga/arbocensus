@@ -10,6 +10,9 @@ class RouteAdmin(admin.ModelAdmin):
     search_fields = ["route_number", "surveyor__username"]
     readonly_fields = ["id"]
 
+    def has_add_permission(self, request):
+        return False
+
 
 @admin.register(RouteStop)
 class RouteStopAdmin(admin.ModelAdmin):
@@ -17,3 +20,6 @@ class RouteStopAdmin(admin.ModelAdmin):
     list_filter = ["route", "visited"]
     search_fields = ["tree__id", "route__route_number"]
     readonly_fields = ["id"]
+
+    def has_add_permission(self, request):
+        return False

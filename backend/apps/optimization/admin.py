@@ -52,3 +52,6 @@ class RoutingSolutionAdmin(admin.ModelAdmin):
     list_filter = ["generated_at"]
     search_fields = ["job__id"]
     readonly_fields = ["id", "generated_at"]
+
+    def has_add_permission(self, request):
+        return False
