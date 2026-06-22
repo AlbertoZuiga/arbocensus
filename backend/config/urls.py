@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/", include("apps.accounts.urls")),
+    path("api/", include("apps.datasets.urls")),
 ]
 
 if settings.DEBUG:
