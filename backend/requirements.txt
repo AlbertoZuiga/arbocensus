@@ -32,7 +32,7 @@ click-plugins==1.1.1.2
     # via celery
 click-repl==0.3.0
     # via celery
-django==4.2.13
+django==6.0.6
     # via
     #   -r requirements.in
     #   django-cors-headers
