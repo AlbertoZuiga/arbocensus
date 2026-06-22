@@ -47,6 +47,14 @@ reportAttributeAccessIssue = "warning"
 reportMissingTypeStubs = false
 reportOptionalCallOperand = false
 
+# factory-boy ships without py.typed: its re-exports look like private imports
+# and the inner Meta classes look like incompatible overrides to pyright.
+[[tool.pyright.executionEnvironments]]
+root = "backend/tests"
+extraPaths = ["backend"]
+reportPrivateImportUsage = "none"
+reportIncompatibleVariableOverride = "none"
+
 # Testing configuration
 [tool.pytest.ini_options]
 addopts = [
