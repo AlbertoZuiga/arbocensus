@@ -48,6 +48,7 @@ node_modules/
 .claude/settings.local.json
 .claude/rules/
 .claude/commands/
+.claude/worktrees/
 
 # GitHub Copilot domain instructions — local only, source of truth in .claude/rules/
 .github/instructions/
