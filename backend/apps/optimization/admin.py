@@ -16,7 +16,16 @@ class OptimizationJobAdmin(admin.ModelAdmin):
     list_display = ["id", "config", "status", "created_at", "completed_at"]
     list_filter = ["status", "created_at"]
     search_fields = ["id", "config__dataset__name"]
-    readonly_fields = ["id", "created_at", "started_at", "completed_at"]
+    readonly_fields = [
+        "id",
+        "status",
+        "celery_task_id",
+        "metrics",
+        "error_message",
+        "created_at",
+        "started_at",
+        "completed_at",
+    ]
     actions = ["run_jobs"]
 
     @admin.action(description="Run optimization (Celery)")
