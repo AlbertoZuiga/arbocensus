@@ -47,11 +47,13 @@ def test_more_service_time_means_more_or_equal_vehicles():
 
 
 def test_ceil_plus_buffer_arithmetic():
-    matrix = uniform_matrix(5, travel=30.0)
+    real_nodes = 5
+    travel = 30.0
+    matrix = uniform_matrix(real_nodes, travel=travel)
     total_service = 5000
     min_route = 1800
 
-    total_work = total_service + 5 * 30.0
+    total_work = total_service + real_nodes * travel
     expected = math.ceil(total_work / min_route) + VEHICLE_BUFFER
     assert estimate_max_vehicles(matrix, total_service, min_route) == expected
     assert expected == 8
