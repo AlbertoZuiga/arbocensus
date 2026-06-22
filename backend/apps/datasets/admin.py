@@ -14,6 +14,36 @@ class DatasetAdmin(admin.ModelAdmin):
     search_fields = ["name", "description"]
     readonly_fields = ["imported_at", "total_trees"]
     change_list_template = "admin/datasets/dataset_changelist.html"
+    actions = ["build_cost_matrix"]
+
+    @admin.action(description="Build cost matrix (OSRM)")
+    def build_cost_matrix(self, request, queryset):
+        from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
+
+        builder = OSRMCostMatrixBuilder()
+        for dataset in queryset:
+            trees = list(dataset.tree_set.filter(is_active=True))
+            if not trees:
+                self.message_user(
+                    request,
+                    f"Dataset '{dataset.name}' has no active trees.",
+                    level=messages.WARNING,
+                )
+                continue
+            try:
+                matrix = builder.build(trees)
+            except Exception as exc:
+                self.message_user(
+                    request,
+                    f"Dataset '{dataset.name}': {exc}",
+                    level=messages.ERROR,
+                )
+                continue
+            self.message_user(
+                request,
+                f"Built {matrix.shape[0]}x{matrix.shape[0]} cost matrix for '{dataset.name}'.",
+                level=messages.SUCCESS,
+            )
 
     def get_urls(self):
         return [
@@ -76,4 +106,17 @@ class DistanceMatrixAdmin(admin.ModelAdmin):
     list_display = ["dataset", "dimension", "computed_at"]
     list_filter = ["computed_at"]
     search_fields = ["dataset__name"]
-    readonly_fields = ["id", "computed_at"]
+    readonly_fields = [
+        "id",
+        "dataset",
+        "source_hash",
+        "matrix_data",
+        "dimension",
+        "computed_at",
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
