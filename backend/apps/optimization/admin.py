@@ -28,6 +28,11 @@ class OptimizationJobAdmin(admin.ModelAdmin):
     ]
     actions = ["run_jobs"]
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.readonly_fields + ["config"]
+        return self.readonly_fields
+
     @admin.action(description="Run optimization (Celery)")
     def run_jobs(self, request, queryset):
         from config.celery import app
