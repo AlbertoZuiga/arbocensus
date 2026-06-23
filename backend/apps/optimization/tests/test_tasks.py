@@ -10,9 +10,7 @@ def make_job(dataset):
     return OptimizationJob.objects.create(config=config)
 
 
-def test_success_sets_running_then_completed(
-    make_dataset_with_trees, monkeypatch
-):
+def test_success_sets_running_then_completed(make_dataset_with_trees, monkeypatch):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     job = make_job(dataset)
 
@@ -22,9 +20,7 @@ def test_success_sets_running_then_completed(
         seen_status["during"] = OptimizationJob.objects.get(id=job.id).status
         return {"total_routes": 1}
 
-    monkeypatch.setattr(
-        "apps.optimization.pipeline.OptimizationPipeline.run", fake_run
-    )
+    monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
 
     result = run_optimization.apply(args=[str(job.id)]).get()
 
@@ -42,9 +38,7 @@ def test_failure_sets_error_before_reraise(make_dataset_with_trees, monkeypatch)
     def fake_run(self):
         raise ValueError("boom")
 
-    monkeypatch.setattr(
-        "apps.optimization.pipeline.OptimizationPipeline.run", fake_run
-    )
+    monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
 
     outcome = run_optimization.apply(args=[str(job.id)])
     assert outcome.failed()
