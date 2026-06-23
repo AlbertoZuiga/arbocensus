@@ -33,6 +33,14 @@ def test_surveyor_cannot_create_dataset():
     assert response.status_code == 403
 
 
+def test_surveyor_cannot_update_dataset(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    response = _client("surveyor").patch(
+        f"/api/datasets/{dataset.id}/", {"name": "Renamed"}, format="multipart"
+    )
+    assert response.status_code == 403
+
+
 def test_trees_endpoint_returns_geojson(make_dataset_with_trees):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     response = _client("surveyor").get(f"/api/datasets/{dataset.id}/trees/")
