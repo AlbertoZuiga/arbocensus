@@ -1,3 +1,5 @@
+from typing import Any
+
 from apps.accounts.permissions import IsSurveyorRole
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -12,9 +14,11 @@ from .serializers import RouteDetailSerializer, RouteSerializer, RouteStopSerial
 
 
 class RouteViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Route.objects.all()
+    serializer_class = RouteSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> Any:
         queryset = Route.objects.all()
         if self.action in ("retrieve", "geojson"):
             queryset = queryset.prefetch_related("stops__tree")
@@ -23,7 +27,7 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(solution_id=solution_id)
         return queryset
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Any:
         if self.action == "retrieve":
             return RouteDetailSerializer
         return RouteSerializer
