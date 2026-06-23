@@ -28,6 +28,11 @@ class OptimizationJobAdmin(admin.ModelAdmin):
     ]
     actions = ["run_jobs"]
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return [*self.readonly_fields, "config"]
+        return self.readonly_fields
+
     @admin.action(description="Run optimization (Celery)")
     def run_jobs(self, request, queryset):
         from config.celery import app
@@ -51,4 +56,14 @@ class RoutingSolutionAdmin(admin.ModelAdmin):
     list_display = ["job", "total_routes", "total_travel_time_sec", "generated_at"]
     list_filter = ["generated_at"]
     search_fields = ["job__id"]
-    readonly_fields = ["id", "generated_at"]
+    readonly_fields = [
+        "id",
+        "job",
+        "total_routes",
+        "total_travel_time_sec",
+        "balance_score",
+        "generated_at",
+    ]
+
+    def has_add_permission(self, request):
+        return False
