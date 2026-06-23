@@ -28,6 +28,7 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f backend/dev-requirements.txt ]; then pip install -r backend/dev-requirements.txt; fi
           if [ -f tools/requirements-dev.txt ]; then pip install -r tools/requirements-dev.txt; fi
+          pip install ruff==0.5.0 pyright==1.1.407
 
       - name: Lint with Ruff
         run: ruff check .
