@@ -16,14 +16,12 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5433:5432"
+      - "${DB_HOST_PORT:-5433}:5432"
 
   redis:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
 
   osrm:
     image: osrm/osrm-backend
@@ -46,8 +44,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 120s
-    ports:
-      - "5001:5000"
 
   backend:
     build:
@@ -72,7 +68,7 @@ services:
     volumes:
       - ./backend:/app
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     command: python manage.py runserver 0.0.0.0:8000
 
   celery:
