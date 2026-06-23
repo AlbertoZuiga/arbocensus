@@ -30,7 +30,7 @@ class OptimizationJobAdmin(admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
-            return self.readonly_fields + ["config"]
+            return [*self.readonly_fields, "config"]
         return self.readonly_fields
 
     @admin.action(description="Run optimization (Celery)")
