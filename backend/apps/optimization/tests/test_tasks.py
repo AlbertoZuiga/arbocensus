@@ -1,6 +1,11 @@
+from typing import cast
+
 import pytest
 from apps.optimization.models import OptimizationJob, RoutingConfig
 from apps.optimization.tasks import run_optimization
+from celery import Task
+
+task = cast(Task, run_optimization)
 
 pytestmark = pytest.mark.django_db
 
@@ -22,7 +27,7 @@ def test_success_sets_running_then_completed(make_dataset_with_trees, monkeypatc
 
     monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
 
-    result = run_optimization.apply(args=[str(job.id)]).get()
+    result = task.apply(args=[str(job.id)]).get()
 
     assert seen_status["during"] == OptimizationJob.Status.RUNNING
     job.refresh_from_db()
@@ -40,7 +45,7 @@ def test_failure_sets_error_before_reraise(make_dataset_with_trees, monkeypatch)
 
     monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
 
-    outcome = run_optimization.apply(args=[str(job.id)])
+    outcome = task.apply(args=[str(job.id)])
     assert outcome.failed()
 
     job.refresh_from_db()
