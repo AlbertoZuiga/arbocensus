@@ -1,3 +1,4 @@
+from apps.accounts.permissions import IsSurveyorRole
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import viewsets
@@ -15,6 +16,8 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = Route.objects.all()
+        if self.action in ("retrieve", "geojson"):
+            queryset = queryset.prefetch_related("stops__tree")
         solution_id = self.request.query_params.get("solution_id")
         if solution_id:
             queryset = queryset.filter(solution_id=solution_id)
@@ -25,18 +28,10 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             return RouteDetailSerializer
         return RouteSerializer
 
-    @action(detail=True, methods=["get"])
-    def stops(self, request, pk=None):
-        route = self.get_object()
-        stops = route.stops.select_related("tree")
-        return Response(RouteStopSerializer(stops, many=True).data)
-
     @action(detail=False, methods=["get"])
     def geojson(self, request):
-        solution_id = request.query_params.get("solution_id")
-        routes = Route.objects.filter(solution_id=solution_id) if solution_id else Route.objects.none()
         features = []
-        for route in routes.prefetch_related("stops__tree"):
+        for route in self.get_queryset():
             coordinates = [
                 [stop.tree.location.x, stop.tree.location.y]
                 for stop in route.stops.all()
@@ -56,10 +51,10 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RouteStopVisitView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsSurveyorRole]
 
     def post(self, request, stop_id):
-        stop = get_object_or_404(RouteStop, id=stop_id)
+        stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
         stop.visited = True
         stop.visited_at = timezone.now()
         stop.notes = request.data.get("notes", stop.notes)
