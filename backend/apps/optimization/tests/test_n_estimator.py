@@ -19,7 +19,7 @@ def uniform_matrix(real_node_count, travel=30.0):
 
 
 def test_zero_work_falls_back_to_buffer():
-    matrix = uniform_matrix(3, travel=0.0)
+    matrix = uniform_matrix(VEHICLE_BUFFER + 1, travel=0.0)
     assert (
         estimate_max_vehicles(matrix, total_service_time_sec=0, min_route_time_sec=3600)
         == VEHICLE_BUFFER
@@ -47,7 +47,7 @@ def test_more_service_time_means_more_or_equal_vehicles():
 
 
 def test_ceil_plus_buffer_arithmetic():
-    real_nodes = 5
+    real_nodes = 10
     travel = 30.0
     matrix = uniform_matrix(real_nodes, travel=travel)
     total_service = 5000
@@ -57,6 +57,16 @@ def test_ceil_plus_buffer_arithmetic():
     expected = math.ceil(total_work / min_route) + VEHICLE_BUFFER
     assert estimate_max_vehicles(matrix, total_service, min_route) == expected
     assert expected == 8
+
+
+def test_estimate_capped_at_real_node_count():
+    real_nodes = 12
+    matrix = uniform_matrix(real_nodes, travel=30.0)
+    estimate = estimate_max_vehicles(
+        matrix, total_service_time_sec=100_000, min_route_time_sec=1800
+    )
+    assert 1 <= estimate <= real_nodes
+    assert estimate == real_nodes
 
 
 def test_average_pair_travel_uses_upper_triangle_real_nodes():
