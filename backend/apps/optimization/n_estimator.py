@@ -20,4 +20,4 @@ def estimate_max_vehicles(matrix, total_service_time_sec, min_route_time_sec):
     total_travel = real_node_count * average_pair_travel(matrix)
     total_work = total_service_time_sec + total_travel
     n_est = math.ceil(total_work / min_route_time_sec) + VEHICLE_BUFFER
-    return max(1, n_est)
+    return max(1, min(n_est, real_node_count))
