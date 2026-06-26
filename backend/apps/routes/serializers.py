@@ -1,6 +1,15 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import Route, RouteStop
+
+CustomUser = get_user_model()
+
+
+class RouteAssignSerializer(serializers.Serializer):
+    surveyor_id = serializers.PrimaryKeyRelatedField(
+        queryset=CustomUser.objects.filter(role=CustomUser.Role.SURVEYOR)
+    )
 
 
 class RouteStopSerializer(serializers.ModelSerializer):

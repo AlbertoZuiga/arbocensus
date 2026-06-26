@@ -75,3 +75,55 @@ def test_visit_rejected_for_non_surveyor(solution_with_route):
     admin = CustomUserFactory(role="admin")
     response = _client(admin).post(f"/api/routes/stops/{stops[0].id}/visit/")
     assert response.status_code == 403
+
+
+def test_admin_assigns_route_to_surveyor(solution_with_route):
+    _, route, _ = solution_with_route
+    admin = CustomUserFactory(role="admin")
+    target = CustomUserFactory(role="surveyor")
+    response = _client(admin).patch(
+        f"/api/routes/{route.id}/assign/", {"surveyor_id": str(target.id)}
+    )
+    assert response.status_code == 200
+    assert response.data["surveyor"] == target.id
+    route.refresh_from_db()
+    assert route.surveyor == target
+
+
+def test_assign_rejected_for_non_admin(solution_with_route):
+    _, route, _ = solution_with_route
+    target = CustomUserFactory(role="surveyor")
+    response = _client(target).patch(
+        f"/api/routes/{route.id}/assign/", {"surveyor_id": str(target.id)}
+    )
+    assert response.status_code == 403
+
+
+def test_assign_rejects_non_surveyor_target(solution_with_route):
+    _, route, _ = solution_with_route
+    admin = CustomUserFactory(role="admin")
+    other_admin = CustomUserFactory(role="admin")
+    response = _client(admin).patch(
+        f"/api/routes/{route.id}/assign/", {"surveyor_id": str(other_admin.id)}
+    )
+    assert response.status_code == 400
+    route.refresh_from_db()
+    assert route.surveyor != other_admin
+
+
+def test_my_route_returns_only_callers_routes(solution_with_route, surveyor):
+    _, route, _ = solution_with_route
+    other = CustomUserFactory(role="surveyor")
+    response = _client(other).get("/api/routes/my-route/")
+    assert response.status_code == 200
+    assert response.data == []
+
+    response = _client(surveyor).get("/api/routes/my-route/")
+    assert response.status_code == 200
+    assert [r["id"] for r in response.data] == [str(route.id)]
+
+
+def test_my_route_rejected_for_non_surveyor(solution_with_route):
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get("/api/routes/my-route/")
+    assert response.status_code == 403

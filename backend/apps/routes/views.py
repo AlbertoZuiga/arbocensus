@@ -1,6 +1,6 @@
 from typing import Any
 
-from apps.accounts.permissions import IsSurveyorRole
+from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import viewsets
@@ -10,13 +10,25 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Route, RouteStop
-from .serializers import RouteDetailSerializer, RouteSerializer, RouteStopSerializer
+from .serializers import (
+    RouteAssignSerializer,
+    RouteDetailSerializer,
+    RouteSerializer,
+    RouteStopSerializer,
+)
 
 
 class RouteViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self) -> Any:
+        if self.action == "assign":
+            return [IsAdminRole()]
+        if self.action == "my_route":
+            return [IsSurveyorRole()]
+        return [IsAuthenticated()]
 
     def get_queryset(self) -> Any:
         queryset = Route.objects.all()
@@ -52,6 +64,20 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                 }
             )
         return Response({"type": "FeatureCollection", "features": features})
+
+    @action(detail=True, methods=["patch"])
+    def assign(self, request, pk=None):
+        route = self.get_object()
+        serializer = RouteAssignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        route.surveyor = serializer.validated_data["surveyor_id"]
+        route.save(update_fields=["surveyor"])
+        return Response(RouteSerializer(route).data)
+
+    @action(detail=False, methods=["get"], url_path="my-route")
+    def my_route(self, request):
+        routes = Route.objects.filter(surveyor=request.user)
+        return Response(RouteSerializer(routes, many=True).data)
 
 
 class RouteStopVisitView(APIView):
