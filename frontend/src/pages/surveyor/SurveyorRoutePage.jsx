@@ -13,7 +13,7 @@ import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 function CenteredMessage({ children }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 text-center">
-      <p className="text-slate-500">{children}</p>
+      <p className="text-muted-foreground">{children}</p>
     </main>
   );
 }
@@ -77,7 +77,7 @@ export default function SurveyorRoutePage() {
 
   return (
     <main className="flex h-dvh flex-col overflow-hidden bg-slate-50">
-      <header className="relative z-[1000] border-b border-slate-200 bg-white px-4 py-3">
+      <header className="relative z-[1000] border-b bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           {routes.length > 1 ? (
             <RouteSelector
@@ -86,12 +86,12 @@ export default function SurveyorRoutePage() {
               onSelect={handleSelectRoute}
             />
           ) : (
-            <h1 className="text-lg font-bold text-emerald-700">
+            <h1 className="text-lg font-bold text-primary">
               Ruta {activeIndex + 1} · {stops.length} árboles
             </h1>
           )}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-muted-foreground">
               {visitedCount}/{stops.length}
             </span>
             <UserMenu />
@@ -99,7 +99,7 @@ export default function SurveyorRoutePage() {
         </div>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <div
-            className="h-full rounded-full bg-emerald-600 transition-all"
+            className="h-full rounded-full bg-primary transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>

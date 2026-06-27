@@ -1,20 +1,24 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 export default function RouteSelector({ routes, activeRouteId, onSelect }) {
   return (
-    <div className="relative inline-block">
-      <select
-        value={activeRouteId}
-        onChange={(event) => onSelect(event.target.value)}
-        className="appearance-none bg-transparent pr-6 text-lg font-bold text-emerald-700 focus:outline-none"
-      >
+    <Select value={activeRouteId} onValueChange={onSelect}>
+      <SelectTrigger className="w-auto gap-1 border-none bg-transparent px-0 text-lg font-bold text-primary shadow-none focus:ring-0">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
         {routes.map((route, index) => (
-          <option key={route.id} value={route.id}>
+          <SelectItem key={route.id} value={route.id}>
             Ruta {index + 1} · {route.total_trees} árboles
-          </option>
+          </SelectItem>
         ))}
-      </select>
-      <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-emerald-700">
-        ▾
-      </span>
-    </div>
+      </SelectContent>
+    </Select>
   );
 }
