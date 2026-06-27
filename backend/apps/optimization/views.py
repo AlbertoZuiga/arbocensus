@@ -1,3 +1,5 @@
+from typing import Any
+
 from apps.accounts.permissions import IsAdminRole
 from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -18,7 +20,7 @@ class OptimizationJobViewSet(
     queryset = OptimizationJob.objects.all()
     permission_classes = [IsAdminRole]
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Any:
         if self.action == "create":
             return RoutingConfigSerializer
         return OptimizationJobSerializer
