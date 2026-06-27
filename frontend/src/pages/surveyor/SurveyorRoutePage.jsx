@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMyRoute, useRouteDetail } from "../../hooks/useMyRoute.js";
 import { useWatchPosition } from "../../hooks/useWatchPosition.js";
+import { useVisitStop } from "../../hooks/useVisitStop.js";
 import RouteMap from "../../components/surveyor/RouteMap.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
@@ -20,6 +21,7 @@ export default function SurveyorRoutePage() {
   const routeId = myRoute.data?.[0]?.id;
   const routeDetail = useRouteDetail(routeId);
   const { position } = useWatchPosition();
+  const visitMutation = useVisitStop(routeId);
   const [selectedStopId, setSelectedStopId] = useState(null);
 
   const stops = useMemo(() => routeDetail.data?.stops ?? [], [routeDetail.data]);
@@ -87,7 +89,13 @@ export default function SurveyorRoutePage() {
         />
       </div>
 
-      <ProximityPanel stop={selectedStop} distance={distance} inRange={inRange} />
+      <ProximityPanel
+        stop={selectedStop}
+        distance={distance}
+        inRange={inRange}
+        onVisit={(stopId) => visitMutation.mutate(stopId)}
+        isVisiting={visitMutation.isPending}
+      />
 
       <section className="flex-1 overflow-y-auto">
         <StopList
