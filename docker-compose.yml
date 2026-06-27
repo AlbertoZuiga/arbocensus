@@ -71,6 +71,22 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     command: python manage.py runserver 0.0.0.0:8000
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      VITE_API_URL: http://localhost:${BACKEND_PORT:-8000}/api
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    command: npm run dev -- --host
+
   celery:
     build:
       context: ./backend
