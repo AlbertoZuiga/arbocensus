@@ -53,5 +53,6 @@ describe("ProximityPanel", () => {
     );
     expect(screen.getByText("Visitado")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Navegar" })).not.toBeInTheDocument();
   });
 });

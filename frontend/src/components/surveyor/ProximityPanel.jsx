@@ -38,10 +38,13 @@ export default function ProximityPanel({
           </p>
         )}
       </div>
-      {locked ? (
-        <Button variant="outline" disabled>
+      {locked || stop.visited ? (
+        <span
+          aria-disabled="true"
+          className="inline-flex h-9 items-center rounded-md border border-input px-4 py-2 text-sm font-medium text-muted-foreground opacity-50"
+        >
           Navegar
-        </Button>
+        </span>
       ) : (
         <Button asChild variant="outline">
           <a
