@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
@@ -6,8 +6,16 @@ import AdminHome from "./pages/admin/AdminHome.jsx";
 import Datasets from "./pages/admin/Datasets.jsx";
 import Censadores from "./pages/admin/Censadores.jsx";
 import { useSession } from "./hooks/useSession.js";
-import { ROLES } from "./constants/roles.js";
+import { useAuthStore } from "./store/authStore.js";
+import { HOME_BY_ROLE, ROLES } from "./constants/roles.js";
 import SurveyorRoutePage from "./pages/surveyor/SurveyorRoutePage.jsx";
+
+function NotFoundRedirect() {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const target = accessToken ? HOME_BY_ROLE[user?.role] ?? "/login" : "/login";
+  return <Navigate to={target} replace />;
+}
 
 export default function App() {
   const { isBootstrapping } = useSession();
@@ -43,6 +51,7 @@ export default function App() {
         <Route path="datasets" element={<Datasets />} />
         <Route path="censadores" element={<Censadores />} />
       </Route>
+      <Route path="*" element={<NotFoundRedirect />} />
     </Routes>
   );
 }
