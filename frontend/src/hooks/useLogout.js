@@ -10,7 +10,7 @@ export function useLogout() {
 
   return useCallback(() => {
     logout();
-    queryClient.removeQueries({ queryKey: ["me"] });
+    queryClient.clear();
     navigate("/login", { replace: true });
   }, [logout, queryClient, navigate]);
 }
