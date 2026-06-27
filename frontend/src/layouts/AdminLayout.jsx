@@ -1,6 +1,7 @@
-import { NavLink, Outlet } from "react-router-dom";
-import LogoutButton from "../components/LogoutButton.jsx";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuthStore } from "../store/authStore.js";
+import { useLogout } from "../hooks/useLogout.js";
 
 const navLinkClass = ({ isActive }) =>
   `rounded px-3 py-1.5 text-sm font-medium ${
@@ -11,11 +12,32 @@ const navLinkClass = ({ isActive }) =>
 
 export default function AdminLayout() {
   const user = useAuthStore((state) => state.user);
+  const handleLogout = useLogout();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event) => {
+      if (!menuRef.current.contains(event.target)) setMenuOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="flex items-center gap-6 border-b border-slate-200 bg-white px-6 py-3">
-        <span className="text-lg font-bold text-emerald-700">Arbocensus</span>
+        <Link to="/admin" className="text-lg font-bold text-emerald-700">
+          Arbocensus
+        </Link>
         <nav className="flex items-center gap-2">
           <NavLink to="/admin/datasets" className={navLinkClass}>
             Datasets
@@ -24,11 +46,33 @@ export default function AdminLayout() {
             Censadores
           </NavLink>
         </nav>
-        <div className="ml-auto flex items-center gap-4">
-          <span className="text-sm text-slate-600">
-            {user?.username} · {user?.role_display}
-          </span>
-          <LogoutButton />
+        <div ref={menuRef} className="relative ml-auto">
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+            className="flex cursor-pointer items-center gap-1 text-sm text-slate-600"
+          >
+            {user?.username}
+            <span className={`text-xs transition ${menuOpen ? "rotate-180" : ""}`}>
+              ▾
+            </span>
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 z-10 mt-2 w-48 rounded border border-slate-200 bg-white py-1 shadow-lg">
+              <div className="px-3 py-2 text-xs text-slate-400">
+                {user?.role_display}
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
       </header>
       <main className="flex-1 p-6">
