@@ -3,6 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import client from "../api/client.js";
 import { useAuthStore } from "../store/authStore.js";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -27,41 +37,48 @@ export default function Login() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50">
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-80 flex-col gap-4 rounded-lg bg-white p-8 shadow"
-      >
-        <h1 className="text-2xl font-bold text-emerald-700">Arbocensus</h1>
-        <input
-          type="text"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder="Usuario"
-          autoComplete="username"
-          className="rounded border border-slate-300 px-3 py-2"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Contraseña"
-          autoComplete="current-password"
-          className="rounded border border-slate-300 px-3 py-2"
-        />
-        {mutation.isError && (
-          <p className="text-sm text-red-600">
-            Usuario o contraseña incorrectos.
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="rounded bg-emerald-700 py-2 font-semibold text-white disabled:opacity-50"
-        >
-          {mutation.isPending ? "Ingresando…" : "Ingresar"}
-        </button>
-      </form>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <Card className="w-80">
+        <CardHeader>
+          <CardTitle className="text-2xl text-primary">Arbocensus</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="username">Usuario</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Usuario"
+                autoComplete="username"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Contraseña"
+                autoComplete="current-password"
+              />
+            </div>
+            {mutation.isError && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Usuario o contraseña incorrectos.
+                </AlertDescription>
+              </Alert>
+            )}
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Ingresando…" : "Ingresar"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   );
 }
