@@ -38,12 +38,22 @@ export default function SurveyorRoutePage() {
 
   const stops = useMemo(() => routeDetail.data?.stops ?? [], [routeDetail.data]);
 
+  const nextPendingStop = useMemo(
+    () => stops.find((stop) => !stop.visited) ?? null,
+    [stops]
+  );
+
   const selectedStop = useMemo(() => {
     if (selectedStopId) {
       return stops.find((stop) => stop.id === selectedStopId) ?? null;
     }
-    return stops.find((stop) => !stop.visited) ?? stops[0] ?? null;
-  }, [stops, selectedStopId]);
+    return nextPendingStop ?? stops[0] ?? null;
+  }, [stops, selectedStopId, nextPendingStop]);
+
+  const selectedStopLocked =
+    selectedStop != null &&
+    !selectedStop.visited &&
+    selectedStop.id !== nextPendingStop?.id;
 
   const distance = useMemo(() => {
     if (!position || !selectedStop) return null;
@@ -118,6 +128,7 @@ export default function SurveyorRoutePage() {
         stop={selectedStop}
         distance={distance}
         inRange={inRange}
+        locked={selectedStopLocked}
         onVisit={(stopId) => visitMutation.mutate(stopId)}
         isVisiting={visitMutation.isPending}
       />
@@ -126,6 +137,7 @@ export default function SurveyorRoutePage() {
         <StopList
           stops={stops}
           selectedStopId={selectedStop?.id ?? null}
+          nextPendingStopId={nextPendingStop?.id ?? null}
           onSelectStop={setSelectedStopId}
         />
       </section>

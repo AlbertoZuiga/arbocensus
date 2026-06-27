@@ -1,6 +1,13 @@
 import { PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
-export default function ProximityPanel({ stop, distance, inRange, onVisit, isVisiting }) {
+export default function ProximityPanel({
+  stop,
+  distance,
+  inRange,
+  locked,
+  onVisit,
+  isVisiting,
+}) {
   if (!stop) return null;
 
   return (
@@ -32,6 +39,10 @@ export default function ProximityPanel({ stop, distance, inRange, onVisit, isVis
       {stop.visited ? (
         <span className="rounded bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-700">
           Visitado
+        </span>
+      ) : locked ? (
+        <span className="max-w-32 text-right text-xs font-medium text-slate-500">
+          Visita los árboles anteriores primero
         </span>
       ) : (
         <button
