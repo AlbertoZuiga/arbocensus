@@ -1,7 +1,7 @@
 from typing import cast
 
 import pytest
-from apps.optimization.models import OptimizationJob, RoutingConfig
+from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.tasks import run_optimization
 from celery import Task
 
@@ -51,6 +51,26 @@ def test_failure_sets_error_before_reraise(make_dataset_with_trees, monkeypatch)
     job.refresh_from_db()
     assert job.status == OptimizationJob.Status.FAILED
     assert job.error_message == "boom"
+
+
+def test_duplicate_delivery_keeps_single_solution(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    job = make_job(dataset)
+
+    def fake_run(self):
+        RoutingSolution.objects.create(job=self.job, total_routes=1)
+        return {"total_routes": 1}
+
+    monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
+
+    first = task.apply(args=[str(job.id)]).get()
+    second = task.apply(args=[str(job.id)]).get()
+
+    assert RoutingSolution.objects.filter(job=job).count() == 1
+    job.refresh_from_db()
+    assert job.status == OptimizationJob.Status.COMPLETED
+    assert first == {"total_routes": 1}
+    assert second == {"total_routes": 1}
 
 
 def test_task_configured_with_max_retries():
