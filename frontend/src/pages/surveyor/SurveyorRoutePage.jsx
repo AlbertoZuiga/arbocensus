@@ -76,7 +76,7 @@ export default function SurveyorRoutePage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col bg-slate-50">
+    <main className="flex h-dvh flex-col overflow-hidden bg-slate-50">
       <header className="border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           {routes.length > 1 ? (
@@ -105,7 +105,7 @@ export default function SurveyorRoutePage() {
         </div>
       </header>
 
-      <div className="h-[55vh] w-full">
+      <div className="h-[55vh] w-full shrink-0">
         <RouteMap
           stops={stops}
           selectedStopId={selectedStop?.id ?? null}

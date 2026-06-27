@@ -4,7 +4,7 @@ export default function ProximityPanel({ stop, distance, inRange, onVisit, isVis
   if (!stop) return null;
 
   return (
-    <div className="flex items-center gap-3 border-t border-slate-200 bg-white px-4 py-3">
+    <div className="flex shrink-0 items-center gap-3 border-t border-slate-200 bg-white px-4 py-3">
       <div className="flex-1">
         <p className="text-sm font-semibold text-slate-700">
           Próximo árbol {stop.sequence}
