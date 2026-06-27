@@ -4,6 +4,7 @@ import { useWatchPosition } from "../../hooks/useWatchPosition.js";
 import { useVisitStop } from "../../hooks/useVisitStop.js";
 import { useWakeLock } from "../../hooks/useWakeLock.js";
 import RouteMap from "../../components/surveyor/RouteMap.jsx";
+import RouteSelector from "../../components/surveyor/RouteSelector.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
 import LogoutButton from "../../components/LogoutButton.jsx";
@@ -19,10 +20,19 @@ function CenteredMessage({ children }) {
 
 export default function SurveyorRoutePage() {
   const myRoute = useMyRoute();
-  const routeId = myRoute.data?.[0]?.id;
-  const routeDetail = useRouteDetail(routeId);
+  const routes = useMemo(
+    () => [...(myRoute.data ?? [])].sort((a, b) => a.route_number - b.route_number),
+    [myRoute.data]
+  );
+
+  const [selectedRouteId, setSelectedRouteId] = useState(null);
+  const activeRouteId =
+    routes.find((route) => route.id === selectedRouteId)?.id ?? routes[0]?.id;
+  const activeIndex = routes.findIndex((route) => route.id === activeRouteId);
+
+  const routeDetail = useRouteDetail(activeRouteId);
   const { position } = useWatchPosition();
-  const visitMutation = useVisitStop(routeId);
+  const visitMutation = useVisitStop(activeRouteId);
   useWakeLock();
   const [selectedStopId, setSelectedStopId] = useState(null);
 
@@ -47,26 +57,34 @@ export default function SurveyorRoutePage() {
 
   const inRange = distance != null && distance <= PROXIMITY_THRESHOLD_M;
 
-  if (myRoute.isLoading || (routeId && routeDetail.isLoading)) {
+  if (myRoute.isLoading || (activeRouteId && routeDetail.isLoading)) {
     return <CenteredMessage>Cargando ruta…</CenteredMessage>;
   }
   if (myRoute.isError) {
     return <CenteredMessage>No se pudo cargar tu ruta.</CenteredMessage>;
   }
-  if (!routeId) {
+  if (!activeRouteId) {
     return <CenteredMessage>No tienes ninguna ruta asignada.</CenteredMessage>;
   }
 
   const visitedCount = stops.filter((stop) => stop.visited).length;
   const progress = stops.length > 0 ? (visitedCount / stops.length) * 100 : 0;
 
+  const handleSelectRoute = (routeId) => {
+    setSelectedRouteId(routeId);
+    setSelectedStopId(null);
+  };
+
   return (
     <main className="flex min-h-screen flex-col bg-slate-50">
       <header className="border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-emerald-700">
-            Ruta {routeDetail.data?.route_number}
-          </h1>
+          <div>
+            <h1 className="text-lg font-bold text-emerald-700">
+              Ruta {activeIndex + 1}
+            </h1>
+            <p className="text-xs text-slate-500">{stops.length} árboles</p>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-slate-500">
               {visitedCount}/{stops.length}
@@ -81,6 +99,12 @@ export default function SurveyorRoutePage() {
           />
         </div>
       </header>
+
+      <RouteSelector
+        routes={routes}
+        activeRouteId={activeRouteId}
+        onSelect={handleSelectRoute}
+      />
 
       <div className="h-[55vh] w-full">
         <RouteMap
