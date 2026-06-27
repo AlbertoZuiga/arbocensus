@@ -1,22 +1,13 @@
 import { Route, Routes } from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import LogoutButton from "./components/LogoutButton.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import AdminHome from "./pages/admin/AdminHome.jsx";
 import Datasets from "./pages/admin/Datasets.jsx";
 import Censadores from "./pages/admin/Censadores.jsx";
 import { useSession } from "./hooks/useSession.js";
 import { ROLES } from "./constants/roles.js";
-
-function SurveyorHome() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50">
-      <h1 className="text-3xl font-bold text-emerald-700">Arbocensus móvil</h1>
-      <LogoutButton />
-    </main>
-  );
-}
+import SurveyorRoutePage from "./pages/surveyor/SurveyorRoutePage.jsx";
 
 export default function App() {
   const { isBootstrapping } = useSession();
@@ -36,7 +27,7 @@ export default function App() {
         path="/"
         element={
           <ProtectedRoute requiredRole={ROLES.SURVEYOR}>
-            <SurveyorHome />
+            <SurveyorRoutePage />
           </ProtectedRoute>
         }
       />
