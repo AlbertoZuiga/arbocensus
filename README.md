@@ -42,10 +42,13 @@ Servicios disponibles:
 
 | Servicio   | URL                                            |
 | ---------- | ---------------------------------------------- |
+| Frontend   | [http://localhost:5173](http://localhost:5173) |
 | API Django | [http://localhost:8000](http://localhost:8000) |
 | PostgreSQL | localhost:5432                                 |
 | Redis      | localhost:6379                                 |
 | OSRM       | [http://localhost:5000](http://localhost:5000) |
+
+El frontend (Vite + React) corre con HMR dentro del contenedor `frontend`. Ver [`frontend/README.md`](frontend/README.md) para detalle y desarrollo local sin Docker.
 
 ### Desarrollo Local
 
@@ -116,6 +119,13 @@ celery -A config worker --loglevel=info
 │   ├── config/               # Django settings, URLs, Celery
 │   ├── Dockerfile
 │   └── requirements.txt
+├── frontend/                 # Vite + React + Tailwind (SPA)
+│   ├── src/
+│   │   ├── api/              # cliente axios (JWT) + token store
+│   │   ├── App.jsx
+│   │   └── main.jsx         # React Query + router
+│   ├── Dockerfile
+│   └── package.json
 ├── data/osm/                 # PBF para OSRM (ignorado en git)
 ├── docs/                     # Documentación y tesis
 ├── scripts/                  # Scripts de setup y utilidades
@@ -141,6 +151,10 @@ celery -A config worker --loglevel=info
 **Frontend (en desarrollo):**
 
 - [React 18](https://react.dev/) + [Vite](https://vitejs.dev/) — interfaz de usuario
+- [Tailwind CSS](https://tailwindcss.com/) — estilos utility-first
+- [@tanstack/react-query](https://tanstack.com/query) — estado de servidor
+- [axios](https://axios-http.com/) — cliente HTTP con interceptores JWT
+- [react-router](https://reactrouter.com/) — enrutamiento SPA
 - [Leaflet](https://leafletjs.com/) — visualización de rutas y árboles en mapa
 
 **Herramientas de desarrollo:**
