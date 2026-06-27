@@ -17,7 +17,7 @@ export default function ProximityPanel({
     <div className="flex shrink-0 items-center gap-3 border-t bg-white px-4 py-3">
       <div className="flex-1">
         <p className="text-sm font-semibold text-slate-700">
-          Próximo árbol {stop.sequence}
+          {locked ? "Árbol" : "Próximo árbol"} {stop.sequence}
         </p>
         {distance == null ? (
           <p className="text-xs text-muted-foreground">Esperando ubicación GPS…</p>
@@ -48,7 +48,7 @@ export default function ProximityPanel({
           Visitado
         </Badge>
       ) : locked ? (
-        <span className="max-w-32 text-right text-xs font-medium text-slate-500">
+        <span className="max-w-[8rem] text-right text-xs font-medium text-slate-500">
           Visita los árboles anteriores primero
         </span>
       ) : (
