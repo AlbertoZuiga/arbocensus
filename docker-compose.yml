@@ -39,7 +39,7 @@ services:
         osrm-routed --algorithm mld /data/chile-latest.osrm --max-table-size 5000 --port 5000
       "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5000; printf 'GET /nearest/v1/foot/-70.65,-33.45 HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '\"code\":\"Ok\"' <&3"]
       interval: 30s
       timeout: 10s
       retries: 3
