@@ -29,12 +29,12 @@ describe("ProximityPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides the visit button and shows a hint when the stop is locked out of order", () => {
+  it("disables the visit button and shows a warning when the stop is locked out of order", () => {
     const onVisit = vi.fn();
     render(
       <ProximityPanel stop={stop} distance={5} inRange locked onVisit={onVisit} />
     );
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByRole("button")).toBeDisabled();
     expect(
       screen.getByText("Visita los árboles anteriores primero")
     ).toBeInTheDocument();

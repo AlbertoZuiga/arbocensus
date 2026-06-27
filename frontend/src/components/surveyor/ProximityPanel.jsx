@@ -19,7 +19,11 @@ export default function ProximityPanel({
         <p className="text-sm font-semibold text-slate-700">
           {locked ? "Árbol" : "Próximo árbol"} {stop.sequence}
         </p>
-        {distance == null ? (
+        {locked ? (
+          <p className="text-xs font-medium text-amber-600">
+            Visita los árboles anteriores primero
+          </p>
+        ) : distance == null ? (
           <p className="text-xs text-muted-foreground">Esperando ubicación GPS…</p>
         ) : (
           <p
@@ -34,28 +38,30 @@ export default function ProximityPanel({
           </p>
         )}
       </div>
-      <Button asChild variant="outline">
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lon}&travelmode=walking`}
-          target="_blank"
-          rel="noreferrer"
-        >
+      {locked ? (
+        <Button variant="outline" disabled>
           Navegar
-        </a>
-      </Button>
+        </Button>
+      ) : (
+        <Button asChild variant="outline">
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lon}&travelmode=walking`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Navegar
+          </a>
+        </Button>
+      )}
       {stop.visited ? (
         <Badge variant="secondary" className="bg-primary/10 text-primary">
           Visitado
         </Badge>
-      ) : locked ? (
-        <span className="max-w-[8rem] text-right text-xs font-medium text-slate-500">
-          Visita los árboles anteriores primero
-        </span>
       ) : (
         <Button
           type="button"
           onClick={() => onVisit(stop.id)}
-          disabled={isVisiting}
+          disabled={isVisiting || locked}
           className={cn(!inRange && "bg-amber-600 hover:bg-amber-600/90")}
         >
           {inRange ? "Marcar visitado" : "Marcar de todos modos"}

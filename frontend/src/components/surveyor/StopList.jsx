@@ -39,13 +39,7 @@ export default function StopList({
               <span className="flex-1 text-sm text-slate-700">
                 Árbol {stop.sequence}
               </span>
-              {stop.visited ? (
-                <Badge>Visitado</Badge>
-              ) : (
-                stop.id === nextPendingStopId && (
-                  <span className="text-xs font-semibold text-amber-600">Siguiente</span>
-                )
-              )}
+              {stop.visited && <Badge>Visitado</Badge>}
             </button>
           </li>
         );

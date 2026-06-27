@@ -129,7 +129,9 @@ export default function SurveyorRoutePage() {
         distance={distance}
         inRange={inRange}
         locked={selectedStopLocked}
-        onVisit={(stopId) => visitMutation.mutate(stopId)}
+        onVisit={(stopId) =>
+          visitMutation.mutate(stopId, { onSuccess: () => setSelectedStopId(null) })
+        }
         isVisiting={visitMutation.isPending}
       />
 
