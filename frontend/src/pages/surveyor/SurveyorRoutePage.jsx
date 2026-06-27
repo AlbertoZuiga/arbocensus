@@ -3,7 +3,9 @@ import { useMyRoute, useRouteDetail } from "../../hooks/useMyRoute.js";
 import { useWatchPosition } from "../../hooks/useWatchPosition.js";
 import RouteMap from "../../components/surveyor/RouteMap.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
+import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
 import LogoutButton from "../../components/LogoutButton.jsx";
+import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
 function CenteredMessage({ children }) {
   return (
@@ -28,6 +30,18 @@ export default function SurveyorRoutePage() {
     }
     return stops.find((stop) => !stop.visited) ?? stops[0] ?? null;
   }, [stops, selectedStopId]);
+
+  const distance = useMemo(() => {
+    if (!position || !selectedStop) return null;
+    return haversineMeters(
+      position.lat,
+      position.lon,
+      selectedStop.lat,
+      selectedStop.lon
+    );
+  }, [position, selectedStop]);
+
+  const inRange = distance != null && distance <= PROXIMITY_THRESHOLD_M;
 
   if (myRoute.isLoading || (routeId && routeDetail.isLoading)) {
     return <CenteredMessage>Cargando ruta…</CenteredMessage>;
@@ -72,6 +86,8 @@ export default function SurveyorRoutePage() {
           userPosition={position}
         />
       </div>
+
+      <ProximityPanel stop={selectedStop} distance={distance} inRange={inRange} />
 
       <section className="flex-1 overflow-y-auto">
         <StopList
