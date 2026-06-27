@@ -1,16 +1,14 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import client from "../api/client.js";
 import { useAuthStore } from "../store/authStore.js";
+import { useLogout } from "./useLogout.js";
 
 export function useSession() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useLogout();
 
   const { data, error } = useQuery({
     queryKey: ["me"],
@@ -27,12 +25,8 @@ export function useSession() {
   }, [data, setUser]);
 
   useEffect(() => {
-    if (error) {
-      logout();
-      queryClient.removeQueries({ queryKey: ["me"] });
-      navigate("/login", { replace: true });
-    }
-  }, [error, logout, navigate, queryClient]);
+    if (error) logout();
+  }, [error, logout]);
 
   return { isBootstrapping: !!accessToken && !user && !error };
 }
