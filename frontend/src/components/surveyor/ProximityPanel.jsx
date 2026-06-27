@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
-export default function ProximityPanel({ stop, distance, inRange, onVisit, isVisiting }) {
+export default function ProximityPanel({
+  stop,
+  distance,
+  inRange,
+  locked,
+  onVisit,
+  isVisiting,
+}) {
   if (!stop) return null;
 
   return (
@@ -40,6 +47,10 @@ export default function ProximityPanel({ stop, distance, inRange, onVisit, isVis
         <Badge variant="secondary" className="bg-primary/10 text-primary">
           Visitado
         </Badge>
+      ) : locked ? (
+        <span className="max-w-32 text-right text-xs font-medium text-slate-500">
+          Visita los árboles anteriores primero
+        </span>
       ) : (
         <Button
           type="button"

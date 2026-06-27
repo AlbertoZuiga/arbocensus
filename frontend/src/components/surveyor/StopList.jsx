@@ -1,11 +1,18 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-export default function StopList({ stops, selectedStopId, onSelectStop }) {
+export default function StopList({
+  stops,
+  selectedStopId,
+  nextPendingStopId,
+  onSelectStop,
+}) {
   return (
     <ul className="divide-y divide-slate-100">
       {stops.map((stop) => {
         const selected = stop.id === selectedStopId;
+        const locked =
+          !stop.visited && nextPendingStopId != null && stop.id !== nextPendingStopId;
         return (
           <li key={stop.id}>
             <button
@@ -14,6 +21,7 @@ export default function StopList({ stops, selectedStopId, onSelectStop }) {
               className={cn(
                 "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
                 selected ? "bg-accent" : "bg-white hover:bg-accent/50",
+                locked && "opacity-60",
               )}
             >
               <span
@@ -31,7 +39,13 @@ export default function StopList({ stops, selectedStopId, onSelectStop }) {
               <span className="flex-1 text-sm text-slate-700">
                 Árbol {stop.sequence}
               </span>
-              {stop.visited && <Badge>Visitado</Badge>}
+              {stop.visited ? (
+                <Badge>Visitado</Badge>
+              ) : (
+                stop.id === nextPendingStopId && (
+                  <span className="text-xs font-semibold text-amber-600">Siguiente</span>
+                )
+              )}
             </button>
           </li>
         );
