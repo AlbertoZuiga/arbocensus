@@ -17,7 +17,9 @@ class RoutingConfigSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
     def validate(self, attrs):
-        if attrs["max_route_time_sec"] < attrs["min_route_time_sec"]:
+        min_time = attrs.get("min_route_time_sec")
+        max_time = attrs.get("max_route_time_sec")
+        if min_time is not None and max_time is not None and max_time < min_time:
             raise serializers.ValidationError(
                 "max_route_time_sec must be greater than or equal to min_route_time_sec"
             )
