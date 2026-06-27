@@ -27,7 +27,7 @@ export function useSession() {
   }, [data, setUser]);
 
   useEffect(() => {
-    if (error?.response?.status === 401) {
+    if (error) {
       logout();
       queryClient.removeQueries({ queryKey: ["me"] });
       navigate("/login", { replace: true });
