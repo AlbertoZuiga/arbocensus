@@ -107,7 +107,7 @@ def test_get_solution_shape(make_dataset_with_trees):
         job=job, total_routes=3, total_travel_time_sec=120.5, balance_score=0.8
     )
 
-    response = _client("surveyor").get(f"/api/optimization/solutions/{solution.id}/")
+    response = _client("admin").get(f"/api/optimization/solutions/{solution.id}/")
 
     assert response.status_code == 200
     assert set(response.data) == {
@@ -120,3 +120,50 @@ def test_get_solution_shape(make_dataset_with_trees):
     }
     assert response.data["total_routes"] == 3
     assert response.data["job"] == str(job.id)
+
+
+def _solution_with_surveyor_route(make_dataset_with_trees, surveyor):
+    from apps.routes.models import Route
+
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(config=config)
+    solution = RoutingSolution.objects.create(job=job, total_routes=1)
+    Route.objects.create(
+        solution=solution, route_number=1, total_trees=1, surveyor=surveyor
+    )
+    return solution
+
+
+def test_surveyor_gets_own_solution(make_dataset_with_trees):
+    surveyor = CustomUserFactory(role="surveyor")
+    solution = _solution_with_surveyor_route(make_dataset_with_trees, surveyor)
+
+    client = APIClient()
+    client.force_authenticate(user=surveyor)
+    response = client.get(f"/api/optimization/solutions/{solution.id}/")
+
+    assert response.status_code == 200
+    assert response.data["id"] == str(solution.id)
+
+
+def test_surveyor_cannot_get_foreign_solution(make_dataset_with_trees):
+    owner = CustomUserFactory(role="surveyor")
+    solution = _solution_with_surveyor_route(make_dataset_with_trees, owner)
+    other = CustomUserFactory(role="surveyor")
+
+    client = APIClient()
+    client.force_authenticate(user=other)
+    response = client.get(f"/api/optimization/solutions/{solution.id}/")
+
+    assert response.status_code == 404
+
+
+def test_admin_gets_any_solution(make_dataset_with_trees):
+    surveyor = CustomUserFactory(role="surveyor")
+    solution = _solution_with_surveyor_route(make_dataset_with_trees, surveyor)
+
+    response = _client("admin").get(f"/api/optimization/solutions/{solution.id}/")
+
+    assert response.status_code == 200
+    assert response.data["id"] == str(solution.id)

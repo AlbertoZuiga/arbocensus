@@ -1,6 +1,7 @@
 from typing import Any
 
 from apps.accounts.permissions import IsAdminRole
+from django.contrib.auth import get_user_model
 from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,6 +13,8 @@ from .serializers import (
     RoutingSolutionSerializer,
 )
 from .tasks import run_optimization
+
+CustomUser = get_user_model()
 
 
 class OptimizationJobViewSet(
@@ -30,13 +33,22 @@ class OptimizationJobViewSet(
         serializer.is_valid(raise_exception=True)
         config = serializer.save()
         job = OptimizationJob.objects.create(config=config)
-        run_optimization.delay(str(job.id))
+        try:
+            run_optimization.delay(str(job.id))
+        except Exception as exc:
+            job.set_error(f"Failed to enqueue optimization task: {exc}")
+            raise
         return Response(
             OptimizationJobSerializer(job).data, status=status.HTTP_201_CREATED
         )
 
 
 class RoutingSolutionViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    queryset = RoutingSolution.objects.all()
     serializer_class = RoutingSolutionSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self) -> Any:
+        user = self.request.user
+        if user.role == CustomUser.Role.ADMIN:
+            return RoutingSolution.objects.all()
+        return RoutingSolution.objects.filter(routes__surveyor=user).distinct()
