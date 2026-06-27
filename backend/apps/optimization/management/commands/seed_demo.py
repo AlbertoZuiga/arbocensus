@@ -18,13 +18,14 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--trees", type=int, default=40)
         parser.add_argument("--name", type=str, default="Demo Santiago")
+        parser.add_argument("--seed", type=int, default=SEED)
 
     def handle(self, *args, **options):
         n_trees = options["trees"]
         if n_trees < 2:
             raise CommandError("--trees must be at least 2")
 
-        rng = random.Random(SEED)
+        rng = random.Random(options["seed"])
 
         with transaction.atomic():
             dataset = Dataset.objects.create(name=options["name"])
