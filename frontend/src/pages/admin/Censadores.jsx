@@ -1,3 +1,15 @@
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
 export default function Censadores() {
-  return <h1 className="text-2xl font-bold text-slate-800">Censadores</h1>;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl">Censadores</CardTitle>
+      </CardHeader>
+    </Card>
+  );
 }

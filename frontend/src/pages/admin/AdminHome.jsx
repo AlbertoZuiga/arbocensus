@@ -1,15 +1,23 @@
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function AdminHome() {
   return (
-    <section className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold text-slate-800">Panel de administración</h1>
-      <Link
-        to="/admin/datasets"
-        className="w-fit rounded bg-emerald-700 px-4 py-2 font-semibold text-white"
-      >
-        Ir a Datasets
-      </Link>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl">Panel de administración</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button asChild>
+          <Link to="/admin/datasets">Ir a Datasets</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

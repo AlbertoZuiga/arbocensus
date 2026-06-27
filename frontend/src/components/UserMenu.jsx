@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useAuthStore } from "../store/authStore.js";
 import { useLogout } from "../hooks/useLogout.js";
+import { Button } from "@/components/ui/button";
 
 export default function UserMenu() {
   const user = useAuthStore((state) => state.user);
@@ -26,33 +28,35 @@ export default function UserMenu() {
 
   return (
     <div ref={menuRef} className="relative">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         aria-controls="user-menu"
         onClick={() => setMenuOpen((open) => !open)}
-        className="flex cursor-pointer items-center gap-1 text-sm text-slate-600"
+        className="text-muted-foreground"
       >
         {user?.username}
-        <span className={`text-xs transition ${menuOpen ? "rotate-180" : ""}`}>
-          ▾
-        </span>
-      </button>
+        <ChevronDown
+          className={`transition ${menuOpen ? "rotate-180" : ""}`}
+        />
+      </Button>
       {menuOpen && (
         <div
           id="user-menu"
           role="menu"
-          className="absolute right-0 z-10 mt-2 w-48 rounded border border-slate-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
         >
-          <div className="px-3 py-2 text-xs text-slate-400">
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">
             {user?.role_display}
           </div>
           <button
             type="button"
             role="menuitem"
             onClick={handleLogout}
-            className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+            className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Cerrar sesión
           </button>
