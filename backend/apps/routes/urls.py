@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import RouteStopVisitView, RouteViewSet
 
 router = DefaultRouter()
+router.include_format_suffixes = False
 router.register("routes", RouteViewSet, basename="route")
 
 urlpatterns = router.urls + [
