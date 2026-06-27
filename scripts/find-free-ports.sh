@@ -32,10 +32,14 @@ backend_port="$(find_free_port "${BACKEND_PORT:-8000}")"
 db_host_port="$(find_free_port "${DB_HOST_PORT:-5433}")"
 frontend_port="$(find_free_port "${FRONTEND_PORT:-5173}")"
 
+cors_allowed_origins="http://localhost:${frontend_port},http://localhost:3000"
+
 set_env_var BACKEND_PORT "$backend_port"
 set_env_var DB_HOST_PORT "$db_host_port"
 set_env_var FRONTEND_PORT "$frontend_port"
+set_env_var CORS_ALLOWED_ORIGINS "$cors_allowed_origins"
 
 printf 'BACKEND_PORT=%s\n' "$backend_port"
 printf 'DB_HOST_PORT=%s\n' "$db_host_port"
 printf 'FRONTEND_PORT=%s\n' "$frontend_port"
+printf 'CORS_ALLOWED_ORIGINS=%s\n' "$cors_allowed_origins"
