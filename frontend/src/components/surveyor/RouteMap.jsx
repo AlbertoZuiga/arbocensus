@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -31,7 +31,7 @@ function FitBounds({ positions }) {
 }
 
 export default function RouteMap({ stops, selectedStopId, onSelectStop, userPosition }) {
-  const line = stops.map((stop) => [stop.lat, stop.lon]);
+  const line = useMemo(() => stops.map((stop) => [stop.lat, stop.lon]), [stops]);
   const center = line[0] ?? [-33.45, -70.65];
 
   return (
