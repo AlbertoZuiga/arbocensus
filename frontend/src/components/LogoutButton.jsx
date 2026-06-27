@@ -1,12 +1,15 @@
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/authStore.js";
 
 export default function LogoutButton() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = () => {
     logout();
+    queryClient.removeQueries({ queryKey: ["me"] });
     navigate("/login", { replace: true });
   };
 
