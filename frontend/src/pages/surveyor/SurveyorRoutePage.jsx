@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMyRoute, useRouteDetail } from "../../hooks/useMyRoute.js";
 import { useWatchPosition } from "../../hooks/useWatchPosition.js";
 import { useVisitStop } from "../../hooks/useVisitStop.js";
+import { useWakeLock } from "../../hooks/useWakeLock.js";
 import RouteMap from "../../components/surveyor/RouteMap.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
@@ -22,6 +23,7 @@ export default function SurveyorRoutePage() {
   const routeDetail = useRouteDetail(routeId);
   const { position } = useWatchPosition();
   const visitMutation = useVisitStop(routeId);
+  useWakeLock();
   const [selectedStopId, setSelectedStopId] = useState(null);
 
   const stops = useMemo(() => routeDetail.data?.stops ?? [], [routeDetail.data]);
