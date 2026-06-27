@@ -51,6 +51,7 @@ export default function AdminLayout() {
             type="button"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
+            aria-controls="user-menu"
             onClick={() => setMenuOpen((open) => !open)}
             className="flex cursor-pointer items-center gap-1 text-sm text-slate-600"
           >
@@ -60,12 +61,17 @@ export default function AdminLayout() {
             </span>
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-10 mt-2 w-48 rounded border border-slate-200 bg-white py-1 shadow-lg">
+            <div
+              id="user-menu"
+              role="menu"
+              className="absolute right-0 z-10 mt-2 w-48 rounded border border-slate-200 bg-white py-1 shadow-lg"
+            >
               <div className="px-3 py-2 text-xs text-slate-400">
                 {user?.role_display}
               </div>
               <button
                 type="button"
+                role="menuitem"
                 onClick={handleLogout}
                 className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
               >
