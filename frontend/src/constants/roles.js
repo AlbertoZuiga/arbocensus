@@ -4,6 +4,6 @@ export const ROLES = {
 };
 
 export const HOME_BY_ROLE = {
-  [ROLES.ADMIN]: "/",
-  [ROLES.SURVEYOR]: "/m",
+  [ROLES.ADMIN]: "/admin",
+  [ROLES.SURVEYOR]: "/surveyor",
 };

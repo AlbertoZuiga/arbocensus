@@ -1,9 +1,15 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import LogoutButton from "./components/LogoutButton.jsx";
 import { useSession } from "./hooks/useSession.js";
-import { ROLES } from "./constants/roles.js";
+import { useAuthStore } from "./store/authStore.js";
+import { ROLES, HOME_BY_ROLE } from "./constants/roles.js";
+
+function RoleRedirect() {
+  const user = useAuthStore((state) => state.user);
+  return <Navigate to={HOME_BY_ROLE[user.role] ?? "/login"} replace />;
+}
 
 function AdminHome() {
   return (
@@ -40,13 +46,21 @@ export default function App() {
       <Route
         path="/"
         element={
+          <ProtectedRoute>
+            <RoleRedirect />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
           <ProtectedRoute requiredRole={ROLES.ADMIN}>
             <AdminHome />
           </ProtectedRoute>
         }
       />
       <Route
-        path="/m"
+        path="/surveyor"
         element={
           <ProtectedRoute requiredRole={ROLES.SURVEYOR}>
             <SurveyorHome />
