@@ -79,12 +79,17 @@ export default function SurveyorRoutePage() {
     <main className="flex min-h-screen flex-col bg-slate-50">
       <header className="border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
-          <div>
+          {routes.length > 1 ? (
+            <RouteSelector
+              routes={routes}
+              activeRouteId={activeRouteId}
+              onSelect={handleSelectRoute}
+            />
+          ) : (
             <h1 className="text-lg font-bold text-emerald-700">
-              Ruta {activeIndex + 1}
+              Ruta {activeIndex + 1} · {stops.length} árboles
             </h1>
-            <p className="text-xs text-slate-500">{stops.length} árboles</p>
-          </div>
+          )}
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-slate-500">
               {visitedCount}/{stops.length}
@@ -99,12 +104,6 @@ export default function SurveyorRoutePage() {
           />
         </div>
       </header>
-
-      <RouteSelector
-        routes={routes}
-        activeRouteId={activeRouteId}
-        onSelect={handleSelectRoute}
-      />
 
       <div className="h-[55vh] w-full">
         <RouteMap
