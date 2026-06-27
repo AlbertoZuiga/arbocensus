@@ -7,7 +7,7 @@ import RouteMap from "../../components/surveyor/RouteMap.jsx";
 import RouteSelector from "../../components/surveyor/RouteSelector.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
-import LogoutButton from "../../components/LogoutButton.jsx";
+import UserMenu from "../../components/UserMenu.jsx";
 import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
 function CenteredMessage({ children }) {
@@ -94,7 +94,7 @@ export default function SurveyorRoutePage() {
             <span className="text-xs font-semibold text-slate-500">
               {visitedCount}/{stops.length}
             </span>
-            <LogoutButton />
+            <UserMenu />
           </div>
         </div>
         <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
