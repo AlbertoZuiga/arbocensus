@@ -77,7 +77,7 @@ export default function SurveyorRoutePage() {
 
   return (
     <main className="flex h-dvh flex-col overflow-hidden bg-slate-50">
-      <header className="border-b border-slate-200 bg-white px-4 py-3">
+      <header className="relative z-[1000] border-b border-slate-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between">
           {routes.length > 1 ? (
             <RouteSelector
