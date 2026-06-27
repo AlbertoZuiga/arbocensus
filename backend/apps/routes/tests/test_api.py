@@ -61,6 +61,33 @@ def test_visit_marks_stop_visited(solution_with_route, surveyor):
     assert stops[0].visited_at is not None
 
 
+def test_visit_next_pending_stop_in_order_succeeds(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    first = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    assert first.status_code == 200
+    second = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
+    assert second.status_code == 200
+    stops[1].refresh_from_db()
+    assert stops[1].visited is True
+
+
+def test_visit_out_of_order_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
+    assert response.status_code == 400
+    assert response.data["detail"] == "Debes visitar los árboles anteriores primero."
+    stops[1].refresh_from_db()
+    assert stops[1].visited is False
+
+
+def test_revisiting_visited_stop_is_idempotent(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    assert response.status_code == 200
+    assert response.data["visited"] is True
+
+
 def test_visit_foreign_stop_returns_404(solution_with_route):
     _, _, stops = solution_with_route
     other = CustomUserFactory(role="surveyor")
