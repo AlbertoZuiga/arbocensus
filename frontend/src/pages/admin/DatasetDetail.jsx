@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { CircleMarker } from "react-leaflet";
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
+import { getErrorMessage } from "@/lib/errors";
 import BaseMap from "@/components/map/BaseMap.jsx";
 import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
 import {
@@ -69,7 +70,7 @@ export default function DatasetDetail() {
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  No se pudieron cargar los árboles: {error.message}
+                  {getErrorMessage(error, "No se pudieron cargar los árboles.")}
                 </AlertDescription>
               </Alert>
             )}
