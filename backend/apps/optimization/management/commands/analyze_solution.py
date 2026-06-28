@@ -68,6 +68,8 @@ class Command(BaseCommand):
         for route in routes:
             stops = list(route.stops.select_related("tree").order_by("sequence"))
             points = [(s.tree.location.y, s.tree.location.x) for s in stops]
+            if not points:
+                continue
             sequences = [s.sequence for s in stops]
             c = centroid(points)
             radii = [haversine(c, p) for p in points]
