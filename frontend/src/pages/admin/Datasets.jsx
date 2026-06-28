@@ -66,16 +66,16 @@ export default function Datasets() {
           <Input
             ref={fileInputRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.json,text/csv,application/json"
             className="hidden"
             onChange={handleFileChange}
-            aria-label="Subir CSV"
+            aria-label="Subir archivo"
           />
           <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={upload.isPending}
           >
-            {upload.isPending ? "Importando…" : "Subir CSV"}
+            {upload.isPending ? "Importando…" : "Subir CSV/JSON"}
           </Button>
         </div>
       </CardHeader>

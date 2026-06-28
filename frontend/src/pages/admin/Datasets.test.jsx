@@ -80,11 +80,26 @@ describe("Datasets", () => {
     renderPage();
 
     const file = new File(["lat,lon\n1,2"], "trees.csv", { type: "text/csv" });
-    await user.upload(screen.getByLabelText("Subir CSV"), file);
+    await user.upload(screen.getByLabelText("Subir archivo"), file);
 
     expect(uploadDataset.mock.calls[0][0]).toBe(file);
     expect(
       await screen.findByText("Importados 128 árboles"),
     ).toBeInTheDocument();
+  });
+
+  it("uploads a JSON file too", async () => {
+    const user = userEvent.setup();
+    fetchDatasets.mockResolvedValue([]);
+    uploadDataset.mockResolvedValue({ id: "d10", name: "GeoJSON", tree_count: 5 });
+    renderPage();
+
+    const file = new File(['{"type":"FeatureCollection"}'], "trees.json", {
+      type: "application/json",
+    });
+    await user.upload(screen.getByLabelText("Subir archivo"), file);
+
+    expect(uploadDataset.mock.calls[0][0]).toBe(file);
+    expect(await screen.findByText("Importados 5 árboles")).toBeInTheDocument();
   });
 });
