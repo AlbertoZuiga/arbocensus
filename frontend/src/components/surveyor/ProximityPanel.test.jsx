@@ -34,7 +34,9 @@ describe("ProximityPanel", () => {
     render(
       <ProximityPanel stop={stop} distance={5} inRange locked onVisit={onVisit} />
     );
-    expect(screen.getByRole("button")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Marcar visitado" })
+    ).toBeDisabled();
     expect(
       screen.getByText("Visita los árboles anteriores primero")
     ).toBeInTheDocument();
@@ -52,7 +54,9 @@ describe("ProximityPanel", () => {
       />
     );
     expect(screen.getByText("Visitado")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /marcar/i })
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Navegar" })).not.toBeInTheDocument();
   });
 });
