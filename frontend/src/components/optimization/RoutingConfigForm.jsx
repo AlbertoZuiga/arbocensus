@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 
 import { createJob } from "@/api/optimization";
+import { getErrorMessage } from "@/lib/errors";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,10 +16,11 @@ import { Label } from "@/components/ui/label";
 const DEFAULTS = {
   minRouteTimeHours: 2,
   maxRouteTimeHours: 3,
-  serviceTimeSec: 300,
+  serviceTimeMinutes: 5,
 };
 
 const hoursToSeconds = (hours) => Math.round(Number(hours) * 3600);
+const minutesToSeconds = (minutes) => Math.round(Number(minutes) * 60);
 
 export default function RoutingConfigForm({ datasetId, onJobCreated }) {
   const [minRouteTimeHours, setMinRouteTimeHours] = useState(
@@ -27,9 +29,11 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
   const [maxRouteTimeHours, setMaxRouteTimeHours] = useState(
     DEFAULTS.maxRouteTimeHours
   );
-  const [serviceTimeSec, setServiceTimeSec] = useState(
-    DEFAULTS.serviceTimeSec
+  const [serviceTimeMinutes, setServiceTimeMinutes] = useState(
+    DEFAULTS.serviceTimeMinutes
   );
+
+  const rangeInvalid = Number(maxRouteTimeHours) < Number(minRouteTimeHours);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -37,7 +41,7 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
         dataset: datasetId,
         minRouteTimeSec: hoursToSeconds(minRouteTimeHours),
         maxRouteTimeSec: hoursToSeconds(maxRouteTimeHours),
-        serviceTimeSec: Number(serviceTimeSec),
+        serviceTimeSec: minutesToSeconds(serviceTimeMinutes),
       }),
     onSuccess: (job) => {
       onJobCreated?.(job);
@@ -46,6 +50,7 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (rangeInvalid) return;
     mutation.mutate();
   };
 
@@ -79,25 +84,38 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="service-time">Tiempo de servicio (s)</Label>
+            <Label htmlFor="service-time">
+              Tiempo de censo por árbol (min)
+            </Label>
             <Input
               id="service-time"
               type="number"
               min="0"
-              step="1"
-              value={serviceTimeSec}
-              onChange={(e) => setServiceTimeSec(e.target.value)}
+              step="0.5"
+              value={serviceTimeMinutes}
+              onChange={(e) => setServiceTimeMinutes(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Tiempo estimado para censar un árbol en terreno.
+            </p>
           </div>
 
-          {mutation.isError && (
+          {rangeInvalid && (
             <p className="text-sm text-destructive">
-              {mutation.error?.response?.data?.detail ??
-                "No se pudo crear el trabajo de optimización"}
+              El tiempo mínimo no puede ser mayor que el máximo.
             </p>
           )}
 
-          <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isError && (
+            <p className="text-sm text-destructive">
+              {getErrorMessage(
+                mutation.error,
+                "No se pudo crear el trabajo de optimización"
+              )}
+            </p>
+          )}
+
+          <Button type="submit" disabled={mutation.isPending || rangeInvalid}>
             {mutation.isPending ? "Generando…" : "Generar rutas"}
           </Button>
         </form>

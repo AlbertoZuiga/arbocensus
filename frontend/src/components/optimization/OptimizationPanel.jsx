@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchSolution } from "@/api/optimization";
+import { getErrorMessage } from "@/lib/errors";
 import { useOptimizationJob } from "@/hooks/useOptimizationJob";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,25 +33,31 @@ function SolutionSummary({ solutionId }) {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          No se pudo cargar la solución: {error.message}
+          {getErrorMessage(error, "No se pudo cargar la solución.")}
         </AlertDescription>
       </Alert>
     );
   if (!solution) return null;
 
   return (
-    <dl className="grid grid-cols-2 gap-2 text-sm">
-      <dt className="text-muted-foreground">Rutas</dt>
-      <dd className="text-right font-medium">{solution.total_routes}</dd>
-      <dt className="text-muted-foreground">Tiempo total de viaje</dt>
-      <dd className="text-right font-medium">
-        {formatDuration(solution.total_travel_time_sec)}
-      </dd>
-      <dt className="text-muted-foreground">Balance</dt>
-      <dd className="text-right font-medium">
-        {solution.balance_score.toFixed(2)}
-      </dd>
-    </dl>
+    <div className="space-y-2">
+      <dl className="grid grid-cols-2 gap-2 text-sm">
+        <dt className="text-muted-foreground">Rutas</dt>
+        <dd className="text-right font-medium">{solution.total_routes}</dd>
+        <dt className="text-muted-foreground">Tiempo total de viaje</dt>
+        <dd className="text-right font-medium">
+          {formatDuration(solution.total_travel_time_sec)}
+        </dd>
+        <dt className="text-muted-foreground">Balance de carga</dt>
+        <dd className="text-right font-medium">
+          {solution.balance_score.toFixed(2)}
+        </dd>
+      </dl>
+      <p className="text-xs text-muted-foreground">
+        Balance de carga: 1.00 indica rutas con duraciones equilibradas; valores
+        más bajos, rutas más dispares.
+      </p>
+    </div>
   );
 }
 

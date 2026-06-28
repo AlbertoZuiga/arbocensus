@@ -26,11 +26,11 @@ describe("RoutingConfigForm", () => {
     vi.clearAllMocks();
   });
 
-  it("renders editable defaults (2h / 3h / 300s)", () => {
+  it("renders editable defaults (2h / 3h / 5min)", () => {
     renderForm();
     expect(screen.getByLabelText(/Tiempo mínimo por ruta/)).toHaveValue(2);
     expect(screen.getByLabelText(/Tiempo máximo por ruta/)).toHaveValue(3);
-    expect(screen.getByLabelText(/Tiempo de servicio/)).toHaveValue(300);
+    expect(screen.getByLabelText(/Tiempo de censo por árbol/)).toHaveValue(5);
   });
 
   it("submits with hours converted to seconds", async () => {
@@ -77,5 +77,22 @@ describe("RoutingConfigForm", () => {
     await user.click(screen.getByRole("button", { name: "Generar rutas" }));
 
     await waitFor(() => expect(onJobCreated).toHaveBeenCalledWith(job));
+  });
+
+  it("blocks submit and warns when min exceeds max", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const maxInput = screen.getByLabelText(/Tiempo máximo por ruta/);
+    await user.clear(maxInput);
+    await user.type(maxInput, "1");
+
+    expect(
+      screen.getByText("El tiempo mínimo no puede ser mayor que el máximo.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Generar rutas" })
+    ).toBeDisabled();
+    expect(createJob).not.toHaveBeenCalled();
   });
 });
