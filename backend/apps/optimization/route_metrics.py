@@ -76,3 +76,23 @@ def interleave_per_route(routes):
 def worst_pair_iou(routes):
     ious = [bbox_iou(a["bbox"], b["bbox"]) for a, b in combinations(routes, 2)]
     return max(ious) if ious else 0.0
+
+
+def routes_from_solution(solution):
+    routes = []
+    for route in solution.routes.order_by("route_number"):
+        stops = list(route.stops.select_related("tree").order_by("sequence"))
+        coords = [(s.tree.location.y, s.tree.location.x) for s in stops]
+        if not coords:
+            continue
+        routes.append(summarize_route([s.sequence for s in stops], coords))
+    return routes
+
+
+def aggregate_metrics(routes):
+    return {
+        "sum_max_radius_m": round(sum_max_radius(routes)),
+        "interleave_total": total_interleave(routes),
+        "interleave_per_route": round(interleave_per_route(routes), 2),
+        "worst_pair_iou": round(worst_pair_iou(routes), 2),
+    }

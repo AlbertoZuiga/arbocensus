@@ -67,6 +67,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./docs:/docs
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     command: python manage.py runserver 0.0.0.0:8000
