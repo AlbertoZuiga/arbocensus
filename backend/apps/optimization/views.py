@@ -18,7 +18,10 @@ CustomUser = get_user_model()
 
 
 class OptimizationJobViewSet(
-    mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
 ):
     queryset = OptimizationJob.objects.all()
     permission_classes = [IsAdminRole]
@@ -27,6 +30,13 @@ class OptimizationJobViewSet(
         if self.action == "create":
             return RoutingConfigSerializer
         return OptimizationJobSerializer
+
+    def get_queryset(self) -> Any:
+        queryset = OptimizationJob.objects.all()
+        dataset = self.request.query_params.get("dataset")
+        if dataset:
+            queryset = queryset.filter(config__dataset=dataset)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

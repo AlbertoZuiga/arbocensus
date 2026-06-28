@@ -99,6 +99,30 @@ def test_get_job_without_solution_returns_null(make_dataset_with_trees):
     assert response.data["solution_id"] is None
 
 
+def test_list_jobs_filtered_by_dataset_newest_first(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    other_dataset, _ = make_dataset_with_trees([(-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    older = OptimizationJob.objects.create(config=config)
+    newer = OptimizationJob.objects.create(config=config)
+    other_config = RoutingConfig.objects.create(dataset=other_dataset)
+    OptimizationJob.objects.create(config=other_config)
+
+    response = _client("admin").get(f"/api/optimization/jobs/?dataset={dataset.id}")
+
+    assert response.status_code == 200
+    ids = [job["id"] for job in response.data["results"]]
+    assert ids == [str(newer.id), str(older.id)]
+
+
+def test_list_jobs_rejected_for_non_admin(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+
+    response = _client("surveyor").get(f"/api/optimization/jobs/?dataset={dataset.id}")
+
+    assert response.status_code == 403
+
+
 def test_get_solution_shape(make_dataset_with_trees):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
     config = RoutingConfig.objects.create(dataset=dataset)
