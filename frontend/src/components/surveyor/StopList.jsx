@@ -1,11 +1,18 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { isStopLocked } from "../../utils/stops.js";
 
-export default function StopList({ stops, selectedStopId, onSelectStop }) {
+export default function StopList({
+  stops,
+  selectedStopId,
+  nextPendingStopId,
+  onSelectStop,
+}) {
   return (
     <ul className="divide-y divide-slate-100">
       {stops.map((stop) => {
         const selected = stop.id === selectedStopId;
+        const locked = isStopLocked(stop, nextPendingStopId);
         return (
           <li key={stop.id}>
             <button
@@ -14,6 +21,7 @@ export default function StopList({ stops, selectedStopId, onSelectStop }) {
               className={cn(
                 "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors",
                 selected ? "bg-accent" : "bg-white hover:bg-accent/50",
+                locked && "opacity-60",
               )}
             >
               <span

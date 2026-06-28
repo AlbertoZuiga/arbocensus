@@ -3,16 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
-export default function ProximityPanel({ stop, distance, inRange, onVisit, isVisiting }) {
+export default function ProximityPanel({
+  stop,
+  distance,
+  inRange,
+  locked,
+  onVisit,
+  isVisiting,
+}) {
   if (!stop) return null;
 
   return (
     <div className="flex shrink-0 items-center gap-3 border-t bg-white px-4 py-3">
       <div className="flex-1">
         <p className="text-sm font-semibold text-slate-700">
-          Próximo árbol {stop.sequence}
+          {locked ? "Árbol" : "Próximo árbol"} {stop.sequence}
         </p>
-        {distance == null ? (
+        {locked ? (
+          <p className="text-xs font-medium text-amber-600">
+            Visita los árboles anteriores primero
+          </p>
+        ) : distance == null ? (
           <p className="text-xs text-muted-foreground">Esperando ubicación GPS…</p>
         ) : (
           <p
@@ -27,15 +38,21 @@ export default function ProximityPanel({ stop, distance, inRange, onVisit, isVis
           </p>
         )}
       </div>
-      <Button asChild variant="outline">
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lon}&travelmode=walking`}
-          target="_blank"
-          rel="noreferrer"
-        >
+      {locked || stop.visited ? (
+        <Button variant="outline" disabled>
           Navegar
-        </a>
-      </Button>
+        </Button>
+      ) : (
+        <Button asChild variant="outline">
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lon}&travelmode=walking`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Navegar
+          </a>
+        </Button>
+      )}
       {stop.visited ? (
         <Badge variant="secondary" className="bg-primary/10 text-primary">
           Visitado
@@ -44,7 +61,7 @@ export default function ProximityPanel({ stop, distance, inRange, onVisit, isVis
         <Button
           type="button"
           onClick={() => onVisit(stop.id)}
-          disabled={isVisiting}
+          disabled={isVisiting || locked}
           className={cn(!inRange && "bg-amber-600 hover:bg-amber-600/90")}
         >
           {inRange ? "Marcar visitado" : "Marcar de todos modos"}

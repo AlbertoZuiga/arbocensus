@@ -85,6 +85,15 @@ class RouteStopVisitView(APIView):
 
     def post(self, request, stop_id):
         stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
+        if stop.visited:
+            return Response(RouteStopSerializer(stop).data)
+        if RouteStop.objects.filter(
+            route=stop.route, sequence__lt=stop.sequence, visited=False
+        ).exists():
+            return Response(
+                {"detail": "Debes visitar los árboles anteriores primero."},
+                status=400,
+            )
         stop.visited = True
         stop.visited_at = timezone.now()
         stop.notes = request.data.get("notes", stop.notes)
