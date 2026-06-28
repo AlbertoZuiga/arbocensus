@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet } from "react-router-dom";
 import UserMenu from "../components/UserMenu.jsx";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/toaster";
 
 const navLinkClass = ({ isActive }) =>
   cn(
@@ -31,6 +32,7 @@ export default function AdminLayout() {
       <main className="flex-1 p-6">
         <Outlet />
       </main>
+      <Toaster />
     </div>
   );
 }
