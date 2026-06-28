@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CircleMarker } from "react-leaflet";
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
 import BaseMap from "@/components/map/BaseMap.jsx";
+import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
 import {
   Card,
   CardContent,
@@ -93,18 +94,7 @@ export default function DatasetDetail() {
           </CardContent>
         </Card>
 
-        {/* OPTIMIZATION CONFIG PANEL — placeholder.
-            A sibling track builds the optimization config panel here. */}
-        <Card data-testid="optimization-config-placeholder">
-          <CardHeader>
-            <CardTitle>Optimización</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              El panel de configuración de optimización se agregará aquí.
-            </p>
-          </CardContent>
-        </Card>
+        <OptimizationPanel datasetId={id} />
       </div>
     </div>
   );
