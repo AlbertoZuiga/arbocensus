@@ -83,9 +83,13 @@ def test_visit_out_of_order_returns_400(solution_with_route, surveyor):
 def test_revisiting_visited_stop_is_idempotent(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    stops[0].refresh_from_db()
+    first_visited_at = stops[0].visited_at
     response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
     assert response.status_code == 200
     assert response.data["visited"] is True
+    stops[0].refresh_from_db()
+    assert stops[0].visited_at == first_visited_at
 
 
 def test_visit_foreign_stop_returns_404(solution_with_route):
