@@ -49,6 +49,11 @@ else:
     print(f"[entrypoint] superuser '{username}' already exists, skipping")
 PYEOF
   fi
+
+  if [ "${SEED_DEV:-true}" = "true" ]; then
+    echo "[entrypoint] running idempotent dev seed"
+    python manage.py seed_dev
+  fi
 fi
 
 exec "$@"
