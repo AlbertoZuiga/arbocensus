@@ -50,6 +50,22 @@ Servicios disponibles:
 
 El frontend (Vite + React) corre con HMR dentro del contenedor `frontend`. Ver [`frontend/README.md`](frontend/README.md) para detalle y desarrollo local sin Docker.
 
+#### Datos de prueba (seed automático)
+
+Al levantar el backend, el `entrypoint` corre `seed_dev` de forma **idempotente**
+(no recrea lo que ya existe): crea usuarios de prueba y un dataset _light_ de
+15 árboles **sin** ejecutar el solver. Desactívalo con `SEED_DEV=false` en `.env`.
+
+| Usuario      | Rol      | Contraseña    |
+| ------------ | -------- | ------------- |
+| `admin1`     | admin    | `arbocensus`  |
+| `surveyor1`  | surveyor | `arbocensus`  |
+| `surveyor2`  | surveyor | `arbocensus`  |
+
+Cantidades y contraseña son configurables (`SEED_ADMIN_COUNT`,
+`SEED_SURVEYOR_COUNT`, `SEED_USER_PASSWORD`, `SEED_DEV_TREES`). El superusuario
+`admin` lo crea aparte el propio `entrypoint` (`DJANGO_SUPERUSER_*`).
+
 ### Desarrollo Local
 
 ```bash
@@ -99,6 +115,18 @@ make -C backend test ARGS="apps/optimization/tests"  # Subconjunto
 python manage.py migrate
 python manage.py createsuperuser
 celery -A config worker --loglevel=info
+
+# Seed / datos (dentro del contenedor backend)
+make seed                                         # seed_dev idempotente (usuarios + dataset light, sin solver)
+python manage.py seed_demo --profile light        # 15 árboles, solo siembra (--no-optimize por defecto)
+python manage.py seed_demo --profile medium       # 50 árboles + optimización (solver 180s)
+python manage.py seed_demo --profile heavy        # 200 árboles + optimización
+python manage.py seed_demo --distribution clustered --snap  # distribución realista + snap a calles (OSRM)
+python manage.py baseline_sweep                   # barrido reproducible de calidad geográfica
+
+# Análisis
+python manage.py analyze_solution                 # métricas de la última solución
+# Los informes de baseline_sweep / seed_demo se guardan en docs/experiments/.
 ```
 
 > Los tests corren **dentro del contenedor backend**, no en el host. Los modelos
