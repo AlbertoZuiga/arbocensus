@@ -24,3 +24,8 @@ def test_max_route_time_must_not_be_below_min():
     )
     with pytest.raises(ValidationError):
         config.full_clean()
+
+
+def test_strategy_defaults_to_global():
+    config = RoutingConfig(dataset=DatasetFactory())
+    assert config.strategy == RoutingConfig.Strategy.GLOBAL

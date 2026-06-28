@@ -8,8 +8,16 @@ from django.utils import timezone
 
 
 class RoutingConfig(models.Model):
+    class Strategy(models.TextChoices):
+        GLOBAL = "global"
+        SPATIAL_TERM = "spatial_term"
+        CLUSTER_FIRST = "cluster_first"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE)
+    strategy = models.CharField(
+        max_length=20, choices=Strategy.choices, default=Strategy.GLOBAL
+    )
     min_route_time_sec = models.IntegerField(
         default=7200, validators=[MinValueValidator(1)]
     )

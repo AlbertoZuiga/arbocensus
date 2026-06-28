@@ -5,8 +5,14 @@ from .models import OptimizationJob, RoutingConfig, RoutingSolution
 
 @admin.register(RoutingConfig)
 class RoutingConfigAdmin(admin.ModelAdmin):
-    list_display = ["dataset", "min_route_time_sec", "max_route_time_sec", "created_at"]
-    list_filter = ["created_at"]
+    list_display = [
+        "dataset",
+        "strategy",
+        "min_route_time_sec",
+        "max_route_time_sec",
+        "created_at",
+    ]
+    list_filter = ["strategy", "created_at"]
     search_fields = ["dataset__name"]
     readonly_fields = ["id", "created_at"]
 

@@ -9,6 +9,7 @@ class RoutingConfigSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "dataset",
+            "strategy",
             "min_route_time_sec",
             "max_route_time_sec",
             "service_time_sec",
