@@ -60,14 +60,14 @@ describe("DatasetDetail", () => {
     expect(marker).toHaveAttribute("data-center", JSON.stringify([-33.45, -70.65]));
   });
 
-  it("renders the dataset name and the optimization config placeholder", async () => {
+  it("renders the dataset name and the optimization config form", async () => {
     fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
     fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
     renderDetail();
 
     expect(await screen.findByText("Providencia")).toBeInTheDocument();
     expect(
-      screen.getByTestId("optimization-config-placeholder"),
+      screen.getByText("Configuración de rutas"),
     ).toBeInTheDocument();
   });
 

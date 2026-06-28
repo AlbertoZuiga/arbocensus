@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchDatasets, uploadDataset } from "@/api/datasets.js";
+import { getErrorMessage } from "@/lib/errors";
 import { toast } from "@/store/toastStore.js";
 import {
   Card,
@@ -30,17 +31,6 @@ function treeCount(dataset) {
   return dataset.tree_count ?? dataset.total_trees ?? 0;
 }
 
-function uploadErrorMessage(err) {
-  const data = err.response?.data;
-  if (data?.detail) return data.detail;
-  if (data && typeof data === "object") {
-    const first = Object.values(data)[0];
-    if (Array.isArray(first)) return first[0];
-    if (typeof first === "string") return first;
-  }
-  return "No se pudo importar el archivo";
-}
-
 export default function Datasets() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
@@ -57,7 +47,7 @@ export default function Datasets() {
       toast.success(`Importados ${treeCount(dataset)} árboles`);
     },
     onError: (err) => {
-      toast.error(uploadErrorMessage(err));
+      toast.error(getErrorMessage(err, "No se pudo importar el archivo"));
     },
     onSettled: () => {
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -95,7 +85,7 @@ export default function Datasets() {
         {error && (
           <Alert variant="destructive">
             <AlertDescription>
-              No se pudieron cargar los datasets: {error.message}
+              {getErrorMessage(error, "No se pudieron cargar los datasets.")}
             </AlertDescription>
           </Alert>
         )}
