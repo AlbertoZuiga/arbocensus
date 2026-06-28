@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 const STATUS_CONFIG = {
   queued: { variant: "secondary", label: "En cola" },
   running: { variant: "default", label: "Ejecutando" },
-  completed: { variant: "default", label: "Completado" },
+  completed: { variant: "success", label: "Completado" },
   failed: { variant: "destructive", label: "Fallido" },
   error: { variant: "destructive", label: "Error" },
 };
