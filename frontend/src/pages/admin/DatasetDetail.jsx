@@ -95,7 +95,7 @@ export default function DatasetDetail() {
           </CardContent>
         </Card>
 
-        <OptimizationPanel datasetId={id} />
+        <OptimizationPanel key={id} datasetId={id} />
       </div>
     </div>
   );

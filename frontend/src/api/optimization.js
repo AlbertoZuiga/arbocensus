@@ -20,6 +20,13 @@ export async function fetchJob(jobId) {
   return data;
 }
 
+export async function fetchLatestJob(datasetId) {
+  const { data } = await client.get("/optimization/jobs/", {
+    params: { dataset: datasetId },
+  });
+  return data.results?.[0] ?? null;
+}
+
 export async function fetchSolution(solutionId) {
   const { data } = await client.get(`/optimization/solutions/${solutionId}/`);
   return data;
