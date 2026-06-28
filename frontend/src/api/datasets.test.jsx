@@ -1,14 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { uploadDataset } from "./datasets.js";
+import { fetchDatasets, uploadDataset } from "./datasets.js";
 import client from "./client.js";
 
 vi.mock("./client.js", () => ({
-  default: { post: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn() },
 }));
 
 beforeEach(() => {
+  client.get.mockReset();
   client.post.mockReset();
   client.post.mockResolvedValue({ data: { id: "d1", total_trees: 3 } });
+});
+
+describe("fetchDatasets", () => {
+  it("unwraps the paginated DRF response", async () => {
+    client.get.mockResolvedValue({
+      data: { count: 1, next: null, results: [{ id: "d1" }] },
+    });
+    expect(await fetchDatasets()).toEqual([{ id: "d1" }]);
+  });
+
+  it("returns a bare array unchanged", async () => {
+    client.get.mockResolvedValue({ data: [{ id: "d2" }] });
+    expect(await fetchDatasets()).toEqual([{ id: "d2" }]);
+  });
 });
 
 describe("uploadDataset", () => {

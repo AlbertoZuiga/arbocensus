@@ -2,7 +2,7 @@ import client from "./client.js";
 
 export async function fetchDatasets() {
   const { data } = await client.get("/datasets/");
-  return data;
+  return data.results ?? data;
 }
 
 export async function fetchDataset(id) {
