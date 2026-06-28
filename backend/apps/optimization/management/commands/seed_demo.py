@@ -1,15 +1,17 @@
 import random
 
-from apps.datasets.models import Dataset, Tree
+from apps.optimization.demo_seed import (
+    DISTRIBUTIONS,
+    create_dataset,
+    generate_points,
+    snap_to_streets,
+)
 from apps.optimization.models import OptimizationJob, RoutingConfig
 from apps.optimization.pipeline import OptimizationPipeline
-from django.contrib.gis.geos import Point
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 SEED = 42
-LAT_MIN, LAT_MAX = -33.45, -33.41
-LON_MIN, LON_MAX = -70.66, -70.58
 
 
 class Command(BaseCommand):
@@ -19,30 +21,26 @@ class Command(BaseCommand):
         parser.add_argument("--trees", type=int, default=40)
         parser.add_argument("--name", type=str, default="Demo Santiago")
         parser.add_argument("--seed", type=int, default=SEED)
+        parser.add_argument("--distribution", choices=DISTRIBUTIONS, default="uniform")
+        parser.add_argument("--clusters", type=int, default=4)
+        parser.add_argument("--snap", action="store_true")
 
     def handle(self, *args, **options):
         n_trees = options["trees"]
         if n_trees < 2:
             raise CommandError("--trees must be at least 2")
+        if options["clusters"] < 1:
+            raise CommandError("--clusters must be at least 1")
 
         rng = random.Random(options["seed"])
+        points = generate_points(
+            rng, n_trees, options["distribution"], options["clusters"]
+        )
+        if options["snap"]:
+            points = snap_to_streets(points)
 
         with transaction.atomic():
-            dataset = Dataset.objects.create(name=options["name"])
-            trees = [
-                Tree(
-                    dataset=dataset,
-                    location=Point(
-                        rng.uniform(LON_MIN, LON_MAX),
-                        rng.uniform(LAT_MIN, LAT_MAX),
-                    ),
-                )
-                for _ in range(n_trees)
-            ]
-            Tree.objects.bulk_create(trees)
-            dataset.total_trees = n_trees
-            dataset.save(update_fields=["total_trees"])
-
+            dataset = create_dataset(options["name"], points)
             config = RoutingConfig.objects.create(dataset=dataset)
             job = OptimizationJob.objects.create(config=config)
 
