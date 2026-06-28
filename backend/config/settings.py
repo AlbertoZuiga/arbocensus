@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "apps.core",
     "apps.accounts",
     "apps.datasets",
     "apps.optimization",
