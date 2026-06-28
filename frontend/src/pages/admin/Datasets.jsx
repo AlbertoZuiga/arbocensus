@@ -1,6 +1,8 @@
+import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { fetchDatasets } from "@/api/datasets.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchDatasets, uploadDataset } from "@/api/datasets.js";
+import { toast } from "@/store/toastStore.js";
 import {
   Card,
   CardContent,
@@ -16,6 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -27,15 +31,53 @@ function treeCount(dataset) {
 }
 
 export default function Datasets() {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef(null);
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["datasets"],
     queryFn: fetchDatasets,
   });
 
+  const upload = useMutation({
+    mutationFn: uploadDataset,
+    onSuccess: (dataset) => {
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      toast.success(`Importados ${treeCount(dataset)} árboles`);
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.detail ?? "No se pudo importar el CSV");
+    },
+    onSettled: () => {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+  });
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) upload.mutate(file);
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="text-2xl">Datasets</CardTitle>
+        <div className="flex items-center gap-2">
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleFileChange}
+            aria-label="Subir CSV"
+          />
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={upload.isPending}
+          >
+            {upload.isPending ? "Importando…" : "Subir CSV"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading && <p className="text-muted-foreground">Cargando…</p>}

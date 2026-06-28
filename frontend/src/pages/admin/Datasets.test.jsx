@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Datasets from "./Datasets.jsx";
-import { fetchDatasets } from "@/api/datasets.js";
+import { Toaster } from "@/components/ui/toaster";
+import { fetchDatasets, uploadDataset } from "@/api/datasets.js";
 
 vi.mock("@/api/datasets.js", () => ({
   fetchDatasets: vi.fn(),
+  uploadDataset: vi.fn(),
 }));
 
 function renderPage() {
@@ -17,6 +20,7 @@ function renderPage() {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <Datasets />
+        <Toaster />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -24,6 +28,7 @@ function renderPage() {
 
 beforeEach(() => {
   fetchDatasets.mockReset();
+  uploadDataset.mockReset();
 });
 
 describe("Datasets", () => {
@@ -66,5 +71,20 @@ describe("Datasets", () => {
     await waitFor(() =>
       expect(screen.getByText(/No se pudieron cargar/)).toBeInTheDocument(),
     );
+  });
+
+  it("uploads a CSV and shows a toast with the imported tree count", async () => {
+    const user = userEvent.setup();
+    fetchDatasets.mockResolvedValue([]);
+    uploadDataset.mockResolvedValue({ id: "d9", name: "Nuevo", tree_count: 128 });
+    renderPage();
+
+    const file = new File(["lat,lon\n1,2"], "trees.csv", { type: "text/csv" });
+    await user.upload(screen.getByLabelText("Subir CSV"), file);
+
+    expect(uploadDataset.mock.calls[0][0]).toBe(file);
+    expect(
+      await screen.findByText("Importados 128 árboles"),
+    ).toBeInTheDocument();
   });
 });
