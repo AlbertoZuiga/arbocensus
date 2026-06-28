@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import AdminHome from "./pages/admin/AdminHome.jsx";
 import Datasets from "./pages/admin/Datasets.jsx";
+import DatasetDetail from "./pages/admin/DatasetDetail.jsx";
 import Censadores from "./pages/admin/Censadores.jsx";
 import { useSession } from "./hooks/useSession.js";
 import { useAuthStore } from "./store/authStore.js";
@@ -49,6 +50,7 @@ export default function App() {
       >
         <Route index element={<AdminHome />} />
         <Route path="datasets" element={<Datasets />} />
+        <Route path="datasets/:id" element={<DatasetDetail />} />
         <Route path="censadores" element={<Censadores />} />
       </Route>
       <Route path="*" element={<NotFoundRedirect />} />
