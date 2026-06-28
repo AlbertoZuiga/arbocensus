@@ -9,6 +9,7 @@ import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
 import UserMenu from "../../components/UserMenu.jsx";
 import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
+import { isStopLocked } from "../../utils/stops.js";
 
 function CenteredMessage({ children }) {
   return (
@@ -51,9 +52,7 @@ export default function SurveyorRoutePage() {
   }, [stops, selectedStopId, nextPendingStop]);
 
   const selectedStopLocked =
-    selectedStop != null &&
-    !selectedStop.visited &&
-    selectedStop.id !== nextPendingStop?.id;
+    selectedStop != null && isStopLocked(selectedStop, nextPendingStop?.id ?? null);
 
   const distance = useMemo(() => {
     if (!position || !selectedStop) return null;

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { isStopLocked } from "../../utils/stops.js";
 
 export default function StopList({
   stops,
@@ -11,8 +12,7 @@ export default function StopList({
     <ul className="divide-y divide-slate-100">
       {stops.map((stop) => {
         const selected = stop.id === selectedStopId;
-        const locked =
-          !stop.visited && nextPendingStopId != null && stop.id !== nextPendingStopId;
+        const locked = isStopLocked(stop, nextPendingStopId);
         return (
           <li key={stop.id}>
             <button
