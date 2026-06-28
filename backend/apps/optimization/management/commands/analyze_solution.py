@@ -2,6 +2,7 @@ import math
 from itertools import combinations
 
 from apps.optimization.models import RoutingSolution
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 EARTH_RADIUS_M = 6371000
@@ -54,7 +55,7 @@ class Command(BaseCommand):
         if solution_id:
             try:
                 solution = RoutingSolution.objects.get(id=solution_id)
-            except RoutingSolution.DoesNotExist as exc:
+            except (RoutingSolution.DoesNotExist, ValidationError) as exc:
                 raise CommandError(f"No solution found with id {solution_id}") from exc
         else:
             solution = RoutingSolution.objects.order_by("-generated_at").first()
