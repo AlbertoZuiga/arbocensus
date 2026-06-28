@@ -16,8 +16,10 @@ export async function fetchDatasetTrees(id) {
 }
 
 export async function uploadDataset(file) {
+  const name = file.name.replace(/\.[^.]+$/, "");
   const form = new FormData();
   form.append("file", file);
+  form.append("name", name);
   const { data } = await client.post("/datasets/", form, {
     headers: { "Content-Type": "multipart/form-data" },
   });

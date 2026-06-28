@@ -30,6 +30,17 @@ function treeCount(dataset) {
   return dataset.tree_count ?? dataset.total_trees ?? 0;
 }
 
+function uploadErrorMessage(err) {
+  const data = err.response?.data;
+  if (data?.detail) return data.detail;
+  if (data && typeof data === "object") {
+    const first = Object.values(data)[0];
+    if (Array.isArray(first)) return first[0];
+    if (typeof first === "string") return first;
+  }
+  return "No se pudo importar el archivo";
+}
+
 export default function Datasets() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
@@ -46,7 +57,7 @@ export default function Datasets() {
       toast.success(`Importados ${treeCount(dataset)} árboles`);
     },
     onError: (err) => {
-      toast.error(err.response?.data?.detail ?? "No se pudo importar el CSV");
+      toast.error(uploadErrorMessage(err));
     },
     onSettled: () => {
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -75,7 +86,7 @@ export default function Datasets() {
             onClick={() => fileInputRef.current?.click()}
             disabled={upload.isPending}
           >
-            {upload.isPending ? "Importando…" : "Subir CSV/JSON"}
+            {upload.isPending ? "Importando…" : "Subir archivo"}
           </Button>
         </div>
       </CardHeader>
