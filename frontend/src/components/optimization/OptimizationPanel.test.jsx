@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 vi.mock("@/api/optimization", () => ({
   createJob: vi.fn(),
   fetchSolution: vi.fn(),
+  fetchLatestJob: vi.fn().mockResolvedValue(null),
 }));
 
 let mockJob;
@@ -13,7 +14,7 @@ vi.mock("@/hooks/useOptimizationJob", () => ({
   useOptimizationJob: (jobId) => ({ data: jobId ? mockJob : undefined }),
 }));
 
-import { createJob, fetchSolution } from "@/api/optimization";
+import { createJob, fetchSolution, fetchLatestJob } from "@/api/optimization";
 import OptimizationPanel from "./OptimizationPanel.jsx";
 
 function renderPanel() {
@@ -42,6 +43,15 @@ describe("OptimizationPanel", () => {
     expect(
       screen.queryByText("Trabajo de optimización"),
     ).not.toBeInTheDocument();
+  });
+
+  it("restores the dataset's latest job on mount without creating one", async () => {
+    fetchLatestJob.mockResolvedValue({ id: "j1", status: "completed" });
+    mockJob = { id: "j1", status: "completed", solution_id: null };
+    renderPanel();
+
+    expect(await screen.findByText("Completado")).toBeInTheDocument();
+    expect(createJob).not.toHaveBeenCalled();
   });
 
   it("shows the job status badge after a job is created", async () => {

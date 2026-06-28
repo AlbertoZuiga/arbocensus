@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { fetchSolution } from "@/api/optimization";
+import { fetchLatestJob, fetchSolution } from "@/api/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import { useOptimizationJob } from "@/hooks/useOptimizationJob";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -62,19 +62,28 @@ function SolutionSummary({ solutionId }) {
 }
 
 export default function OptimizationPanel({ datasetId }) {
-  const [jobId, setJobId] = useState(null);
+  const queryClient = useQueryClient();
+  const [createdJobId, setCreatedJobId] = useState(null);
+
+  const { data: latestJob } = useQuery({
+    queryKey: ["optimization-latest-job", datasetId],
+    queryFn: () => fetchLatestJob(datasetId),
+    enabled: !!datasetId,
+  });
+
+  const jobId = createdJobId ?? latestJob?.id ?? null;
   const { data: job } = useOptimizationJob(jobId);
 
-  useEffect(() => {
-    setJobId(null);
-  }, [datasetId]);
+  const handleJobCreated = (created) => {
+    setCreatedJobId(created.id);
+    queryClient.invalidateQueries({
+      queryKey: ["optimization-latest-job", datasetId],
+    });
+  };
 
   return (
     <div className="flex flex-col gap-4">
-      <RoutingConfigForm
-        datasetId={datasetId}
-        onJobCreated={(created) => setJobId(created.id)}
-      />
+      <RoutingConfigForm datasetId={datasetId} onJobCreated={handleJobCreated} />
 
       {job && (
         <Card>
