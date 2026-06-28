@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CircleMarker, Tooltip } from "react-leaflet";
+import { CircleMarker } from "react-leaflet";
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
 import BaseMap from "@/components/map/BaseMap.jsx";
 import {
@@ -21,7 +21,6 @@ function toLeafletPositions(featureCollection) {
     return {
       id: feature.id ?? feature.properties?.id,
       position: [lat, lon],
-      properties: feature.properties ?? {},
     };
   });
 }
@@ -86,11 +85,7 @@ export default function DatasetDetail() {
                         fillColor: "#16a34a",
                         fillOpacity: 0.7,
                       }}
-                    >
-                      {marker.properties.species && (
-                        <Tooltip>{marker.properties.species}</Tooltip>
-                      )}
-                    </CircleMarker>
+                    />
                   ))}
                 </BaseMap>
               </div>
