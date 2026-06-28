@@ -2,7 +2,8 @@ from apps.datasets.models import Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingSolution
 from apps.optimization.n_estimator import estimate_max_vehicles
-from apps.optimization.solver import ArbocensusVRPSolver, build_open_matrix
+from apps.optimization.solver import build_open_matrix
+from apps.optimization.strategies import solve_by_strategy
 from apps.routes.models import Route, RouteStop
 
 SOLVER_TIME_LIMIT_SEC = 180
@@ -29,15 +30,16 @@ class OptimizationPipeline:
             self.config.min_route_time_sec,
         )
 
-        solver = ArbocensusVRPSolver(
+        routes = solve_by_strategy(
+            self.config.strategy,
             matrix,
+            points=[(tree.location.y, tree.location.x) for tree in trees],
             min_route_time_sec=self.config.min_route_time_sec,
             max_route_time_sec=self.config.max_route_time_sec,
             service_time_sec=self.config.service_time_sec,
             max_vehicles=max_vehicles,
             time_limit_sec=SOLVER_TIME_LIMIT_SEC,
         )
-        routes = solver.solve()
         if routes is None:
             raise ValueError(
                 f"No feasible solution: {len(trees)} trees × "
