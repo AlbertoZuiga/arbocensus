@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "apps.core",
     "apps.accounts",
     "apps.datasets",
     "apps.optimization",
@@ -89,6 +90,16 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+EXPERIMENTS_DIR = Path(
+    env("EXPERIMENTS_DIR", default=str(BASE_DIR.parent / "docs" / "experiments"))
+)
+
+SEED_ADMIN_COUNT = env.int("SEED_ADMIN_COUNT", default=1)
+SEED_SURVEYOR_COUNT = env.int("SEED_SURVEYOR_COUNT", default=2)
+SEED_USER_PASSWORD = env("SEED_USER_PASSWORD", default="arbocensus")
+SEED_DEV_DATASET_NAME = env("SEED_DEV_DATASET_NAME", default="Dev Seed")
+SEED_DEV_TREES = env.int("SEED_DEV_TREES", default=15)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.CustomUser"

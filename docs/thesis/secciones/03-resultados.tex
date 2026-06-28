@@ -41,6 +41,72 @@ dataset y con los mismos parámetros temporales.
 % TODO: completar tabla comparativa y análisis una vez que el motor esté validado
 %        con el dataset real.
 
+% ---- 3.1.3 -----------------------------------------------------
+\subsection{Baseline de calidad geográfica de rutas (VRP global sin clustering)}
+
+Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se
+caracterizó la calidad espacial de la solución producida por la formulación
+actual: un único \textit{Open mTSP} global resuelto con OR-Tools, sin
+agrupamiento previo de los nodos. El interés no es el balance temporal ---ya
+controlado por la penalización blanda sobre $T_{\min}$--- sino la
+\textit{compacidad geográfica} de cada ruta y el grado de
+\textit{solapamiento} (\textit{interleaving}) entre rutas distintas.
+
+Se definieron los siguientes indicadores sobre las coordenadas reales de las
+paradas (\texttt{RouteStop}), usando distancia de \textit{haversine}:
+
+\begin{itemize}
+  \item \textbf{Compacidad} ($\sum r_{\max}$): suma, sobre las rutas, del radio
+  máximo de cada ruta (distancia del centroide a su parada más lejana). Menor es mejor.
+  \item \textbf{Solapamiento} (\textit{interleaving}): número de paradas
+  pertenecientes a \textit{otras} rutas que caen dentro de la caja envolvente
+  (\textit{bounding box}) de una ruta dada, sumado sobre todas las rutas. Se
+  reporta tanto el total como su valor normalizado por número de rutas
+  ($\overline{\text{solap}} = \text{total}/k$), para permitir comparar entre
+  tamaños de dataset. Mayor indica peor partición espacial.
+  \item \textbf{IoU peor par}: intersección sobre unión de las cajas
+  envolventes del par de rutas con mayor superposición. Mayor indica mayor
+  solapamiento espacial entre dos rutas.
+\end{itemize}
+
+El balance temporal se reporta como $\min_r T_r / \max_r T_r$
+(\textit{balance\_score} del modelo). Se ejecutó un barrido reproducible
+mediante el comando \texttt{baseline\_sweep} ($5$ semillas $\times$ $3$ tamaños
+de dataset, $n \in \{20, 40, 80\}$) sobre la zona de Providencia/Santiago
+Centro, con distribución uniforme de nodos y el límite de solver por defecto de
+$180$\,s, promediando las métricas por semilla (Tabla~\ref{tab:baseline-geo}).
+
+\begin{table}[H]
+  \centering
+  \caption{Baseline de calidad geográfica del VRP global (media de 5 semillas por $n$).}
+  \label{tab:baseline-geo}
+  \begin{tabularx}{\textwidth}{rXXXXXX}
+    \toprule
+    $n$ & Rutas $k$ & Balance & $\sum r_{\max}$ [m] & Solap. total & Solap./ruta & IoU peor par \\
+    \midrule
+    20 & 3.0 & 0.946 & 6\,530  & 0.4  & 0.13 & 0.01 \\
+    40 & 5.0 & 0.949 & 8\,758  & 6.6  & 1.32 & 0.13 \\
+    80 & 8.0 & 0.872 & 13\,126 & 25.8 & 3.23 & 0.28 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+El hallazgo principal es un \textbf{desacople entre balance temporal y calidad
+geográfica}: el balance se mantiene alto ($0.87$--$0.95$) mientras el
+solapamiento entre rutas crece de forma monótona con la densidad, tanto en
+términos absolutos ($0.4 \to 6.6 \to 25.8$) como normalizado por ruta
+($0.13 \to 1.32 \to 3.23$). El IoU del peor par sigue la misma tendencia
+($0.01 \to 0.13 \to 0.28$). El efecto es \textbf{sistémico y dependiente de la
+densidad}: con $n=20$ el solapamiento es prácticamente nulo, pero crece de
+forma sostenida al aumentar la densidad de nodos, observándose el caso
+recurrente de una ruta compacta geográficamente contenida dentro de la caja
+envolvente de otra más extensa. Esto es coherente con que el modelo optimiza
+tiempo total con un término de balance blando, sin ningún criterio espacial
+explícito en la partición.
+
+% TODO: comparar este baseline contra la variante con clustering geográfico
+% como preprocesamiento, una vez implementada (misma métrica vía baseline_sweep).
+
 % ---- 3.2 -------------------------------------------------------
 \section{POSIBLES MEJORAS}
 

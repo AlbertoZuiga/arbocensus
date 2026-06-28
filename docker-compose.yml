@@ -59,6 +59,7 @@ services:
       SECRET_KEY: ${DJANGO_SECRET_KEY}
       DEBUG: "True"
       RUN_MIGRATIONS: "true"
+      SEED_DEV: "${SEED_DEV:-true}"
       DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
       DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@arbocensus.cl}
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-admin}
@@ -67,6 +68,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./docs:/docs
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     command: python manage.py runserver 0.0.0.0:8000
