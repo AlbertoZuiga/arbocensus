@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from apps.datasets.models import Dataset, Tree
-from apps.optimization.models import OptimizationJob, RoutingConfig
+from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.pipeline import OptimizationPipeline
 from apps.routes.models import Route, RouteStop
 from django.contrib.gis.geos import Point
@@ -47,9 +47,9 @@ def test_pipeline_persists_solution_with_all_trees(requests_mock):
 
     metrics = OptimizationPipeline(job).run()
 
-    solution = job.solution
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
     assert solution.total_routes >= 1
-    assert metrics["solution_id"] == str(solution.id)
+    assert metrics["solutions"]["global"]["solution_id"] == str(solution.id)
 
     stops = RouteStop.objects.filter(route__solution=solution)
     assert stops.count() == tree_count
@@ -63,11 +63,25 @@ def test_pipeline_sequences_start_at_one_per_route(requests_mock):
 
     OptimizationPipeline(job).run()
 
-    for route in Route.objects.filter(solution=job.solution):
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
+    for route in Route.objects.filter(solution=solution):
         sequences = list(
             route.stops.order_by("sequence").values_list("sequence", flat=True)
         )
         assert sequences == list(range(1, len(sequences) + 1))
+
+
+def test_pipeline_cluster_first_persists_all_trees(requests_mock):
+    tree_count = 20
+    job = make_job(tree_count)
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+
+    OptimizationPipeline(job).run()
+
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.CLUSTER_FIRST)
+    stops = RouteStop.objects.filter(route__solution=solution)
+    assert stops.count() == tree_count
+    assert len(set(stops.values_list("tree_id", flat=True))) == tree_count
 
 
 def test_pipeline_raises_on_infeasible(requests_mock):

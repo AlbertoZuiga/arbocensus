@@ -71,7 +71,9 @@ def test_get_job_status_shape(make_dataset_with_trees):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
     config = RoutingConfig.objects.create(dataset=dataset)
     job = OptimizationJob.objects.create(config=config)
-    solution = RoutingSolution.objects.create(job=job, total_routes=2)
+    solution = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=2
+    )
 
     response = _client("admin").get(f"/api/optimization/jobs/{job.id}/")
 
@@ -83,9 +85,9 @@ def test_get_job_status_shape(make_dataset_with_trees):
         "metrics",
         "started_at",
         "completed_at",
-        "solution_id",
+        "solution_ids",
     }
-    assert response.data["solution_id"] == solution.id
+    assert response.data["solution_ids"] == {"global": str(solution.id)}
 
 
 def test_get_job_without_solution_returns_null(make_dataset_with_trees):
@@ -96,7 +98,7 @@ def test_get_job_without_solution_returns_null(make_dataset_with_trees):
     response = _client("admin").get(f"/api/optimization/jobs/{job.id}/")
 
     assert response.status_code == 200
-    assert response.data["solution_id"] is None
+    assert response.data["solution_ids"] == {}
 
 
 def test_list_jobs_filtered_by_dataset_newest_first(make_dataset_with_trees):
@@ -128,7 +130,11 @@ def test_get_solution_shape(make_dataset_with_trees):
     config = RoutingConfig.objects.create(dataset=dataset)
     job = OptimizationJob.objects.create(config=config)
     solution = RoutingSolution.objects.create(
-        job=job, total_routes=3, total_travel_time_sec=120.5, balance_score=0.8
+        job=job,
+        strategy="global",
+        total_routes=3,
+        total_travel_time_sec=120.5,
+        balance_score=0.8,
     )
 
     response = _client("admin").get(f"/api/optimization/solutions/{solution.id}/")
@@ -136,6 +142,7 @@ def test_get_solution_shape(make_dataset_with_trees):
     assert response.status_code == 200
     assert set(response.data) == {
         "id",
+        "strategy",
         "total_routes",
         "total_travel_time_sec",
         "balance_score",
