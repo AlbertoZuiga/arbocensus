@@ -32,7 +32,7 @@ class OptimizationJobViewSet(
         return OptimizationJobSerializer
 
     def get_queryset(self) -> Any:
-        queryset = OptimizationJob.objects.all()
+        queryset = OptimizationJob.objects.prefetch_related("solutions")
         dataset = self.request.query_params.get("dataset")
         if dataset:
             queryset = queryset.filter(config__dataset=dataset)
