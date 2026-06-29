@@ -29,19 +29,28 @@ class Command(BaseCommand):
         parser.add_argument("--base-seed", type=int, default=42)
         parser.add_argument("--distribution", choices=DISTRIBUTIONS, default="uniform")
         parser.add_argument("--clusters", type=int, default=4)
+        parser.add_argument(
+            "--strategy",
+            choices=[s.value for s in RoutingSolution.Strategy],
+            default=RoutingSolution.Strategy.GLOBAL,
+        )
 
     def handle(self, *args, **options):
         sizes = [int(s) for s in options["sizes"].split(",")]
         seeds = [options["base_seed"] + i for i in range(options["seeds"])]
         distribution = options["distribution"]
         clusters = options["clusters"]
+        strategy = options["strategy"]
 
         self.stdout.write(
-            f"Sweep distribution={distribution} sizes={sizes} seeds={seeds}"
+            f"Sweep strategy={strategy} distribution={distribution} "
+            f"sizes={sizes} seeds={seeds}"
         )
         rows = []
         for n in sizes:
-            runs = [self._run(n, seed, distribution, clusters) for seed in seeds]
+            runs = [
+                self._run(n, seed, distribution, clusters, strategy) for seed in seeds
+            ]
             row = {key: mean(r[key] for r in runs) for key in runs[0]}
             rows.append((n, row))
             self.stdout.write(
@@ -61,11 +70,11 @@ class Command(BaseCommand):
                 f"{row['interleave_pr']:.2f} & {row['worst_iou']:.2f} \\\\"
             )
 
-        report_path = self._record(rows, options, seeds, distribution)
+        report_path = self._record(rows, options, seeds, distribution, strategy)
         self.stdout.write("")
         self.stdout.write(f"Experiment report: {report_path}")
 
-    def _record(self, rows, options, seeds, distribution):
+    def _record(self, rows, options, seeds, distribution, strategy):
         table = [
             "| n | k | balance | sum_rmax [m] | solap. total | solap./ruta | IoU peor par |",
             "| --- | --- | --- | --- | --- | --- | --- |",
@@ -78,9 +87,10 @@ class Command(BaseCommand):
             )
         return record_experiment(
             slug="baseline-sweep",
-            title=f"Baseline geográfico VRP global · {distribution}",
+            title=f"Baseline geográfico VRP {strategy} · {distribution}",
             command="manage.py baseline_sweep",
             params={
+                "strategy": strategy,
                 "sizes": options["sizes"],
                 "seeds": len(seeds),
                 "distribution": distribution,
@@ -139,7 +149,7 @@ class Command(BaseCommand):
             },
         )
 
-    def _run(self, n, seed, distribution, clusters):
+    def _run(self, n, seed, distribution, clusters, strategy):
         rng = random.Random(seed)
         points = generate_points(rng, n, distribution, clusters)
         with transaction.atomic():
@@ -151,7 +161,7 @@ class Command(BaseCommand):
         metrics = OptimizationPipeline(job).run()
         job.set_completed(metrics)
 
-        solution = RoutingSolution.objects.get(id=metrics["solution_id"])
+        solution = RoutingSolution.objects.get(job=job, strategy=strategy)
         analyzed = routes_from_solution(solution)
         return {
             "k": float(solution.total_routes),
