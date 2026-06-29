@@ -5,7 +5,12 @@ from .models import OptimizationJob, RoutingConfig, RoutingSolution
 
 @admin.register(RoutingConfig)
 class RoutingConfigAdmin(admin.ModelAdmin):
-    list_display = ["dataset", "min_route_time_sec", "max_route_time_sec", "created_at"]
+    list_display = [
+        "dataset",
+        "min_route_time_sec",
+        "max_route_time_sec",
+        "created_at",
+    ]
     list_filter = ["created_at"]
     search_fields = ["dataset__name"]
     readonly_fields = ["id", "created_at"]
@@ -53,12 +58,19 @@ class OptimizationJobAdmin(admin.ModelAdmin):
 
 @admin.register(RoutingSolution)
 class RoutingSolutionAdmin(admin.ModelAdmin):
-    list_display = ["job", "total_routes", "total_travel_time_sec", "generated_at"]
-    list_filter = ["generated_at"]
+    list_display = [
+        "job",
+        "strategy",
+        "total_routes",
+        "total_travel_time_sec",
+        "generated_at",
+    ]
+    list_filter = ["strategy", "generated_at"]
     search_fields = ["job__id"]
     readonly_fields = [
         "id",
         "job",
+        "strategy",
         "total_routes",
         "total_travel_time_sec",
         "balance_score",

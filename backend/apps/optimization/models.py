@@ -91,10 +91,16 @@ class OptimizationJob(models.Model):
 
 
 class RoutingSolution(models.Model):
+    class Strategy(models.TextChoices):
+        GLOBAL = "global"
+        SPATIAL_TERM = "spatial_term"
+        CLUSTER_FIRST = "cluster_first"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    job = models.OneToOneField(
-        OptimizationJob, on_delete=models.CASCADE, related_name="solution"
+    job = models.ForeignKey(
+        OptimizationJob, on_delete=models.CASCADE, related_name="solutions"
     )
+    strategy = models.CharField(max_length=20, choices=Strategy.choices)
     total_routes = models.IntegerField()
     total_travel_time_sec = models.FloatField(default=0)
     balance_score = models.FloatField(default=0)

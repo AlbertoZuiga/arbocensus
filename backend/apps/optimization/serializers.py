@@ -27,7 +27,7 @@ class RoutingConfigSerializer(serializers.ModelSerializer):
 
 
 class OptimizationJobSerializer(serializers.ModelSerializer):
-    solution_id = serializers.SerializerMethodField()
+    solution_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = OptimizationJob
@@ -38,15 +38,12 @@ class OptimizationJobSerializer(serializers.ModelSerializer):
             "metrics",
             "started_at",
             "completed_at",
-            "solution_id",
+            "solution_ids",
         ]
         read_only_fields = fields
 
-    def get_solution_id(self, obj):
-        try:
-            return obj.solution.id
-        except RoutingSolution.DoesNotExist:
-            return None
+    def get_solution_ids(self, obj):
+        return {s.strategy: str(s.id) for s in obj.solutions.all()}
 
 
 class RoutingSolutionSerializer(serializers.ModelSerializer):
@@ -56,6 +53,7 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
         model = RoutingSolution
         fields = [
             "id",
+            "strategy",
             "total_routes",
             "total_travel_time_sec",
             "balance_score",

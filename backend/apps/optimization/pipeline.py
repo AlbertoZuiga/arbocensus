@@ -2,7 +2,8 @@ from apps.datasets.models import Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingSolution
 from apps.optimization.n_estimator import estimate_max_vehicles
-from apps.optimization.solver import ArbocensusVRPSolver, build_open_matrix
+from apps.optimization.solver import build_open_matrix
+from apps.optimization.strategies import solve_by_strategy
 from apps.routes.models import Route, RouteStop
 
 SOLVER_TIME_LIMIT_SEC = 180
@@ -28,26 +29,35 @@ class OptimizationPipeline:
             total_service,
             self.config.min_route_time_sec,
         )
+        points = [(tree.location.y, tree.location.x) for tree in trees]
 
-        solver = ArbocensusVRPSolver(
-            matrix,
-            min_route_time_sec=self.config.min_route_time_sec,
-            max_route_time_sec=self.config.max_route_time_sec,
-            service_time_sec=self.config.service_time_sec,
-            max_vehicles=max_vehicles,
-            time_limit_sec=SOLVER_TIME_LIMIT_SEC,
-        )
-        routes = solver.solve()
-        if routes is None:
-            raise ValueError(
-                f"No feasible solution: {len(trees)} trees × "
-                f"{self.config.service_time_sec}s service exceeds "
-                f"max_route_time {self.config.max_route_time_sec}s per route"
+        results = {}
+        for strategy in RoutingSolution.Strategy:
+            routes = solve_by_strategy(
+                strategy.value,
+                matrix,
+                points=points,
+                min_route_time_sec=self.config.min_route_time_sec,
+                max_route_time_sec=self.config.max_route_time_sec,
+                service_time_sec=self.config.service_time_sec,
+                max_vehicles=max_vehicles,
+                time_limit_sec=SOLVER_TIME_LIMIT_SEC,
+            )
+            if routes is None:
+                raise ValueError(
+                    f"No feasible solution for strategy '{strategy.value}': "
+                    f"{len(trees)} trees × {self.config.service_time_sec}s service "
+                    f"exceeds max_route_time {self.config.max_route_time_sec}s per route"
+                )
+            results[strategy.value] = self._persist_solution(
+                trees, matrix, routes, max_vehicles, strategy.value
             )
 
-        return self._persist_solution(trees, matrix, routes, max_vehicles)
+        return {"solutions": results}
 
-    def _persist_solution(self, trees, matrix, routes, max_vehicles_estimated):
+    def _persist_solution(
+        self, trees, matrix, routes, max_vehicles_estimated, strategy
+    ):
         route_times = [self._travel_time(matrix, route) for route in routes]
         estimated_times = [
             travel + len(route) * self.config.service_time_sec
@@ -56,6 +66,7 @@ class OptimizationPipeline:
 
         solution = RoutingSolution.objects.create(
             job=self.job,
+            strategy=strategy,
             total_routes=len(routes),
             total_travel_time_sec=sum(route_times),
             balance_score=self._balance_score(estimated_times),
