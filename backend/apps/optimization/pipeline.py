@@ -5,6 +5,7 @@ from apps.optimization.n_estimator import estimate_max_vehicles
 from apps.optimization.solver import build_open_matrix
 from apps.optimization.strategies import solve_by_strategy
 from apps.routes.models import Route, RouteStop
+from django.db import transaction
 
 SOLVER_TIME_LIMIT_SEC = 180
 
@@ -14,7 +15,7 @@ class OptimizationPipeline:
         self.job = job
         self.config = job.config
 
-    def run(self):
+    def run(self, strategy=None):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
             key=lambda tree: tree.id,
@@ -31,10 +32,16 @@ class OptimizationPipeline:
         )
         points = [(tree.location.y, tree.location.x) for tree in trees]
 
-        results = {}
-        for strategy in RoutingSolution.Strategy:
+        strategies_to_run = (
+            [RoutingSolution.Strategy(strategy)]
+            if strategy
+            else list(RoutingSolution.Strategy)
+        )
+
+        solved = {}
+        for s in strategies_to_run:
             routes = solve_by_strategy(
-                strategy.value,
+                s.value,
                 matrix,
                 points=points,
                 min_route_time_sec=self.config.min_route_time_sec,
@@ -45,13 +52,18 @@ class OptimizationPipeline:
             )
             if routes is None:
                 raise ValueError(
-                    f"No feasible solution for strategy '{strategy.value}': "
+                    f"No feasible solution for strategy '{s.value}': "
                     f"{len(trees)} trees × {self.config.service_time_sec}s service "
                     f"exceeds max_route_time {self.config.max_route_time_sec}s per route"
                 )
-            results[strategy.value] = self._persist_solution(
-                trees, matrix, routes, max_vehicles, strategy.value
-            )
+            solved[s.value] = routes
+
+        results = {}
+        with transaction.atomic():
+            for s_value, routes in solved.items():
+                results[s_value] = self._persist_solution(
+                    trees, matrix, routes, max_vehicles, s_value
+                )
 
         return {"solutions": results}
 

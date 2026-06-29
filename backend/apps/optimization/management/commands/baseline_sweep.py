@@ -32,7 +32,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--strategy",
             choices=[s.value for s in RoutingSolution.Strategy],
-            default=RoutingSolution.Strategy.GLOBAL,
+            default=RoutingSolution.Strategy.GLOBAL.value,
         )
 
     def handle(self, *args, **options):
@@ -158,7 +158,7 @@ class Command(BaseCommand):
             job = OptimizationJob.objects.create(config=config)
 
         job.set_status("running")
-        metrics = OptimizationPipeline(job).run()
+        metrics = OptimizationPipeline(job).run(strategy=strategy)
         job.set_completed(metrics)
 
         solution = RoutingSolution.objects.get(job=job, strategy=strategy)
