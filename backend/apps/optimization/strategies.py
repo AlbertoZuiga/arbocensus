@@ -8,6 +8,7 @@ from apps.optimization.solver import (
     SOFT_UPPER_PENALTY,
     ArbocensusVRPSolver,
     build_open_matrix,
+    extract_or_tools_routes,
 )
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
@@ -27,7 +28,7 @@ def solve_by_strategy(
     max_vehicles,
     time_limit_sec,
 ):
-    if strategy == RoutingSolution.Strategy.SPATIAL_TERM:
+    if strategy == RoutingSolution.Strategy.SPATIAL_TERM.value:
         return solve_spatial_term(
             matrix,
             points=points,
@@ -37,7 +38,7 @@ def solve_by_strategy(
             max_vehicles=max_vehicles,
             time_limit_sec=time_limit_sec,
         )
-    if strategy == RoutingSolution.Strategy.CLUSTER_FIRST:
+    if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
         return solve_cluster_first(
             matrix,
             points=points,
@@ -65,21 +66,6 @@ def _open_geo_matrix(points):
             if i != j:
                 geo[i + 1][j + 1] = haversine(a, b)
     return geo
-
-
-def _extract_routes(manager, routing, solution, max_vehicles):
-    routes = []
-    for vehicle_id in range(max_vehicles):
-        index = routing.Start(vehicle_id)
-        route = []
-        while not routing.IsEnd(index):
-            node = manager.IndexToNode(index) - 1
-            if node >= 0:
-                route.append(node)
-            index = solution.Value(routing.NextVar(index))
-        if route:
-            routes.append(route)
-    return routes
 
 
 def solve_spatial_term(
@@ -147,7 +133,7 @@ def solve_spatial_term(
     solution = routing.SolveWithParameters(search_params)
     if solution is None:
         return None
-    return _extract_routes(manager, routing, solution, max_vehicles)
+    return extract_or_tools_routes(manager, routing, solution, max_vehicles)
 
 
 def project_equirectangular(points):
@@ -237,18 +223,15 @@ def solve_cluster_first(
             time_limit_sec=time_limit_sec,
         ).solve()
         if sub_routes is None:
-            raise ValueError(
-                f"cluster_first: cluster {cluster_id} infeasible "
-                f"(size={len(members)}, max_route_time={max_route_time_sec}s, "
-                f"service_time={service_time_sec}s, max_vehicles={max_vehicles})"
-            )
+            return None
         for sub_route in sub_routes:
             global_route = [members[node] for node in sub_route]
             routes.append(global_route)
             covered.extend(global_route)
 
-    assert sorted(covered) == list(range(n)), (
-        f"cluster_first node coverage mismatch: "
-        f"{len(covered)} covered ({len(set(covered))} unique) vs {n} trees"
-    )
+    if sorted(covered) != list(range(n)):
+        raise ValueError(
+            f"cluster_first node coverage mismatch: "
+            f"{len(covered)} covered ({len(set(covered))} unique) vs {n} trees"
+        )
     return routes

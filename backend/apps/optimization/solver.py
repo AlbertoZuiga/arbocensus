@@ -85,15 +85,19 @@ class ArbocensusVRPSolver:
         return self._extract_solution(manager, routing, solution)
 
     def _extract_solution(self, manager, routing, solution):
-        routes = []
-        for vehicle_id in range(self.max_vehicles):
-            index = routing.Start(vehicle_id)
-            route = []
-            while not routing.IsEnd(index):
-                node = manager.IndexToNode(index) - 1
-                if node >= 0:
-                    route.append(node)
-                index = solution.Value(routing.NextVar(index))
-            if route:
-                routes.append(route)
-        return routes
+        return extract_or_tools_routes(manager, routing, solution, self.max_vehicles)
+
+
+def extract_or_tools_routes(manager, routing, solution, max_vehicles):
+    routes = []
+    for vehicle_id in range(max_vehicles):
+        index = routing.Start(vehicle_id)
+        route = []
+        while not routing.IsEnd(index):
+            node = manager.IndexToNode(index) - 1
+            if node >= 0:
+                route.append(node)
+            index = solution.Value(routing.NextVar(index))
+        if route:
+            routes.append(route)
+    return routes
