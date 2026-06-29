@@ -105,6 +105,7 @@ def test_cluster_first_covers_all_nodes_once():
         service_time_sec=300,
         time_limit_sec=5,
     )
+    assert routes is not None
     assert len(routes) >= 1
     visited = [node for route in routes for node in route]
     assert sorted(visited) == list(range(n))
@@ -124,6 +125,7 @@ def test_cluster_first_respects_max_route_time():
         service_time_sec=300,
         time_limit_sec=10,
     )
+    assert routes is not None
     open_matrix = build_open_matrix(matrix)
     for route in routes:
         assert route_time(open_matrix, route, 300) <= max_route_time
@@ -139,6 +141,7 @@ def test_cluster_first_degenerates_to_single_cluster():
         service_time_sec=300,
         time_limit_sec=5,
     )
+    assert routes is not None
     visited = sorted(node for route in routes for node in route)
     assert visited == [0, 1]
 
