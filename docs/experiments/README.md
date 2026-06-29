@@ -8,7 +8,10 @@ la redacción de la tesis.
 ## Quién escribe aquí
 
 - `manage.py seed_demo` (cuando corre la optimización) → `*-seed-demo.md`.
-- `manage.py baseline_sweep` → `*-baseline-sweep.md`.
+- `manage.py baseline_sweep` → `*-baseline-sweep.md`. Acepta
+  `--strategy {global,spatial_term,cluster_first}` (por defecto `global`) para
+  barrer cada estrategia de partición espacial; el informe registra la estrategia
+  usada en su cabecera y parámetros.
 
 La carpeta se resuelve desde `settings.EXPERIMENTS_DIR`
 (`docs/experiments/` por defecto; configurable con la variable de entorno

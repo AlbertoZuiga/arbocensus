@@ -168,6 +168,42 @@ Problem}) con las siguientes características:
         (por defecto 180 segundos).
 \end{itemize}
 
+% ---- 2.3.5 ------------------------------------------------------
+\subsection{Estrategias de partición espacial}
+
+La formulación global anterior minimiza el tiempo total de recorrido y equilibra
+la duración de las rutas, pero no incorpora ningún criterio geográfico explícito
+en la partición de los nodos. Como consecuencia, las rutas se agrupan por
+proximidad temporal y no espacial, lo que produce \textit{solapamiento}
+(\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
+(véase la Sección de resultados). Para mitigar este efecto, el sistema admite tres
+estrategias de ruteo seleccionables mediante el campo \texttt{strategy} de
+\texttt{RoutingConfig}; la estrategia \texttt{global} es el valor por defecto, de
+modo que el comportamiento original se conserva sin cambios.
+
+\begin{itemize}
+  \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
+        Sección~2.3.4, sin término espacial. Constituye la línea base.
+  \item \textbf{\texttt{spatial\_term}}: añade una segunda dimensión de
+        \textit{distancia geográfica} (Haversine entre paradas) y penaliza la
+        extensión geográfica de cada ruta mediante
+        \texttt{SetSpanCostCoefficientForAllVehicles} con coeficiente
+        $\lambda_{\text{span}} = 3$. El \textit{span} de una ruta es la diferencia
+        entre el máximo y el mínimo acumulado de la dimensión a lo largo del
+        vehículo; penalizarlo empuja al solver hacia rutas más compactas a costa
+        de mayor tiempo total. La cota superior temporal se ajusta al punto medio
+        $(T_{\min} + T_{\max})/2$ para preservar el balance.
+  \item \textbf{\texttt{cluster\_first}}: enfoque \textit{cluster-first,
+        route-second}. Primero se proyectan las coordenadas a un plano local
+        mediante una aproximación equirectangular y se particionan en $k$ grupos
+        con \textit{k-means++}; el número de grupos $k$ se estima a partir de la
+        carga de trabajo por árbol (servicio más desplazamiento promedio) sobre el
+        tiempo objetivo. Luego se resuelve un VRP independiente por grupo con el
+        mismo \texttt{ArbocensusVRPSolver}, lo que acota la dispersión geográfica
+        de cada ruta por construcción. Una aserción de cobertura verifica que la
+        unión de los grupos cubra exactamente el conjunto de árboles.
+\end{itemize}
+
 % ---- 2.4 -------------------------------------------------------
 \section{API REST}
 
