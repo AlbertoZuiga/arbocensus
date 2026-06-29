@@ -9,6 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import JobStatusBadge from "./JobStatusBadge";
 import RoutingConfigForm from "./RoutingConfigForm";
 
+const STRATEGY_LABELS = {
+  global: "Global",
+  spatial_term: "Término espacial",
+  cluster_first: "Clustering primero",
+};
+
 const formatDuration = (seconds) => {
   const total = Math.round(seconds);
   const hours = Math.floor(total / 3600);
@@ -40,24 +46,18 @@ function SolutionSummary({ solutionId }) {
   if (!solution) return null;
 
   return (
-    <div className="space-y-2">
-      <dl className="grid grid-cols-2 gap-2 text-sm">
-        <dt className="text-muted-foreground">Rutas</dt>
-        <dd className="text-right font-medium">{solution.total_routes}</dd>
-        <dt className="text-muted-foreground">Tiempo total de viaje</dt>
-        <dd className="text-right font-medium">
-          {formatDuration(solution.total_travel_time_sec)}
-        </dd>
-        <dt className="text-muted-foreground">Balance de carga</dt>
-        <dd className="text-right font-medium">
-          {solution.balance_score.toFixed(2)}
-        </dd>
-      </dl>
-      <p className="text-xs text-muted-foreground">
-        Balance de carga: 1.00 indica rutas con duraciones equilibradas; valores
-        más bajos, rutas más dispares.
-      </p>
-    </div>
+    <dl className="grid grid-cols-2 gap-2 text-sm">
+      <dt className="text-muted-foreground">Rutas</dt>
+      <dd className="text-right font-medium">{solution.total_routes}</dd>
+      <dt className="text-muted-foreground">Tiempo total de viaje</dt>
+      <dd className="text-right font-medium">
+        {formatDuration(solution.total_travel_time_sec)}
+      </dd>
+      <dt className="text-muted-foreground">Balance de carga</dt>
+      <dd className="text-right font-medium">
+        {solution.balance_score.toFixed(2)}
+      </dd>
+    </dl>
   );
 }
 
@@ -97,9 +97,21 @@ export default function OptimizationPanel({ datasetId }) {
                 <AlertDescription>{job.error_message}</AlertDescription>
               </Alert>
             )}
-            {job.solution_id && (
-              <SolutionSummary solutionId={job.solution_id} />
-            )}
+            {job.solution_ids &&
+              Object.keys(job.solution_ids).length > 0 && (
+                <div className="space-y-4 divide-y">
+                  {Object.entries(job.solution_ids).map(
+                    ([strategy, solutionId]) => (
+                      <div key={strategy} className="pt-4 first:pt-0 space-y-2">
+                        <p className="text-sm font-medium">
+                          {STRATEGY_LABELS[strategy] ?? strategy}
+                        </p>
+                        <SolutionSummary solutionId={solutionId} />
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
           </CardContent>
         </Card>
       )}

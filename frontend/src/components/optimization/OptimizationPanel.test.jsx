@@ -47,7 +47,7 @@ describe("OptimizationPanel", () => {
 
   it("restores the dataset's latest job on mount without creating one", async () => {
     fetchLatestJob.mockResolvedValue({ id: "j1", status: "completed" });
-    mockJob = { id: "j1", status: "completed", solution_id: null };
+    mockJob = { id: "j1", status: "completed", solution_ids: {} };
     renderPanel();
 
     expect(await screen.findByText("Completado")).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe("OptimizationPanel", () => {
 
   it("shows the job status badge after a job is created", async () => {
     createJob.mockResolvedValue({ id: "j1", status: "queued" });
-    mockJob = { id: "j1", status: "running", solution_id: null };
+    mockJob = { id: "j1", status: "running", solution_ids: {} };
     const user = userEvent.setup();
     renderPanel();
 
@@ -65,7 +65,7 @@ describe("OptimizationPanel", () => {
     expect(await screen.findByText("Ejecutando")).toBeInTheDocument();
   });
 
-  it("renders the solution summary when the job completes", async () => {
+  it("renders solution summaries for all strategies when the job completes", async () => {
     createJob.mockResolvedValue({ id: "j1", status: "queued" });
     fetchSolution.mockResolvedValue({
       id: "s1",
@@ -73,16 +73,26 @@ describe("OptimizationPanel", () => {
       total_travel_time_sec: 5400,
       balance_score: 0.87,
     });
-    mockJob = { id: "j1", status: "completed", solution_id: "s1" };
+    mockJob = {
+      id: "j1",
+      status: "completed",
+      solution_ids: {
+        global: "s1",
+        spatial_term: "s2",
+        cluster_first: "s3",
+      },
+    };
     const user = userEvent.setup();
     renderPanel();
 
     await user.click(screen.getByRole("button", { name: "Generar rutas" }));
 
-    expect(await screen.findByText("4")).toBeInTheDocument();
-    expect(screen.getByText("1 h 30 min")).toBeInTheDocument();
-    expect(screen.getByText("0.87")).toBeInTheDocument();
+    expect(await screen.findByText("Global")).toBeInTheDocument();
+    expect(screen.getByText("Término espacial")).toBeInTheDocument();
+    expect(screen.getByText("Clustering primero")).toBeInTheDocument();
     await waitFor(() => expect(fetchSolution).toHaveBeenCalledWith("s1"));
+    await waitFor(() => expect(fetchSolution).toHaveBeenCalledWith("s2"));
+    await waitFor(() => expect(fetchSolution).toHaveBeenCalledWith("s3"));
   });
 
   it("shows the error message when the job fails", async () => {
@@ -90,7 +100,7 @@ describe("OptimizationPanel", () => {
     mockJob = {
       id: "j1",
       status: "failed",
-      solution_id: null,
+      solution_ids: {},
       error_message: "OSRM table request timed out",
     };
     const user = userEvent.setup();
