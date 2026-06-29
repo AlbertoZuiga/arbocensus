@@ -17,8 +17,8 @@ def run_optimization(self, job_id):
         metrics = OptimizationPipeline(job).run()
         job.set_completed(metrics)
         return metrics
-    except IntegrityError as exc:
-        job.set_error(str(exc))
+    except IntegrityError:
+        job.refresh_from_db()
         return job.metrics
     except Exception as exc:
         job.set_error(str(exc))
