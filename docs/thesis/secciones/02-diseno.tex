@@ -176,10 +176,10 @@ la duración de las rutas, pero no incorpora ningún criterio geográfico explí
 en la partición de los nodos. Como consecuencia, las rutas se agrupan por
 proximidad temporal y no espacial, lo que produce \textit{solapamiento}
 (\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
-(véase la Sección de resultados). Para mitigar este efecto, el sistema admite tres
-estrategias de ruteo seleccionables mediante el campo \texttt{strategy} de
-\texttt{RoutingConfig}; la estrategia \texttt{global} es el valor por defecto, de
-modo que el comportamiento original se conserva sin cambios.
+(véase la Sección de resultados). Para comparar enfoques, el sistema ejecuta las tres estrategias automáticamente
+en cada trabajo de optimización y persiste una \texttt{RoutingSolution}
+independiente por estrategia. La estrategia \texttt{global} reproduce el
+comportamiento de la formulación anterior sin cambios.
 
 \begin{itemize}
   \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
