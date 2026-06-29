@@ -3,16 +3,13 @@ from celery import shared_task
 
 @shared_task(bind=True, max_retries=1)
 def run_optimization(self, job_id):
-    from apps.optimization.models import OptimizationJob, RoutingSolution
+    from apps.optimization.models import OptimizationJob
     from apps.optimization.pipeline import OptimizationPipeline
     from django.db import IntegrityError
 
     job = OptimizationJob.objects.get(id=job_id)
 
     if job.status == OptimizationJob.Status.COMPLETED:
-        return job.metrics
-    existing = RoutingSolution.objects.filter(job=job).first()
-    if existing is not None:
         return job.metrics
 
     try:

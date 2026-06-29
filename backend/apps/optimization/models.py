@@ -108,6 +108,7 @@ class RoutingSolution(models.Model):
 
     class Meta:
         ordering = ["-generated_at"]
+        unique_together = (("job", "strategy"),)
 
     def __str__(self):
         return f"RoutingSolution {self.id} ({self.total_routes} routes)"
