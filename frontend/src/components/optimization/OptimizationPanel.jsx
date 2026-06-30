@@ -57,6 +57,16 @@ function SolutionSummary({ solutionId }) {
       <dd className="text-right font-medium">
         {solution.balance_score.toFixed(2)}
       </dd>
+      <dt className="text-muted-foreground">Radio máx. (suma)</dt>
+      <dd className="text-right font-medium">{solution.sum_max_radius_m} m</dd>
+      <dt className="text-muted-foreground">Solapamiento por ruta</dt>
+      <dd className="text-right font-medium">
+        {solution.interleave_per_route.toFixed(2)}
+      </dd>
+      <dt className="text-muted-foreground">IoU peor par</dt>
+      <dd className="text-right font-medium">
+        {solution.worst_pair_iou.toFixed(2)}
+      </dd>
     </dl>
   );
 }
