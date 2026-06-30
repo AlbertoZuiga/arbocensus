@@ -78,6 +78,16 @@ def worst_pair_iou(routes):
     return max(ious) if ious else 0.0
 
 
+def routes_from_points(node_routes, trees):
+    summaries = []
+    for route in node_routes:
+        coords = [(trees[node].location.y, trees[node].location.x) for node in route]
+        if not coords:
+            continue
+        summaries.append(summarize_route(list(range(1, len(coords) + 1)), coords))
+    return summaries
+
+
 def routes_from_solution(solution):
     routes = []
     for route in solution.routes.order_by("route_number"):
