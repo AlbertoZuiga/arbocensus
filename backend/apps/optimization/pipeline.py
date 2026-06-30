@@ -2,6 +2,7 @@ from apps.datasets.models import Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingSolution
 from apps.optimization.n_estimator import estimate_max_vehicles
+from apps.optimization.route_metrics import aggregate_metrics, routes_from_solution
 from apps.optimization.solver import build_open_matrix
 from apps.optimization.strategies import solve_by_strategy
 from apps.routes.models import Route, RouteStop
@@ -101,12 +102,27 @@ class OptimizationPipeline:
                 )
         RouteStop.objects.bulk_create(stops, batch_size=500)
 
+        spatial = aggregate_metrics(routes_from_solution(solution))
+        solution.sum_max_radius_m = spatial["sum_max_radius_m"]
+        solution.interleave_total = spatial["interleave_total"]
+        solution.interleave_per_route = spatial["interleave_per_route"]
+        solution.worst_pair_iou = spatial["worst_pair_iou"]
+        solution.save(
+            update_fields=[
+                "sum_max_radius_m",
+                "interleave_total",
+                "interleave_per_route",
+                "worst_pair_iou",
+            ]
+        )
+
         return {
             "solution_id": str(solution.id),
             "total_routes": solution.total_routes,
             "total_travel_time_sec": solution.total_travel_time_sec,
             "balance_score": solution.balance_score,
             "max_vehicles_estimated": max_vehicles_estimated,
+            **spatial,
         }
 
     def _travel_time(self, matrix, route):
