@@ -72,6 +72,10 @@ describe("OptimizationPanel", () => {
       total_routes: 4,
       total_travel_time_sec: 5400,
       balance_score: 0.87,
+      sum_max_radius_m: 820,
+      interleave_total: 5,
+      interleave_per_route: 0.13,
+      worst_pair_iou: 0.02,
     });
     mockJob = {
       id: "j1",

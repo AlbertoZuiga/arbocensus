@@ -84,6 +84,27 @@ def test_pipeline_cluster_first_persists_all_trees(requests_mock):
     assert len(set(stops.values_list("tree_id", flat=True))) == tree_count
 
 
+def test_pipeline_persists_spatial_metrics(requests_mock):
+    from apps.optimization.route_metrics import aggregate_metrics, routes_from_solution
+
+    tree_count = 20
+    job = make_job(tree_count)
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+
+    metrics = OptimizationPipeline(job).run()
+
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
+    expected = aggregate_metrics(routes_from_solution(solution))
+    assert solution.sum_max_radius_m == expected["sum_max_radius_m"]
+    assert solution.interleave_total == expected["interleave_total"]
+    assert solution.interleave_per_route == expected["interleave_per_route"]
+    assert solution.worst_pair_iou == expected["worst_pair_iou"]
+
+    global_metrics = metrics["solutions"]["global"]
+    assert global_metrics["sum_max_radius_m"] == expected["sum_max_radius_m"]
+    assert global_metrics["worst_pair_iou"] == expected["worst_pair_iou"]
+
+
 def test_pipeline_raises_on_infeasible(requests_mock):
     job = make_job(
         5, min_route_time_sec=200, max_route_time_sec=200, service_time_sec=300

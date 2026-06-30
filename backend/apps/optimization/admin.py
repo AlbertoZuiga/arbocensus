@@ -74,6 +74,10 @@ class RoutingSolutionAdmin(admin.ModelAdmin):
         "total_routes",
         "total_travel_time_sec",
         "balance_score",
+        "sum_max_radius_m",
+        "interleave_total",
+        "interleave_per_route",
+        "worst_pair_iou",
         "generated_at",
     ]
 

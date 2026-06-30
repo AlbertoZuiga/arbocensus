@@ -104,6 +104,10 @@ class RoutingSolution(models.Model):
     total_routes = models.IntegerField()
     total_travel_time_sec = models.FloatField(default=0)
     balance_score = models.FloatField(default=0)
+    sum_max_radius_m = models.IntegerField(default=0)
+    interleave_total = models.IntegerField(default=0)
+    interleave_per_route = models.FloatField(default=0)
+    worst_pair_iou = models.FloatField(default=0)
     generated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

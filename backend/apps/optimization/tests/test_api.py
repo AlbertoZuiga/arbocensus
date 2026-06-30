@@ -146,6 +146,10 @@ def test_get_solution_shape(make_dataset_with_trees):
         "total_routes",
         "total_travel_time_sec",
         "balance_score",
+        "sum_max_radius_m",
+        "interleave_total",
+        "interleave_per_route",
+        "worst_pair_iou",
         "generated_at",
         "job",
     }
