@@ -4,10 +4,23 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DatasetDetail from "./DatasetDetail.jsx";
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
+import { fetchJobs } from "@/api/optimization";
 
 vi.mock("@/api/datasets.js", () => ({
   fetchDataset: vi.fn(),
   fetchDatasetTrees: vi.fn(),
+}));
+
+vi.mock("@/api/optimization", () => ({
+  createJob: vi.fn(),
+  fetchSolution: vi.fn(),
+  fetchJobs: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/hooks/useOptimizationJob", () => ({
+  useOptimizationJob: (jobId) => ({
+    data: jobId ? { id: jobId, status: "completed", solution_ids: {} } : undefined,
+  }),
 }));
 
 vi.mock("@/components/map/BaseMap.jsx", () => ({
@@ -39,6 +52,8 @@ function renderDetail() {
 beforeEach(() => {
   fetchDataset.mockReset();
   fetchDatasetTrees.mockReset();
+  fetchJobs.mockReset();
+  fetchJobs.mockResolvedValue([]);
 });
 
 describe("DatasetDetail", () => {
@@ -68,6 +83,19 @@ describe("DatasetDetail", () => {
     expect(await screen.findByText("Providencia")).toBeInTheDocument();
     expect(
       screen.getByText("Configuración de rutas"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the optimization job history for the dataset", async () => {
+    fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    fetchJobs.mockResolvedValue([
+      { id: "j1", status: "completed", solution_ids: { global: "s1" } },
+    ]);
+    renderDetail();
+
+    expect(
+      await screen.findByText("Historial de trabajos"),
     ).toBeInTheDocument();
   });
 

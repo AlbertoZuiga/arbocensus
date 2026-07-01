@@ -6,6 +6,7 @@ import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
 import { getErrorMessage } from "@/lib/errors";
 import BaseMap from "@/components/map/BaseMap.jsx";
 import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
+import JobHistoryCard from "@/components/optimization/JobHistoryCard.jsx";
 import {
   Card,
   CardContent,
@@ -97,6 +98,8 @@ export default function DatasetDetail() {
 
         <OptimizationPanel key={id} datasetId={id} />
       </div>
+
+      <JobHistoryCard datasetId={id} />
     </div>
   );
 }

@@ -1,20 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/api/optimization", () => ({
   createJob: vi.fn(),
-  fetchSolution: vi.fn(),
-  fetchLatestJob: vi.fn().mockResolvedValue(null),
+  fetchJobs: vi.fn().mockResolvedValue([]),
 }));
 
-let mockJob;
-vi.mock("@/hooks/useOptimizationJob", () => ({
-  useOptimizationJob: (jobId) => ({ data: jobId ? mockJob : undefined }),
-}));
-
-import { createJob, fetchSolution, fetchLatestJob } from "@/api/optimization";
+import { createJob, fetchJobs } from "@/api/optimization";
 import OptimizationPanel from "./OptimizationPanel.jsx";
 
 function renderPanel() {
@@ -26,7 +21,9 @@ function renderPanel() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <OptimizationPanel datasetId="d1" />
+      <MemoryRouter>
+        <OptimizationPanel datasetId="d1" />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -34,86 +31,78 @@ function renderPanel() {
 describe("OptimizationPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockJob = undefined;
+    fetchJobs.mockResolvedValue([]);
   });
 
-  it("renders the config form and no job card initially", () => {
+  it("renders the config form and no job cards initially", () => {
     renderPanel();
     expect(screen.getByText("Configuración de rutas")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Trabajo de optimización"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Última optimización")).not.toBeInTheDocument();
   });
 
   it("restores the dataset's latest job on mount without creating one", async () => {
-    fetchLatestJob.mockResolvedValue({ id: "j1", status: "completed" });
-    mockJob = { id: "j1", status: "completed", solution_ids: {} };
+    fetchJobs.mockResolvedValue([
+      {
+        id: "j1",
+        status: "completed",
+        solution_ids: { global: "s1" },
+        started_at: "2026-06-30T10:00:00Z",
+      },
+    ]);
     renderPanel();
 
-    expect(await screen.findByText("Completado")).toBeInTheDocument();
+    expect(await screen.findByText("Última optimización")).toBeInTheDocument();
     expect(createJob).not.toHaveBeenCalled();
   });
 
-  it("shows the job status badge after a job is created", async () => {
-    createJob.mockResolvedValue({ id: "j1", status: "queued" });
-    mockJob = { id: "j1", status: "running", solution_ids: {} };
-    const user = userEvent.setup();
+  it("shows the status badge of the latest job", async () => {
+    fetchJobs.mockResolvedValue([
+      { id: "j1", status: "running", solution_ids: {}, started_at: null },
+    ]);
     renderPanel();
 
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
-
-    expect(await screen.findByText("Ejecutando")).toBeInTheDocument();
+    expect((await screen.findAllByText("Ejecutando")).length).toBeGreaterThan(0);
   });
 
-  it("renders solution summaries for all strategies when the job completes", async () => {
-    createJob.mockResolvedValue({ id: "j1", status: "queued" });
-    fetchSolution.mockResolvedValue({
-      id: "s1",
-      total_routes: 4,
-      total_travel_time_sec: 5400,
-      balance_score: 0.87,
-      sum_max_radius_m: 820,
-      interleave_total: 5,
-      interleave_per_route: 0.13,
-      worst_pair_iou: 0.02,
-    });
-    mockJob = {
-      id: "j1",
-      status: "completed",
-      solution_ids: {
-        global: "s1",
-        spatial_term: "s2",
-        cluster_first: "s3",
+  it("links the latest job to the job detail page", async () => {
+    fetchJobs.mockResolvedValue([
+      {
+        id: "j2",
+        status: "completed",
+        solution_ids: { global: "s1" },
+        started_at: "2026-06-30T10:00:00Z",
       },
-    };
-    const user = userEvent.setup();
+    ]);
     renderPanel();
 
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
-
-    expect(await screen.findByText("Global")).toBeInTheDocument();
-    expect(screen.getByText("Término espacial")).toBeInTheDocument();
-    expect(screen.getByText("Clustering primero")).toBeInTheDocument();
-    await waitFor(() => expect(fetchSolution).toHaveBeenCalledWith("s1"));
-    await waitFor(() => expect(fetchSolution).toHaveBeenCalledWith("s2"));
-    await waitFor(() => expect(fetchSolution).toHaveBeenCalledWith("s3"));
+    const detailLink = await screen.findByRole("link", { name: "Ver detalle" });
+    expect(detailLink).toHaveAttribute("href", "/admin/datasets/d1/jobs/j2");
   });
 
-  it("shows the error message when the job fails", async () => {
-    createJob.mockResolvedValue({ id: "j1", status: "queued" });
-    mockJob = {
-      id: "j1",
-      status: "failed",
-      solution_ids: {},
-      error_message: "OSRM table request timed out",
-    };
-    const user = userEvent.setup();
+  it("shows the error message when the latest job fails", async () => {
+    fetchJobs.mockResolvedValue([
+      {
+        id: "j1",
+        status: "failed",
+        solution_ids: {},
+        error_message: "OSRM table request timed out",
+        started_at: "2026-06-30T10:00:00Z",
+      },
+    ]);
     renderPanel();
-
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
 
     expect(
       await screen.findByText("OSRM table request timed out"),
     ).toBeInTheDocument();
+  });
+
+  it("submits the config form to create a job", async () => {
+    createJob.mockResolvedValue({ id: "j1", status: "queued" });
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
+
+    expect(createJob).toHaveBeenCalledTimes(1);
   });
 });
