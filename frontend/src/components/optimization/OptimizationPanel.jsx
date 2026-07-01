@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { fetchLatestJob, fetchSolution } from "@/api/optimization";
+import { fetchJobs, fetchSolution } from "@/api/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import { useOptimizationJob } from "@/hooks/useOptimizationJob";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import JobHistoryList from "./JobHistoryList";
 import JobStatusBadge from "./JobStatusBadge";
 import RoutingConfigForm from "./RoutingConfigForm";
+
+const ACTIVE_STATUSES = ["queued", "running"];
 
 const STRATEGY_LABELS = {
   global: "Global",
@@ -73,27 +76,46 @@ function SolutionSummary({ solutionId }) {
 
 export default function OptimizationPanel({ datasetId }) {
   const queryClient = useQueryClient();
-  const [createdJobId, setCreatedJobId] = useState(null);
+  const [selectedJobId, setSelectedJobId] = useState(null);
 
-  const { data: latestJob } = useQuery({
-    queryKey: ["optimization-latest-job", datasetId],
-    queryFn: () => fetchLatestJob(datasetId),
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["optimization-jobs", datasetId],
+    queryFn: () => fetchJobs(datasetId),
     enabled: !!datasetId,
+    refetchInterval: (query) =>
+      (query.state.data ?? []).some((j) => ACTIVE_STATUSES.includes(j.status))
+        ? 3000
+        : false,
   });
 
-  const jobId = createdJobId ?? latestJob?.id ?? null;
+  const jobId = selectedJobId ?? jobs[0]?.id ?? null;
   const { data: job } = useOptimizationJob(jobId);
 
   const handleJobCreated = (created) => {
-    setCreatedJobId(created.id);
+    setSelectedJobId(created.id);
     queryClient.invalidateQueries({
-      queryKey: ["optimization-latest-job", datasetId],
+      queryKey: ["optimization-jobs", datasetId],
     });
   };
 
   return (
     <div className="flex flex-col gap-4">
       <RoutingConfigForm datasetId={datasetId} onJobCreated={handleJobCreated} />
+
+      {jobs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Historial de trabajos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <JobHistoryList
+              jobs={jobs}
+              selectedJobId={jobId}
+              onSelect={setSelectedJobId}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {job && (
         <Card>

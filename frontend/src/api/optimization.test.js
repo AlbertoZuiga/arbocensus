@@ -5,7 +5,13 @@ vi.mock("./client.js", () => ({
 }));
 
 import client from "./client.js";
-import { createJob, fetchJob, fetchSolution } from "./optimization.js";
+import {
+  createJob,
+  fetchJob,
+  fetchJobs,
+  fetchLatestJob,
+  fetchSolution,
+} from "./optimization.js";
 
 describe("optimization api", () => {
   beforeEach(() => {
@@ -41,6 +47,37 @@ describe("optimization api", () => {
     const result = await fetchJob("j1");
     expect(client.get).toHaveBeenCalledWith("/optimization/jobs/j1/");
     expect(result).toEqual({ status: "running" });
+  });
+
+  it("fetches all jobs for a dataset as an array", async () => {
+    client.get.mockResolvedValue({
+      data: { results: [{ id: "j2" }, { id: "j1" }] },
+    });
+    const result = await fetchJobs("d1");
+    expect(client.get).toHaveBeenCalledWith("/optimization/jobs/", {
+      params: { dataset: "d1" },
+    });
+    expect(result).toEqual([{ id: "j2" }, { id: "j1" }]);
+  });
+
+  it("returns an empty array when a dataset has no jobs", async () => {
+    client.get.mockResolvedValue({ data: {} });
+    const result = await fetchJobs("d1");
+    expect(result).toEqual([]);
+  });
+
+  it("returns the newest job from the list", async () => {
+    client.get.mockResolvedValue({
+      data: { results: [{ id: "newest" }, { id: "older" }] },
+    });
+    const result = await fetchLatestJob("d1");
+    expect(result).toEqual({ id: "newest" });
+  });
+
+  it("returns null when a dataset has no jobs", async () => {
+    client.get.mockResolvedValue({ data: { results: [] } });
+    const result = await fetchLatestJob("d1");
+    expect(result).toBeNull();
   });
 
   it("fetches a solution by id", async () => {
