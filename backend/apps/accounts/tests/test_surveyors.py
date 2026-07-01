@@ -1,4 +1,5 @@
 import pytest
+from apps.accounts.models import CustomUser
 from rest_framework.test import APIClient
 from tests.factories import CustomUserFactory
 
@@ -6,9 +7,9 @@ pytestmark = pytest.mark.django_db
 
 
 def test_admin_lists_only_surveyors():
-    admin = CustomUserFactory(role="admin")
-    surveyor = CustomUserFactory(role="surveyor", email="s@example.com")
-    CustomUserFactory(role="admin")
+    admin = CustomUserFactory(role=CustomUser.Role.ADMIN)
+    surveyor = CustomUserFactory(role=CustomUser.Role.SURVEYOR, email="s@example.com")
+    CustomUserFactory(role=CustomUser.Role.ADMIN)
 
     client = APIClient()
     client.force_authenticate(user=admin)
@@ -20,13 +21,13 @@ def test_admin_lists_only_surveyors():
     assert str(surveyor.id) in ids
     assert str(admin.id) not in ids
     for row in results:
-        assert row["role"] == "surveyor"
+        assert row["role"] == CustomUser.Role.SURVEYOR
 
 
 def test_surveyor_response_exposes_expected_fields():
-    admin = CustomUserFactory(role="admin")
+    admin = CustomUserFactory(role=CustomUser.Role.ADMIN)
     CustomUserFactory(
-        role="surveyor",
+        role=CustomUser.Role.SURVEYOR,
         first_name="Ada",
         last_name="Lovelace",
         email="ada@example.com",
@@ -52,7 +53,7 @@ def test_surveyor_response_exposes_expected_fields():
 
 
 def test_surveyor_forbidden_for_non_admin():
-    surveyor = CustomUserFactory(role="surveyor")
+    surveyor = CustomUserFactory(role=CustomUser.Role.SURVEYOR)
     client = APIClient()
     client.force_authenticate(user=surveyor)
     response = client.get("/api/auth/surveyors/")

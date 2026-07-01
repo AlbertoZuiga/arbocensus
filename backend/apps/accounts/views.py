@@ -19,4 +19,6 @@ class MeView(RetrieveAPIView):
 class SurveyorListView(ListAPIView):
     serializer_class = SurveyorSerializer
     permission_classes = [IsAdminRole]
-    queryset = CustomUser.objects.filter(role=CustomUser.Role.SURVEYOR)
+    queryset = CustomUser.objects.filter(role=CustomUser.Role.SURVEYOR).order_by(
+        "-date_joined"
+    )
