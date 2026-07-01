@@ -3,8 +3,10 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { CircleMarker } from "react-leaflet";
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
+import { fetchLatestJob } from "@/api/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import BaseMap from "@/components/map/BaseMap.jsx";
+import RouteResultsMap from "@/components/map/RouteResultsMap.jsx";
 import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
 import JobHistoryCard from "@/components/optimization/JobHistoryCard.jsx";
 import {
@@ -47,6 +49,17 @@ export default function DatasetDetail() {
 
   const markers = useMemo(() => toLeafletPositions(trees), [trees]);
   const bounds = useMemo(() => markers.map((m) => m.position), [markers]);
+
+  const { data: latestJob } = useQuery({
+    queryKey: ["optimization-latest-job", id],
+    queryFn: () => fetchLatestJob(id),
+  });
+
+  const solutionId = useMemo(() => {
+    if (latestJob?.status !== "completed") return null;
+    const ids = latestJob.solution_ids ?? {};
+    return ids.global ?? Object.values(ids)[0] ?? null;
+  }, [latestJob]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -100,6 +113,17 @@ export default function DatasetDetail() {
       </div>
 
       <JobHistoryCard datasetId={id} />
+
+      {solutionId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Rutas optimizadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RouteResultsMap solutionId={solutionId} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
