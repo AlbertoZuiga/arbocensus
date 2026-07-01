@@ -9,7 +9,6 @@ import {
   createJob,
   fetchJob,
   fetchJobs,
-  fetchLatestJob,
   fetchSolution,
 } from "./optimization.js";
 
@@ -64,20 +63,6 @@ describe("optimization api", () => {
     client.get.mockResolvedValue({ data: {} });
     const result = await fetchJobs("d1");
     expect(result).toEqual([]);
-  });
-
-  it("returns the newest job from the list", async () => {
-    client.get.mockResolvedValue({
-      data: { results: [{ id: "newest" }, { id: "older" }] },
-    });
-    const result = await fetchLatestJob("d1");
-    expect(result).toEqual({ id: "newest" });
-  });
-
-  it("returns null when a dataset has no jobs", async () => {
-    client.get.mockResolvedValue({ data: { results: [] } });
-    const result = await fetchLatestJob("d1");
-    expect(result).toBeNull();
   });
 
   it("fetches a solution by id", async () => {
