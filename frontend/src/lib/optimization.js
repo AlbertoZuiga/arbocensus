@@ -7,10 +7,15 @@ export const STRATEGY_LABELS = {
 export const strategyLabel = (strategy) =>
   STRATEGY_LABELS[strategy] ?? strategy;
 
+const STATUS_SUMMARIES = {
+  queued: "En cola",
+  running: "Optimizando…",
+};
+
 export const strategySummary = (job) => {
   const strategies = Object.keys(job.solution_ids ?? {});
-  if (strategies.length === 0) return "Sin soluciones";
-  return strategies.map(strategyLabel).join(", ");
+  if (strategies.length > 0) return strategies.map(strategyLabel).join(", ");
+  return STATUS_SUMMARIES[job.status] ?? "Sin soluciones";
 };
 
 export const formatDuration = (seconds) => {
