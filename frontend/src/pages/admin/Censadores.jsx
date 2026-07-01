@@ -22,7 +22,7 @@ function fullName(surveyor) {
     .filter(Boolean)
     .join(" ")
     .trim();
-  return name || surveyor.username;
+  return name || surveyor.username || "—";
 }
 
 export default function Censadores() {
@@ -64,7 +64,7 @@ export default function Censadores() {
                     {fullName(surveyor)}
                   </TableCell>
                   <TableCell>{surveyor.email || "—"}</TableCell>
-                  <TableCell>{surveyor.role_display ?? surveyor.role}</TableCell>
+                  <TableCell>{surveyor.role_display}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
