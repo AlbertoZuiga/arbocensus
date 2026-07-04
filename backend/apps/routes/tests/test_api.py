@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.routes.models import Route, RouteStop
@@ -41,14 +43,22 @@ def test_routes_filtered_by_solution(solution_with_route):
     assert response.data["count"] == 1
 
 
-def test_geojson_returns_linestring_per_route(solution_with_route):
+def test_geojson_returns_street_following_path_per_route(
+    solution_with_route, monkeypatch
+):
     solution, _, _ = solution_with_route
+    street_path = [[-70.65, -33.45], [-70.655, -33.455], [-70.66, -33.46]]
+    fetch = MagicMock(return_value=street_path)
+    monkeypatch.setattr("apps.routes.views.fetch_route_path", fetch)
+
     response = _client().get(f"/api/routes/geojson/?solution_id={solution.id}")
+
     assert response.status_code == 200
     assert response.data["type"] == "FeatureCollection"
     feature = response.data["features"][0]
     assert feature["geometry"]["type"] == "LineString"
-    assert feature["geometry"]["coordinates"] == [[-70.65, -33.45], [-70.66, -33.46]]
+    assert feature["geometry"]["coordinates"] == street_path
+    fetch.assert_called_once_with([[-70.65, -33.45], [-70.66, -33.46]])
 
 
 def test_visit_marks_stop_visited(solution_with_route, surveyor):
