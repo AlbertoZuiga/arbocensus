@@ -21,10 +21,3 @@ export async function fetchRoutesGeojson(solutionId) {
   });
   return data;
 }
-
-export async function fetchRoutes(solutionId) {
-  const { data } = await client.get("/routes/", {
-    params: { solution_id: solutionId },
-  });
-  return data.results ?? data;
-}

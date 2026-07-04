@@ -5,7 +5,7 @@ vi.mock("./client.js", () => ({
 }));
 
 import client from "./client.js";
-import { fetchRoutesGeojson, fetchRoutes } from "./routes.js";
+import { fetchRoutesGeojson } from "./routes.js";
 
 describe("routes api", () => {
   beforeEach(() => {
@@ -22,23 +22,5 @@ describe("routes api", () => {
       params: { solution_id: "s1" },
     });
     expect(result).toBe(collection);
-  });
-
-  it("unwraps the paginated routes list", async () => {
-    client.get.mockResolvedValue({
-      data: { count: 1, results: [{ id: "r1" }] },
-    });
-
-    const result = await fetchRoutes("s1");
-
-    expect(client.get).toHaveBeenCalledWith("/routes/", {
-      params: { solution_id: "s1" },
-    });
-    expect(result).toEqual([{ id: "r1" }]);
-  });
-
-  it("returns a bare routes array unchanged", async () => {
-    client.get.mockResolvedValue({ data: [{ id: "r2" }] });
-    expect(await fetchRoutes("s1")).toEqual([{ id: "r2" }]);
   });
 });
