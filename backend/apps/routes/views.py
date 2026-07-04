@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Route, RouteStop
+from .osrm import fetch_route_path
 from .serializers import (
     RouteAssignSerializer,
     RouteDetailSerializer,
@@ -48,10 +49,11 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
     def geojson(self, request):
         features = []
         for route in self.get_queryset():
-            coordinates = [
+            stop_coordinates = [
                 [stop.tree.location.x, stop.tree.location.y]
                 for stop in route.stops.all()
             ]
+            coordinates = fetch_route_path(stop_coordinates)
             features.append(
                 {
                     "type": "Feature",
@@ -60,6 +62,7 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                         "route_number": route.route_number,
                         "total_trees": route.total_trees,
                         "travel_time_sec": route.travel_time_sec,
+                        "stops": stop_coordinates,
                     },
                 }
             )

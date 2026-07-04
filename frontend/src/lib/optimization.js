@@ -19,7 +19,7 @@ export const strategySummary = (job) => {
 };
 
 export const formatDuration = (seconds) => {
-  const total = Math.round(seconds);
+  const total = Math.round(seconds ?? 0);
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
