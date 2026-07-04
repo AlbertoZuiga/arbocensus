@@ -15,6 +15,7 @@ export default function DatasetMap({ markers, solutionId }) {
     queryKey: ["routes-geojson", solutionId],
     queryFn: () => fetchRoutesGeojson(solutionId),
     enabled: !!solutionId,
+    staleTime: Infinity,
   });
 
   const routes = useMemo(() => geojsonToRoutes(data), [data]);
@@ -55,7 +56,7 @@ export default function DatasetMap({ markers, solutionId }) {
                   opacity: active ? 0.85 : 0.15,
                 }}
               />
-              {route.positions.map((position, index) => (
+              {route.stops.map((position, index) => (
                 <CircleMarker
                   key={index}
                   center={position}

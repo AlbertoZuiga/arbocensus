@@ -10,15 +10,29 @@ const collection = {
         type: "LineString",
         coordinates: [
           [-70.65, -33.45],
+          [-70.655, -33.455],
           [-70.66, -33.46],
         ],
       },
-      properties: { route_number: 1, total_trees: 2, travel_time_sec: 600 },
+      properties: {
+        route_number: 1,
+        total_trees: 2,
+        travel_time_sec: 600,
+        stops: [
+          [-70.65, -33.45],
+          [-70.66, -33.46],
+        ],
+      },
     },
     {
       type: "Feature",
       geometry: { type: "LineString", coordinates: [[-70.7, -33.5]] },
-      properties: { route_number: 2, total_trees: 1, travel_time_sec: 120 },
+      properties: {
+        route_number: 2,
+        total_trees: 1,
+        travel_time_sec: 120,
+        stops: [[-70.7, -33.5]],
+      },
     },
   ],
 };
@@ -28,9 +42,19 @@ describe("geojsonToRoutes", () => {
     const routes = geojsonToRoutes(collection);
     expect(routes[0].positions).toEqual([
       [-33.45, -70.65],
+      [-33.455, -70.655],
       [-33.46, -70.66],
     ]);
     expect(routes[1].positions).toEqual([[-33.5, -70.7]]);
+  });
+
+  it("separates stop markers from the street path and inverts them", () => {
+    const routes = geojsonToRoutes(collection);
+    expect(routes[0].stops).toEqual([
+      [-33.45, -70.65],
+      [-33.46, -70.66],
+    ]);
+    expect(routes[1].stops).toEqual([[-33.5, -70.7]]);
   });
 
   it("maps route properties and assigns distinct colors per route", () => {

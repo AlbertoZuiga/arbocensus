@@ -58,6 +58,7 @@ def test_geojson_returns_street_following_path_per_route(
     feature = response.data["features"][0]
     assert feature["geometry"]["type"] == "LineString"
     assert feature["geometry"]["coordinates"] == street_path
+    assert feature["properties"]["stops"] == [[-70.65, -33.45], [-70.66, -33.46]]
     fetch.assert_called_once_with([[-70.65, -33.45], [-70.66, -33.46]])
 
 

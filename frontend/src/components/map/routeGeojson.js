@@ -14,17 +14,19 @@ export const ROUTE_COLORS = [
 export function geojsonToRoutes(featureCollection) {
   const features = featureCollection?.features ?? [];
   return features.map((feature, index) => {
-    // GeoJSON LineString coordinates are [lon, lat]; Leaflet expects [lat, lon].
+    // GeoJSON coordinates are [lon, lat]; Leaflet expects [lat, lon].
     const positions = (feature.geometry?.coordinates ?? []).map(
       ([lon, lat]) => [lat, lon],
     );
     const props = feature.properties ?? {};
+    const stops = (props.stops ?? []).map(([lon, lat]) => [lat, lon]);
     return {
       routeNumber: props.route_number,
       totalTrees: props.total_trees,
       travelTimeSec: props.travel_time_sec,
       color: ROUTE_COLORS[index % ROUTE_COLORS.length],
       positions,
+      stops,
     };
   });
 }
