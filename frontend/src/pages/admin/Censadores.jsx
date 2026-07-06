@@ -38,10 +38,13 @@ export default function Censadores() {
     queryFn: () => fetchRoutes(),
   });
 
-  const routeBySurveyor = useMemo(() => {
+  const routesBySurveyor = useMemo(() => {
     const map = new Map();
     for (const route of routes) {
-      if (route.surveyor) map.set(route.surveyor, route);
+      if (!route.surveyor) continue;
+      const list = map.get(route.surveyor) ?? [];
+      list.push(route);
+      map.set(route.surveyor, list);
     }
     return map;
   }, [routes]);
@@ -76,10 +79,15 @@ export default function Censadores() {
             </TableHeader>
             <TableBody>
               {data.map((surveyor) => {
-                const route = routeBySurveyor.get(surveyor.id);
-                const total = route
-                  ? route.visited_count + route.pending_count
-                  : 0;
+                const assigned = routesBySurveyor.get(surveyor.id) ?? [];
+                const visited = assigned.reduce(
+                  (sum, route) => sum + route.visited_count,
+                  0,
+                );
+                const total = assigned.reduce(
+                  (sum, route) => sum + route.visited_count + route.pending_count,
+                  0,
+                );
                 return (
                   <TableRow key={surveyor.id}>
                     <TableCell className="font-medium">
@@ -88,11 +96,15 @@ export default function Censadores() {
                     <TableCell>{surveyor.email || "—"}</TableCell>
                     <TableCell>{surveyor.role_display}</TableCell>
                     <TableCell>
-                      {route ? `Ruta ${route.route_number}` : "—"}
+                      {assigned.length
+                        ? assigned
+                            .map((route) => `Ruta ${route.route_number}`)
+                            .join(", ")
+                        : "—"}
                     </TableCell>
                     <TableCell>
-                      {route
-                        ? `${route.visited_count}/${total} visitados`
+                      {assigned.length
+                        ? `${visited}/${total} visitados`
                         : "—"}
                     </TableCell>
                   </TableRow>
