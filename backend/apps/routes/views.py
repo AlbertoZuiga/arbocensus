@@ -71,14 +71,15 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["patch"])
     def assign(self, request, pk=None):
         route = self.get_object()
-        if route.solution.published_at is None:
+        serializer = RouteAssignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        surveyor = serializer.validated_data["surveyor_id"]
+        if surveyor is not None and route.solution.published_at is None:
             return Response(
                 {"detail": "Solo se puede asignar sobre la solución publicada."},
                 status=400,
             )
-        serializer = RouteAssignSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        route.surveyor = serializer.validated_data["surveyor_id"]
+        route.surveyor = surveyor
         route.save(update_fields=["surveyor"])
         return Response(RouteSerializer(route).data)
 

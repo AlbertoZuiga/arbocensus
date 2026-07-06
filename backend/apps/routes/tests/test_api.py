@@ -179,6 +179,18 @@ def test_assign_rejected_when_solution_not_published(solution_with_route):
     assert route.surveyor != target
 
 
+def test_unassign_allowed_when_solution_not_published(solution_with_route, surveyor):
+    solution, route, _ = solution_with_route
+    solution.unpublish()
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).patch(
+        f"/api/routes/{route.id}/assign/", {"surveyor_id": None}, format="json"
+    )
+    assert response.status_code == 200
+    route.refresh_from_db()
+    assert route.surveyor is None
+
+
 def test_my_route_returns_only_callers_routes(solution_with_route, surveyor):
     _, route, _ = solution_with_route
     other = CustomUserFactory(role="surveyor")
