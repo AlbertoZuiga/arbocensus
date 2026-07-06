@@ -38,9 +38,31 @@ def _client(user=None):
 
 def test_routes_filtered_by_solution(solution_with_route):
     solution, _, _ = solution_with_route
-    response = _client().get(f"/api/routes/?solution_id={solution.id}")
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/routes/?solution_id={solution.id}")
     assert response.status_code == 200
     assert response.data["count"] == 1
+
+
+def test_surveyor_lists_only_own_routes(solution_with_route, surveyor):
+    _, route, _ = solution_with_route
+    other = CustomUserFactory(role="surveyor")
+
+    own = _client(surveyor).get("/api/routes/")
+    assert own.status_code == 200
+    assert [r["id"] for r in own.data["results"]] == [str(route.id)]
+
+    foreign = _client(other).get("/api/routes/")
+    assert foreign.status_code == 200
+    assert foreign.data["results"] == []
+
+
+def test_admin_lists_all_routes(solution_with_route):
+    _, route, _ = solution_with_route
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get("/api/routes/")
+    assert response.status_code == 200
+    assert [r["id"] for r in response.data["results"]] == [str(route.id)]
 
 
 def test_geojson_returns_street_following_path_per_route(
@@ -51,7 +73,8 @@ def test_geojson_returns_street_following_path_per_route(
     fetch = MagicMock(return_value=street_path)
     monkeypatch.setattr("apps.routes.views.fetch_route_path", fetch)
 
-    response = _client().get(f"/api/routes/geojson/?solution_id={solution.id}")
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/routes/geojson/?solution_id={solution.id}")
 
     assert response.status_code == 200
     assert response.data["type"] == "FeatureCollection"
