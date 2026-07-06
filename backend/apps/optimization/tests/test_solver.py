@@ -1,5 +1,11 @@
 import numpy as np
+from apps.optimization.cost_matrix import UNREACHABLE_PENALTY
 from apps.optimization.solver import ArbocensusVRPSolver, build_open_matrix
+
+
+def unwrap(result):
+    assert result is not None
+    return result
 
 
 def uniform_matrix(n, travel=60.0):
@@ -26,8 +32,8 @@ def test_all_points_visited():
         max_vehicles=5,
         time_limit_sec=5,
     )
-    routes = solver.solve()
-    assert routes is not None
+    routes, dropped = unwrap(solver.solve())
+    assert dropped == []
 
     visited = sorted(node for route in routes for node in route)
     assert visited == list(range(6))
@@ -42,8 +48,7 @@ def test_dummy_depot_not_in_routes():
         max_vehicles=5,
         time_limit_sec=5,
     )
-    routes = solver.solve()
-    assert routes is not None
+    routes, _ = unwrap(solver.solve())
 
     for route in routes:
         for node in route:
@@ -59,8 +64,8 @@ def test_each_node_visited_exactly_once():
         max_vehicles=5,
         time_limit_sec=5,
     )
-    routes = solver.solve()
-    assert routes is not None
+    routes, dropped = unwrap(solver.solve())
+    assert dropped == []
 
     visited = [node for route in routes for node in route]
     assert sorted(visited) == list(range(8))
@@ -78,15 +83,36 @@ def test_respects_max_route_time():
         max_vehicles=8,
         time_limit_sec=10,
     )
-    routes = solver.solve()
-    assert routes is not None
+    routes, _ = unwrap(solver.solve())
 
     open_matrix = build_open_matrix(matrix)
     for route in routes:
         assert route_time(open_matrix, route, 300) <= max_route_time
 
 
-def test_returns_none_on_infeasible():
+def test_drops_single_unreachable_node():
+    matrix = uniform_matrix(6)
+    unreachable = 3
+    matrix[:, unreachable] = UNREACHABLE_PENALTY
+    matrix[unreachable, :] = UNREACHABLE_PENALTY
+    matrix[unreachable, unreachable] = 0.0
+
+    solver = ArbocensusVRPSolver(
+        matrix,
+        min_route_time_sec=600,
+        max_route_time_sec=100_000,
+        service_time_sec=300,
+        max_vehicles=5,
+        time_limit_sec=5,
+    )
+    routes, dropped = unwrap(solver.solve())
+
+    assert dropped == [unreachable]
+    visited = sorted(node for route in routes for node in route)
+    assert visited == [n for n in range(6) if n != unreachable]
+
+
+def test_drops_all_when_time_budget_too_tight():
     solver = ArbocensusVRPSolver(
         uniform_matrix(5),
         min_route_time_sec=1,
@@ -95,4 +121,7 @@ def test_returns_none_on_infeasible():
         max_vehicles=5,
         time_limit_sec=5,
     )
-    assert solver.solve() is None
+    routes, dropped = unwrap(solver.solve())
+
+    assert routes == []
+    assert sorted(dropped) == list(range(5))

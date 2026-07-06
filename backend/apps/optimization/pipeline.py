@@ -40,8 +40,9 @@ class OptimizationPipeline:
         )
 
         solved = {}
+        dropped_nodes = set()
         for s in strategies_to_run:
-            routes = solve_by_strategy(
+            result = solve_by_strategy(
                 s.value,
                 matrix,
                 points=points,
@@ -51,13 +52,16 @@ class OptimizationPipeline:
                 max_vehicles=max_vehicles,
                 time_limit_sec=SOLVER_TIME_LIMIT_SEC,
             )
-            if routes is None:
+            if result is None:
                 raise ValueError(
-                    f"No feasible solution for strategy '{s.value}': "
-                    f"{len(trees)} trees × {self.config.service_time_sec}s service "
-                    f"exceeds max_route_time {self.config.max_route_time_sec}s per route"
+                    f"No feasible solution for strategy '{s.value}': the solver could "
+                    f"not build any route for {len(trees)} trees under the current "
+                    f"routing config (service {self.config.service_time_sec}s, "
+                    f"max_route_time {self.config.max_route_time_sec}s)."
                 )
+            routes, dropped = result
             solved[s.value] = routes
+            dropped_nodes.update(dropped)
 
         results = {}
         with transaction.atomic():
@@ -66,7 +70,10 @@ class OptimizationPipeline:
                     trees, matrix, routes, max_vehicles, s_value
                 )
 
-        return {"solutions": results}
+        return {
+            "solutions": results,
+            "dropped_trees": sorted(str(trees[n].id) for n in dropped_nodes),
+        }
 
     def _persist_solution(
         self, trees, matrix, routes, max_vehicles_estimated, strategy

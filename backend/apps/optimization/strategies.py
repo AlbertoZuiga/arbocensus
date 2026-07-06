@@ -143,6 +143,7 @@ def solve_cluster_first(
 
     routes = []
     covered = []
+    dropped = []
     for cluster_id in range(k):
         members = [i for i in range(n) if labels[i] == cluster_id]
         if not members:
@@ -152,7 +153,7 @@ def solve_cluster_first(
         max_vehicles = estimate_max_vehicles(
             build_open_matrix(sub_matrix), total_service, min_route_time_sec
         )
-        sub_routes = ArbocensusVRPSolver(
+        result = ArbocensusVRPSolver(
             sub_matrix,
             min_route_time_sec=min_route_time_sec,
             max_route_time_sec=max_route_time_sec,
@@ -160,16 +161,18 @@ def solve_cluster_first(
             max_vehicles=max_vehicles,
             time_limit_sec=time_limit_sec,
         ).solve()
-        if sub_routes is None:
+        if result is None:
             return None
+        sub_routes, sub_dropped = result
         for sub_route in sub_routes:
             global_route = [members[node] for node in sub_route]
             routes.append(global_route)
             covered.extend(global_route)
+        dropped.extend(members[node] for node in sub_dropped)
 
-    if sorted(covered) != list(range(n)):
+    if sorted(covered + dropped) != list(range(n)):
         raise ValueError(
             f"cluster_first node coverage mismatch: "
-            f"{len(covered)} covered ({len(set(covered))} unique) vs {n} trees"
+            f"{len(covered)} covered + {len(dropped)} dropped vs {n} trees"
         )
-    return routes
+    return routes, dropped
