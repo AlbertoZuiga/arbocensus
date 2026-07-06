@@ -20,6 +20,7 @@ def solution_with_route(make_dataset_with_trees, surveyor):
     config = RoutingConfig.objects.create(dataset=dataset)
     job = OptimizationJob.objects.create(config=config)
     solution = RoutingSolution.objects.create(job=job, total_routes=1)
+    solution.publish()
     route = Route.objects.create(
         solution=solution, route_number=1, total_trees=len(trees), surveyor=surveyor
     )
@@ -153,6 +154,31 @@ def test_assign_rejects_non_surveyor_target(solution_with_route):
     assert route.surveyor != other_admin
 
 
+def test_assign_null_unassigns_route(solution_with_route, surveyor):
+    _, route, _ = solution_with_route
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).patch(
+        f"/api/routes/{route.id}/assign/", {"surveyor_id": None}, format="json"
+    )
+    assert response.status_code == 200
+    assert response.data["surveyor"] is None
+    route.refresh_from_db()
+    assert route.surveyor is None
+
+
+def test_assign_rejected_when_solution_not_published(solution_with_route):
+    solution, route, _ = solution_with_route
+    solution.unpublish()
+    admin = CustomUserFactory(role="admin")
+    target = CustomUserFactory(role="surveyor")
+    response = _client(admin).patch(
+        f"/api/routes/{route.id}/assign/", {"surveyor_id": str(target.id)}
+    )
+    assert response.status_code == 400
+    route.refresh_from_db()
+    assert route.surveyor != target
+
+
 def test_my_route_returns_only_callers_routes(solution_with_route, surveyor):
     _, route, _ = solution_with_route
     other = CustomUserFactory(role="surveyor")
@@ -169,3 +195,11 @@ def test_my_route_rejected_for_non_surveyor(solution_with_route):
     admin = CustomUserFactory(role="admin")
     response = _client(admin).get("/api/routes/my-route/")
     assert response.status_code == 403
+
+
+def test_my_route_excludes_unpublished_solution(solution_with_route, surveyor):
+    solution, _, _ = solution_with_route
+    solution.unpublish()
+    response = _client(surveyor).get("/api/routes/my-route/")
+    assert response.status_code == 200
+    assert response.data == []
