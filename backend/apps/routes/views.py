@@ -32,9 +32,9 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self) -> Any:
-        queryset = Route.objects.select_related("surveyor", "solution").prefetch_related(
-            "stops__tree"
-        )
+        queryset = Route.objects.select_related(
+            "surveyor", "solution"
+        ).prefetch_related("stops__tree")
         solution_id = self.request.query_params.get("solution_id")
         if solution_id:
             queryset = queryset.filter(solution_id=solution_id)
@@ -85,9 +85,11 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="my-route")
     def my_route(self, request):
-        routes = Route.objects.select_related("surveyor").prefetch_related(
-            "stops__tree"
-        ).filter(surveyor=request.user, solution__published_at__isnull=False)
+        routes = (
+            Route.objects.select_related("surveyor")
+            .prefetch_related("stops__tree")
+            .filter(surveyor=request.user, solution__published_at__isnull=False)
+        )
         return Response(RouteSerializer(routes, many=True).data)
 
 

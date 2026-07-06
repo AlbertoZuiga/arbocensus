@@ -212,7 +212,9 @@ def test_admin_publishes_solution(make_dataset_with_trees):
     job = OptimizationJob.objects.create(config=config)
     solution = RoutingSolution.objects.create(job=job, total_routes=1)
 
-    response = _client("admin").post(f"/api/optimization/solutions/{solution.id}/publish/")
+    response = _client("admin").post(
+        f"/api/optimization/solutions/{solution.id}/publish/"
+    )
 
     assert response.status_code == 200
     assert response.data["published_at"] is not None
@@ -250,7 +252,9 @@ def test_publish_rejected_for_non_admin(make_dataset_with_trees):
     job = OptimizationJob.objects.create(config=config)
     solution = RoutingSolution.objects.create(job=job, total_routes=1)
 
-    response = _client("surveyor").post(f"/api/optimization/solutions/{solution.id}/publish/")
+    response = _client("surveyor").post(
+        f"/api/optimization/solutions/{solution.id}/publish/"
+    )
 
     assert response.status_code == 403
     solution.refresh_from_db()
@@ -264,7 +268,9 @@ def test_admin_unpublishes_solution(make_dataset_with_trees):
     solution = RoutingSolution.objects.create(job=job, total_routes=1)
     solution.publish()
 
-    response = _client("admin").post(f"/api/optimization/solutions/{solution.id}/unpublish/")
+    response = _client("admin").post(
+        f"/api/optimization/solutions/{solution.id}/unpublish/"
+    )
 
     assert response.status_code == 200
     assert response.data["published_at"] is None
