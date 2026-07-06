@@ -16,7 +16,7 @@ def test_csv_import_detects_lat_lon_columns():
     dataset = make_dataset()
     csv_file = io.StringIO("latitude,longitude\n-33.45,-70.65\n-33.46,-70.66\n")
 
-    count = import_file(csv_file, dataset, "trees.csv")
+    count, _ = import_file(csv_file, dataset, "trees.csv")
 
     assert count == 2
     assert Tree.objects.filter(dataset=dataset).count() == 2
@@ -37,9 +37,10 @@ def test_csv_import_skips_rows_with_missing_coordinates():
     dataset = make_dataset()
     csv_file = io.StringIO("lat,lon\n-33.45,-70.65\n,-70.66\n-33.47,\n")
 
-    count = import_file(csv_file, dataset, "trees.csv")
+    count, skipped = import_file(csv_file, dataset, "trees.csv")
 
     assert count == 1
+    assert skipped == 2
 
 
 def test_csv_import_without_lat_column_raises():
@@ -62,7 +63,7 @@ def test_json_import_detects_keys_and_counts():
     )
     json_file = io.StringIO(payload)
 
-    count = import_file(json_file, dataset, "trees.json")
+    count, _ = import_file(json_file, dataset, "trees.json")
 
     assert count == 2
     tree = Tree.objects.filter(dataset=dataset).first()
@@ -83,7 +84,7 @@ def test_json_import_skips_null_coordinates():
     )
     json_file = io.StringIO(payload)
 
-    count = import_file(json_file, dataset, "trees.json")
+    count, _ = import_file(json_file, dataset, "trees.json")
 
     assert count == 1
 
@@ -116,7 +117,7 @@ def test_csv_import_detects_uppercase_columns():
     dataset = make_dataset()
     csv_file = io.StringIO("LAT,LON\n-33.45,-70.65\n")
 
-    count = import_file(csv_file, dataset, "trees.csv")
+    count, _ = import_file(csv_file, dataset, "trees.csv")
 
     assert count == 1
     tree = Tree.objects.get(dataset=dataset)
@@ -128,7 +129,7 @@ def test_csv_import_detects_lng_and_spanish_aliases():
     dataset = make_dataset()
     csv_file = io.StringIO("latitud,lng\n-33.45,-70.65\n")
 
-    count = import_file(csv_file, dataset, "trees.csv")
+    count, _ = import_file(csv_file, dataset, "trees.csv")
 
     assert count == 1
     tree = Tree.objects.get(dataset=dataset)
@@ -140,7 +141,7 @@ def test_csv_import_with_semicolon_delimiter():
     dataset = make_dataset()
     csv_file = io.StringIO("lat;lon\n-33.45;-70.65\n-33.46;-70.66\n")
 
-    count = import_file(csv_file, dataset, "trees.csv")
+    count, _ = import_file(csv_file, dataset, "trees.csv")
 
     assert count == 2
 

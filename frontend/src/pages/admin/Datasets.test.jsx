@@ -88,6 +88,25 @@ describe("Datasets", () => {
     ).toBeInTheDocument();
   });
 
+  it("mentions skipped rows in the toast when some were dropped", async () => {
+    const user = userEvent.setup();
+    fetchDatasets.mockResolvedValue([]);
+    uploadDataset.mockResolvedValue({
+      id: "d11",
+      name: "Parcial",
+      total_trees: 3,
+      skipped_rows: 2,
+    });
+    renderPage();
+
+    const file = new File(["lat,lon\n1,2"], "trees.csv", { type: "text/csv" });
+    await user.upload(screen.getByLabelText("Subir archivo"), file);
+
+    expect(
+      await screen.findByText("3 importados (2 filas sin coordenadas)"),
+    ).toBeInTheDocument();
+  });
+
   it("uploads a JSON file too", async () => {
     const user = userEvent.setup();
     fetchDatasets.mockResolvedValue([]);

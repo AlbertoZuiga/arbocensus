@@ -1,6 +1,8 @@
 from apps.accounts.permissions import IsAdminRole
-from rest_framework import viewsets
+from django.db import transaction
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,10 +22,19 @@ class DatasetViewSet(viewsets.ModelViewSet):
             return [IsAdminRole()]
         return [IsAuthenticated()]
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         upload = serializer.validated_data.pop("file")
-        dataset = serializer.save()
-        import_file(upload, dataset, upload.name)
+        try:
+            with transaction.atomic():
+                dataset = serializer.save()
+                _, skipped_rows = import_file(upload, dataset, upload.name)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        headers = self.get_success_headers(serializer.data)
+        data = {**serializer.data, "skipped_rows": skipped_rows}
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=True, methods=["get"])
     def trees(self, request, pk=None):

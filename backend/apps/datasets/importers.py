@@ -29,14 +29,19 @@ class BaseImporter(ABC):
         _IMPORTERS[ext] = cls
 
     @abstractmethod
-    def _parse(self, file) -> Iterator[tuple[float, float]]:
-        """Yields (lat, lon) pairs. Skips rows with missing/null coordinates."""
+    def _parse(self, file) -> Iterator[tuple[float, float] | None]:
+        """Yields (lat, lon) pairs, or None for rows with missing/null coordinates."""
 
-    def import_into(self, file, dataset: Dataset) -> int:
+    def import_into(self, file, dataset: Dataset) -> tuple[int, int]:
         total = 0
+        skipped = 0
         batch: list[Tree] = []
 
-        for lat, lon in self._parse(file):
+        for coords in self._parse(file):
+            if coords is None:
+                skipped += 1
+                continue
+            lat, lon = coords
             batch.append(Tree(dataset=dataset, location=Point(lon, lat)))
             if len(batch) == _BATCH_SIZE:
                 Tree.objects.bulk_create(batch)
@@ -49,11 +54,11 @@ class BaseImporter(ABC):
 
         dataset.total_trees = total
         dataset.save(update_fields=["total_trees"])
-        return total
+        return total, skipped
 
 
 class CsvImporter(BaseImporter, ext="csv"):
-    def _parse(self, file) -> Iterator[tuple[float, float]]:
+    def _parse(self, file) -> Iterator[tuple[float, float] | None]:
         content = file.read()
         if isinstance(content, bytes):
             content = content.decode("utf-8-sig")
@@ -76,10 +81,12 @@ class CsvImporter(BaseImporter, ext="csv"):
             lat, lon = row.get(lat_col), row.get(lon_col)
             if lat and lon:
                 yield float(lat.replace(",", ".")), float(lon.replace(",", "."))
+            else:
+                yield None
 
 
 class JsonImporter(BaseImporter, ext="json"):
-    def _parse(self, file) -> Iterator[tuple[float, float]]:
+    def _parse(self, file) -> Iterator[tuple[float, float] | None]:
         data = json.load(file)
 
         if not isinstance(data, dict) or not isinstance(data.get("trees"), list):
@@ -102,9 +109,11 @@ class JsonImporter(BaseImporter, ext="json"):
             lat, lon = entry.get(lat_key), entry.get(lon_key)
             if lat is not None and lon is not None:
                 yield float(lat), float(lon)
+            else:
+                yield None
 
 
-def import_file(file, dataset: Dataset, filename: str) -> int:
+def import_file(file, dataset: Dataset, filename: str) -> tuple[int, int]:
     ext = filename.rsplit(".", 1)[-1].lower()
     importer_cls = _IMPORTERS.get(ext)
     if not importer_cls:

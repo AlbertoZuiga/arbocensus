@@ -44,7 +44,13 @@ export default function Datasets() {
     mutationFn: uploadDataset,
     onSuccess: (dataset) => {
       queryClient.invalidateQueries({ queryKey: ["datasets"] });
-      toast.success(`Importados ${treeCount(dataset)} árboles`);
+      const imported = treeCount(dataset);
+      const skipped = dataset.skipped_rows ?? 0;
+      toast.success(
+        skipped > 0
+          ? `${imported} importados (${skipped} filas sin coordenadas)`
+          : `Importados ${imported} árboles`,
+      );
     },
     onError: (err) => {
       toast.error(getErrorMessage(err, "No se pudo importar el archivo"));
