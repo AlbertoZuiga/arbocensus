@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSurveyors } from "@/api/surveyors.js";
+import { fetchRoutes } from "@/api/routes.js";
 import { getErrorMessage } from "@/lib/errors";
 import {
   Card,
@@ -31,6 +33,22 @@ export default function Censadores() {
     queryFn: fetchSurveyors,
   });
 
+  const { data: routes = [] } = useQuery({
+    queryKey: ["routes", "assigned"],
+    queryFn: () => fetchRoutes(),
+  });
+
+  const routesBySurveyor = useMemo(() => {
+    const map = new Map();
+    for (const route of routes) {
+      if (!route.surveyor) continue;
+      const list = map.get(route.surveyor) ?? [];
+      list.push(route);
+      map.set(route.surveyor, list);
+    }
+    return map;
+  }, [routes]);
+
   return (
     <Card>
       <CardHeader>
@@ -55,18 +73,43 @@ export default function Censadores() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Ruta asignada</TableHead>
+                <TableHead>Progreso</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((surveyor) => (
-                <TableRow key={surveyor.id}>
-                  <TableCell className="font-medium">
-                    {fullName(surveyor)}
-                  </TableCell>
-                  <TableCell>{surveyor.email || "—"}</TableCell>
-                  <TableCell>{surveyor.role_display}</TableCell>
-                </TableRow>
-              ))}
+              {data.map((surveyor) => {
+                const assigned = routesBySurveyor.get(surveyor.id) ?? [];
+                const visited = assigned.reduce(
+                  (sum, route) => sum + route.visited_count,
+                  0,
+                );
+                const total = assigned.reduce(
+                  (sum, route) => sum + route.visited_count + route.pending_count,
+                  0,
+                );
+                return (
+                  <TableRow key={surveyor.id}>
+                    <TableCell className="font-medium">
+                      {fullName(surveyor)}
+                    </TableCell>
+                    <TableCell>{surveyor.email || "—"}</TableCell>
+                    <TableCell>{surveyor.role_display}</TableCell>
+                    <TableCell>
+                      {assigned.length
+                        ? assigned
+                            .map((route) => `Ruta ${route.route_number}`)
+                            .join(", ")
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {assigned.length
+                        ? `${visited}/${total} visitados`
+                        : "—"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}

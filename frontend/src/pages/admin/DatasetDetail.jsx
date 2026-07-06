@@ -7,6 +7,8 @@ import { useOptimizationJobs } from "@/hooks/useOptimizationJobs";
 import { getErrorMessage } from "@/lib/errors";
 import DatasetMap from "@/components/map/DatasetMap.jsx";
 import StrategyTabs from "@/components/map/StrategyTabs.jsx";
+import PublishButton from "@/components/optimization/PublishButton.jsx";
+import RouteAssignmentPanel from "@/components/routes/RouteAssignmentPanel.jsx";
 import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
 import JobHistoryCard from "@/components/optimization/JobHistoryCard.jsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,7 +36,10 @@ function toLeafletPositions(featureCollection) {
 export default function DatasetDetail() {
   const { id } = useParams();
   const [strategy, setStrategy] = useState(null);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [openPanel, setOpenPanel] = useState(null);
+
+  const togglePanel = (panel) =>
+    setOpenPanel((current) => (current === panel ? null : panel));
 
   const { data: dataset } = useQuery({
     queryKey: ["dataset", id],
@@ -70,6 +75,15 @@ export default function DatasetDetail() {
     null;
   const solutionId =
     strategies.find((s) => s.key === activeStrategy)?.solutionId ?? null;
+  const datasetSolutionIds = useMemo(() => {
+    const ids = new Set();
+    for (const job of jobs) {
+      for (const id of Object.values(job.solution_ids ?? {})) {
+        if (id) ids.add(id);
+      }
+    }
+    return [...ids];
+  }, [jobs]);
 
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col gap-4">
@@ -79,10 +93,18 @@ export default function DatasetDetail() {
         </Button>
         <h1 className="text-2xl font-semibold">{dataset?.name ?? "Dataset"}</h1>
         <Button
-          variant={panelOpen ? "secondary" : "outline"}
+          variant={openPanel === "assign" ? "secondary" : "outline"}
           size="sm"
           className="ml-auto"
-          onClick={() => setPanelOpen((open) => !open)}
+          disabled={!solutionId}
+          onClick={() => togglePanel("assign")}
+        >
+          👤 Asignación
+        </Button>
+        <Button
+          variant={openPanel === "optimization" ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => togglePanel("optimization")}
         >
           ⚙ Optimización
         </Button>
@@ -104,13 +126,19 @@ export default function DatasetDetail() {
         )}
         {trees && <DatasetMap markers={markers} solutionId={solutionId} />}
 
-        <div className="absolute left-3 top-3 z-[1000]">
+        <div className="absolute left-3 top-3 z-[1000] flex flex-col gap-2">
           {strategies.length > 0 ? (
-            <StrategyTabs
-              strategies={strategies}
-              value={activeStrategy}
-              onChange={setStrategy}
-            />
+            <>
+              <StrategyTabs
+                strategies={strategies}
+                value={activeStrategy}
+                onChange={setStrategy}
+              />
+              <PublishButton
+                solutionId={solutionId}
+                datasetSolutionIds={datasetSolutionIds}
+              />
+            </>
           ) : (
             <span className="rounded-md border bg-background/90 px-3 py-1.5 text-sm text-muted-foreground shadow-md backdrop-blur">
               Optimiza el dataset para ver rutas
@@ -121,13 +149,22 @@ export default function DatasetDetail() {
         <div
           className={cn(
             "absolute right-0 top-0 z-[1001] h-full w-full max-w-sm overflow-y-auto border-l bg-background p-4 shadow-xl transition-transform",
-            panelOpen ? "translate-x-0" : "translate-x-full",
+            openPanel === "optimization" ? "translate-x-0" : "translate-x-full",
           )}
         >
           <div className="flex flex-col gap-4">
             <OptimizationPanel key={id} datasetId={id} />
             <JobHistoryCard datasetId={id} />
           </div>
+        </div>
+
+        <div
+          className={cn(
+            "absolute right-0 top-0 z-[1001] h-full w-full max-w-sm overflow-y-auto border-l bg-background p-4 shadow-xl transition-transform",
+            openPanel === "assign" ? "translate-x-0" : "translate-x-full",
+          )}
+        >
+          <RouteAssignmentPanel datasetSolutionIds={datasetSolutionIds} />
         </div>
       </div>
     </div>

@@ -31,3 +31,17 @@ export async function fetchSolution(solutionId) {
   const { data } = await client.get(`/optimization/solutions/${solutionId}/`);
   return data;
 }
+
+export async function publishSolution(solutionId) {
+  const { data } = await client.post(
+    `/optimization/solutions/${solutionId}/publish/`,
+  );
+  return data;
+}
+
+export async function unpublishSolution(solutionId) {
+  const { data } = await client.post(
+    `/optimization/solutions/${solutionId}/unpublish/`,
+  );
+  return data;
+}
