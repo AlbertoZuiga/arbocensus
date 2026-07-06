@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from apps.datasets.models import DistanceMatrix
 from apps.optimization.cost_matrix import (
-    OSRM_MAX_TABLE_SIZE,
+    OSRM_MAX_TREES_PER_REQUEST,
     UNREACHABLE_PENALTY,
     OSRMCostMatrixBuilder,
 )
@@ -67,15 +67,15 @@ def test_cache_hit_skips_osrm(requests_mock, make_dataset_with_trees):
 
 
 def test_fetch_rejects_dataset_over_table_limit():
-    trees = _fake_trees(OSRM_MAX_TABLE_SIZE + 1)
+    trees = _fake_trees(OSRM_MAX_TREES_PER_REQUEST + 1)
 
-    with pytest.raises(ValueError, match="límite de la matriz OSRM"):
+    with pytest.raises(ValueError, match="árboles por consulta OSRM"):
         OSRMCostMatrixBuilder()._fetch_from_osrm(trees)
 
 
 def test_fetch_allows_dataset_at_table_limit(requests_mock):
-    trees = _fake_trees(OSRM_MAX_TABLE_SIZE)
-    n = OSRM_MAX_TABLE_SIZE
+    trees = _fake_trees(OSRM_MAX_TREES_PER_REQUEST)
+    n = OSRM_MAX_TREES_PER_REQUEST
     requests_mock.get(ANY, json={"durations": np.zeros((n, n)).tolist()})
 
     matrix = OSRMCostMatrixBuilder()._fetch_from_osrm(trees)
