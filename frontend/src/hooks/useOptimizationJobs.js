@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchJobs } from "../api/optimization.js";
-
-const ACTIVE_STATUSES = ["queued", "running"];
+import { pollInterval } from "../lib/optimization.js";
 
 export function useOptimizationJobs(datasetId) {
   return useQuery({
@@ -9,7 +8,9 @@ export function useOptimizationJobs(datasetId) {
     queryFn: () => fetchJobs(datasetId),
     enabled: !!datasetId,
     refetchInterval: (query) =>
-      (query.state.data ?? []).some((j) => ACTIVE_STATUSES.includes(j.status))
+      (query.state.data ?? []).some(
+        (j) => pollInterval(j.status, j.created_at) !== false,
+      )
         ? 3000
         : false,
   });

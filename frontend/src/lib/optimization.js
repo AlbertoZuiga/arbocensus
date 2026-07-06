@@ -25,6 +25,24 @@ export const formatDuration = (seconds) => {
   return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
 };
 
+const ACTIVE_STATUSES = ["queued", "running"];
+export const MAX_POLL_MS = 15 * 60 * 1000;
+
+export function pollInterval(status, createdAt, now = Date.now()) {
+  if (!ACTIVE_STATUSES.includes(status)) return false;
+  if (createdAt) {
+    const elapsed = now - new Date(createdAt).getTime();
+    if (elapsed >= MAX_POLL_MS) return false;
+  }
+  return 3000;
+}
+
+export const formatElapsed = (value, now = Date.now()) => {
+  if (!value) return null;
+  const minutes = Math.max(0, Math.floor((now - new Date(value).getTime()) / 60000));
+  return `hace ${minutes} min`;
+};
+
 export const formatTimestamp = (value, dateStyle = "long") =>
   value
     ? new Date(value).toLocaleString("es-CL", { dateStyle, timeStyle: "short" })

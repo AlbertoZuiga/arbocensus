@@ -36,6 +36,7 @@ class OptimizationJobSerializer(serializers.ModelSerializer):
             "status",
             "error_message",
             "metrics",
+            "created_at",
             "started_at",
             "completed_at",
             "solution_ids",

@@ -83,6 +83,7 @@ def test_get_job_status_shape(make_dataset_with_trees):
         "status",
         "error_message",
         "metrics",
+        "created_at",
         "started_at",
         "completed_at",
         "solution_ids",
