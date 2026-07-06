@@ -21,8 +21,8 @@ export default function AdminLayout() {
           <NavLink to="/admin/datasets" className={navLinkClass}>
             Datasets
           </NavLink>
-          <NavLink to="/admin/censadores" className={navLinkClass}>
-            Censadores
+          <NavLink to="/admin/usuarios" className={navLinkClass}>
+            Usuarios
           </NavLink>
         </nav>
         <div className="ml-auto">

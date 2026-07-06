@@ -29,7 +29,7 @@ describe("AdminLayout", () => {
   it("renders the nav links and the current username", () => {
     renderLayout();
     expect(screen.getByRole("link", { name: "Datasets" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Censadores" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Usuarios" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /alice/ })).toBeInTheDocument();
   });
 
