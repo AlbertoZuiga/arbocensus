@@ -9,8 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 environ.Env.read_env(str(BASE_DIR.parent / ".env"))
 
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = env("DEBUG", default=True)
-ALLOWED_HOSTS = env("ALLOWED_HOSTS", default="").split(",")
+DEBUG = env("DEBUG", default=False)
+ALLOWED_HOSTS = [h for h in env("ALLOWED_HOSTS", default="").split(",") if h]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -134,5 +134,7 @@ CELERY_RESULT_BACKEND = env("REDIS_URL", default="redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_TASK_SOFT_TIME_LIMIT = 1500
+CELERY_TASK_TIME_LIMIT = 1800
 
 OSRM_URL = env("OSRM_URL", default="http://osrm:5000")

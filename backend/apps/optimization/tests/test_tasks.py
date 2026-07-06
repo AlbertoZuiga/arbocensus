@@ -4,6 +4,7 @@ import pytest
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.tasks import run_optimization
 from celery import Task
+from celery.exceptions import SoftTimeLimitExceeded
 
 task = cast(Task, run_optimization)
 
@@ -51,6 +52,35 @@ def test_failure_sets_error_before_reraise(make_dataset_with_trees, monkeypatch)
     job.refresh_from_db()
     assert job.status == OptimizationJob.Status.FAILED
     assert job.error_message == "boom"
+
+
+def test_soft_time_limit_sets_error_without_retry(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    job = make_job(dataset)
+
+    def fake_run(self):
+        raise SoftTimeLimitExceeded()
+
+    monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
+
+    outcome = task.apply(args=[str(job.id)])
+    assert outcome.failed()
+    assert isinstance(outcome.result, SoftTimeLimitExceeded)
+
+    job.refresh_from_db()
+    assert job.status == OptimizationJob.Status.FAILED
+
+
+def test_on_failure_marks_running_job_failed(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    job = make_job(dataset)
+    job.set_status("running")
+
+    task.on_failure(RuntimeError("worker killed"), "task-1", [str(job.id)], {}, None)
+
+    job.refresh_from_db()
+    assert job.status == OptimizationJob.Status.FAILED
+    assert job.error_message == "worker killed"
 
 
 def test_duplicate_delivery_keeps_single_solution(make_dataset_with_trees, monkeypatch):

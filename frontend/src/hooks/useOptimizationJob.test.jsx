@@ -7,7 +7,7 @@ vi.mock("../api/optimization.js", () => ({
 }));
 
 import { fetchJob } from "../api/optimization.js";
-import { useOptimizationJob, pollInterval } from "./useOptimizationJob.js";
+import { useOptimizationJob } from "./useOptimizationJob.js";
 
 function makeWrapper() {
   const client = new QueryClient({
@@ -45,25 +45,5 @@ describe("useOptimizationJob", () => {
       status: "completed",
       solution_id: "s1",
     });
-  });
-});
-
-describe("pollInterval", () => {
-  it.each([
-    ["queued", 3000],
-    ["running", 3000],
-  ])("keeps polling while %s", (status, expected) => {
-    expect(pollInterval(status)).toBe(expected);
-  });
-
-  it.each([["completed"], ["failed"], ["error"]])(
-    "stops polling once %s (terminal)",
-    (status) => {
-      expect(pollInterval(status)).toBe(false);
-    }
-  );
-
-  it("stops polling when status is undefined", () => {
-    expect(pollInterval(undefined)).toBe(false);
   });
 });

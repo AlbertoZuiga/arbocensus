@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useOptimizationJobs } from "@/hooks/useOptimizationJobs";
-import { formatTimestamp, strategySummary } from "@/lib/optimization";
+import { formatElapsed, formatTimestamp, strategySummary } from "@/lib/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ export default function OptimizationPanel({ datasetId }) {
   const { data: jobs = [], error } = useOptimizationJobs(datasetId);
 
   const latest = jobs[0];
+  const isActive =
+    latest && ["queued", "running"].includes(latest.status);
 
   const handleJobCreated = () => {
     queryClient.invalidateQueries({
@@ -43,7 +45,9 @@ export default function OptimizationPanel({ datasetId }) {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {formatTimestamp(latest.started_at)}
+              {isActive
+                ? formatElapsed(latest.created_at)
+                : formatTimestamp(latest.started_at)}
             </p>
             {latest.error_message ? (
               <Alert variant="destructive">
