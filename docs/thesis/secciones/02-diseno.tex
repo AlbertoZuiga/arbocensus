@@ -38,14 +38,28 @@ Los modelos de dominio centrales son los siguientes:
   \item \textbf{Tree}: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}.
   \item \textbf{RoutingConfig}: parámetros de una sesión de optimización ($T_{\min}$, $T_{\max}$, $s$).
   \item \textbf{OptimizationJob}: tarea de optimización con estado (\texttt{queued}, \texttt{running}, \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
-  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob}: $k$ rutas con métricas de balance.
-  \item \textbf{Route}: ruta individual asignada a un censador con tiempos estimados.
+  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de desplazamiento, el puntaje de balance temporal y las métricas espaciales de la solución (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} del peor par de rutas).
+  \item \textbf{Route}: ruta individual con tiempos estimados; su asignación a un censador (\texttt{surveyor}) es opcional.
   \item \textbf{RouteStop}: visita de un árbol en una ruta, con número de secuencia y estado de visita.
   \item \textbf{DistanceMatrix}: caché persistente de la matriz $n \times n$ de tiempos OSRM, indexada por un hash SHA-256 de los IDs de árboles activos.
 \end{itemize}
 
 El orden de visita de cada ruta se deriva de \texttt{RouteStop.sequence};
 no existe un campo redundante de secuencia en \texttt{Route}.
+
+% DRAFT — revisar
+Cada \texttt{OptimizationJob} produce una \texttt{RoutingSolution} por cada estrategia
+de partición ejecutada (Sección~\ref{sec:estrategias}), lo que permite comparar los
+enfoques sobre un mismo conjunto de árboles. Para gobernar cuál de estas soluciones
+es la vigente en terreno, el modelo incorpora un ciclo de vida de publicación: el
+campo \texttt{published\_at} marca la solución activa de un \textit{dataset} y una
+restricción de unicidad parcial (\texttt{UniqueConstraint} condicionada a
+\texttt{published\_at} no nulo) garantiza que exista a lo más una
+\texttt{RoutingSolution} publicada por \textit{dataset}. Publicar una nueva solución
+despublica atómicamente la anterior. La asignación de un censador a una \texttt{Route}
+solo se permite sobre la solución publicada, y el campo \texttt{surveyor} admite valor
+nulo (\texttt{SET\_NULL}), de modo que las rutas de soluciones no publicadas permanecen
+sin asignar hasta que el administrador defina el plan vigente.
 
 % TODO: incluir diagrama ER simplificado.
 
@@ -170,6 +184,7 @@ Problem}) con las siguientes características:
 
 % ---- 2.3.5 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
+\label{sec:estrategias}
 
 La formulación global anterior minimiza el tiempo total de recorrido y equilibra
 la duración de las rutas, pero no incorpora ningún criterio geográfico explícito
@@ -212,18 +227,46 @@ comportamiento de la formulación anterior sin cambios.
 % optimization, routes. Mencionar autenticación JWT, roles Admin/Surveyor,
 % polling de estado del job.
 
+% DRAFT — revisar
 La API REST se implementa con Django REST Framework y expone los siguientes
 grupos de recursos:
 
 \begin{itemize}
   \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de tokens JWT mediante \textit{djangorestframework-simplejwt}.
   \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV con detección automática de columnas de coordenadas, consulta de estadísticas y exportación de árboles como \textit{GeoJSON FeatureCollection}.
-  \item \textbf{Optimización} (\texttt{/api/optimization/}): creación de trabajos de optimización, consulta de estado (para \textit{polling} desde el frontend) y acceso a métricas de la solución.
-  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica y registro de visitas en terreno.
+  \item \textbf{Optimización} (\texttt{/api/optimization/}): creación de trabajos de optimización, consulta de estado (para \textit{polling} desde el frontend), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
+  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, consulta de la ruta propia del censador y registro de visitas en terreno.
 \end{itemize}
 
 El sistema implementa dos roles: \textbf{Administrador} (acceso completo) y
-\textbf{Censador} (solo lectura de ruta asignada y registro de visitas).
+\textbf{Censador} (lectura de las rutas propias del plan vigente y registro de
+visitas). La autorización se resuelve por rol mediante permisos personalizados sobre
+el campo \texttt{role} del usuario. La Tabla~\ref{tab:endpoints} resume los
+\textit{endpoints} más relevantes.
+
+\begin{table}[H]
+  \centering
+  \caption{Endpoints principales de la API REST agrupados por recurso.}
+  \label{tab:endpoints}
+  \begin{tabularx}{\textwidth}{llX}
+    \toprule
+    Método & Ruta & Descripción \\
+    \midrule
+    POST  & \texttt{/api/auth/token/}                       & Autenticación y emisión de par de tokens JWT. \\
+    POST  & \texttt{/api/datasets/}                         & Importación de árboles desde CSV. \\
+    GET   & \texttt{/api/datasets/\{id\}/trees/}            & Árboles del \textit{dataset} en \textit{GeoJSON}. \\
+    POST  & \texttt{/api/optimization/jobs/}                & Creación de un trabajo de optimización. \\
+    GET   & \texttt{/api/optimization/jobs/\{id\}/}         & Estado del trabajo (\textit{polling}). \\
+    GET   & \texttt{/api/optimization/solutions/\{id\}/}    & Métricas de una solución. \\
+    POST  & \texttt{/api/optimization/solutions/\{id\}/publish/}   & Publica la solución como plan vigente (Admin). \\
+    POST  & \texttt{/api/optimization/solutions/\{id\}/unpublish/} & Despublica la solución (Admin). \\
+    GET   & \texttt{/api/routes/geojson/}                   & Polilíneas de rutas en \textit{GeoJSON}. \\
+    PATCH & \texttt{/api/routes/\{id\}/assign/}             & Asigna un censador a una ruta publicada (Admin). \\
+    GET   & \texttt{/api/routes/my-route/}                  & Rutas del censador en el plan vigente. \\
+    POST  & \texttt{/api/routes/stops/\{id\}/visit/}        & Registro de visita de una parada. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
 % ---- 2.5 -------------------------------------------------------
 \section{INTERFAZ DE USUARIO}
@@ -232,16 +275,43 @@ El sistema implementa dos roles: \textbf{Administrador} (acceso completo) y
 % Describir el panel de administración: flujo CSV → optimización → mapa Leaflet.
 % Mencionar React 18 + Vite, Zustand, React Query (polling), shadcn/ui.
 
-La interfaz de administración se implementa como una \textit{Single Page Application}
-con React 18 y Vite.
-El flujo principal comprende tres etapas: importación de datos (CSV), configuración
-y lanzamiento de la optimización, y visualización de las rutas resultantes sobre
-un mapa Leaflet con datos de OpenStreetMap.
+% DRAFT — revisar
+La interfaz se implementa como una \textit{Single Page Application} con React~18 y
+Vite. El estado de servidor se gestiona con React Query y el estado de sesión
+(autenticación, notificaciones) con Zustand; los mapas emplean Leaflet sobre teselas
+de OpenStreetMap. La aplicación distingue dos experiencias según el rol del usuario:
+el panel de administración y el portal del censador.
 
-El estado de los trabajos de optimización se monitorea mediante \textit{polling}
-automático con React Query, que consulta el endpoint de estado cada 3 segundos
-mientras el trabajo se encuentra en estado \texttt{queued} o \texttt{running}, y
-detiene las consultas automáticamente al alcanzar un estado terminal.
+El panel de administración comprende cinco etapas. En primer lugar, el administrador
+inicia sesión y obtiene un token JWT. En segundo lugar, importa un archivo CSV que
+genera un \textit{dataset} de árboles, visualizados como puntos sobre un mapa
+(\texttt{DatasetMap}). En tercer lugar, configura los parámetros temporales
+($T_{\min}$, $T_{\max}$, tiempo de servicio) y lanza el trabajo de optimización. En
+cuarto lugar, el estado del trabajo se monitorea mediante \textit{polling} automático
+con React Query, que consulta el endpoint de estado cada 3 segundos mientras el
+trabajo se encuentra en estado \texttt{queued} o \texttt{running} y detiene las
+consultas al alcanzar un estado terminal. Finalmente, se presentan las rutas
+resultantes: dado que cada trabajo produce una solución por estrategia de partición,
+un componente de pestañas (\texttt{StrategyTabs}) permite alternar entre las
+soluciones \texttt{global}, \texttt{spatial\_term} y \texttt{cluster\_first} y
+comparar sus métricas. Las rutas se dibujan como polilíneas coloreadas que siguen la
+red de calles real, obtenidas del trazado peatonal que devuelve OSRM. Desde esta vista
+el administrador publica la solución elegida como plan vigente y asigna cada ruta a un
+censador.
+
+El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first}
+orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente
+asignadas al usuario y presenta las paradas en orden secuencial estricto: una parada
+solo puede marcarse como visitada cuando las anteriores ya lo han sido. La ubicación
+del censador se sigue mediante la API de geolocalización del navegador y se calcula la
+distancia \textit{haversine} a la parada activa; el registro de visita se habilita al
+entrar en un radio de proximidad de 30\,m, con la opción de forzar el registro
+(\textit{«Marcar de todos modos»}) cuando la señal GPS es imprecisa. Cada parada ofrece
+un enlace directo (\textit{deep-link}) a la navegación peatonal de Google Maps. La
+pantalla se mantiene encendida durante el recorrido mediante la \textit{Screen Wake
+Lock API}, y una cola de operaciones offline básica ---persistencia del cliente de
+React Query en \texttt{localStorage} con reanudación de mutaciones pausadas--- permite
+que el registro de visitas realizado sin conexión se sincronice al recuperar la red.
 
 % TODO: incluir capturas de pantalla de las vistas principales (Figura \ref{fig:ui_datasets},
 %        \ref{fig:ui_optimization}, \ref{fig:ui_routes}).

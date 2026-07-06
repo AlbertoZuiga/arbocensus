@@ -3,28 +3,38 @@
 \section{RESULTADOS OBTENIDOS}
 \subsection{Métricas de Calidad de Rutas}
 
-% TODO (copilot-prompts.md → §3.1.1):
-% Reportar: número de rutas generadas, distribución de tiempos por ruta,
-% desviación estándar (target < 15% del promedio), cumplimiento de T_max,
-% tiempo de cómputo. Usar dataset real de la tesis.
-% Presentar en tabla (Tabla \ref{tab:metricas}).
+% DRAFT — revisar
+La calidad de la solución producida por el motor de optimización se evalúa sobre un
+\textit{dataset} real de $N =$ [DATO PENDIENTE] árboles correspondiente a la zona de
+[DATO PENDIENTE: zona/comuna], empleando los parámetros temporales por defecto
+($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s) y el tiempo de servicio configurado
+por árbol. Se reportan cinco indicadores: el número de rutas $k$ generado de forma
+automática por el solver, el tiempo promedio por ruta $\bar{T}$, la desviación
+estándar de los tiempos de ruta ---cuyo criterio de aceptación es que no supere el
+15\,\% del promedio, en línea con el objetivo de balance de carga---, el número de
+rutas que exceden la cota dura $T_{\max}$ ---que debe ser cero por construcción--- y el
+tiempo de cómputo del solver. La Tabla~\ref{tab:metricas} resume estos resultados.
 
-% \begin{table}[H]
-%   \centering
-%   \caption{Métricas de calidad de rutas — dataset de N árboles.}
-%   \label{tab:metricas}
-%   \begin{tabularx}{\textwidth}{lXX}
-%     \toprule
-%     Métrica & Valor & Criterio \\
-%     \midrule
-%     Número de rutas $k$ & -- & mínimo posible \\
-%     Tiempo promedio por ruta & -- & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
-%     Desviación estándar & -- & $< 15\%$ del promedio \\
-%     Rutas que exceden $T_{\max}$ & -- & $= 0$ \\
-%     Tiempo de cómputo (solver) & -- & $< 5$ min \\
-%     \bottomrule
-%   \end{tabularx}
-% \end{table}
+\begin{table}[H]
+  \centering
+  \caption{Métricas de calidad de rutas sobre el dataset de evaluación.}
+  \label{tab:metricas}
+  \begin{tabularx}{\textwidth}{lXX}
+    \toprule
+    Métrica & Valor & Criterio \\
+    \midrule
+    Número de rutas $k$ & [DATO PENDIENTE] & mínimo posible \\
+    Tiempo promedio por ruta & [DATO PENDIENTE] & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
+    Desviación estándar & [DATO PENDIENTE] & $< 15\%$ del promedio \\
+    Rutas que exceden $T_{\max}$ & [DATO PENDIENTE] & $= 0$ \\
+    Tiempo de cómputo (solver) & [DATO PENDIENTE] & $< 5$ min \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+% NOTA: medir sobre el dataset real de la tesis ejecutando un OptimizationJob y
+% leyendo total_routes, la media/desviación de total_estimated_time_sec de las Routes,
+% y el tiempo de cómputo del solver (log del pipeline).
 
 % ---- 3.1.2 ------------------------------------------------------
 \subsection{Comparación con Solución Greedy}
@@ -34,12 +44,35 @@
 % Métricas: tiempo total de desplazamiento, balance (std dev), N de rutas.
 % El baseline se genera programáticamente con el mismo dataset.
 
-Como referencia de comparación se implementa una solución \textit{greedy} basada
-en el heurístico del vecino más cercano, generada programáticamente sobre el mismo
-dataset y con los mismos parámetros temporales.
+% DRAFT — revisar
+Como referencia de comparación se define una solución \textit{greedy} basada
+en el heurístico del vecino más cercano, que se generará programáticamente sobre el
+mismo \textit{dataset} y con los mismos parámetros temporales ($T_{\min}$, $T_{\max}$ y
+tiempo de servicio) que la solución de OR-Tools. Este \textit{baseline} construirá
+rutas encadenando en cada paso el árbol no visitado más cercano hasta agotar el
+presupuesto temporal de la ruta, sin optimización global ni balance explícito, lo que
+permitirá cuantificar el valor agregado del solver frente a una heurística voraz. La
+Tabla~\ref{tab:comparativa} contrastará ambos enfoques.
 
-% TODO: completar tabla comparativa y análisis una vez que el motor esté validado
-%        con el dataset real.
+\begin{table}[H]
+  \centering
+  \caption{Comparación entre la solución de OR-Tools y el baseline greedy.}
+  \label{tab:comparativa}
+  \begin{tabularx}{\textwidth}{lXX}
+    \toprule
+    Métrica & OR-Tools (VRP) & Greedy (vecino más cercano) \\
+    \midrule
+    Número de rutas $k$ & [DATO PENDIENTE] & [DATO PENDIENTE] \\
+    Tiempo total de desplazamiento & [DATO PENDIENTE] & [DATO PENDIENTE] \\
+    Desviación estándar de $T_r$ & [DATO PENDIENTE] & [DATO PENDIENTE] \\
+    Rutas que exceden $T_{\max}$ & [DATO PENDIENTE] & [DATO PENDIENTE] \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+% NOTA: generar el baseline greedy programáticamente sobre el dataset real y comparar
+% total_travel_time_sec, desviación estándar de los tiempos por ruta y k contra la
+% RoutingSolution de estrategia global.
 
 % ---- 3.1.3 -----------------------------------------------------
 \subsection{Baseline de calidad geográfica de rutas (VRP global sin clustering)}
@@ -112,15 +145,25 @@ explícito en la partición.
 
 % TODO (copilot-prompts.md → §3.2):
 % Describir las mejoras V2 identificadas: portal del censador mobile-first,
-% importación GeoJSON y legacy DB, chunking OSRM para datasets >500 puntos,
+% importación GeoJSON y legacy DB, chunking OSRM para datasets >5000 puntos,
 % análisis de sensibilidad del tiempo de solver, Playwright E2E.
 
+% DRAFT — revisar
 Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
 
 \begin{itemize}
-  \item \textbf{Portal del censador}: interfaz \textit{mobile-first} para navegación en terreno con integración Google Maps y capacidad parcial de operación sin conexión.
+  \item \textbf{Disjunciones por nodo}: incorporar restricciones de disjunción (\texttt{AddDisjunction}) con penalización, de modo que el solver pueda descartar árboles atípicos (\textit{outliers}) geográficamente aislados cuando su inclusión degrade excesivamente la compacidad de una ruta.
+  \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para \textit{datasets} que superen los 5\,000 puntos activos, superando el límite \texttt{--max-table-size} de una única solicitud.
+  \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
   \item \textbf{Importación de formatos adicionales}: soporte GeoJSON e importación directa desde bases de datos legadas del sistema Arbocensus previo.
-  \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para datasets que superen los 500 puntos activos.
   \item \textbf{Análisis de sensibilidad}: estudio sistemático de la relación entre el tiempo límite del solver y la calidad de la solución.
+  \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos completos de administrador y censador mediante Playwright.
 \end{itemize}
+
+Asimismo, se documentan las siguientes limitaciones aceptadas en el alcance del
+producto actual: los tokens JWT se almacenan en \texttt{localStorage}, lo que
+simplifica la implementación a costa de una menor protección frente a ataques de tipo
+\textit{cross-site scripting}; y la construcción de la matriz de costos no aplica
+fragmentación, por lo que el tamaño de \textit{dataset} queda acotado por el límite de
+tabla de una única consulta OSRM.
 
