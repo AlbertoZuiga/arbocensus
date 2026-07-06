@@ -75,10 +75,15 @@ export default function DatasetDetail() {
     null;
   const solutionId =
     strategies.find((s) => s.key === activeStrategy)?.solutionId ?? null;
-  const datasetSolutionIds = useMemo(
-    () => strategies.map((s) => s.solutionId),
-    [strategies],
-  );
+  const datasetSolutionIds = useMemo(() => {
+    const ids = new Set();
+    for (const job of jobs) {
+      for (const id of Object.values(job.solution_ids ?? {})) {
+        if (id) ids.add(id);
+      }
+    }
+    return [...ids];
+  }, [jobs]);
 
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col gap-4">
