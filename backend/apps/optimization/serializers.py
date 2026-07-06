@@ -43,6 +43,7 @@ class OptimizationJobSerializer(serializers.ModelSerializer):
         model = OptimizationJob
         fields = [
             "id",
+            "strategy",
             "status",
             "error_message",
             "metrics",

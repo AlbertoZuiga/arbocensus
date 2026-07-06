@@ -63,6 +63,7 @@ def test_create_job_persists_chosen_strategy(make_dataset_with_trees, monkeypatc
     response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
 
     assert response.status_code == 201
+    assert response.data["strategy"] == "compare"
     job = OptimizationJob.objects.get(id=response.data["id"])
     assert job.strategy == OptimizationJob.Strategy.COMPARE
 
@@ -118,6 +119,7 @@ def test_get_job_status_shape(make_dataset_with_trees):
     assert response.status_code == 200
     assert set(response.data) == {
         "id",
+        "strategy",
         "status",
         "error_message",
         "metrics",
