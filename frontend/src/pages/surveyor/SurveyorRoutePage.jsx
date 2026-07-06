@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMyRoute, useRouteDetail } from "../../hooks/useMyRoute.js";
 import { useWatchPosition } from "../../hooks/useWatchPosition.js";
 import { useVisitStop } from "../../hooks/useVisitStop.js";
+import { useSkipStop } from "../../hooks/useSkipStop.js";
 import { useWakeLock } from "../../hooks/useWakeLock.js";
 import RouteMap from "../../components/surveyor/RouteMap.jsx";
 import RouteSelector from "../../components/surveyor/RouteSelector.jsx";
@@ -9,7 +10,7 @@ import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
 import UserMenu from "../../components/UserMenu.jsx";
 import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
-import { isStopLocked } from "../../utils/stops.js";
+import { isStopLocked, isStopResolved } from "../../utils/stops.js";
 
 function CenteredMessage({ children }) {
   return (
@@ -33,14 +34,15 @@ export default function SurveyorRoutePage() {
 
   const routeDetail = useRouteDetail(activeRouteId);
   const { position } = useWatchPosition();
-  const visitMutation = useVisitStop(activeRouteId);
+  const visitMutation = useVisitStop(activeRouteId, position);
+  const skipMutation = useSkipStop(activeRouteId);
   useWakeLock();
   const [selectedStopId, setSelectedStopId] = useState(null);
 
   const stops = useMemo(() => routeDetail.data?.stops ?? [], [routeDetail.data]);
 
   const nextPendingStop = useMemo(
-    () => stops.find((stop) => !stop.visited) ?? null,
+    () => stops.find((stop) => !isStopResolved(stop)) ?? null,
     [stops]
   );
 
@@ -76,8 +78,8 @@ export default function SurveyorRoutePage() {
     return <CenteredMessage>No tienes ninguna ruta asignada.</CenteredMessage>;
   }
 
-  const visitedCount = stops.filter((stop) => stop.visited).length;
-  const progress = stops.length > 0 ? (visitedCount / stops.length) * 100 : 0;
+  const resolvedCount = stops.filter((stop) => isStopResolved(stop)).length;
+  const progress = stops.length > 0 ? (resolvedCount / stops.length) * 100 : 0;
 
   const handleSelectRoute = (routeId) => {
     setSelectedRouteId(routeId);
@@ -101,7 +103,7 @@ export default function SurveyorRoutePage() {
           )}
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold text-muted-foreground">
-              {visitedCount}/{stops.length}
+              {resolvedCount}/{stops.length}
             </span>
             <UserMenu />
           </div>
@@ -131,7 +133,14 @@ export default function SurveyorRoutePage() {
         onVisit={(stopId) =>
           visitMutation.mutate(stopId, { onSuccess: () => setSelectedStopId(null) })
         }
+        onSkip={(stopId, reason) =>
+          skipMutation.mutate(
+            { stopId, reason },
+            { onSuccess: () => setSelectedStopId(null) }
+          )
+        }
         isVisiting={visitMutation.isPending}
+        isSkipping={skipMutation.isPending}
       />
 
       <section className="flex-1 overflow-y-auto">
