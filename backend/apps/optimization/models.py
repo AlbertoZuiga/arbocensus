@@ -53,8 +53,17 @@ class OptimizationJob(models.Model):
         COMPLETED = "completed"
         FAILED = "failed"
 
+    class Strategy(models.TextChoices):
+        GLOBAL = "global"
+        SPATIAL_TERM = "spatial_term"
+        CLUSTER_FIRST = "cluster_first"
+        COMPARE = "compare"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     config = models.ForeignKey(RoutingConfig, on_delete=models.CASCADE)
+    strategy = models.CharField(
+        max_length=20, choices=Strategy.choices, default=Strategy.GLOBAL
+    )
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.QUEUED
     )

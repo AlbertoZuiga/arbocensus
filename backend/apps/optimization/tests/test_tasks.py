@@ -22,7 +22,7 @@ def test_success_sets_running_then_completed(make_dataset_with_trees, monkeypatc
 
     seen_status = {}
 
-    def fake_run(self):
+    def fake_run(self, strategy=None):
         seen_status["during"] = OptimizationJob.objects.get(id=job.id).status
         return {"total_routes": 1}
 
@@ -41,7 +41,7 @@ def test_failure_sets_error_before_reraise(make_dataset_with_trees, monkeypatch)
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     job = make_job(dataset)
 
-    def fake_run(self):
+    def fake_run(self, strategy=None):
         raise ValueError("boom")
 
     monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
@@ -58,7 +58,7 @@ def test_soft_time_limit_sets_error_without_retry(make_dataset_with_trees, monke
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     job = make_job(dataset)
 
-    def fake_run(self):
+    def fake_run(self, strategy=None):
         raise SoftTimeLimitExceeded()
 
     monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
@@ -87,7 +87,7 @@ def test_duplicate_delivery_keeps_single_solution(make_dataset_with_trees, monke
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     job = make_job(dataset)
 
-    def fake_run(self):
+    def fake_run(self, strategy=None):
         RoutingSolution.objects.create(job=self.job, total_routes=1)
         return {"total_routes": 1}
 
@@ -101,6 +101,46 @@ def test_duplicate_delivery_keeps_single_solution(make_dataset_with_trees, monke
     assert job.status == OptimizationJob.Status.COMPLETED
     assert first == {"total_routes": 1}
     assert second == {"total_routes": 1}
+
+
+def test_task_passes_job_strategy_to_pipeline(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(
+        config=config, strategy=OptimizationJob.Strategy.SPATIAL_TERM
+    )
+
+    captured = {}
+
+    def fake_run(self, strategy=None):
+        captured["strategy"] = strategy
+        return {}
+
+    monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
+
+    task.apply(args=[str(job.id)]).get()
+
+    assert captured["strategy"] == "spatial_term"
+
+
+def test_task_compare_runs_all_strategies(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(
+        config=config, strategy=OptimizationJob.Strategy.COMPARE
+    )
+
+    captured = {}
+
+    def fake_run(self, strategy=None):
+        captured["strategy"] = strategy
+        return {}
+
+    monkeypatch.setattr("apps.optimization.pipeline.OptimizationPipeline.run", fake_run)
+
+    task.apply(args=[str(job.id)]).get()
+
+    assert captured["strategy"] is None
 
 
 def test_task_configured_with_max_retries():

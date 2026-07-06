@@ -4,6 +4,11 @@ from .models import OptimizationJob, RoutingConfig, RoutingSolution
 
 
 class RoutingConfigSerializer(serializers.ModelSerializer):
+    strategy = serializers.ChoiceField(
+        choices=OptimizationJob.Strategy.choices,
+        default=OptimizationJob.Strategy.GLOBAL,
+    )
+
     class Meta:
         model = RoutingConfig
         fields = [
@@ -12,9 +17,14 @@ class RoutingConfigSerializer(serializers.ModelSerializer):
             "min_route_time_sec",
             "max_route_time_sec",
             "service_time_sec",
+            "strategy",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def create(self, validated_data):
+        validated_data.pop("strategy", None)
+        return super().create(validated_data)
 
     def validate(self, attrs):
         min_time = attrs.get("min_route_time_sec")
