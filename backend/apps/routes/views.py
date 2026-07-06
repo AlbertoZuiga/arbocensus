@@ -1,5 +1,6 @@
 from typing import Any
 
+from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -32,9 +33,11 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self) -> Any:
-        queryset = Route.objects.select_related(
-            "surveyor", "solution"
-        ).prefetch_related("stops__tree")
+        queryset = Route.objects.select_related("surveyor", "solution")
+        if self.request.user.role != CustomUser.Role.ADMIN:
+            queryset = queryset.filter(surveyor=self.request.user)
+        if self.action in ("retrieve", "geojson"):
+            queryset = queryset.prefetch_related("stops__tree")
         solution_id = self.request.query_params.get("solution_id")
         if solution_id:
             queryset = queryset.filter(solution_id=solution_id)
