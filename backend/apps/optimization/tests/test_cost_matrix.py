@@ -1,8 +1,22 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from apps.datasets.models import DistanceMatrix
-from apps.optimization.cost_matrix import UNREACHABLE_PENALTY, OSRMCostMatrixBuilder
+from apps.optimization.cost_matrix import (
+    OSRM_MAX_TREES_PER_REQUEST,
+    UNREACHABLE_PENALTY,
+    OSRMCostMatrixBuilder,
+)
 from requests_mock import ANY
+
+
+def _fake_trees(count):
+    return [
+        SimpleNamespace(location=SimpleNamespace(x=-70.65, y=-33.45))
+        for _ in range(count)
+    ]
+
 
 pytestmark = pytest.mark.django_db
 
@@ -50,6 +64,23 @@ def test_cache_hit_skips_osrm(requests_mock, make_dataset_with_trees):
 
     assert adapter.call_count == 0
     np.testing.assert_array_equal(matrix, np.array([[0, 5], [5, 0]], dtype=float))
+
+
+def test_fetch_rejects_dataset_over_table_limit():
+    trees = _fake_trees(OSRM_MAX_TREES_PER_REQUEST + 1)
+
+    with pytest.raises(ValueError, match="árboles por consulta OSRM"):
+        OSRMCostMatrixBuilder()._fetch_from_osrm(trees)
+
+
+def test_fetch_allows_dataset_at_table_limit(requests_mock):
+    trees = _fake_trees(OSRM_MAX_TREES_PER_REQUEST)
+    n = OSRM_MAX_TREES_PER_REQUEST
+    requests_mock.get(ANY, json={"durations": np.zeros((n, n)).tolist()})
+
+    matrix = OSRMCostMatrixBuilder()._fetch_from_osrm(trees)
+
+    assert matrix.shape == (n, n)
 
 
 def test_matrix_order_deterministic_by_tree_id(requests_mock, make_dataset_with_trees):
