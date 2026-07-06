@@ -1,4 +1,5 @@
 import numpy as np
+from apps.optimization.route_metrics import haversine
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
 FIXED_VEHICLE_COST = 100_000
@@ -14,6 +15,16 @@ def build_open_matrix(matrix):
     return open_matrix
 
 
+def build_open_geo_matrix(points):
+    n = len(points) + 1
+    geo = np.zeros((n, n))
+    for i, a in enumerate(points):
+        for j, b in enumerate(points):
+            if i != j:
+                geo[i + 1][j + 1] = haversine(a, b)
+    return geo
+
+
 class ArbocensusVRPSolver:
     def __init__(
         self,
@@ -24,6 +35,8 @@ class ArbocensusVRPSolver:
         service_time_sec,
         max_vehicles,
         time_limit_sec=180,
+        spatial_points=None,
+        span_coef=0,
     ):
         self.matrix = build_open_matrix(matrix)
         self.node_count = self.matrix.shape[0] - 1
@@ -32,6 +45,8 @@ class ArbocensusVRPSolver:
         self.service_time_sec = service_time_sec
         self.max_vehicles = max_vehicles
         self.time_limit_sec = time_limit_sec
+        self.spatial_points = spatial_points
+        self.span_coef = span_coef
 
     def solve(self):
         n = self.node_count + 1
@@ -56,6 +71,19 @@ class ArbocensusVRPSolver:
             "Time",
         )
         time_dimension = routing.GetDimensionOrDie("Time")
+
+        if self.spatial_points is not None:
+            geo_matrix = build_open_geo_matrix(self.spatial_points)
+
+            def distance_callback(from_index, to_index):
+                from_node = manager.IndexToNode(from_index)
+                to_node = manager.IndexToNode(to_index)
+                return int(geo_matrix[from_node][to_node])
+
+            distance_cb = routing.RegisterTransitCallback(distance_callback)
+            routing.AddDimension(distance_cb, 0, 10_000_000, True, "Distance")
+            distance_dimension = routing.GetDimensionOrDie("Distance")
+            distance_dimension.SetSpanCostCoefficientForAllVehicles(self.span_coef)
 
         routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
 
