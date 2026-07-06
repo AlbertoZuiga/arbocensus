@@ -237,6 +237,22 @@ def test_skip_rejected_for_non_surveyor(solution_with_route):
     assert response.status_code == 403
 
 
+def test_skipped_stop_counts_toward_route_totals(solution_with_route, surveyor):
+    _, route, stops = solution_with_route
+    _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Árbol inexistente"},
+        format="json",
+    )
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/routes/{route.id}/")
+    assert response.status_code == 200
+    assert response.data["total_trees"] == 2
+    assert response.data["visited_count"] == 0
+    assert response.data["skipped_count"] == 1
+    assert response.data["pending_count"] == 1
+
+
 def test_visit_foreign_stop_returns_404(solution_with_route):
     _, _, stops = solution_with_route
     other = CustomUserFactory(role="surveyor")
