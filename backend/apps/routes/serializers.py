@@ -26,8 +26,10 @@ class RouteStopSerializer(serializers.ModelSerializer):
             "tree_id",
             "lon",
             "lat",
+            "status",
             "visited",
             "visited_at",
+            "skip_reason",
             "notes",
         ]
         read_only_fields = fields
@@ -60,7 +62,9 @@ class RouteSerializer(serializers.ModelSerializer):
         return sum(1 for stop in obj.stops.all() if stop.visited)
 
     def get_pending_count(self, obj):
-        return sum(1 for stop in obj.stops.all() if not stop.visited)
+        return sum(
+            1 for stop in obj.stops.all() if stop.status == RouteStop.Status.PENDING
+        )
 
 
 class RouteDetailSerializer(RouteSerializer):
