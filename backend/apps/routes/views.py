@@ -32,9 +32,9 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self) -> Any:
-        queryset = Route.objects.all()
-        if self.action in ("retrieve", "geojson"):
-            queryset = queryset.prefetch_related("stops__tree")
+        queryset = Route.objects.select_related(
+            "surveyor", "solution"
+        ).prefetch_related("stops__tree")
         solution_id = self.request.query_params.get("solution_id")
         if solution_id:
             queryset = queryset.filter(solution_id=solution_id)
@@ -73,13 +73,23 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         route = self.get_object()
         serializer = RouteAssignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        route.surveyor = serializer.validated_data["surveyor_id"]
+        surveyor = serializer.validated_data["surveyor_id"]
+        if surveyor is not None and route.solution.published_at is None:
+            return Response(
+                {"detail": "Solo se puede asignar sobre la solución publicada."},
+                status=400,
+            )
+        route.surveyor = surveyor
         route.save(update_fields=["surveyor"])
         return Response(RouteSerializer(route).data)
 
     @action(detail=False, methods=["get"], url_path="my-route")
     def my_route(self, request):
-        routes = Route.objects.filter(surveyor=request.user)
+        routes = (
+            Route.objects.select_related("surveyor")
+            .prefetch_related("stops__tree")
+            .filter(surveyor=request.user, solution__published_at__isnull=False)
+        )
         return Response(RouteSerializer(routes, many=True).data)
 
 

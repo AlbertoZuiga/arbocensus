@@ -3,6 +3,7 @@ from typing import Any
 from apps.accounts.permissions import IsAdminRole
 from django.contrib.auth import get_user_model
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -57,8 +58,25 @@ class RoutingSolutionViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
     serializer_class = RoutingSolutionSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self) -> Any:
+        if self.action in ("publish", "unpublish"):
+            return [IsAdminRole()]
+        return [IsAuthenticated()]
+
     def get_queryset(self) -> Any:
         user = self.request.user
         if user.role == CustomUser.Role.ADMIN:
             return RoutingSolution.objects.all()
         return RoutingSolution.objects.filter(routes__surveyor=user).distinct()
+
+    @action(detail=True, methods=["post"])
+    def publish(self, request, pk=None):
+        solution = self.get_object()
+        solution.publish()
+        return Response(RoutingSolutionSerializer(solution).data)
+
+    @action(detail=True, methods=["post"])
+    def unpublish(self, request, pk=None):
+        solution = self.get_object()
+        solution.unpublish()
+        return Response(RoutingSolutionSerializer(solution).data)

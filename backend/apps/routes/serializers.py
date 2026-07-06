@@ -8,7 +8,8 @@ CustomUser = get_user_model()
 
 class RouteAssignSerializer(serializers.Serializer):
     surveyor_id = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.filter(role=CustomUser.Role.SURVEYOR)
+        queryset=CustomUser.objects.filter(role=CustomUser.Role.SURVEYOR),
+        allow_null=True,
     )
 
 
@@ -33,6 +34,10 @@ class RouteStopSerializer(serializers.ModelSerializer):
 
 
 class RouteSerializer(serializers.ModelSerializer):
+    surveyor_name = serializers.SerializerMethodField()
+    visited_count = serializers.SerializerMethodField()
+    pending_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Route
         fields = [
@@ -42,8 +47,20 @@ class RouteSerializer(serializers.ModelSerializer):
             "travel_time_sec",
             "total_estimated_time_sec",
             "surveyor",
+            "surveyor_name",
+            "visited_count",
+            "pending_count",
         ]
         read_only_fields = fields
+
+    def get_surveyor_name(self, obj):
+        return obj.surveyor.username if obj.surveyor_id else None
+
+    def get_visited_count(self, obj):
+        return sum(1 for stop in obj.stops.all() if stop.visited)
+
+    def get_pending_count(self, obj):
+        return sum(1 for stop in obj.stops.all() if not stop.visited)
 
 
 class RouteDetailSerializer(RouteSerializer):

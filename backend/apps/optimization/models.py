@@ -2,7 +2,7 @@ import uuid
 
 from apps.datasets.models import Dataset
 from django.core.validators import MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, Q
 from django.utils import timezone
 
@@ -100,6 +100,9 @@ class RoutingSolution(models.Model):
     job = models.ForeignKey(
         OptimizationJob, on_delete=models.CASCADE, related_name="solutions"
     )
+    dataset = models.ForeignKey(
+        Dataset, on_delete=models.CASCADE, related_name="solutions"
+    )
     strategy = models.CharField(max_length=20, choices=Strategy.choices)
     total_routes = models.IntegerField()
     total_travel_time_sec = models.FloatField(default=0)
@@ -108,11 +111,36 @@ class RoutingSolution(models.Model):
     interleave_total = models.IntegerField(default=0)
     interleave_per_route = models.FloatField(default=0)
     worst_pair_iou = models.FloatField(default=0)
+    published_at = models.DateTimeField(null=True, blank=True)
     generated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-generated_at"]
         unique_together = (("job", "strategy"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["dataset"],
+                condition=Q(published_at__isnull=False),
+                name="one_published_solution_per_dataset",
+            ),
+        ]
 
     def __str__(self):
         return f"RoutingSolution {self.id} ({self.total_routes} routes)"
+
+    def save(self, *args, **kwargs):
+        if not self.dataset_id and self.job_id:
+            self.dataset_id = self.job.config.dataset_id
+        super().save(*args, **kwargs)
+
+    def publish(self):
+        with transaction.atomic():
+            RoutingSolution.objects.filter(
+                dataset_id=self.dataset_id, published_at__isnull=False
+            ).exclude(pk=self.pk).update(published_at=None)
+            self.published_at = timezone.now()
+            self.save(update_fields=["published_at"])
+
+    def unpublish(self):
+        self.published_at = None
+        self.save(update_fields=["published_at"])

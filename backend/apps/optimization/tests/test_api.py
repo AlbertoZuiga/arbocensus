@@ -151,7 +151,9 @@ def test_get_solution_shape(make_dataset_with_trees):
         "interleave_per_route",
         "worst_pair_iou",
         "generated_at",
+        "published_at",
         "job",
+        "dataset",
     }
     assert response.data["total_routes"] == 3
     assert response.data["job"] == str(job.id)
@@ -202,3 +204,75 @@ def test_admin_gets_any_solution(make_dataset_with_trees):
 
     assert response.status_code == 200
     assert response.data["id"] == str(solution.id)
+
+
+def test_admin_publishes_solution(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(config=config)
+    solution = RoutingSolution.objects.create(job=job, total_routes=1)
+
+    response = _client("admin").post(
+        f"/api/optimization/solutions/{solution.id}/publish/"
+    )
+
+    assert response.status_code == 200
+    assert response.data["published_at"] is not None
+    solution.refresh_from_db()
+    assert solution.published_at is not None
+
+
+def test_publishing_new_solution_unpublishes_previous_for_same_dataset(
+    make_dataset_with_trees,
+):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    older_job = OptimizationJob.objects.create(config=config)
+    newer_job = OptimizationJob.objects.create(config=config)
+    older = RoutingSolution.objects.create(
+        job=older_job, strategy="global", total_routes=1
+    )
+    newer = RoutingSolution.objects.create(
+        job=newer_job, strategy="global", total_routes=2
+    )
+    older.publish()
+
+    response = _client("admin").post(f"/api/optimization/solutions/{newer.id}/publish/")
+
+    assert response.status_code == 200
+    older.refresh_from_db()
+    newer.refresh_from_db()
+    assert older.published_at is None
+    assert newer.published_at is not None
+
+
+def test_publish_rejected_for_non_admin(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(config=config)
+    solution = RoutingSolution.objects.create(job=job, total_routes=1)
+
+    response = _client("surveyor").post(
+        f"/api/optimization/solutions/{solution.id}/publish/"
+    )
+
+    assert response.status_code == 403
+    solution.refresh_from_db()
+    assert solution.published_at is None
+
+
+def test_admin_unpublishes_solution(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(config=config)
+    solution = RoutingSolution.objects.create(job=job, total_routes=1)
+    solution.publish()
+
+    response = _client("admin").post(
+        f"/api/optimization/solutions/{solution.id}/unpublish/"
+    )
+
+    assert response.status_code == 200
+    assert response.data["published_at"] is None
+    solution.refresh_from_db()
+    assert solution.published_at is None

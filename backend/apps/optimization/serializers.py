@@ -48,6 +48,7 @@ class OptimizationJobSerializer(serializers.ModelSerializer):
 
 class RoutingSolutionSerializer(serializers.ModelSerializer):
     job = serializers.UUIDField(source="job.id", read_only=True)
+    dataset = serializers.UUIDField(source="dataset.id", read_only=True)
 
     class Meta:
         model = RoutingSolution
@@ -62,6 +63,8 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
             "interleave_per_route",
             "worst_pair_iou",
             "generated_at",
+            "published_at",
             "job",
+            "dataset",
         ]
         read_only_fields = fields
