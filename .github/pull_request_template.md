@@ -1,23 +1,23 @@
-## Description
+## Descripción
 
-Provide a brief summary of **what this PR does** and **why it is needed**.
+Proporciona un resumen breve de **qué hace este PR** y **por qué es necesario**.
 
-### Problem
+### Problema
 
-Describe the problem being solved or the need addressed by this change.
+Describe el problema que se está resolviendo o la necesidad que aborda este cambio.
 
-### Solution
+### Solución
 
-Explain how this PR solves the problem or improves the existing functionality.
+Explica cómo este PR resuelve el problema o mejora la funcionalidad existente.
 
-## How to Test
+## Cómo probar
 
-Provide clear steps to reproduce and verify the changes:
+Proporciona pasos claros para reproducir y verificar los cambios:
 
-- List item 1
-- List item 2
-- List item 3
+- Elemento 1
+- Elemento 2
+- Elemento 3
 
-## Screenshots (optional)
+## Capturas de pantalla (opcional)
 
-Include screenshots or GIFs if the change affects UI or has visible behavior.
+Incluye capturas de pantalla o GIFs si el cambio afecta la interfaz o tiene comportamiento visible.
