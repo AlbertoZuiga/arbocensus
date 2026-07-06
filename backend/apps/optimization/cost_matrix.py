@@ -6,6 +6,7 @@ from apps.datasets.models import DistanceMatrix
 from django.conf import settings
 
 UNREACHABLE_PENALTY = 9_999_999.0
+OSRM_MAX_TABLE_SIZE = 350
 
 
 class OSRMCostMatrixBuilder:
@@ -34,6 +35,11 @@ class OSRMCostMatrixBuilder:
         return hashlib.sha256(",".join(ordered_ids).encode()).hexdigest()
 
     def _fetch_from_osrm(self, trees):
+        if len(trees) > OSRM_MAX_TABLE_SIZE:
+            raise ValueError(
+                f"dataset excede el límite de la matriz OSRM "
+                f"({OSRM_MAX_TABLE_SIZE} árboles); dividir dataset"
+            )
         coords = ";".join(f"{tree.location.x},{tree.location.y}" for tree in trees)
         url = f"{settings.OSRM_URL}/table/v1/foot/{coords}"
         response = requests.get(url, params={"annotations": "duration"}, timeout=60)
