@@ -50,6 +50,11 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["get"])
     def geojson(self, request):
+        if not request.query_params.get("solution_id"):
+            return Response(
+                {"detail": "El parámetro solution_id es obligatorio."},
+                status=400,
+            )
         features = []
         for route in self.get_queryset():
             stop_coordinates = [

@@ -93,6 +93,13 @@ def test_geojson_returns_street_following_path_per_route(
     fetch.assert_called_once_with([[-70.65, -33.45], [-70.66, -33.46]])
 
 
+def test_geojson_without_solution_id_returns_400(solution_with_route):
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get("/api/routes/geojson/")
+    assert response.status_code == 400
+    assert "solution_id" in response.data["detail"]
+
+
 def test_visit_marks_stop_visited(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
