@@ -119,6 +119,7 @@ export default function JobDetail() {
     const solution = solutionQueries[i].data;
     if (solution) solutionsByStrategy[strategy] = solution;
   });
+  const droppedTrees = job.metrics?.dropped_trees ?? [];
   const strategies = STRATEGY_ORDER.filter((s) => solutionsByStrategy[s]);
   const solutionsLoading = solutionQueries.some((q) => q.isLoading);
   const solutionsError = solutionQueries.some((q) => q.error);
@@ -140,6 +141,16 @@ export default function JobDetail() {
       {job.error_message && (
         <Alert variant="destructive">
           <AlertDescription>{job.error_message}</AlertDescription>
+        </Alert>
+      )}
+
+      {droppedTrees.length > 0 && (
+        <Alert className="border-amber-500/50 text-amber-700 dark:text-amber-500">
+          <AlertDescription>
+            {droppedTrees.length === 1
+              ? "1 árbol quedó fuera de las rutas."
+              : `${droppedTrees.length} árboles quedaron fuera de las rutas.`}
+          </AlertDescription>
         </Alert>
       )}
 

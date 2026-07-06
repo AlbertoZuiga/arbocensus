@@ -99,6 +99,26 @@ describe("JobDetail", () => {
     expect(bestRadius.className).toContain("text-primary");
   });
 
+  it("warns when trees were dropped as unreachable", async () => {
+    mockJob = {
+      ...mockJob,
+      metrics: { dropped_trees: ["t1", "t2", "t3"] },
+    };
+    renderJobDetail();
+    expect(
+      await screen.findByText(/3 árboles quedaron fuera de las rutas/),
+    ).toBeInTheDocument();
+  });
+
+  it("does not warn when no trees were dropped", async () => {
+    mockJob = { ...mockJob, metrics: { dropped_trees: [] } };
+    renderJobDetail();
+    await screen.findByText("Global");
+    expect(
+      screen.queryByText(/quedaron fuera de las rutas/),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not highlight when all strategies tie", async () => {
     renderJobDetail();
     await screen.findByText("3590 m");

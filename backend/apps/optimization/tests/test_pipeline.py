@@ -13,6 +13,13 @@ SANTIAGO_LON = -70.65
 SANTIAGO_LAT = -33.45
 
 
+@pytest.fixture(autouse=True)
+def fast_solver(monkeypatch):
+    monkeypatch.setattr(
+        "apps.optimization.pipeline.SOLVER_TIME_LIMIT_SEC", 5, raising=False
+    )
+
+
 def make_job(
     tree_count,
     min_route_time_sec=1800,
@@ -105,11 +112,49 @@ def test_pipeline_persists_spatial_metrics(requests_mock):
     assert global_metrics["worst_pair_iou"] == expected["worst_pair_iou"]
 
 
-def test_pipeline_raises_on_infeasible(requests_mock):
-    job = make_job(
-        5, min_route_time_sec=200, max_route_time_sec=200, service_time_sec=300
-    )
-    requests_mock.get(ANY, json=osrm_durations(5))
+def test_pipeline_reports_no_dropped_trees_when_all_reachable(requests_mock):
+    job = make_job(20)
+    requests_mock.get(ANY, json=osrm_durations(20))
 
-    with pytest.raises(ValueError, match="No feasible solution"):
-        OptimizationPipeline(job).run()
+    metrics = OptimizationPipeline(job).run()
+
+    assert metrics["dropped_trees"] == []
+
+
+def test_pipeline_drops_unreachable_tree(requests_mock):
+    tree_count = 8
+    job = make_job(tree_count)
+    durations = osrm_durations(tree_count)
+    trees = sorted(Tree.objects.filter(dataset=job.config.dataset), key=lambda t: t.id)
+    unreachable_index = 3
+    for i in range(tree_count):
+        durations["durations"][i][unreachable_index] = 9_999_999.0
+        durations["durations"][unreachable_index][i] = 9_999_999.0
+    durations["durations"][unreachable_index][unreachable_index] = 0.0
+    requests_mock.get(ANY, json=durations)
+
+    metrics = OptimizationPipeline(job).run()
+
+    assert metrics["dropped_trees"] == [str(trees[unreachable_index].id)]
+
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
+    stops = RouteStop.objects.filter(route__solution=solution)
+    assert stops.count() == tree_count - 1
+    assert str(trees[unreachable_index].id) not in {
+        str(tid) for tid in stops.values_list("tree_id", flat=True)
+    }
+
+
+def test_pipeline_drops_all_when_time_budget_too_tight(requests_mock):
+    tree_count = 5
+    job = make_job(
+        tree_count,
+        min_route_time_sec=200,
+        max_route_time_sec=200,
+        service_time_sec=300,
+    )
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+
+    metrics = OptimizationPipeline(job).run()
+
+    assert len(metrics["dropped_trees"]) == tree_count

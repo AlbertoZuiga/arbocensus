@@ -5,6 +5,7 @@ from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 FIXED_VEHICLE_COST = 100_000
 SOFT_LOWER_PENALTY = 10_000
 SOFT_UPPER_PENALTY = 500
+DROP_PENALTY = 10 * FIXED_VEHICLE_COST
 
 
 def build_open_matrix(matrix):
@@ -87,6 +88,9 @@ class ArbocensusVRPSolver:
 
         routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
 
+        for node in range(1, n):
+            routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
+
         midpoint = (self.min_route_time_sec + self.max_route_time_sec) // 2
         for vehicle_id in range(self.max_vehicles):
             end_index = routing.End(vehicle_id)
@@ -128,4 +132,11 @@ def extract_or_tools_routes(manager, routing, solution, max_vehicles):
             index = solution.Value(routing.NextVar(index))
         if route:
             routes.append(route)
-    return routes
+
+    dropped = []
+    for index in range(routing.Size()):
+        if routing.IsStart(index) or routing.IsEnd(index):
+            continue
+        if solution.Value(routing.NextVar(index)) == index:
+            dropped.append(manager.IndexToNode(index) - 1)
+    return routes, dropped

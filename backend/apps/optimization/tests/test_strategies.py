@@ -11,6 +11,11 @@ SANTIAGO_LAT = -33.45
 SANTIAGO_LON = -70.65
 
 
+def unwrap(result):
+    assert result is not None
+    return result
+
+
 def uniform_matrix(n, travel=60.0):
     m = np.full((n, n), travel)
     np.fill_diagonal(m, 0.0)
@@ -43,16 +48,18 @@ def route_time(open_matrix, route, service_time_sec):
 
 def test_spatial_term_visits_every_node_once():
     n = 8
-    routes = solve_spatial_term(
-        uniform_matrix(n),
-        points=line_points(n),
-        min_route_time_sec=600,
-        max_route_time_sec=100_000,
-        service_time_sec=300,
-        max_vehicles=5,
-        time_limit_sec=5,
+    routes, dropped = unwrap(
+        solve_spatial_term(
+            uniform_matrix(n),
+            points=line_points(n),
+            min_route_time_sec=600,
+            max_route_time_sec=100_000,
+            service_time_sec=300,
+            max_vehicles=5,
+            time_limit_sec=5,
+        )
     )
-    assert routes is not None
+    assert dropped == []
     visited = [node for route in routes for node in route]
     assert sorted(visited) == list(range(n))
     assert len(visited) == len(set(visited))
@@ -60,16 +67,18 @@ def test_spatial_term_visits_every_node_once():
 
 def test_spatial_term_excludes_dummy_depot():
     n = 6
-    routes = solve_spatial_term(
-        uniform_matrix(n),
-        points=line_points(n),
-        min_route_time_sec=600,
-        max_route_time_sec=100_000,
-        service_time_sec=300,
-        max_vehicles=5,
-        time_limit_sec=5,
+    routes, dropped = unwrap(
+        solve_spatial_term(
+            uniform_matrix(n),
+            points=line_points(n),
+            min_route_time_sec=600,
+            max_route_time_sec=100_000,
+            service_time_sec=300,
+            max_vehicles=5,
+            time_limit_sec=5,
+        )
     )
-    assert routes is not None
+    assert dropped == []
     for route in routes:
         for node in route:
             assert 0 <= node < n
@@ -79,16 +88,18 @@ def test_spatial_term_respects_max_route_time():
     n = 8
     matrix = uniform_matrix(n, travel=120.0)
     max_route_time = 2_000
-    routes = solve_spatial_term(
-        matrix,
-        points=line_points(n),
-        min_route_time_sec=500,
-        max_route_time_sec=max_route_time,
-        service_time_sec=300,
-        max_vehicles=8,
-        time_limit_sec=10,
+    routes, dropped = unwrap(
+        solve_spatial_term(
+            matrix,
+            points=line_points(n),
+            min_route_time_sec=500,
+            max_route_time_sec=max_route_time,
+            service_time_sec=300,
+            max_vehicles=8,
+            time_limit_sec=10,
+        )
     )
-    assert routes is not None
+    assert dropped == []
     open_matrix = build_open_matrix(matrix)
     for route in routes:
         assert route_time(open_matrix, route, 300) <= max_route_time
@@ -97,15 +108,17 @@ def test_spatial_term_respects_max_route_time():
 def test_cluster_first_covers_all_nodes_once():
     per_cluster = 5
     n = per_cluster * 2
-    routes = solve_cluster_first(
-        uniform_matrix(n),
-        points=two_cluster_points(per_cluster),
-        min_route_time_sec=600,
-        max_route_time_sec=100_000,
-        service_time_sec=300,
-        time_limit_sec=5,
+    routes, dropped = unwrap(
+        solve_cluster_first(
+            uniform_matrix(n),
+            points=two_cluster_points(per_cluster),
+            min_route_time_sec=600,
+            max_route_time_sec=100_000,
+            service_time_sec=300,
+            time_limit_sec=5,
+        )
     )
-    assert routes is not None
+    assert dropped == []
     assert len(routes) >= 1
     visited = [node for route in routes for node in route]
     assert sorted(visited) == list(range(n))
@@ -117,15 +130,17 @@ def test_cluster_first_respects_max_route_time():
     n = per_cluster * 2
     matrix = uniform_matrix(n, travel=120.0)
     max_route_time = 3_000
-    routes = solve_cluster_first(
-        matrix,
-        points=two_cluster_points(per_cluster),
-        min_route_time_sec=500,
-        max_route_time_sec=max_route_time,
-        service_time_sec=300,
-        time_limit_sec=10,
+    routes, dropped = unwrap(
+        solve_cluster_first(
+            matrix,
+            points=two_cluster_points(per_cluster),
+            min_route_time_sec=500,
+            max_route_time_sec=max_route_time,
+            service_time_sec=300,
+            time_limit_sec=10,
+        )
     )
-    assert routes is not None
+    assert dropped == []
     open_matrix = build_open_matrix(matrix)
     for route in routes:
         assert route_time(open_matrix, route, 300) <= max_route_time
@@ -133,15 +148,17 @@ def test_cluster_first_respects_max_route_time():
 
 def test_cluster_first_degenerates_to_single_cluster():
     n = 2
-    routes = solve_cluster_first(
-        uniform_matrix(n),
-        points=line_points(n),
-        min_route_time_sec=600,
-        max_route_time_sec=100_000,
-        service_time_sec=300,
-        time_limit_sec=5,
+    routes, dropped = unwrap(
+        solve_cluster_first(
+            uniform_matrix(n),
+            points=line_points(n),
+            min_route_time_sec=600,
+            max_route_time_sec=100_000,
+            service_time_sec=300,
+            time_limit_sec=5,
+        )
     )
-    assert routes is not None
+    assert dropped == []
     visited = sorted(node for route in routes for node in route)
     assert visited == [0, 1]
 
