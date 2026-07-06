@@ -1,3 +1,11 @@
+export function isStopResolved(stop) {
+  return stop.visited || stop.status === "skipped";
+}
+
 export function isStopLocked(stop, nextPendingStopId) {
-  return !stop.visited && nextPendingStopId != null && stop.id !== nextPendingStopId;
+  return (
+    !isStopResolved(stop) &&
+    nextPendingStopId != null &&
+    stop.id !== nextPendingStopId
+  );
 }

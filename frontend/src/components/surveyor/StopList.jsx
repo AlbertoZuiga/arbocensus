@@ -29,9 +29,11 @@ export default function StopList({
                   "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
                   stop.visited
                     ? "bg-primary"
-                    : selected
-                      ? "bg-blue-600"
-                      : "bg-slate-500",
+                    : stop.status === "skipped"
+                      ? "bg-slate-400"
+                      : selected
+                        ? "bg-blue-600"
+                        : "bg-slate-500",
                 )}
               >
                 {stop.sequence}
@@ -39,7 +41,15 @@ export default function StopList({
               <span className="flex-1 text-sm text-slate-700">
                 Árbol {stop.sequence}
               </span>
-              {stop.visited && <Badge>Visitado</Badge>}
+              {stop.visited ? (
+                <Badge>Visitado</Badge>
+              ) : (
+                stop.status === "skipped" && (
+                  <Badge variant="secondary" className="bg-slate-200 text-slate-600">
+                    Omitido
+                  </Badge>
+                )
+              )}
             </button>
           </li>
         );

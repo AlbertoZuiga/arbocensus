@@ -81,8 +81,9 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
       )}
 
       {routes.map((route) => {
-        const total = route.visited_count + route.pending_count;
-        const progress = total ? (route.visited_count / total) * 100 : 0;
+        const total = route.total_trees;
+        const resolved = route.visited_count + route.skipped_count;
+        const progress = total ? (resolved / total) * 100 : 0;
         return (
           <div key={route.id} className="rounded-md border p-3">
             <div className="flex items-center justify-between">
@@ -124,7 +125,12 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
                 <span>
                   {route.visited_count}/{total} visitados
                 </span>
-                <span>{route.pending_count} pendientes</span>
+                <span>
+                  {route.skipped_count > 0 && (
+                    <span className="mr-2">{route.skipped_count} omitidos</span>
+                  )}
+                  {route.pending_count} pendientes
+                </span>
               </div>
               <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div

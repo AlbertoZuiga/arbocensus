@@ -134,6 +134,125 @@ def test_revisiting_visited_stop_is_idempotent(solution_with_route, surveyor):
     assert stops[0].visited_at == first_visited_at
 
 
+def test_visit_stores_visit_location_as_point(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": -33.45, "lon": -70.65},
+        format="json",
+    )
+    assert response.status_code == 200
+    stops[0].refresh_from_db()
+    assert stops[0].visit_location.x == pytest.approx(-70.65)
+    assert stops[0].visit_location.y == pytest.approx(-33.45)
+
+
+def test_skip_requires_reason(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/skip/", {}, format="json"
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == "pending"
+
+
+def test_skip_marks_stop_skipped(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Árbol inexistente"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.data["status"] == "skipped"
+    stops[0].refresh_from_db()
+    assert stops[0].status == "skipped"
+    assert stops[0].skip_reason == "Árbol inexistente"
+
+
+def test_skip_unblocks_next_stop(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    skip = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Acceso bloqueado"},
+        format="json",
+    )
+    assert skip.status_code == 200
+    visit = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
+    assert visit.status_code == 200
+    stops[1].refresh_from_db()
+    assert stops[1].visited is True
+
+
+def test_skip_out_of_order_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[1].id}/skip/",
+        {"reason": "Otro"},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[1].refresh_from_db()
+    assert stops[1].status == "pending"
+
+
+def test_reskipping_stop_is_idempotent(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    first = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Árbol inexistente"},
+        format="json",
+    )
+    assert first.status_code == 200
+    second = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Otro motivo"},
+        format="json",
+    )
+    assert second.status_code == 200
+    stops[0].refresh_from_db()
+    assert stops[0].skip_reason == "Árbol inexistente"
+
+
+def test_skip_foreign_stop_returns_404(solution_with_route):
+    _, _, stops = solution_with_route
+    other = CustomUserFactory(role="surveyor")
+    response = _client(other).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Otro"},
+        format="json",
+    )
+    assert response.status_code == 404
+
+
+def test_skip_rejected_for_non_surveyor(solution_with_route):
+    _, _, stops = solution_with_route
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Otro"},
+        format="json",
+    )
+    assert response.status_code == 403
+
+
+def test_skipped_stop_counts_toward_route_totals(solution_with_route, surveyor):
+    _, route, stops = solution_with_route
+    _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/skip/",
+        {"reason": "Árbol inexistente"},
+        format="json",
+    )
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/routes/{route.id}/")
+    assert response.status_code == 200
+    assert response.data["total_trees"] == 2
+    assert response.data["visited_count"] == 0
+    assert response.data["skipped_count"] == 1
+    assert response.data["pending_count"] == 1
+
+
 def test_visit_foreign_stop_returns_404(solution_with_route):
     _, _, stops = solution_with_route
     other = CustomUserFactory(role="surveyor")

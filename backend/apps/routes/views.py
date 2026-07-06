@@ -2,8 +2,8 @@ from typing import Any
 
 from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
+from django.contrib.gis.geos import Point
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -96,22 +96,40 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(RouteSerializer(routes, many=True).data)
 
 
+ORDER_ERROR = "Debes visitar los árboles anteriores primero."
+
+
 class RouteStopVisitView(APIView):
     permission_classes = [IsSurveyorRole]
 
     def post(self, request, stop_id):
         stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
-        if stop.visited:
+        if stop.status != RouteStop.Status.PENDING:
             return Response(RouteStopSerializer(stop).data)
-        if RouteStop.objects.filter(
-            route=stop.route, sequence__lt=stop.sequence, visited=False
-        ).exists():
-            return Response(
-                {"detail": "Debes visitar los árboles anteriores primero."},
-                status=400,
-            )
-        stop.visited = True
-        stop.visited_at = timezone.now()
-        stop.notes = request.data.get("notes", stop.notes)
-        stop.save(update_fields=["visited", "visited_at", "notes"])
+        if stop.has_pending_predecessor():
+            return Response({"detail": ORDER_ERROR}, status=400)
+        location = None
+        lat = request.data.get("lat")
+        lon = request.data.get("lon")
+        if lat is not None and lon is not None:
+            location = Point(float(lon), float(lat), srid=4326)
+        stop.mark_visited(location=location, notes=request.data.get("notes"))
+        return Response(RouteStopSerializer(stop).data)
+
+
+class RouteStopSkipView(APIView):
+    permission_classes = [IsSurveyorRole]
+
+    def post(self, request, stop_id):
+        stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
+        reason = (request.data.get("reason") or "").strip()
+        if not reason:
+            return Response({"detail": "Debes indicar un motivo."}, status=400)
+        if stop.status == RouteStop.Status.SKIPPED:
+            return Response(RouteStopSerializer(stop).data)
+        if stop.status == RouteStop.Status.VISITED:
+            return Response({"detail": "El árbol ya fue visitado."}, status=400)
+        if stop.has_pending_predecessor():
+            return Response({"detail": ORDER_ERROR}, status=400)
+        stop.mark_skipped(reason)
         return Response(RouteStopSerializer(stop).data)

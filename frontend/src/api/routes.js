@@ -10,8 +10,13 @@ export async function fetchRouteDetail(routeId) {
   return data;
 }
 
-export async function visitStop(stopId) {
-  const { data } = await client.post(`/routes/stops/${stopId}/visit/`);
+export async function visitStop(stopId, coords) {
+  const { data } = await client.post(`/routes/stops/${stopId}/visit/`, coords ?? {});
+  return data;
+}
+
+export async function skipStop(stopId, reason) {
+  const { data } = await client.post(`/routes/stops/${stopId}/skip/`, { reason });
   return data;
 }
 

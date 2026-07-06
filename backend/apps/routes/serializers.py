@@ -26,8 +26,10 @@ class RouteStopSerializer(serializers.ModelSerializer):
             "tree_id",
             "lon",
             "lat",
+            "status",
             "visited",
             "visited_at",
+            "skip_reason",
             "notes",
         ]
         read_only_fields = fields
@@ -37,6 +39,7 @@ class RouteSerializer(serializers.ModelSerializer):
     surveyor_name = serializers.SerializerMethodField()
     visited_count = serializers.SerializerMethodField()
     pending_count = serializers.SerializerMethodField()
+    skipped_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Route
@@ -50,6 +53,7 @@ class RouteSerializer(serializers.ModelSerializer):
             "surveyor_name",
             "visited_count",
             "pending_count",
+            "skipped_count",
         ]
         read_only_fields = fields
 
@@ -60,7 +64,14 @@ class RouteSerializer(serializers.ModelSerializer):
         return sum(1 for stop in obj.stops.all() if stop.visited)
 
     def get_pending_count(self, obj):
-        return sum(1 for stop in obj.stops.all() if not stop.visited)
+        return sum(
+            1 for stop in obj.stops.all() if stop.status == RouteStop.Status.PENDING
+        )
+
+    def get_skipped_count(self, obj):
+        return sum(
+            1 for stop in obj.stops.all() if stop.status == RouteStop.Status.SKIPPED
+        )
 
 
 class RouteDetailSerializer(RouteSerializer):
