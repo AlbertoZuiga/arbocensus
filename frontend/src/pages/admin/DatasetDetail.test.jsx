@@ -14,7 +14,20 @@ vi.mock("@/api/datasets.js", () => ({
 vi.mock("@/api/optimization", () => ({
   createJob: vi.fn(),
   fetchSolution: vi.fn(),
+  publishSolution: vi.fn(),
   fetchJobs: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/api/routes.js", () => ({
+  fetchRoutes: vi.fn().mockResolvedValue([]),
+  fetchRoutesGeojson: vi.fn().mockResolvedValue({
+    type: "FeatureCollection",
+    features: [],
+  }),
+}));
+
+vi.mock("@/api/surveyors.js", () => ({
+  fetchSurveyors: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/hooks/useOptimizationJob", () => ({
