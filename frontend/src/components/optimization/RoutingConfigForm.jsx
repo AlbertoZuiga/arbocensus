@@ -12,17 +12,36 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const DEFAULTS = {
   minRouteTimeHours: 2,
   maxRouteTimeHours: 3,
   serviceTimeMinutes: 5,
+  strategy: "global",
 };
+
+const STRATEGY_OPTIONS = [
+  { value: "global", label: "Global" },
+  { value: "spatial_term", label: "Término espacial" },
+  { value: "cluster_first", label: "Clustering primero" },
+  { value: "compare", label: "Comparar las 3" },
+];
 
 const hoursToSeconds = (hours) => Math.round(Number(hours) * 3600);
 const minutesToSeconds = (minutes) => Math.round(Number(minutes) * 60);
 
-export default function RoutingConfigForm({ datasetId, onJobCreated }) {
+export default function RoutingConfigForm({
+  datasetId,
+  onJobCreated,
+  hasActiveJob = false,
+}) {
   const [minRouteTimeHours, setMinRouteTimeHours] = useState(
     DEFAULTS.minRouteTimeHours
   );
@@ -32,6 +51,7 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
   const [serviceTimeMinutes, setServiceTimeMinutes] = useState(
     DEFAULTS.serviceTimeMinutes
   );
+  const [strategy, setStrategy] = useState(DEFAULTS.strategy);
 
   const hasEmptyField = [
     minRouteTimeHours,
@@ -48,6 +68,7 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
         minRouteTimeSec: hoursToSeconds(minRouteTimeHours),
         maxRouteTimeSec: hoursToSeconds(maxRouteTimeHours),
         serviceTimeSec: minutesToSeconds(serviceTimeMinutes),
+        strategy,
       }),
     onSuccess: (job) => {
       onJobCreated?.(job);
@@ -56,7 +77,7 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (hasEmptyField || rangeInvalid) return;
+    if (hasEmptyField || rangeInvalid || hasActiveJob) return;
     mutation.mutate();
   };
 
@@ -105,6 +126,29 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
               Tiempo estimado para censar un árbol en terreno.
             </p>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="strategy">Estrategia</Label>
+            <Select value={strategy} onValueChange={setStrategy}>
+              <SelectTrigger id="strategy">
+                <SelectValue>
+                  {STRATEGY_OPTIONS.find((o) => o.value === strategy)?.label}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {STRATEGY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {hasActiveJob && (
+            <p className="text-sm text-muted-foreground">
+              Ya hay una optimización en curso para este dataset.
+            </p>
+          )}
 
           {rangeInvalid && (
             <p className="text-sm text-destructive">
@@ -123,7 +167,9 @@ export default function RoutingConfigForm({ datasetId, onJobCreated }) {
 
           <Button
             type="submit"
-            disabled={mutation.isPending || hasEmptyField || rangeInvalid}
+            disabled={
+              mutation.isPending || hasEmptyField || rangeInvalid || hasActiveJob
+            }
           >
             {mutation.isPending ? "Generando…" : "Generar rutas"}
           </Button>
