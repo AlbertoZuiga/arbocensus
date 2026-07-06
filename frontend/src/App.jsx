@@ -6,7 +6,7 @@ import AdminHome from "./pages/admin/AdminHome.jsx";
 import Datasets from "./pages/admin/Datasets.jsx";
 import DatasetDetail from "./pages/admin/DatasetDetail.jsx";
 import JobDetail from "./pages/admin/JobDetail.jsx";
-import Censadores from "./pages/admin/Censadores.jsx";
+import Usuarios from "./pages/admin/Usuarios.jsx";
 import { useSession } from "./hooks/useSession.js";
 import { useAuthStore } from "./store/authStore.js";
 import { HOME_BY_ROLE, ROLES } from "./constants/roles.js";
@@ -53,7 +53,7 @@ export default function App() {
         <Route path="datasets" element={<Datasets />} />
         <Route path="datasets/:id" element={<DatasetDetail />} />
         <Route path="datasets/:id/jobs/:jobId" element={<JobDetail />} />
-        <Route path="censadores" element={<Censadores />} />
+        <Route path="usuarios" element={<Usuarios />} />
       </Route>
       <Route path="*" element={<NotFoundRedirect />} />
     </Routes>
