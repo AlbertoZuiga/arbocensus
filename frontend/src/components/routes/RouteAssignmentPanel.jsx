@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 import { fetchSolution } from "@/api/optimization.js";
 import { fetchRoutes } from "@/api/routes.js";
 import { fetchSurveyors } from "@/api/surveyors.js";
 import { useAssignRoute } from "@/hooks/useAssignRoute";
 import { formatDuration } from "@/lib/optimization.js";
+import { getErrorMessage } from "@/lib/errors";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -23,15 +25,26 @@ function surveyorLabel(surveyor) {
   return name || surveyor.username;
 }
 
-export default function RouteAssignmentPanel({ solutionId }) {
-  const { data: solution } = useQuery({
-    queryKey: ["solution-metrics", solutionId],
-    queryFn: () => fetchSolution(solutionId),
-    enabled: !!solutionId,
-    staleTime: Infinity,
+export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
+  const solutionResults = useQueries({
+    queries: datasetSolutionIds.map((id) => ({
+      queryKey: ["solution-metrics", id],
+      queryFn: () => fetchSolution(id),
+      enabled: !!id,
+      staleTime: Infinity,
+    })),
   });
 
-  const { data: routes = [] } = useQuery({
+  const publishedSolution = solutionResults
+    .map((result) => result.data)
+    .find((solution) => solution?.published_at);
+  const solutionId = publishedSolution?.id ?? null;
+
+  const {
+    data: routes = [],
+    isLoading: routesLoading,
+    error: routesError,
+  } = useQuery({
     queryKey: ["routes", solutionId],
     queryFn: () => fetchRoutes(solutionId),
     enabled: !!solutionId,
@@ -45,17 +58,26 @@ export default function RouteAssignmentPanel({ solutionId }) {
 
   const assign = useAssignRoute();
 
-  if (!solutionId) return null;
-
-  const published = !!solution?.published_at;
+  const published = !!solutionId;
 
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">Asignación de rutas</h2>
       {!published && (
         <p className="text-sm text-muted-foreground">
-          Publica esta solución para asignar censadores a las rutas.
+          Publica una solución para asignar censadores a las rutas.
         </p>
+      )}
+
+      {routesError && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {getErrorMessage(routesError, "No se pudieron cargar las rutas.")}
+          </AlertDescription>
+        </Alert>
+      )}
+      {routesLoading && (
+        <p className="text-sm text-muted-foreground">Cargando rutas…</p>
       )}
 
       {routes.map((route) => {
@@ -87,7 +109,7 @@ export default function RouteAssignmentPanel({ solutionId }) {
               >
                 <SelectValue placeholder="Sin asignar" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[1100]">
                 <SelectItem value={UNASSIGNED}>Sin asignar</SelectItem>
                 {surveyors.map((surveyor) => (
                   <SelectItem key={surveyor.id} value={surveyor.id}>

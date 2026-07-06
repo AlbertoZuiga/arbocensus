@@ -164,7 +164,7 @@ export default function DatasetDetail() {
             openPanel === "assign" ? "translate-x-0" : "translate-x-full",
           )}
         >
-          <RouteAssignmentPanel solutionId={solutionId} />
+          <RouteAssignmentPanel datasetSolutionIds={datasetSolutionIds} />
         </div>
       </div>
     </div>
