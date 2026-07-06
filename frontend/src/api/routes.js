@@ -21,3 +21,17 @@ export async function fetchRoutesGeojson(solutionId) {
   });
   return data;
 }
+
+export async function fetchRoutes(solutionId) {
+  const { data } = await client.get("/routes/", {
+    params: solutionId ? { solution_id: solutionId } : undefined,
+  });
+  return data.results ?? data;
+}
+
+export async function assignRoute(routeId, surveyorId) {
+  const { data } = await client.patch(`/routes/${routeId}/assign/`, {
+    surveyor_id: surveyorId,
+  });
+  return data;
+}
