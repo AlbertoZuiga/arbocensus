@@ -15,13 +15,13 @@ class OSRMCostMatrixBuilder:
     def build(self, trees):
         trees = sorted(trees, key=lambda tree: tree.id)
         dataset = trees[0].dataset
+        source_hash = self._compute_hash(trees)
 
-        cached = self.get_cached(trees)
+        cached = self._lookup_cache(dataset, source_hash)
         if cached is not None:
             return cached
 
         matrix = self._fetch_from_osrm(trees)
-        source_hash = self._compute_hash(trees)
         DistanceMatrix.objects.update_or_create(
             dataset=dataset,
             defaults={
@@ -36,7 +36,9 @@ class OSRMCostMatrixBuilder:
         trees = sorted(trees, key=lambda tree: tree.id)
         dataset = trees[0].dataset
         source_hash = self._compute_hash(trees)
+        return self._lookup_cache(dataset, source_hash)
 
+    def _lookup_cache(self, dataset, source_hash):
         cached = DistanceMatrix.objects.filter(dataset=dataset).first()
         if cached is not None and cached.source_hash == source_hash:
             return np.array(cached.matrix_data, dtype=float)
