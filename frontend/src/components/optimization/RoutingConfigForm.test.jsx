@@ -5,9 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/api/optimization", () => ({
   createJob: vi.fn(),
+  fetchFleetEstimate: vi.fn(),
 }));
 
-import { createJob } from "@/api/optimization";
+import { createJob, fetchFleetEstimate } from "@/api/optimization";
 import RoutingConfigForm from "./RoutingConfigForm.jsx";
 
 function renderForm(props = {}) {
@@ -24,6 +25,7 @@ function renderForm(props = {}) {
 describe("RoutingConfigForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fetchFleetEstimate.mockResolvedValue(null);
   });
 
   it("renders editable defaults (2h / 3h / 5min)", () => {
@@ -103,6 +105,21 @@ describe("RoutingConfigForm", () => {
     expect(
       screen.getByText("Ya hay una optimización en curso para este dataset.")
     ).toBeInTheDocument();
+  });
+
+  it("shows the fleet estimate hint when n_estimated is a number", async () => {
+    fetchFleetEstimate.mockResolvedValue(4);
+    renderForm();
+
+    expect(await screen.findByText("Hasta 4 rutas aprox.")).toBeInTheDocument();
+  });
+
+  it("renders no hint when n_estimated is null", async () => {
+    fetchFleetEstimate.mockResolvedValue(null);
+    renderForm();
+
+    await waitFor(() => expect(fetchFleetEstimate).toHaveBeenCalledWith("d1"));
+    expect(screen.queryByText(/rutas aprox\./)).not.toBeInTheDocument();
   });
 
   it("blocks submit and warns when min exceeds max", async () => {

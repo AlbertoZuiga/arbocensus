@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { createJob } from "@/api/optimization";
+import { createJob, fetchFleetEstimate } from "@/api/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +52,13 @@ export default function RoutingConfigForm({
     DEFAULTS.serviceTimeMinutes
   );
   const [strategy, setStrategy] = useState(DEFAULTS.strategy);
+
+  const { data: fleetEstimate } = useQuery({
+    queryKey: ["fleet-estimate", datasetId],
+    queryFn: () => fetchFleetEstimate(datasetId),
+    enabled: !!datasetId,
+    refetchInterval: false,
+  });
 
   const hasEmptyField = [
     minRouteTimeHours,
@@ -143,6 +150,12 @@ export default function RoutingConfigForm({
               </SelectContent>
             </Select>
           </div>
+
+          {fleetEstimate != null && (
+            <p className="text-sm text-muted-foreground">
+              Hasta {fleetEstimate} rutas aprox.
+            </p>
+          )}
 
           {hasActiveJob && (
             <p className="text-sm text-muted-foreground">
