@@ -70,6 +70,19 @@ def test_estimate_capped_at_real_node_count():
     assert estimate == real_nodes
 
 
+def test_buffer_param_overrides_default_solver_headroom():
+    real_nodes = 10
+    travel = 30.0
+    matrix = uniform_matrix(real_nodes, travel=travel)
+    total_service = 5000
+    min_route = 1800
+
+    total_work = total_service + real_nodes * travel
+    assert estimate_max_vehicles(
+        matrix, total_service, min_route, buffer=0
+    ) == math.ceil(total_work / min_route)
+
+
 def test_average_pair_travel_uses_upper_triangle_real_nodes():
     matrix = np.array(
         [
