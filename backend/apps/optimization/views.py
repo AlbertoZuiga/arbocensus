@@ -1,13 +1,16 @@
 from typing import Any
 
 from apps.accounts.permissions import IsAdminRole
+from apps.datasets.models import Dataset
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import OptimizationJob, RoutingSolution
+from .pipeline import estimate_fleet_from_cache
 from .serializers import (
     OptimizationJobSerializer,
     RoutingConfigSerializer,
@@ -82,3 +85,10 @@ class RoutingSolutionViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
         solution = self.get_object()
         solution.unpublish()
         return Response(RoutingSolutionSerializer(solution).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminRole])
+def fleet_estimate(request):
+    dataset = get_object_or_404(Dataset, pk=request.query_params.get("dataset"))
+    return Response({"n_estimated": estimate_fleet_from_cache(dataset)})

@@ -1,6 +1,7 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import OptimizationJobViewSet, RoutingSolutionViewSet
+from .views import OptimizationJobViewSet, RoutingSolutionViewSet, fleet_estimate
 
 router = DefaultRouter()
 router.include_format_suffixes = False
@@ -13,4 +14,6 @@ router.register(
     basename="optimization-solution",
 )
 
-urlpatterns = router.urls
+urlpatterns = [
+    path("optimization/estimate/", fleet_estimate, name="optimization-estimate"),
+] + router.urls

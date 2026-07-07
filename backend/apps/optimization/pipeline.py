@@ -1,6 +1,6 @@
 from apps.datasets.models import Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
-from apps.optimization.models import RoutingSolution
+from apps.optimization.models import RoutingConfig, RoutingSolution
 from apps.optimization.n_estimator import estimate_max_vehicles
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
 from apps.optimization.solver import build_open_matrix
@@ -9,6 +9,26 @@ from apps.routes.models import Route, RouteStop
 from django.db import transaction
 
 SOLVER_TIME_LIMIT_SEC = 180
+
+
+def estimate_fleet_from_cache(dataset):
+    trees = sorted(
+        Tree.objects.filter(dataset=dataset, is_active=True),
+        key=lambda tree: tree.id,
+    )
+    if len(trees) < 2:
+        return None
+
+    matrix = OSRMCostMatrixBuilder().get_cached(trees)
+    if matrix is None:
+        return None
+
+    total_service = len(trees) * RoutingConfig.DEFAULT_SERVICE_TIME_SEC
+    return estimate_max_vehicles(
+        build_open_matrix(matrix),
+        total_service,
+        RoutingConfig.DEFAULT_MIN_ROUTE_TIME_SEC,
+    )
 
 
 class OptimizationPipeline:

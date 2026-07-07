@@ -17,6 +17,13 @@ export async function createJob({
   return data;
 }
 
+export async function fetchFleetEstimate(datasetId) {
+  const { data } = await client.get("/optimization/estimate/", {
+    params: { dataset: datasetId },
+  });
+  return data.n_estimated;
+}
+
 export async function fetchJob(jobId) {
   const { data } = await client.get(`/optimization/jobs/${jobId}/`);
   return data;
