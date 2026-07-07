@@ -317,3 +317,56 @@ def test_admin_unpublishes_solution(make_dataset_with_trees):
     assert response.data["published_at"] is None
     solution.refresh_from_db()
     assert solution.published_at is None
+
+
+def test_fleet_estimate_cache_hit_returns_int(make_dataset_with_trees, monkeypatch):
+    from apps.datasets.models import DistanceMatrix
+    from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
+
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    builder = OSRMCostMatrixBuilder()
+    sorted_trees = sorted(trees, key=lambda tree: tree.id)
+    DistanceMatrix.objects.create(
+        dataset=dataset,
+        source_hash=builder._compute_hash(sorted_trees),
+        matrix_data=[[0, 5], [5, 0]],
+        dimension=2,
+    )
+    fetch = MagicMock()
+    monkeypatch.setattr(
+        "apps.optimization.cost_matrix.OSRMCostMatrixBuilder._fetch_from_osrm", fetch
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/estimate/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    assert isinstance(response.data["n_estimated"], int)
+    fetch.assert_not_called()
+
+
+def test_fleet_estimate_cache_miss_returns_null(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    fetch = MagicMock()
+    monkeypatch.setattr(
+        "apps.optimization.cost_matrix.OSRMCostMatrixBuilder._fetch_from_osrm", fetch
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/estimate/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    assert response.data["n_estimated"] is None
+    fetch.assert_not_called()
+
+
+def test_fleet_estimate_rejected_for_non_admin(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+
+    response = _client("surveyor").get(
+        "/api/optimization/estimate/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 403

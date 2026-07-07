@@ -8,16 +8,20 @@ from django.utils import timezone
 
 
 class RoutingConfig(models.Model):
+    DEFAULT_MIN_ROUTE_TIME_SEC = 7200
+    DEFAULT_MAX_ROUTE_TIME_SEC = 10800
+    DEFAULT_SERVICE_TIME_SEC = 300
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE)
     min_route_time_sec = models.IntegerField(
-        default=7200, validators=[MinValueValidator(1)]
+        default=DEFAULT_MIN_ROUTE_TIME_SEC, validators=[MinValueValidator(1)]
     )
     max_route_time_sec = models.IntegerField(
-        default=10800, validators=[MinValueValidator(1)]
+        default=DEFAULT_MAX_ROUTE_TIME_SEC, validators=[MinValueValidator(1)]
     )
     service_time_sec = models.IntegerField(
-        default=300, validators=[MinValueValidator(1)]
+        default=DEFAULT_SERVICE_TIME_SEC, validators=[MinValueValidator(1)]
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
