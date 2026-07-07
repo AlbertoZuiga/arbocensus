@@ -25,6 +25,7 @@ describe("optimization api", () => {
       minRouteTimeSec: 7200,
       maxRouteTimeSec: 10800,
       serviceTimeSec: 300,
+      strategy: "compare",
     });
 
     expect(client.post).toHaveBeenCalledWith("/optimization/jobs/", {
@@ -32,6 +33,7 @@ describe("optimization api", () => {
       min_route_time_sec: 7200,
       max_route_time_sec: 10800,
       service_time_sec: 300,
+      strategy: "compare",
     });
   });
 

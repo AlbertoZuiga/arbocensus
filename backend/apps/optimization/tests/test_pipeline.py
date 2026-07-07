@@ -64,6 +64,30 @@ def test_pipeline_persists_solution_with_all_trees(requests_mock):
     assert len(visited_tree_ids) == tree_count
 
 
+def test_pipeline_single_strategy_persists_one_solution(requests_mock):
+    tree_count = 20
+    job = make_job(tree_count)
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+
+    OptimizationPipeline(job).run(strategy="global")
+
+    assert job.solutions.count() == 1
+    assert job.solutions.get().strategy == RoutingSolution.Strategy.GLOBAL
+
+
+def test_pipeline_compare_persists_three_solutions(requests_mock):
+    tree_count = 20
+    job = make_job(tree_count)
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+
+    OptimizationPipeline(job).run()
+
+    assert job.solutions.count() == 3
+    assert set(job.solutions.values_list("strategy", flat=True)) == {
+        s.value for s in RoutingSolution.Strategy
+    }
+
+
 def test_pipeline_sequences_start_at_one_per_route(requests_mock):
     job = make_job(10)
     requests_mock.get(ANY, json=osrm_durations(10))

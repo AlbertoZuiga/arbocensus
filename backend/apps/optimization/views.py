@@ -43,7 +43,9 @@ class OptimizationJobViewSet(
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         config = serializer.save()
-        job = OptimizationJob.objects.create(config=config)
+        job = OptimizationJob.objects.create(
+            config=config, strategy=serializer.validated_data["strategy"]
+        )
         try:
             run_optimization.delay(str(job.id))
         except Exception as exc:

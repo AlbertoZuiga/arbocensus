@@ -24,6 +24,8 @@ class OptimizationPipeline:
         if len(trees) < 2:
             raise ValueError("Dataset needs at least 2 active trees to optimize")
 
+        time_limit_sec = min(int(30 + 1.5 * len(trees)), SOLVER_TIME_LIMIT_SEC)
+
         matrix = OSRMCostMatrixBuilder().build(trees)
         total_service = len(trees) * self.config.service_time_sec
         max_vehicles = estimate_max_vehicles(
@@ -50,7 +52,7 @@ class OptimizationPipeline:
                 max_route_time_sec=self.config.max_route_time_sec,
                 service_time_sec=self.config.service_time_sec,
                 max_vehicles=max_vehicles,
-                time_limit_sec=SOLVER_TIME_LIMIT_SEC,
+                time_limit_sec=time_limit_sec,
             )
             if result is None:
                 raise ValueError(

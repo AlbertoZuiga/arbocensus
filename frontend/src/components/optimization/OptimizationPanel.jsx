@@ -16,8 +16,10 @@ export default function OptimizationPanel({ datasetId }) {
   const { data: jobs = [], error } = useOptimizationJobs(datasetId);
 
   const latest = jobs[0];
-  const isActive =
-    latest && ["queued", "running"].includes(latest.status);
+  const isActive = latest && ["queued", "running"].includes(latest.status);
+  const hasActiveJob = jobs.some((job) =>
+    ["queued", "running"].includes(job.status)
+  );
 
   const handleJobCreated = () => {
     queryClient.invalidateQueries({
@@ -27,7 +29,11 @@ export default function OptimizationPanel({ datasetId }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <RoutingConfigForm datasetId={datasetId} onJobCreated={handleJobCreated} />
+      <RoutingConfigForm
+        datasetId={datasetId}
+        onJobCreated={handleJobCreated}
+        hasActiveJob={hasActiveJob}
+      />
 
       {error && (
         <Alert variant="destructive">

@@ -28,7 +28,10 @@ def run_optimization(self, job_id):
 
     try:
         job.set_status("running")
-        metrics = OptimizationPipeline(job).run()
+        strategy = (
+            None if job.strategy == OptimizationJob.Strategy.COMPARE else job.strategy
+        )
+        metrics = OptimizationPipeline(job).run(strategy=strategy)
         job.set_completed(metrics)
         return metrics
     except IntegrityError:

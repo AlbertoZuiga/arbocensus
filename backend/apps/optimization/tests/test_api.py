@@ -41,6 +41,45 @@ def test_admin_creates_job_and_triggers_task(make_dataset_with_trees, monkeypatc
     delay.assert_called_once_with(str(job.id))
 
 
+def test_create_job_defaults_to_global_strategy(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
+
+    response = _client("admin").post(
+        "/api/optimization/jobs/", _payload(dataset), format="json"
+    )
+
+    assert response.status_code == 201
+    job = OptimizationJob.objects.get(id=response.data["id"])
+    assert job.strategy == OptimizationJob.Strategy.GLOBAL
+
+
+def test_create_job_persists_chosen_strategy(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
+
+    payload = _payload(dataset)
+    payload["strategy"] = "compare"
+    response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
+
+    assert response.status_code == 201
+    assert response.data["strategy"] == "compare"
+    job = OptimizationJob.objects.get(id=response.data["id"])
+    assert job.strategy == OptimizationJob.Strategy.COMPARE
+
+
+def test_create_job_rejects_invalid_strategy(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
+
+    payload = _payload(dataset)
+    payload["strategy"] = "bogus"
+    response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
+
+    assert response.status_code == 400
+    assert not OptimizationJob.objects.exists()
+
+
 def test_create_job_rejected_for_non_admin(make_dataset_with_trees, monkeypatch):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
     delay = MagicMock()
@@ -80,6 +119,7 @@ def test_get_job_status_shape(make_dataset_with_trees):
     assert response.status_code == 200
     assert set(response.data) == {
         "id",
+        "strategy",
         "status",
         "error_message",
         "metrics",

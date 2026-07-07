@@ -46,6 +46,7 @@ describe("RoutingConfigForm", () => {
         minRouteTimeSec: 7200,
         maxRouteTimeSec: 10800,
         serviceTimeSec: 300,
+        strategy: "global",
       })
     );
   });
@@ -77,6 +78,31 @@ describe("RoutingConfigForm", () => {
     await user.click(screen.getByRole("button", { name: "Generar rutas" }));
 
     await waitFor(() => expect(onJobCreated).toHaveBeenCalledWith(job));
+  });
+
+  it("sends the default global strategy", async () => {
+    createJob.mockResolvedValue({ id: "j1" });
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
+
+    await waitFor(() =>
+      expect(createJob).toHaveBeenCalledWith(
+        expect.objectContaining({ strategy: "global" })
+      )
+    );
+  });
+
+  it("disables submit while an active job exists for the dataset", async () => {
+    renderForm({ hasActiveJob: true });
+
+    expect(
+      screen.getByRole("button", { name: "Generar rutas" })
+    ).toBeDisabled();
+    expect(
+      screen.getByText("Ya hay una optimización en curso para este dataset.")
+    ).toBeInTheDocument();
   });
 
   it("blocks submit and warns when min exceeds max", async () => {

@@ -5,12 +5,14 @@ export async function createJob({
   minRouteTimeSec,
   maxRouteTimeSec,
   serviceTimeSec,
+  strategy,
 }) {
   const { data } = await client.post("/optimization/jobs/", {
     dataset,
     min_route_time_sec: minRouteTimeSec,
     max_route_time_sec: maxRouteTimeSec,
     service_time_sec: serviceTimeSec,
+    strategy,
   });
   return data;
 }
