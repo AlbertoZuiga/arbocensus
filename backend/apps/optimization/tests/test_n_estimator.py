@@ -6,6 +6,7 @@ from apps.optimization.n_estimator import (
     VEHICLE_BUFFER,
     average_pair_travel,
     estimate_max_vehicles,
+    mean_nearest_neighbor_travel,
 )
 
 
@@ -87,3 +88,52 @@ def test_average_pair_travel_excludes_unreachable_penalty():
     matrix[2, 1] = UNREACHABLE_PENALTY
 
     assert average_pair_travel(matrix) == 20.0
+
+
+def test_mean_nearest_neighbor_travel_excludes_diagonal():
+    matrix = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 10.0, 20.0],
+            [0.0, 15.0, 0.0, 30.0],
+            [0.0, 40.0, 25.0, 0.0],
+        ]
+    )
+    # row minima over real nodes (excluding self=0): 10.0, 15.0, 25.0
+    assert mean_nearest_neighbor_travel(matrix) == (10.0 + 15.0 + 25.0) / 3
+
+
+def test_mean_nearest_neighbor_travel_excludes_unreachable_penalty():
+    matrix = uniform_matrix(3, travel=20.0)
+    matrix[1, 2] = UNREACHABLE_PENALTY
+    matrix[2, 1] = UNREACHABLE_PENALTY
+
+    assert mean_nearest_neighbor_travel(matrix) == 20.0
+
+
+def test_nearest_neighbor_estimate_lower_than_average_pair_estimate_on_sparse_matrix():
+    real_node_count = 20
+    matrix = uniform_matrix(real_node_count, travel=20.0)
+    real_nodes = matrix[1:, 1:]
+    # a few far outliers inflate the pairwise average without affecting
+    # each node's nearest neighbor, since a close neighbor (20.0) remains
+    for i, j in ((0, 1), (2, 3), (4, 5)):
+        real_nodes[i, j] = real_nodes[j, i] = 5000.0
+    matrix[1:, 1:] = real_nodes
+
+    total_service = 3600
+    min_route = 1000
+    nn_travel = real_node_count * mean_nearest_neighbor_travel(matrix)
+    avg_travel = real_node_count * average_pair_travel(matrix)
+    assert nn_travel < avg_travel
+
+    nn_estimate = min(
+        math.ceil((total_service + nn_travel) / min_route) + VEHICLE_BUFFER,
+        real_node_count,
+    )
+    avg_estimate = min(
+        math.ceil((total_service + avg_travel) / min_route) + VEHICLE_BUFFER,
+        real_node_count,
+    )
+    assert estimate_max_vehicles(matrix, total_service, min_route) == nn_estimate
+    assert nn_estimate < avg_estimate
