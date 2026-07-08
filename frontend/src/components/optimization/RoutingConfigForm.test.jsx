@@ -118,8 +118,28 @@ describe("RoutingConfigForm", () => {
     fetchFleetEstimate.mockResolvedValue(null);
     renderForm();
 
-    await waitFor(() => expect(fetchFleetEstimate).toHaveBeenCalledWith("d1"));
+    await waitFor(() =>
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 300)
+    );
     expect(screen.queryByText(/rutas aprox\./)).not.toBeInTheDocument();
+  });
+
+  it("refetches the estimate when min route time or service time change", async () => {
+    fetchFleetEstimate.mockResolvedValue(4);
+    const user = userEvent.setup();
+    renderForm();
+
+    await waitFor(() =>
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 300)
+    );
+
+    const serviceInput = screen.getByLabelText(/Tiempo de censo por árbol/);
+    await user.clear(serviceInput);
+    await user.type(serviceInput, "10");
+
+    await waitFor(() =>
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 600)
+    );
   });
 
   it("blocks submit and warns when min exceeds max", async () => {

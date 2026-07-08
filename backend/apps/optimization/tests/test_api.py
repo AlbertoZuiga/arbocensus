@@ -319,6 +319,93 @@ def test_admin_unpublishes_solution(make_dataset_with_trees):
     assert solution.published_at is None
 
 
+def test_fleet_estimate_requires_dataset_param():
+    response = _client("admin").get("/api/optimization/estimate/")
+
+    assert response.status_code == 400
+
+
+def test_fleet_estimate_rejects_invalid_dataset_uuid():
+    response = _client("admin").get(
+        "/api/optimization/estimate/", {"dataset": "not-a-uuid"}
+    )
+
+    assert response.status_code == 400
+
+
+def test_fleet_estimate_excludes_solver_headroom_buffer(
+    make_dataset_with_trees, monkeypatch
+):
+    from apps.datasets.models import DistanceMatrix
+    from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
+
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    builder = OSRMCostMatrixBuilder()
+    sorted_trees = sorted(trees, key=lambda tree: tree.id)
+    DistanceMatrix.objects.create(
+        dataset=dataset,
+        source_hash=builder._compute_hash(sorted_trees),
+        matrix_data=[[0, 5], [5, 0]],
+        dimension=2,
+    )
+    estimate_max_vehicles = MagicMock(return_value=1)
+    monkeypatch.setattr(
+        "apps.optimization.pipeline.estimate_max_vehicles", estimate_max_vehicles
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/estimate/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    assert estimate_max_vehicles.call_args.kwargs["buffer"] == 0
+
+
+def test_fleet_estimate_rejects_non_integer_time_params(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+
+    response = _client("admin").get(
+        "/api/optimization/estimate/",
+        {"dataset": str(dataset.id), "min_route_time_sec": "not-a-number"},
+    )
+
+    assert response.status_code == 400
+
+
+def test_fleet_estimate_uses_query_params_over_defaults(
+    make_dataset_with_trees, monkeypatch
+):
+    from apps.datasets.models import DistanceMatrix
+    from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
+
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    builder = OSRMCostMatrixBuilder()
+    sorted_trees = sorted(trees, key=lambda tree: tree.id)
+    DistanceMatrix.objects.create(
+        dataset=dataset,
+        source_hash=builder._compute_hash(sorted_trees),
+        matrix_data=[[0, 5], [5, 0]],
+        dimension=2,
+    )
+    estimate_max_vehicles = MagicMock(return_value=1)
+    monkeypatch.setattr(
+        "apps.optimization.pipeline.estimate_max_vehicles", estimate_max_vehicles
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/estimate/",
+        {
+            "dataset": str(dataset.id),
+            "min_route_time_sec": "3600",
+            "service_time_sec": "600",
+        },
+    )
+
+    assert response.status_code == 200
+    assert estimate_max_vehicles.call_args.args[2] == 3600
+    assert estimate_max_vehicles.call_args.args[1] == len(trees) * 600
+
+
 def test_fleet_estimate_cache_hit_returns_int(make_dataset_with_trees, monkeypatch):
     from apps.datasets.models import DistanceMatrix
     from apps.optimization.cost_matrix import OSRMCostMatrixBuilder

@@ -53,18 +53,29 @@ export default function RoutingConfigForm({
   );
   const [strategy, setStrategy] = useState(DEFAULTS.strategy);
 
-  const { data: fleetEstimate } = useQuery({
-    queryKey: ["fleet-estimate", datasetId],
-    queryFn: () => fetchFleetEstimate(datasetId),
-    enabled: !!datasetId,
-    refetchInterval: false,
-  });
-
   const hasEmptyField = [
     minRouteTimeHours,
     maxRouteTimeHours,
     serviceTimeMinutes,
   ].some((value) => value === "" || Number.isNaN(Number(value)));
+
+  const { data: fleetEstimate } = useQuery({
+    queryKey: [
+      "fleet-estimate",
+      datasetId,
+      minRouteTimeHours,
+      serviceTimeMinutes,
+    ],
+    queryFn: () =>
+      fetchFleetEstimate(
+        datasetId,
+        hoursToSeconds(minRouteTimeHours),
+        minutesToSeconds(serviceTimeMinutes),
+      ),
+    enabled: !!datasetId && !hasEmptyField,
+    refetchInterval: false,
+    staleTime: 5_000,
+  });
   const rangeInvalid =
     !hasEmptyField && Number(maxRouteTimeHours) < Number(minRouteTimeHours);
 
