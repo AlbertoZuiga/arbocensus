@@ -11,7 +11,11 @@ from django.db import transaction
 SOLVER_TIME_LIMIT_SEC = 180
 
 
-def estimate_fleet_from_cache(dataset):
+def estimate_fleet_from_cache(
+    dataset,
+    min_route_time_sec=RoutingConfig.DEFAULT_MIN_ROUTE_TIME_SEC,
+    service_time_sec=RoutingConfig.DEFAULT_SERVICE_TIME_SEC,
+):
     trees = sorted(
         Tree.objects.filter(dataset=dataset, is_active=True),
         key=lambda tree: tree.id,
@@ -23,11 +27,12 @@ def estimate_fleet_from_cache(dataset):
     if matrix is None:
         return None
 
-    total_service = len(trees) * RoutingConfig.DEFAULT_SERVICE_TIME_SEC
+    total_service = len(trees) * service_time_sec
     return estimate_max_vehicles(
         build_open_matrix(matrix),
         total_service,
-        RoutingConfig.DEFAULT_MIN_ROUTE_TIME_SEC,
+        min_route_time_sec,
+        buffer=0,
     )
 
 
