@@ -138,3 +138,5 @@ CELERY_TASK_SOFT_TIME_LIMIT = 1500
 CELERY_TASK_TIME_LIMIT = 1800
 
 OSRM_URL = env("OSRM_URL", default="http://osrm:5000")
+
+LEGACY_DB_URL = env("LEGACY_DB_URL", default="")
