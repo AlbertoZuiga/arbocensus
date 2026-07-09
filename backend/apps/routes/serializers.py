@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Route, RouteStop
+from .models import Route, RouteStop, TreeObservation
 
 CustomUser = get_user_model()
 
@@ -11,6 +11,37 @@ class RouteAssignSerializer(serializers.Serializer):
         queryset=CustomUser.objects.filter(role=CustomUser.Role.SURVEYOR),
         allow_null=True,
     )
+
+
+class TreeObservationInputSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=TreeObservation.Status.choices, required=False
+    )
+    photo = serializers.ImageField(required=False, allow_null=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class TreeObservationSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TreeObservation
+        fields = [
+            "id",
+            "tree",
+            "route_stop",
+            "status",
+            "photo",
+            "photo_url",
+            "notes",
+            "created_by",
+            "created_by_username",
+            "observed_at",
+        ]
+        read_only_fields = fields
+
+    def get_created_by_username(self, obj):
+        return obj.created_by.username if obj.created_by_id else None
 
 
 class RouteStopSerializer(serializers.ModelSerializer):

@@ -6,17 +6,20 @@ from django.contrib.gis.geos import Point
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Route, RouteStop
+from .models import Route, RouteStop, TreeObservation
 from .osrm import fetch_route_path
 from .serializers import (
     RouteAssignSerializer,
     RouteDetailSerializer,
     RouteSerializer,
     RouteStopSerializer,
+    TreeObservationInputSerializer,
+    TreeObservationSerializer,
 )
 
 
@@ -109,6 +112,8 @@ class RouteStopVisitView(APIView):
 
     def post(self, request, stop_id):
         stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
+        observation = TreeObservationInputSerializer(data=request.data)
+        observation.is_valid(raise_exception=True)
         if stop.status != RouteStop.Status.PENDING:
             return Response(RouteStopSerializer(stop).data)
         if stop.has_pending_predecessor():
@@ -119,6 +124,15 @@ class RouteStopVisitView(APIView):
         if lat is not None and lon is not None:
             location = Point(float(lon), float(lat), srid=4326)
         stop.mark_visited(location=location, notes=request.data.get("notes"))
+        data = observation.validated_data
+        TreeObservation.objects.create(
+            tree=stop.tree,
+            route_stop=stop,
+            status=data.get("status", TreeObservation.Status.ALIVE),
+            photo=data.get("photo"),
+            notes=data.get("notes", ""),
+            created_by=request.user,
+        )
         return Response(RouteStopSerializer(stop).data)
 
 
@@ -127,6 +141,8 @@ class RouteStopSkipView(APIView):
 
     def post(self, request, stop_id):
         stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
+        observation = TreeObservationInputSerializer(data=request.data)
+        observation.is_valid(raise_exception=True)
         reason = (request.data.get("reason") or "").strip()
         if not reason:
             return Response({"detail": "Debes indicar un motivo."}, status=400)
@@ -137,4 +153,23 @@ class RouteStopSkipView(APIView):
         if stop.has_pending_predecessor():
             return Response({"detail": ORDER_ERROR}, status=400)
         stop.mark_skipped(reason)
+        data = observation.validated_data
+        TreeObservation.objects.create(
+            tree=stop.tree,
+            route_stop=stop,
+            status=data.get("status", TreeObservation.status_for_skip(reason)),
+            photo=data.get("photo"),
+            notes=data.get("notes", ""),
+            created_by=request.user,
+        )
         return Response(RouteStopSerializer(stop).data)
+
+
+class TreeObservationListView(ListAPIView):
+    serializer_class = TreeObservationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return TreeObservation.objects.filter(
+            tree_id=self.kwargs["tree_id"]
+        ).select_related("created_by")
