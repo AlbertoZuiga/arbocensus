@@ -3,7 +3,6 @@ from typing import Any
 from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
 from django.contrib.gis.geos import Point
-from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -125,7 +124,7 @@ class RouteStopVisitView(APIView):
         if lat is not None and lon is not None:
             location = Point(float(lon), float(lat), srid=4326)
         stop.mark_visited(location=location, notes=request.data.get("notes"))
-        data = observation.validated_data
+        data: Any = observation.validated_data
         TreeObservation.objects.create(
             tree=stop.tree,
             route_stop=stop,
@@ -154,7 +153,7 @@ class RouteStopSkipView(APIView):
         if stop.has_pending_predecessor():
             return Response({"detail": ORDER_ERROR}, status=400)
         stop.mark_skipped(reason)
-        data = observation.validated_data
+        data: Any = observation.validated_data
         TreeObservation.objects.create(
             tree=stop.tree,
             route_stop=stop,
@@ -171,7 +170,7 @@ class TreeObservationListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     queryset = TreeObservation.objects.none()
 
-    def get_queryset(self) -> QuerySet[Any]:
+    def get_queryset(self) -> Any:
         return TreeObservation.objects.filter(
             tree_id=self.kwargs["tree_id"]
         ).select_related("created_by")
