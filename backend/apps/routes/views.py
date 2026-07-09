@@ -3,6 +3,7 @@ from typing import Any
 from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
 from django.contrib.gis.geos import Point
+from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -169,7 +170,7 @@ class TreeObservationListView(ListAPIView):
     serializer_class = TreeObservationSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[TreeObservation]:  # type: ignore[override]
         return TreeObservation.objects.filter(
             tree_id=self.kwargs["tree_id"]
         ).select_related("created_by")
