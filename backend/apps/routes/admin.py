@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Route, RouteStop
+from .models import Route, RouteStop, TreeObservation
 
 
 @admin.register(Route)
@@ -19,6 +19,14 @@ class RouteAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(TreeObservation)
+class TreeObservationAdmin(admin.ModelAdmin):
+    list_display = ["tree", "status", "created_by", "observed_at"]
+    list_filter = ["status", "created_by"]
+    search_fields = ["tree__id"]
+    readonly_fields = ["id", "tree", "route_stop", "created_by"]
 
 
 @admin.register(RouteStop)

@@ -86,3 +86,52 @@ class RouteStop(models.Model):
         self.status = self.Status.SKIPPED
         self.skip_reason = reason
         self.save(update_fields=["status", "skip_reason"])
+
+
+class TreeObservation(models.Model):
+    class Status(models.TextChoices):
+        ALIVE = "alive", "Alive"
+        REMOVED = "removed", "Removed"
+        NOT_FOUND = "not_found", "Not found"
+        OTHER = "other", "Other"
+        UNKNOWN = "unknown", "Unknown"
+
+    NOT_FOUND_SKIP_REASON = "Árbol inexistente"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tree = models.ForeignKey(
+        Tree, on_delete=models.CASCADE, related_name="observations"
+    )
+    route_stop = models.ForeignKey(
+        RouteStop,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="observations",
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.UNKNOWN
+    )
+    photo = models.ImageField(upload_to="observations/", null=True, blank=True)
+    photo_url = models.URLField(blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tree_observations",
+    )
+    observed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-observed_at"]
+
+    def __str__(self):
+        return f"Observation {self.status} - Tree {str(self.tree_id)[:8]}"
+
+    @classmethod
+    def status_for_skip(cls, reason):
+        if reason == cls.NOT_FOUND_SKIP_REASON:
+            return cls.Status.NOT_FOUND
+        return cls.Status.UNKNOWN

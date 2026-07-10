@@ -1,7 +1,12 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import RouteStopSkipView, RouteStopVisitView, RouteViewSet
+from .views import (
+    RouteStopSkipView,
+    RouteStopVisitView,
+    RouteViewSet,
+    TreeObservationListView,
+)
 
 router = DefaultRouter()
 router.include_format_suffixes = False
@@ -17,5 +22,10 @@ urlpatterns = router.urls + [
         "routes/stops/<uuid:stop_id>/skip/",
         RouteStopSkipView.as_view(),
         name="routestop_skip",
+    ),
+    path(
+        "datasets/trees/<uuid:tree_id>/observations/",
+        TreeObservationListView.as_view(),
+        name="tree_observations",
     ),
 ]
