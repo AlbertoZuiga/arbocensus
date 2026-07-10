@@ -63,6 +63,20 @@ def test_surveyor_cannot_update_dataset(make_dataset_with_trees):
     assert response.status_code == 403
 
 
+def test_admin_can_delete_dataset(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    response = _client("admin").delete(f"/api/datasets/{dataset.id}/")
+    assert response.status_code == 204
+    assert not Dataset.objects.filter(id=dataset.id).exists()
+
+
+def test_surveyor_cannot_delete_dataset(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    response = _client("surveyor").delete(f"/api/datasets/{dataset.id}/")
+    assert response.status_code == 403
+    assert Dataset.objects.filter(id=dataset.id).exists()
+
+
 def test_trees_endpoint_returns_geojson(make_dataset_with_trees):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     response = _client("surveyor").get(f"/api/datasets/{dataset.id}/trees/")
