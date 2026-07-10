@@ -11,7 +11,7 @@ from . import legacy
 from .importers import import_file
 from .legacy import LegacyDatabaseNotConfiguredError
 from .models import Dataset
-from .serializers import DatasetSerializer
+from .serializers import DatasetSerializer, LegacySelectionSerializer
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
@@ -26,7 +26,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
             "partial_update",
             "destroy",
             "legacy_areas",
+            "legacy_trees",
             "import_legacy",
+            "from_legacy_selection",
         ):
             return [IsAdminRole()]
         return [IsAuthenticated()]
@@ -53,6 +55,38 @@ class DatasetViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+
+    @action(detail=False, methods=["get"], url_path="legacy/trees")
+    def legacy_trees(self, request):
+        try:
+            return Response(legacy.list_trees())
+        except LegacyDatabaseNotConfiguredError as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+    @action(detail=False, methods=["post"], url_path="from-legacy-selection")
+    def from_legacy_selection(self, request):
+        serializer = LegacySelectionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        selection = list(
+            dict.fromkeys(
+                (tree["source"], tree["external_id"])
+                for tree in serializer.validated_data["trees"]
+            )
+        )
+        try:
+            rows = legacy.load_selection(selection)
+        except LegacyDatabaseNotConfiguredError as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except ValueError as exc:
+            raise ValidationError({"trees": str(exc)}) from exc
+        dataset = legacy.create_dataset(serializer.validated_data["name"], rows)
+        return Response(
+            self.get_serializer(dataset).data, status=status.HTTP_201_CREATED
+        )
 
     @action(detail=False, methods=["post"], url_path="import-legacy")
     def import_legacy(self, request):
