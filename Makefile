@@ -4,7 +4,9 @@
 # (test users + light dataset). Disable with SEED_DEV=false in .env.
 
 up:
-	bash scripts/find-free-ports.sh
+	@if [ -z "$$(docker compose ps -q)" ]; then \
+		bash scripts/find-free-ports.sh; \
+	fi
 	docker compose up -d
 
 up-build:
