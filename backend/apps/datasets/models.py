@@ -23,11 +23,21 @@ class Tree(models.Model):
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE)
     location = gis_models.PointField(srid=4326)
     is_active = models.BooleanField(default=True)
+    species = models.CharField(max_length=255, blank=True)
+    source = models.CharField(max_length=20, blank=True)
+    external_id = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["id"]
         indexes = [
             models.Index(fields=["dataset"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["dataset", "source", "external_id"],
+                condition=models.Q(external_id__isnull=False),
+                name="unique_source_external_id_per_dataset",
+            ),
         ]
 
     def __str__(self):

@@ -1,6 +1,17 @@
 from rest_framework import serializers
 
+from .legacy import SOURCES
 from .models import Dataset
+
+
+class LegacyTreeRefSerializer(serializers.Serializer):
+    source = serializers.ChoiceField(choices=list(SOURCES))
+    external_id = serializers.IntegerField()
+
+
+class LegacySelectionSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    trees = LegacyTreeRefSerializer(many=True, allow_empty=False)
 
 
 class DatasetSerializer(serializers.ModelSerializer):
