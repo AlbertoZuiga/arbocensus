@@ -1,48 +1,65 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
-import { MapContainer, TileLayer, Polyline, Marker, useMap } from "react-leaflet";
+import { Polyline, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import BaseMap from "../map/BaseMap.jsx";
 
 function stopIcon(sequence, visited, selected) {
   const color = visited ? "#16a34a" : selected ? "#2563eb" : "#475569";
+  const size = selected ? 34 : 28;
   return L.divIcon({
     className: "",
-    html: `<div style="background:${color};color:#fff;border-radius:9999px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">${sequence}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    html: `<div style="background:${color};color:#fff;border-radius:9999px;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)">${sequence}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
 }
 
 const userIcon = L.divIcon({
   className: "",
-  html: `<div style="background:#0ea5e9;width:16px;height:16px;border-radius:9999px;border:3px solid #fff;box-shadow:0 0 0 4px rgba(14,165,233,.3)"></div>`,
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
+  html: `<div style="background:#0ea5e9;width:18px;height:18px;border-radius:9999px;border:3px solid #fff;box-shadow:0 0 0 5px rgba(14,165,233,.35)"></div>`,
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
 });
 
-function FitBounds({ positions }) {
+function geometryToPositions(geometry) {
+  const coordinates = geometry?.coordinates ?? [];
+  // GeoJSON coordinates are [lon, lat]; Leaflet expects [lat, lon].
+  return coordinates.map(([lon, lat]) => [lat, lon]);
+}
+
+function FollowUser({ position, enabled }) {
   const map = useMap();
+  const hasCentered = useRef(false);
   useEffect(() => {
-    if (positions.length > 0) {
-      map.fitBounds(positions, { padding: [40, 40] });
+    if (!enabled || !position) return;
+    if (!hasCentered.current) {
+      map.setView([position.lat, position.lon], 17);
+      hasCentered.current = true;
+    } else {
+      map.panTo([position.lat, position.lon], { animate: true });
     }
-  }, [map, positions]);
+  }, [map, position, enabled]);
   return null;
 }
 
-export default function RouteMap({ stops, selectedStopId, onSelectStop, userPosition }) {
-  const line = useMemo(() => stops.map((stop) => [stop.lat, stop.lon]), [stops]);
-  const center = line[0] ?? [-33.45, -70.65];
+export default function RouteMap({
+  stops,
+  selectedStopId,
+  onSelectStop,
+  userPosition,
+  geometry,
+}) {
+  const stopLine = useMemo(() => stops.map((stop) => [stop.lat, stop.lon]), [stops]);
+  const walkedLine = useMemo(() => geometryToPositions(geometry), [geometry]);
+  const line = walkedLine.length > 1 ? walkedLine : stopLine;
+  const center = stopLine[0] ?? [-33.45, -70.65];
 
   return (
-    <MapContainer center={center} zoom={15} className="h-full w-full">
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="&copy; OpenStreetMap"
-      />
-      <FitBounds positions={line} />
+    <BaseMap center={center} zoom={15} bounds={stopLine}>
+      <FollowUser position={userPosition} enabled={!!userPosition} />
       {line.length > 1 && (
-        <Polyline positions={line} color="#2563eb" weight={4} opacity={0.7} />
+        <Polyline positions={line} color="#2563eb" weight={5} opacity={0.75} />
       )}
       {stops.map((stop) => (
         <Marker
@@ -55,6 +72,6 @@ export default function RouteMap({ stops, selectedStopId, onSelectStop, userPosi
       {userPosition && (
         <Marker position={[userPosition.lat, userPosition.lon]} icon={userIcon} />
       )}
-    </MapContainer>
+    </BaseMap>
   );
 }

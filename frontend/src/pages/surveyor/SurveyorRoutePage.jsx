@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMyRoute, useRouteDetail } from "../../hooks/useMyRoute.js";
+import { useMyRoute, useRouteDetail, useRoutePath } from "../../hooks/useMyRoute.js";
 import { useWatchPosition } from "../../hooks/useWatchPosition.js";
 import { useVisitStop } from "../../hooks/useVisitStop.js";
 import { useSkipStop } from "../../hooks/useSkipStop.js";
@@ -33,6 +33,7 @@ export default function SurveyorRoutePage() {
   const activeIndex = routes.findIndex((route) => route.id === activeRouteId);
 
   const routeDetail = useRouteDetail(activeRouteId);
+  const routePath = useRoutePath(activeRouteId);
   const { position } = useWatchPosition();
   const visitMutation = useVisitStop(activeRouteId, position);
   const skipMutation = useSkipStop(activeRouteId);
@@ -122,6 +123,7 @@ export default function SurveyorRoutePage() {
           selectedStopId={selectedStop?.id ?? null}
           onSelectStop={setSelectedStopId}
           userPosition={position}
+          geometry={routePath.data}
         />
       </div>
 

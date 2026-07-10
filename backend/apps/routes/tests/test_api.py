@@ -93,6 +93,22 @@ def test_geojson_returns_street_following_path_per_route(
     fetch.assert_called_once_with([[-70.65, -33.45], [-70.66, -33.46]])
 
 
+def test_path_returns_street_following_geometry_for_single_route(
+    solution_with_route, surveyor, monkeypatch
+):
+    _, route, _ = solution_with_route
+    street_path = [[-70.65, -33.45], [-70.655, -33.455], [-70.66, -33.46]]
+    fetch = MagicMock(return_value=street_path)
+    monkeypatch.setattr("apps.routes.views.fetch_route_path", fetch)
+
+    response = _client(surveyor).get(f"/api/routes/{route.id}/path/")
+
+    assert response.status_code == 200
+    assert response.data["type"] == "LineString"
+    assert response.data["coordinates"] == street_path
+    fetch.assert_called_once_with([[-70.65, -33.45], [-70.66, -33.46]])
+
+
 def test_geojson_without_solution_id_returns_400(solution_with_route):
     admin = CustomUserFactory(role="admin")
     response = _client(admin).get("/api/routes/geojson/")
