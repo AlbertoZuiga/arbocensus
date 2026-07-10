@@ -186,6 +186,8 @@ def test_get_solution_shape(make_dataset_with_trees):
         "strategy",
         "total_routes",
         "total_travel_time_sec",
+        "total_service_time_sec",
+        "total_time_sec",
         "balance_score",
         "sum_max_radius_m",
         "interleave_total",
@@ -198,6 +200,8 @@ def test_get_solution_shape(make_dataset_with_trees):
     }
     assert response.data["total_routes"] == 3
     assert response.data["job"] == str(job.id)
+    assert response.data["total_service_time_sec"] == 0
+    assert response.data["total_time_sec"] == 120.5
 
 
 def _solution_with_surveyor_route(make_dataset_with_trees, surveyor):

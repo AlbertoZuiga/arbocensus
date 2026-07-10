@@ -74,6 +74,9 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                         "route_number": route.route_number,
                         "total_trees": route.total_trees,
                         "travel_time_sec": route.travel_time_sec,
+                        "total_service_time_sec": route.total_estimated_time_sec
+                        - route.travel_time_sec,
+                        "total_estimated_time_sec": route.total_estimated_time_sec,
                         "stops": stop_coordinates,
                     },
                 }

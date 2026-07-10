@@ -4,7 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/api/optimization.js", () => ({
   fetchSolution: vi.fn(() =>
-    Promise.resolve({ total_routes: 3, total_travel_time_sec: 3600 }),
+    Promise.resolve({
+      total_routes: 3,
+      total_travel_time_sec: 3600,
+      total_service_time_sec: 1800,
+    }),
   ),
 }));
 
@@ -38,7 +42,10 @@ describe("StrategyTabs", () => {
 
     expect(screen.getByText("Global")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    await screen.findByText("3 rutas · 1 h 0 min");
+    await screen.findByText("3 rutas · 1 h 30 min");
+    expect(
+      screen.getByText("Caminata 1 h 0 min · Censo 30 min"),
+    ).toBeInTheDocument();
   });
 
   it("renders a toggle with a tab per strategy when more than one ran", () => {

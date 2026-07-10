@@ -37,6 +37,7 @@ class RouteStopSerializer(serializers.ModelSerializer):
 
 class RouteSerializer(serializers.ModelSerializer):
     surveyor_name = serializers.SerializerMethodField()
+    total_service_time_sec = serializers.SerializerMethodField()
     visited_count = serializers.SerializerMethodField()
     pending_count = serializers.SerializerMethodField()
     skipped_count = serializers.SerializerMethodField()
@@ -48,6 +49,7 @@ class RouteSerializer(serializers.ModelSerializer):
             "route_number",
             "total_trees",
             "travel_time_sec",
+            "total_service_time_sec",
             "total_estimated_time_sec",
             "surveyor",
             "surveyor_name",
@@ -59,6 +61,9 @@ class RouteSerializer(serializers.ModelSerializer):
 
     def get_surveyor_name(self, obj):
         return obj.surveyor.username if obj.surveyor_id else None
+
+    def get_total_service_time_sec(self, obj):
+        return obj.total_estimated_time_sec - obj.travel_time_sec
 
     def get_visited_count(self, obj):
         return sum(1 for stop in obj.stops.all() if stop.visited)

@@ -61,6 +61,8 @@ class OptimizationJobSerializer(serializers.ModelSerializer):
 class RoutingSolutionSerializer(serializers.ModelSerializer):
     job = serializers.UUIDField(source="job.id", read_only=True)
     dataset = serializers.UUIDField(source="dataset.id", read_only=True)
+    total_service_time_sec = serializers.SerializerMethodField()
+    total_time_sec = serializers.SerializerMethodField()
 
     class Meta:
         model = RoutingSolution
@@ -69,6 +71,8 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
             "strategy",
             "total_routes",
             "total_travel_time_sec",
+            "total_service_time_sec",
+            "total_time_sec",
             "balance_score",
             "sum_max_radius_m",
             "interleave_total",
@@ -80,3 +84,10 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
             "dataset",
         ]
         read_only_fields = fields
+
+    def get_total_service_time_sec(self, obj):
+        total_trees = sum(route.total_trees for route in obj.routes.all())
+        return total_trees * obj.job.config.service_time_sec
+
+    def get_total_time_sec(self, obj):
+        return obj.total_travel_time_sec + self.get_total_service_time_sec(obj)

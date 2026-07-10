@@ -24,6 +24,7 @@ export function geojsonToRoutes(featureCollection) {
       routeNumber: props.route_number,
       totalTrees: props.total_trees,
       travelTimeSec: props.travel_time_sec,
+      totalServiceTimeSec: props.total_service_time_sec,
       color: ROUTE_COLORS[index % ROUTE_COLORS.length],
       positions,
       stops,
