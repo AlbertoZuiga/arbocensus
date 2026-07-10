@@ -70,6 +70,11 @@ export default function Datasets() {
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="text-2xl">Datasets</CardTitle>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/admin/datasets/legacy-import">
+              Importar desde Arbocensus
+            </Link>
+          </Button>
           <Input
             ref={fileInputRef}
             type="file"

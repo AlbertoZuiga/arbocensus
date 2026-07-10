@@ -19,10 +19,16 @@ export default function BaseMap({
   zoom = 13,
   bounds,
   className = "h-full w-full",
+  preferCanvas = false,
   children,
 }) {
   return (
-    <MapContainer center={center} zoom={zoom} className={className}>
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      className={className}
+      preferCanvas={preferCanvas}
+    >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap"

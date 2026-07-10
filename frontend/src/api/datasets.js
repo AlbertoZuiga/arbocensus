@@ -15,6 +15,24 @@ export async function fetchDatasetTrees(id) {
   return data;
 }
 
+export async function fetchLegacyAreas() {
+  const { data } = await client.get("/datasets/legacy/areas/");
+  return data;
+}
+
+export async function fetchLegacyTrees() {
+  const { data } = await client.get("/datasets/legacy/trees/");
+  return data;
+}
+
+export async function createDatasetFromLegacySelection({ name, trees }) {
+  const { data } = await client.post("/datasets/from-legacy-selection/", {
+    name,
+    trees,
+  });
+  return data;
+}
+
 export async function uploadDataset(file) {
   const name = file.name.replace(/\.[^.]+$/, "");
   const form = new FormData();
