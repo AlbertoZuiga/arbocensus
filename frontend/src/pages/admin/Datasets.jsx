@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchDatasets, uploadDataset } from "@/api/datasets.js";
+import { deleteDataset, fetchDatasets, uploadDataset } from "@/api/datasets.js";
 import { getErrorMessage } from "@/lib/errors";
 import { toast } from "@/store/toastStore.js";
 import {
@@ -21,6 +21,14 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function formatDate(value) {
   if (!value) return "—";
@@ -34,6 +42,7 @@ function treeCount(dataset) {
 export default function Datasets() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
+  const [datasetToDelete, setDatasetToDelete] = useState(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["datasets"],
@@ -57,6 +66,20 @@ export default function Datasets() {
     },
     onSettled: () => {
       if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: deleteDataset,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      toast.success("Dataset eliminado");
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, "No se pudo eliminar el dataset"));
+    },
+    onSettled: () => {
+      setDatasetToDelete(null);
     },
   });
 
@@ -110,6 +133,7 @@ export default function Datasets() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Árboles</TableHead>
                 <TableHead>Importado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,12 +149,52 @@ export default function Datasets() {
                   </TableCell>
                   <TableCell>{treeCount(dataset)}</TableCell>
                   <TableCell>{formatDate(dataset.imported_at)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDatasetToDelete(dataset)}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
       </CardContent>
+      <Dialog
+        open={!!datasetToDelete}
+        onOpenChange={(open) => !open && setDatasetToDelete(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar dataset</DialogTitle>
+            <DialogDescription>
+              ¿Eliminar &quot;{datasetToDelete?.name}&quot;? Se eliminarán también sus
+              árboles y optimizaciones asociadas. Esta acción no se puede
+              deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDatasetToDelete(null)}
+              disabled={remove.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => remove.mutate(datasetToDelete.id)}
+              disabled={remove.isPending}
+            >
+              {remove.isPending ? "Eliminando…" : "Eliminar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
