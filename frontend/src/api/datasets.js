@@ -41,3 +41,7 @@ export async function uploadDataset(file) {
   const { data } = await client.post("/datasets/", form);
   return data;
 }
+
+export async function deleteDataset(id) {
+  await client.delete(`/datasets/${id}/`);
+}

@@ -1,19 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   createDatasetFromLegacySelection,
+  deleteDataset,
   fetchDatasets,
   uploadDataset,
 } from "./datasets.js";
 import client from "./client.js";
 
 vi.mock("./client.js", () => ({
-  default: { get: vi.fn(), post: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
 
 beforeEach(() => {
   client.get.mockReset();
   client.post.mockReset();
+  client.delete.mockReset();
   client.post.mockResolvedValue({ data: { id: "d1", total_trees: 3 } });
+  client.delete.mockResolvedValue({ data: undefined });
 });
 
 describe("fetchDatasets", () => {
@@ -52,5 +55,12 @@ describe("createDatasetFromLegacySelection", () => {
     const [url, body] = client.post.mock.calls[0];
     expect(url).toBe("/datasets/from-legacy-selection/");
     expect(body).toEqual({ name: "Selección", trees });
+  });
+});
+
+describe("deleteDataset", () => {
+  it("sends a DELETE request to the dataset detail endpoint", async () => {
+    await deleteDataset("d1");
+    expect(client.delete).toHaveBeenCalledWith("/datasets/d1/");
   });
 });

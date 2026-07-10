@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Datasets from "./Datasets.jsx";
 import { Toaster } from "@/components/ui/toaster";
-import { fetchDatasets, uploadDataset } from "@/api/datasets.js";
+import { deleteDataset, fetchDatasets, uploadDataset } from "@/api/datasets.js";
 
 vi.mock("@/api/datasets.js", () => ({
   fetchDatasets: vi.fn(),
   uploadDataset: vi.fn(),
+  deleteDataset: vi.fn(),
 }));
 
 function renderPage() {
@@ -29,6 +30,7 @@ function renderPage() {
 beforeEach(() => {
   fetchDatasets.mockReset();
   uploadDataset.mockReset();
+  deleteDataset.mockReset();
 });
 
 describe("Datasets", () => {
@@ -120,5 +122,42 @@ describe("Datasets", () => {
 
     expect(uploadDataset.mock.calls[0][0]).toBe(file);
     expect(await screen.findByText("Importados 5 árboles")).toBeInTheDocument();
+  });
+
+  it("asks for confirmation before deleting and calls the API on confirm", async () => {
+    const user = userEvent.setup();
+    fetchDatasets.mockResolvedValue([
+      { id: "d1", name: "Providencia 2025", tree_count: 42, imported_at: null },
+    ]);
+    deleteDataset.mockResolvedValue(undefined);
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Eliminar" }));
+    expect(
+      await screen.findByText(/¿Eliminar "Providencia 2025"\?/),
+    ).toBeInTheDocument();
+
+    expect(deleteDataset).not.toHaveBeenCalled();
+
+    const dialog = screen.getByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Eliminar" }),
+    );
+
+    await waitFor(() => expect(deleteDataset.mock.calls[0][0]).toBe("d1"));
+    expect(await screen.findByText("Dataset eliminado")).toBeInTheDocument();
+  });
+
+  it("does not delete when the confirmation dialog is cancelled", async () => {
+    const user = userEvent.setup();
+    fetchDatasets.mockResolvedValue([
+      { id: "d1", name: "Providencia 2025", tree_count: 42, imported_at: null },
+    ]);
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Eliminar" }));
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(deleteDataset).not.toHaveBeenCalled();
   });
 });
