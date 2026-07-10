@@ -49,6 +49,7 @@ class LegacyTreeRow:
     lat: float
     lon: float
     species: str = ""
+    area_id: int | None = None
 
 
 @dataclass
@@ -90,13 +91,29 @@ def _load_app_trees() -> list[LegacyTreeRow]:
 
 
 def _api_tree_rows() -> list[LegacyTreeRow]:
-    _, trees = _load_api()
-    return [
-        LegacyTreeRow(
-            source=SOURCE_API, external_id=tree_id, lat=lat, lon=lon, species=species
-        )
-        for tree_id, lat, lon, species in trees
+    areas, trees = _load_api()
+    polygons = [
+        (area_id, polygon)
+        for area_id, _, _, coordinates in areas
+        if (polygon := _polygon(coordinates)) is not None
     ]
+    rows = []
+    for tree_id, lat, lon, species in trees:
+        point = Point(lon, lat)
+        area_id = next(
+            (aid for aid, polygon in polygons if polygon.contains(point)), None
+        )
+        rows.append(
+            LegacyTreeRow(
+                source=SOURCE_API,
+                external_id=tree_id,
+                lat=lat,
+                lon=lon,
+                species=species,
+                area_id=area_id,
+            )
+        )
+    return rows
 
 
 def _polygon(coordinates):
@@ -108,8 +125,16 @@ def _polygon(coordinates):
     return Polygon(ring)
 
 
-def _trees_in_area(coordinates, trees) -> list[LegacyTreeRow]:
-    polygon = _polygon(coordinates)
+def _polygon_geojson(polygon):
+    if polygon is None:
+        return None
+    return {
+        "type": "Polygon",
+        "coordinates": [[list(point) for point in polygon.coords[0]]],
+    }
+
+
+def _trees_in_area(polygon, trees) -> list[LegacyTreeRow]:
     if polygon is None:
         return []
     return [
@@ -123,15 +148,19 @@ def _trees_in_area(coordinates, trees) -> list[LegacyTreeRow]:
 
 def list_areas() -> list[dict]:
     areas, trees = _load_api()
-    return [
-        {
-            "id": area_id,
-            "name": name,
-            "campaign": campaign,
-            "tree_count": len(_trees_in_area(coordinates, trees)),
-        }
-        for area_id, name, campaign, coordinates in areas
-    ]
+    result = []
+    for area_id, name, campaign, coordinates in areas:
+        polygon = _polygon(coordinates)
+        result.append(
+            {
+                "id": area_id,
+                "name": name,
+                "campaign": campaign,
+                "tree_count": len(_trees_in_area(polygon, trees)),
+                "polygon": _polygon_geojson(polygon),
+            }
+        )
+    return result
 
 
 def list_trees() -> list[dict]:
@@ -159,6 +188,7 @@ def list_trees() -> list[dict]:
             "lat": row.lat,
             "lon": row.lon,
             "species": row.species,
+            "area_id": row.area_id,
             "already_imported": (row.source, row.external_id) in imported,
         }
         for row in rows
@@ -184,7 +214,7 @@ def import_area(area_id: int) -> LegacyAreaImport:
     areas, trees = _load_api()
     for row_id, name, campaign, coordinates in areas:
         if row_id == area_id:
-            area_trees = _trees_in_area(coordinates, trees)
+            area_trees = _trees_in_area(_polygon(coordinates), trees)
             if not area_trees:
                 raise ValueError(f"Legacy area {area_id} has no trees")
             return LegacyAreaImport(
@@ -199,7 +229,7 @@ def import_all() -> list[LegacyAreaImport]:
     imports = [
         LegacyAreaImport(
             dataset_name=f"{campaign} — {name}",
-            trees=_trees_in_area(coordinates, trees),
+            trees=_trees_in_area(_polygon(coordinates), trees),
         )
         for _, name, campaign, coordinates in areas
     ]

@@ -7,6 +7,13 @@ from tests.factories import CustomUserFactory
 SQUARE = [(-33.40, -70.60), (-33.40, -70.50), (-33.50, -70.50), (-33.50, -70.60)]
 FAR_SQUARE = [(-34.40, -71.60), (-34.40, -71.50), (-34.50, -71.50), (-34.50, -71.60)]
 
+
+def _geojson_polygon(coordinates):
+    ring = [[lon, lat] for lat, lon in coordinates]
+    ring.append(ring[0])
+    return {"type": "Polygon", "coordinates": [ring]}
+
+
 AREAS = [
     (26, "Area 1", "Campaña Semiponti", SQUARE),
     (48, "Area 1", "Campaña Defensa 2024", FAR_SQUARE),
@@ -47,18 +54,26 @@ def _client(role):
 def test_list_areas_counts_trees_inside_polygon(legacy_db):
     areas = legacy.list_areas()
     assert areas == [
-        {"id": 26, "name": "Area 1", "campaign": "Campaña Semiponti", "tree_count": 2},
+        {
+            "id": 26,
+            "name": "Area 1",
+            "campaign": "Campaña Semiponti",
+            "tree_count": 2,
+            "polygon": _geojson_polygon(SQUARE),
+        },
         {
             "id": 48,
             "name": "Area 1",
             "campaign": "Campaña Defensa 2024",
             "tree_count": 1,
+            "polygon": _geojson_polygon(FAR_SQUARE),
         },
         {
             "id": 99,
             "name": "Area vacía",
             "campaign": "Campaña Semiponti",
             "tree_count": 0,
+            "polygon": None,
         },
     ]
 
@@ -111,6 +126,18 @@ def test_list_trees_combines_both_sources(legacy_db):
         (legacy.SOURCE_APP, 211488),
     ]
     assert all(t["already_imported"] is False for t in trees)
+
+
+@pytest.mark.django_db
+def test_list_trees_assigns_area_id_by_polygon_containment(legacy_db):
+    trees = legacy.list_trees()
+    by_key = {(t["source"], t["external_id"]): t["area_id"] for t in trees}
+    assert by_key[(legacy.SOURCE_API, 776)] == 26
+    assert by_key[(legacy.SOURCE_API, 777)] == 26
+    assert by_key[(legacy.SOURCE_API, 778)] == 48
+    assert by_key[(legacy.SOURCE_API, 779)] is None
+    assert by_key[(legacy.SOURCE_APP, 96905)] is None
+    assert by_key[(legacy.SOURCE_APP, 211488)] is None
 
 
 @pytest.mark.django_db
@@ -178,6 +205,7 @@ def test_legacy_areas_endpoint_returns_counts(legacy_db):
         "name": "Area 1",
         "campaign": "Campaña Semiponti",
         "tree_count": 2,
+        "polygon": _geojson_polygon(SQUARE),
     }
 
 
@@ -206,6 +234,7 @@ def test_legacy_trees_endpoint_returns_both_sources(legacy_db):
         "lat": -33.45,
         "lon": -70.55,
         "species": "Quillaja saponaria",
+        "area_id": 26,
         "already_imported": False,
     }
 
