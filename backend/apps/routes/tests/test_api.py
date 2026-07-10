@@ -73,6 +73,21 @@ def test_admin_lists_all_routes(solution_with_route):
     assert [r["id"] for r in response.data["results"]] == [str(route.id)]
 
 
+def test_route_exposes_service_time_breakdown(solution_with_route):
+    _, route, _ = solution_with_route
+    route.travel_time_sec = 100
+    route.total_estimated_time_sec = 700
+    route.save(update_fields=["travel_time_sec", "total_estimated_time_sec"])
+    admin = CustomUserFactory(role="admin")
+
+    response = _client(admin).get(f"/api/routes/{route.id}/")
+
+    assert response.status_code == 200
+    assert response.data["travel_time_sec"] == 100
+    assert response.data["total_estimated_time_sec"] == 700
+    assert response.data["total_service_time_sec"] == 600
+
+
 def test_geojson_returns_street_following_path_per_route(
     solution_with_route, monkeypatch
 ):
@@ -90,6 +105,10 @@ def test_geojson_returns_street_following_path_per_route(
     assert feature["geometry"]["type"] == "LineString"
     assert feature["geometry"]["coordinates"] == street_path
     assert feature["properties"]["stops"] == [[-70.65, -33.45], [-70.66, -33.46]]
+    assert feature["properties"]["total_service_time_sec"] == (
+        feature["properties"]["total_estimated_time_sec"]
+        - feature["properties"]["travel_time_sec"]
+    )
     fetch.assert_called_once_with([[-70.65, -33.45], [-70.66, -33.46]])
 
 
