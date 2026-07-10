@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchMyRoutes, fetchRouteDetail } from "../api/routes.js";
+import { fetchMyRoutes, fetchRouteDetail, fetchRoutePath } from "../api/routes.js";
 
 export function useMyRoute() {
   return useQuery({
@@ -13,5 +13,14 @@ export function useRouteDetail(routeId) {
     queryKey: ["route", routeId],
     queryFn: () => fetchRouteDetail(routeId),
     enabled: !!routeId,
+  });
+}
+
+export function useRoutePath(routeId) {
+  return useQuery({
+    queryKey: ["route-path", routeId],
+    queryFn: () => fetchRoutePath(routeId),
+    enabled: !!routeId,
+    retry: false,
   });
 }

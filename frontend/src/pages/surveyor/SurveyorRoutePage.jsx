@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMyRoute, useRouteDetail } from "../../hooks/useMyRoute.js";
+import { useMyRoute, useRouteDetail, useRoutePath } from "../../hooks/useMyRoute.js";
 import { useWatchPosition } from "../../hooks/useWatchPosition.js";
 import { useVisitStop } from "../../hooks/useVisitStop.js";
 import { useSkipStop } from "../../hooks/useSkipStop.js";
@@ -33,6 +33,7 @@ export default function SurveyorRoutePage() {
   const activeIndex = routes.findIndex((route) => route.id === activeRouteId);
 
   const routeDetail = useRouteDetail(activeRouteId);
+  const routePath = useRoutePath(activeRouteId);
   const { position } = useWatchPosition();
   const visitMutation = useVisitStop(activeRouteId, position);
   const skipMutation = useSkipStop(activeRouteId);
@@ -102,13 +103,13 @@ export default function SurveyorRoutePage() {
             </h1>
           )}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-muted-foreground">
-              {resolvedCount}/{stops.length}
+            <span className="text-sm font-bold text-slate-700">
+              {resolvedCount}/{stops.length} censados
             </span>
             <UserMenu />
           </div>
         </div>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+        <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-200">
           <div
             className="h-full rounded-full bg-primary transition-all"
             style={{ width: `${progress}%` }}
@@ -122,6 +123,7 @@ export default function SurveyorRoutePage() {
           selectedStopId={selectedStop?.id ?? null}
           onSelectStop={setSelectedStopId}
           userPosition={position}
+          geometry={routePath.data}
         />
       </div>
 

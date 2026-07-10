@@ -36,7 +36,7 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = Route.objects.select_related("surveyor", "solution")
         if self.request.user.role != CustomUser.Role.ADMIN:
             queryset = queryset.filter(surveyor=self.request.user)
-        if self.action in ("retrieve", "geojson"):
+        if self.action in ("retrieve", "geojson", "path"):
             queryset = queryset.prefetch_related("stops__tree")
         solution_id = self.request.query_params.get("solution_id")
         if solution_id:
@@ -48,6 +48,14 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             return RouteDetailSerializer
         return RouteSerializer
 
+    @staticmethod
+    def _route_geometry(route):
+        stop_coordinates = [
+            [stop.tree.location.x, stop.tree.location.y] for stop in route.stops.all()
+        ]
+        coordinates = fetch_route_path(stop_coordinates)
+        return stop_coordinates, coordinates
+
     @action(detail=False, methods=["get"])
     def geojson(self, request):
         if not request.query_params.get("solution_id"):
@@ -57,11 +65,7 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             )
         features = []
         for route in self.get_queryset():
-            stop_coordinates = [
-                [stop.tree.location.x, stop.tree.location.y]
-                for stop in route.stops.all()
-            ]
-            coordinates = fetch_route_path(stop_coordinates)
+            stop_coordinates, coordinates = self._route_geometry(route)
             features.append(
                 {
                     "type": "Feature",
@@ -75,6 +79,12 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                 }
             )
         return Response({"type": "FeatureCollection", "features": features})
+
+    @action(detail=True, methods=["get"])
+    def path(self, request, pk=None):
+        route = self.get_object()
+        _, coordinates = self._route_geometry(route)
+        return Response({"type": "LineString", "coordinates": coordinates})
 
     @action(detail=True, methods=["patch"])
     def assign(self, request, pk=None):

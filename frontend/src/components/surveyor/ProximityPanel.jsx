@@ -87,60 +87,64 @@ export default function ProximityPanel({
 
   return (
     <div className="relative shrink-0">
-      <div className="flex items-center gap-3 border-t bg-white px-4 py-3">
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-slate-700">
-            {locked ? "Árbol" : "Próximo árbol"} {stop.sequence}
-          </p>
+      <div className="flex flex-col gap-3 border-t bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-bold text-slate-900">
+              {locked ? "Árbol" : "Próximo árbol"} {stop.sequence}
+            </p>
+            {skipped ? (
+              <p className="text-sm font-medium text-slate-500">
+                Omitido{stop.skip_reason ? ` — ${stop.skip_reason}` : ""}
+              </p>
+            ) : locked ? (
+              <p className="text-sm font-semibold text-amber-700">
+                Visita los árboles anteriores primero
+              </p>
+            ) : distance == null ? (
+              <p className="text-sm text-muted-foreground">Esperando ubicación GPS…</p>
+            ) : (
+              <p
+                className={cn(
+                  "text-sm font-bold",
+                  inRange ? "text-primary" : "text-amber-700",
+                )}
+              >
+                {inRange
+                  ? `A ${Math.round(distance)} m — en rango`
+                  : `A ${Math.round(distance)} m — fuera del rango de ${PROXIMITY_THRESHOLD_M} m`}
+              </p>
+            )}
+          </div>
+
           {skipped ? (
-            <p className="text-xs font-medium text-slate-500">
-              Omitido{stop.skip_reason ? ` — ${stop.skip_reason}` : ""}
-            </p>
-          ) : locked ? (
-            <p className="text-xs font-medium text-amber-600">
-              Visita los árboles anteriores primero
-            </p>
-          ) : distance == null ? (
-            <p className="text-xs text-muted-foreground">Esperando ubicación GPS…</p>
+            <Badge variant="secondary" className="bg-slate-200 text-slate-600">
+              Omitido
+            </Badge>
+          ) : stop.visited ? (
+            <Badge variant="secondary" className="bg-primary/10 text-primary">
+              Visitado
+            </Badge>
           ) : (
-            <p
-              className={cn(
-                "text-xs font-medium",
-                inRange ? "text-primary" : "text-amber-600",
-              )}
-            >
-              {inRange
-                ? `A ${Math.round(distance)} m — en rango`
-                : `A ${Math.round(distance)} m — fuera del rango de ${PROXIMITY_THRESHOLD_M} m`}
-            </p>
+            <Button asChild size="lg" variant="outline" disabled={locked} className="shrink-0">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lon}&travelmode=walking`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Navegar
+              </a>
+            </Button>
           )}
         </div>
 
         {resolved ? null : (
-          <Button asChild variant="outline" disabled={locked}>
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lon}&travelmode=walking`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Navegar
-            </a>
-          </Button>
-        )}
-
-        {skipped ? (
-          <Badge variant="secondary" className="bg-slate-200 text-slate-600">
-            Omitido
-          </Badge>
-        ) : stop.visited ? (
-          <Badge variant="secondary" className="bg-primary/10 text-primary">
-            Visitado
-          </Badge>
-        ) : (
-          <>
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
+              size="lg"
               variant="outline"
+              className="h-auto min-h-14 w-full whitespace-normal px-3 text-base leading-tight sm:flex-1"
               onClick={() => setSheetOpen(true)}
               disabled={locked || isSkipping}
             >
@@ -148,13 +152,17 @@ export default function ProximityPanel({
             </Button>
             <Button
               type="button"
+              size="lg"
               onClick={() => onVisit(stop.id)}
               disabled={isVisiting || locked}
-              className={cn(!inRange && "bg-amber-600 hover:bg-amber-600/90")}
+              className={cn(
+                "h-auto min-h-14 w-full whitespace-normal px-3 text-base font-bold leading-tight sm:flex-[2]",
+                !inRange && "bg-amber-600 hover:bg-amber-600/90",
+              )}
             >
               {inRange ? "Marcar visitado" : "Marcar de todos modos"}
             </Button>
-          </>
+          </div>
         )}
       </div>
 

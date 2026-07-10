@@ -20,6 +20,11 @@ export async function skipStop(stopId, reason) {
   return data;
 }
 
+export async function fetchRoutePath(routeId) {
+  const { data } = await client.get(`/routes/${routeId}/path/`);
+  return data;
+}
+
 export async function fetchRoutesGeojson(solutionId) {
   const { data } = await client.get("/routes/geojson/", {
     params: { solution_id: solutionId },
