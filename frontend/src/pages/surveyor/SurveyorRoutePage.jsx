@@ -103,13 +103,13 @@ export default function SurveyorRoutePage() {
             </h1>
           )}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-muted-foreground">
-              {resolvedCount}/{stops.length}
+            <span className="text-sm font-bold text-slate-700">
+              {resolvedCount}/{stops.length} censados
             </span>
             <UserMenu />
           </div>
         </div>
-        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+        <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-200">
           <div
             className="h-full rounded-full bg-primary transition-all"
             style={{ width: `${progress}%` }}
