@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchSolution } from "@/api/optimization.js";
-import { formatDuration } from "@/lib/optimization.js";
+import { formatDurationBreakdown } from "@/lib/optimization.js";
 import { cn } from "@/lib/utils";
 
 function useSolutionMetrics(solutionId) {
@@ -13,8 +13,9 @@ function useSolutionMetrics(solutionId) {
   });
 
   return solution
-    ? `${solution.total_routes} rutas · ${formatDuration(
+    ? `${solution.total_routes} rutas · ${formatDurationBreakdown(
         solution.total_travel_time_sec,
+        solution.total_service_time_sec,
       )}`
     : "—";
 }

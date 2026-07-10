@@ -25,6 +25,14 @@ export const formatDuration = (seconds) => {
   return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
 };
 
+export const formatDurationBreakdown = (travelSec, serviceSec) => {
+  const travel = travelSec ?? 0;
+  const service = serviceSec ?? 0;
+  return `Total ${formatDuration(travel + service)} · Caminata ${formatDuration(
+    travel,
+  )} · Censo ${formatDuration(service)}`;
+};
+
 const ACTIVE_STATUSES = ["queued", "running"];
 export const MAX_POLL_MS = 15 * 60 * 1000;
 
@@ -56,9 +64,13 @@ export const COMPARISON_METRICS = [
     better: null,
   },
   {
-    key: "total_travel_time_sec",
-    label: "Tiempo total de viaje",
-    format: formatDuration,
+    key: "total_time_sec",
+    label: "Duración total",
+    format: (_value, solution) =>
+      formatDurationBreakdown(
+        solution.total_travel_time_sec,
+        solution.total_service_time_sec,
+      ),
     better: "lower",
   },
   {
