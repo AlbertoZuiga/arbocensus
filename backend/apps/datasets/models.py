@@ -24,6 +24,7 @@ class Tree(models.Model):
     location = gis_models.PointField(srid=4326)
     is_active = models.BooleanField(default=True)
     species = models.CharField(max_length=255, blank=True)
+    source = models.CharField(max_length=20, blank=True)
     external_id = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
@@ -33,9 +34,9 @@ class Tree(models.Model):
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["dataset", "external_id"],
+                fields=["dataset", "source", "external_id"],
                 condition=models.Q(external_id__isnull=False),
-                name="unique_external_id_per_dataset",
+                name="unique_source_external_id_per_dataset",
             ),
         ]
 
