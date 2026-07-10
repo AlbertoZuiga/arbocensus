@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchDatasets, uploadDataset } from "./datasets.js";
+import {
+  createDatasetFromLegacySelection,
+  fetchDatasets,
+  uploadDataset,
+} from "./datasets.js";
 import client from "./client.js";
 
 vi.mock("./client.js", () => ({
@@ -37,5 +41,16 @@ describe("uploadDataset", () => {
     expect(url).toBe("/datasets/");
     expect(form.get("file")).toBe(file);
     expect(form.get("name")).toBe("providencia");
+  });
+});
+
+describe("createDatasetFromLegacySelection", () => {
+  it("posts the name and tree refs as JSON", async () => {
+    const trees = [{ source: "legacy_api", external_id: 776 }];
+    await createDatasetFromLegacySelection({ name: "Selección", trees });
+
+    const [url, body] = client.post.mock.calls[0];
+    expect(url).toBe("/datasets/from-legacy-selection/");
+    expect(body).toEqual({ name: "Selección", trees });
   });
 });
