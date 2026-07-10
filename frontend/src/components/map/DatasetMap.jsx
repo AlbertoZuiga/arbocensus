@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CircleMarker, Polyline, Popup } from "react-leaflet";
 
 import { fetchRoutesGeojson } from "@/api/routes.js";
-import { formatDuration } from "@/lib/optimization.js";
+import { formatDurationBreakdown } from "@/lib/optimization.js";
 import { cn } from "@/lib/utils";
 import BaseMap from "./BaseMap.jsx";
 import { geojsonToRoutes } from "./routeGeojson.js";
@@ -102,7 +102,11 @@ export default function DatasetMap({ markers, solutionId }) {
                 />
                 <span className="font-medium">Ruta {route.routeNumber}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {route.totalTrees} · {formatDuration(route.travelTimeSec)}
+                  {route.totalTrees} ·{" "}
+                  {formatDurationBreakdown(
+                    route.travelTimeSec,
+                    route.totalServiceTimeSec,
+                  )}
                 </span>
               </button>
             );

@@ -18,6 +18,7 @@ const collection = {
         route_number: 1,
         total_trees: 2,
         travel_time_sec: 600,
+        total_service_time_sec: 600,
         stops: [
           [-70.65, -33.45],
           [-70.66, -33.46],
@@ -31,6 +32,7 @@ const collection = {
         route_number: 2,
         total_trees: 1,
         travel_time_sec: 120,
+        total_service_time_sec: 300,
         stops: [[-70.7, -33.5]],
       },
     },
@@ -63,6 +65,7 @@ describe("geojsonToRoutes", () => {
       routeNumber: 1,
       totalTrees: 2,
       travelTimeSec: 600,
+      totalServiceTimeSec: 600,
     });
     expect(routes[0].color).not.toBe(routes[1].color);
   });
