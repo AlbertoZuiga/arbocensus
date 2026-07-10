@@ -25,13 +25,13 @@ export const formatDuration = (seconds) => {
   return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
 };
 
-export const formatDurationBreakdown = (travelSec, serviceSec) => {
-  const travel = travelSec ?? 0;
-  const service = serviceSec ?? 0;
-  return `Total ${formatDuration(travel + service)} · Caminata ${formatDuration(
-    travel,
-  )} · Censo ${formatDuration(service)}`;
-};
+export const totalDurationSec = (travelSec, serviceSec) =>
+  (travelSec ?? 0) + (serviceSec ?? 0);
+
+export const formatDurationBreakdown = (travelSec, serviceSec) =>
+  `Total ${formatDuration(totalDurationSec(travelSec, serviceSec))} · Caminata ${formatDuration(
+    travelSec ?? 0,
+  )} · Censo ${formatDuration(serviceSec ?? 0)}`;
 
 const ACTIVE_STATUSES = ["queued", "running"];
 export const MAX_POLL_MS = 15 * 60 * 1000;
@@ -66,12 +66,20 @@ export const COMPARISON_METRICS = [
   {
     key: "total_time_sec",
     label: "Duración total",
-    format: (_value, solution) =>
-      formatDurationBreakdown(
-        solution.total_travel_time_sec,
-        solution.total_service_time_sec,
-      ),
+    format: formatDuration,
     better: "lower",
+  },
+  {
+    key: "total_travel_time_sec",
+    label: "Caminata",
+    format: formatDuration,
+    better: "lower",
+  },
+  {
+    key: "total_service_time_sec",
+    label: "Censo",
+    format: formatDuration,
+    better: null,
   },
   {
     key: "balance_score",

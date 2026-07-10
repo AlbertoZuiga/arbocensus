@@ -4,7 +4,7 @@ import { fetchSolution } from "@/api/optimization.js";
 import { fetchRoutes } from "@/api/routes.js";
 import { fetchSurveyors } from "@/api/surveyors.js";
 import { useAssignRoute } from "@/hooks/useAssignRoute";
-import { formatDurationBreakdown } from "@/lib/optimization.js";
+import { formatDuration, totalDurationSec } from "@/lib/optimization.js";
 import { getErrorMessage } from "@/lib/errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -90,12 +90,18 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
               <span className="font-medium">Ruta {route.route_number}</span>
               <span className="text-xs text-muted-foreground">
                 {route.total_trees} árboles ·{" "}
-                {formatDurationBreakdown(
-                  route.travel_time_sec,
-                  route.total_service_time_sec,
+                {formatDuration(
+                  totalDurationSec(
+                    route.travel_time_sec,
+                    route.total_service_time_sec,
+                  ),
                 )}
               </span>
             </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Caminata {formatDuration(route.travel_time_sec)} · Censo{" "}
+              {formatDuration(route.total_service_time_sec)}
+            </p>
 
             <Select
               value={route.surveyor ?? UNASSIGNED}

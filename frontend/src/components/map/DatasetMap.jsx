@@ -3,7 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { CircleMarker, Polyline, Popup } from "react-leaflet";
 
 import { fetchRoutesGeojson } from "@/api/routes.js";
-import { formatDurationBreakdown } from "@/lib/optimization.js";
+import {
+  formatDuration,
+  formatDurationBreakdown,
+  totalDurationSec,
+} from "@/lib/optimization.js";
 import { cn } from "@/lib/utils";
 import BaseMap from "./BaseMap.jsx";
 import { geojsonToRoutes } from "./routeGeojson.js";
@@ -91,6 +95,10 @@ export default function DatasetMap({ markers, solutionId }) {
                 onClick={() =>
                   setSelectedRoute(active ? null : route.routeNumber)
                 }
+                title={formatDurationBreakdown(
+                  route.travelTimeSec,
+                  route.totalServiceTimeSec,
+                )}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
                   active ? "bg-muted" : "hover:bg-muted/50",
@@ -103,9 +111,11 @@ export default function DatasetMap({ markers, solutionId }) {
                 <span className="font-medium">Ruta {route.routeNumber}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {route.totalTrees} ·{" "}
-                  {formatDurationBreakdown(
-                    route.travelTimeSec,
-                    route.totalServiceTimeSec,
+                  {formatDuration(
+                    totalDurationSec(
+                      route.travelTimeSec,
+                      route.totalServiceTimeSec,
+                    ),
                   )}
                 </span>
               </button>

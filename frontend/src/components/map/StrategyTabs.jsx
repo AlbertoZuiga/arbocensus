@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchSolution } from "@/api/optimization.js";
-import { formatDurationBreakdown } from "@/lib/optimization.js";
+import {
+  formatDuration,
+  formatDurationBreakdown,
+  totalDurationSec,
+} from "@/lib/optimization.js";
 import { cn } from "@/lib/utils";
 
 function useSolutionMetrics(solutionId) {
@@ -12,12 +16,20 @@ function useSolutionMetrics(solutionId) {
     staleTime: Infinity,
   });
 
-  return solution
-    ? `${solution.total_routes} rutas · ${formatDurationBreakdown(
+  if (!solution) return { text: "—", title: undefined };
+
+  return {
+    text: `${solution.total_routes} rutas · ${formatDuration(
+      totalDurationSec(
         solution.total_travel_time_sec,
         solution.total_service_time_sec,
-      )}`
-    : "—";
+      ),
+    )}`,
+    title: formatDurationBreakdown(
+      solution.total_travel_time_sec,
+      solution.total_service_time_sec,
+    ),
+  };
 }
 
 function StrategyTab({ label, solutionId, active, onSelect }) {
@@ -27,6 +39,7 @@ function StrategyTab({ label, solutionId, active, onSelect }) {
     <button
       type="button"
       onClick={onSelect}
+      title={metrics.title}
       className={cn(
         "flex min-w-[7rem] flex-col rounded-md px-3 py-1.5 text-left transition",
         active
@@ -35,7 +48,7 @@ function StrategyTab({ label, solutionId, active, onSelect }) {
       )}
     >
       <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs text-muted-foreground">{metrics}</span>
+      <span className="text-xs text-muted-foreground">{metrics.text}</span>
     </button>
   );
 }
@@ -44,9 +57,12 @@ function StrategyChip({ label, solutionId }) {
   const metrics = useSolutionMetrics(solutionId);
 
   return (
-    <div className="flex min-w-[7rem] flex-col rounded-md border bg-background/90 px-3 py-1.5 text-left shadow-md backdrop-blur">
+    <div
+      title={metrics.title}
+      className="flex min-w-[7rem] flex-col rounded-md border bg-background/90 px-3 py-1.5 text-left shadow-md backdrop-blur"
+    >
       <span className="text-sm font-medium">{label}</span>
-      <span className="text-xs text-muted-foreground">{metrics}</span>
+      <span className="text-xs text-muted-foreground">{metrics.text}</span>
     </div>
   );
 }

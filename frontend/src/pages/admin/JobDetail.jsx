@@ -64,7 +64,7 @@ function ComparisonTable({ strategies, solutionsByStrategy }) {
                       isBest && "font-semibold text-primary",
                     )}
                   >
-                    {metric.format(values[i], solutionsByStrategy[s])}
+                    {metric.format(values[i])}
                   </TableCell>
                 );
               })}
