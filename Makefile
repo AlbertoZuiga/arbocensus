@@ -4,7 +4,9 @@
 # (test users + light dataset). Disable with SEED_DEV=false in .env.
 
 up:
-	bash scripts/find-free-ports.sh
+	@if [ ! -f .env ] || ! grep -qE '^BACKEND_PORT=' .env || ! grep -qE '^DB_HOST_PORT=' .env || ! grep -qE '^FRONTEND_PORT=' .env; then \
+		bash scripts/find-free-ports.sh; \
+	fi
 	docker compose up -d
 
 up-build:
