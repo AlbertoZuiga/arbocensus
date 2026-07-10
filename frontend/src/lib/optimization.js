@@ -28,10 +28,10 @@ export const formatDuration = (seconds) => {
 export const totalDurationSec = (travelSec, serviceSec) =>
   (travelSec ?? 0) + (serviceSec ?? 0);
 
-export const formatDurationBreakdown = (travelSec, serviceSec) =>
-  `Total ${formatDuration(totalDurationSec(travelSec, serviceSec))} · Caminata ${formatDuration(
-    travelSec ?? 0,
-  )} · Censo ${formatDuration(serviceSec ?? 0)}`;
+export const formatDurationSplit = (travelSec, serviceSec) =>
+  `Caminata ${formatDuration(travelSec ?? 0)} · Censo ${formatDuration(
+    serviceSec ?? 0,
+  )}`;
 
 const ACTIVE_STATUSES = ["queued", "running"];
 export const MAX_POLL_MS = 15 * 60 * 1000;

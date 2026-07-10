@@ -42,11 +42,10 @@ describe("StrategyTabs", () => {
 
     expect(screen.getByText("Global")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    const metrics = await screen.findByText("3 rutas · 1 h 30 min");
-    expect(metrics.closest("[title]")).toHaveAttribute(
-      "title",
-      "Total 1 h 30 min · Caminata 1 h 0 min · Censo 30 min",
-    );
+    await screen.findByText("3 rutas · 1 h 30 min");
+    expect(
+      screen.getByText("Caminata 1 h 0 min · Censo 30 min"),
+    ).toBeInTheDocument();
   });
 
   it("renders a toggle with a tab per strategy when more than one ran", () => {

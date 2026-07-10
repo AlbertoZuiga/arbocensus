@@ -5,7 +5,7 @@ import { CircleMarker, Polyline, Popup } from "react-leaflet";
 import { fetchRoutesGeojson } from "@/api/routes.js";
 import {
   formatDuration,
-  formatDurationBreakdown,
+  formatDurationSplit,
   totalDurationSec,
 } from "@/lib/optimization.js";
 import { cn } from "@/lib/utils";
@@ -95,29 +95,35 @@ export default function DatasetMap({ markers, solutionId }) {
                 onClick={() =>
                   setSelectedRoute(active ? null : route.routeNumber)
                 }
-                title={formatDurationBreakdown(
-                  route.travelTimeSec,
-                  route.totalServiceTimeSec,
-                )}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
+                  "w-full rounded-md px-2 py-1.5 text-left text-sm",
                   active ? "bg-muted" : "hover:bg-muted/50",
                 )}
               >
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: route.color }}
-                />
-                <span className="font-medium">Ruta {route.routeNumber}</span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {route.totalTrees} ·{" "}
-                  {formatDuration(
-                    totalDurationSec(
+                <span className="flex items-center gap-2">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: route.color }}
+                  />
+                  <span className="font-medium">Ruta {route.routeNumber}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {route.totalTrees} ·{" "}
+                    {formatDuration(
+                      totalDurationSec(
+                        route.travelTimeSec,
+                        route.totalServiceTimeSec,
+                      ),
+                    )}
+                  </span>
+                </span>
+                {active && (
+                  <span className="mt-0.5 block pl-5 text-xs text-muted-foreground">
+                    {formatDurationSplit(
                       route.travelTimeSec,
                       route.totalServiceTimeSec,
-                    ),
-                  )}
-                </span>
+                    )}
+                  </span>
+                )}
               </button>
             );
           })}
