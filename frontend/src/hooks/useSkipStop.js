@@ -7,7 +7,8 @@ export function useSkipStop(routeId) {
 
   return useMutation({
     mutationKey: ["skipStop"],
-    mutationFn: ({ stopId, reason }) => skipStop(stopId, reason),
+    mutationFn: ({ stopId, reason, status, photo, notes }) =>
+      skipStop(stopId, { reason, status, photo, notes }),
     onMutate: async ({ stopId, reason }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData(queryKey);

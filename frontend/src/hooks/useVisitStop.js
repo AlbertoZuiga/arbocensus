@@ -7,12 +7,14 @@ export function useVisitStop(routeId, position) {
 
   return useMutation({
     mutationKey: ["visitStop"],
-    mutationFn: (stopId) =>
-      visitStop(
-        stopId,
-        position ? { lat: position.lat, lon: position.lon } : undefined
-      ),
-    onMutate: async (stopId) => {
+    mutationFn: ({ stopId, status, photo, notes }) =>
+      visitStop(stopId, {
+        ...(position ? { lat: position.lat, lon: position.lon } : {}),
+        status,
+        photo,
+        notes,
+      }),
+    onMutate: async ({ stopId }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData(queryKey);
       queryClient.setQueryData(queryKey, (old) => {
@@ -28,7 +30,7 @@ export function useVisitStop(routeId, position) {
       });
       return { previous };
     },
-    onError: (_error, _stopId, context) => {
+    onError: (_error, _variables, context) => {
       if (context?.previous) {
         queryClient.setQueryData(queryKey, context.previous);
       }

@@ -10,13 +10,30 @@ export async function fetchRouteDetail(routeId) {
   return data;
 }
 
-export async function visitStop(stopId, coords) {
-  const { data } = await client.post(`/routes/stops/${stopId}/visit/`, coords ?? {});
+function observationBody({ photo, ...fields }) {
+  const present = Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value != null)
+  );
+  if (!photo) return present;
+  const form = new FormData();
+  Object.entries(present).forEach(([key, value]) => form.append(key, value));
+  form.append("photo", photo);
+  return form;
+}
+
+export async function visitStop(stopId, fields = {}) {
+  const { data } = await client.post(
+    `/routes/stops/${stopId}/visit/`,
+    observationBody(fields)
+  );
   return data;
 }
 
-export async function skipStop(stopId, reason) {
-  const { data } = await client.post(`/routes/stops/${stopId}/skip/`, { reason });
+export async function skipStop(stopId, fields = {}) {
+  const { data } = await client.post(
+    `/routes/stops/${stopId}/skip/`,
+    observationBody(fields)
+  );
   return data;
 }
 

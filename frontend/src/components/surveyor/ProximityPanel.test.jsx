@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import ProximityPanel from "./ProximityPanel.jsx";
 
 const stop = { id: "s1", sequence: 2, lat: -33.45, lon: -70.65, visited: false };
+const photoFile = new File(["photo"], "tree.jpg", { type: "image/jpeg" });
 
 describe("ProximityPanel", () => {
   it("renders the visit button for the next pending stop", () => {
@@ -42,7 +43,32 @@ describe("ProximityPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("skips the stop with a predefined reason", () => {
+  it("requires a photo before confirming a visit, then submits status + photo", () => {
+    const onVisit = vi.fn();
+    render(
+      <ProximityPanel
+        stop={stop}
+        distance={5}
+        inRange
+        locked={false}
+        onVisit={onVisit}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Marcar visitado" }));
+    expect(screen.getByRole("button", { name: "Confirmar visita" })).toBeDisabled();
+
+    const fileInput = screen.getByLabelText("Foto del árbol");
+    fireEvent.change(fileInput, { target: { files: [photoFile] } });
+    fireEvent.click(screen.getByRole("button", { name: "Removido / talado" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar visita" }));
+
+    expect(onVisit).toHaveBeenCalledWith("s1", {
+      status: "removed",
+      photo: photoFile,
+    });
+  });
+
+  it("skips the stop with a predefined reason and optional photo", () => {
     const onSkip = vi.fn();
     render(
       <ProximityPanel
@@ -57,7 +83,10 @@ describe("ProximityPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "No se pudo censar" }));
     fireEvent.click(screen.getByRole("button", { name: "Árbol inexistente" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar omisión" }));
-    expect(onSkip).toHaveBeenCalledWith("s1", "Árbol inexistente");
+    expect(onSkip).toHaveBeenCalledWith("s1", {
+      reason: "Árbol inexistente",
+      photo: null,
+    });
   });
 
   it("requires custom text before confirming an 'Otro' skip", () => {
@@ -81,7 +110,56 @@ describe("ProximityPanel", () => {
       target: { value: "Zona en obras" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar omisión" }));
-    expect(onSkip).toHaveBeenCalledWith("s1", "Zona en obras");
+    expect(onSkip).toHaveBeenCalledWith("s1", {
+      reason: "Zona en obras",
+      photo: null,
+    });
+  });
+
+  it("closes an open sheet when the selected stop changes", () => {
+    const { rerender } = render(
+      <ProximityPanel
+        stop={stop}
+        distance={5}
+        inRange
+        locked={false}
+        onVisit={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Marcar visitado" }));
+    expect(
+      screen.getByRole("button", { name: "Confirmar visita" })
+    ).toBeInTheDocument();
+
+    rerender(
+      <ProximityPanel
+        stop={{ ...stop, id: "s2", sequence: 3 }}
+        distance={5}
+        inRange
+        locked={false}
+        onVisit={vi.fn()}
+      />
+    );
+    expect(
+      screen.queryByRole("button", { name: "Confirmar visita" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows an explicit error banner when the visit request fails", () => {
+    render(
+      <ProximityPanel
+        stop={stop}
+        distance={5}
+        inRange
+        locked={false}
+        onVisit={vi.fn()}
+        onSkip={vi.fn()}
+        visitError={{ response: null }}
+      />
+    );
+    expect(
+      screen.getByText(/Sin conexión\. No se guardó el registro/)
+    ).toBeInTheDocument();
   });
 
   it("shows the Omitido badge for a skipped stop", () => {

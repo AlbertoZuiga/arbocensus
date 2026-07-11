@@ -83,8 +83,16 @@ export default function SurveyorRoutePage() {
   const progress = stops.length > 0 ? (resolvedCount / stops.length) * 100 : 0;
 
   const handleSelectRoute = (routeId) => {
+    visitMutation.reset();
+    skipMutation.reset();
     setSelectedRouteId(routeId);
     setSelectedStopId(null);
+  };
+
+  const handleSelectStop = (stopId) => {
+    visitMutation.reset();
+    skipMutation.reset();
+    setSelectedStopId(stopId);
   };
 
   return (
@@ -121,7 +129,7 @@ export default function SurveyorRoutePage() {
         <RouteMap
           stops={stops}
           selectedStopId={selectedStop?.id ?? null}
-          onSelectStop={setSelectedStopId}
+          onSelectStop={handleSelectStop}
           userPosition={position}
           geometry={routePath.data}
         />
@@ -132,17 +140,24 @@ export default function SurveyorRoutePage() {
         distance={distance}
         inRange={inRange}
         locked={selectedStopLocked}
-        onVisit={(stopId) =>
-          visitMutation.mutate(stopId, { onSuccess: () => setSelectedStopId(null) })
-        }
-        onSkip={(stopId, reason) =>
-          skipMutation.mutate(
-            { stopId, reason },
+        onVisit={(stopId, payload) => {
+          skipMutation.reset();
+          visitMutation.mutate(
+            { stopId, ...payload },
             { onSuccess: () => setSelectedStopId(null) }
-          )
-        }
+          );
+        }}
+        onSkip={(stopId, payload) => {
+          visitMutation.reset();
+          skipMutation.mutate(
+            { stopId, ...payload },
+            { onSuccess: () => setSelectedStopId(null) }
+          );
+        }}
         isVisiting={visitMutation.isPending}
         isSkipping={skipMutation.isPending}
+        visitError={visitMutation.isError ? visitMutation.error : null}
+        skipError={skipMutation.isError ? skipMutation.error : null}
       />
 
       <section className="flex-1 overflow-y-auto">
@@ -150,7 +165,7 @@ export default function SurveyorRoutePage() {
           stops={stops}
           selectedStopId={selectedStop?.id ?? null}
           nextPendingStopId={nextPendingStop?.id ?? null}
-          onSelectStop={setSelectedStopId}
+          onSelectStop={handleSelectStop}
         />
       </section>
     </main>
