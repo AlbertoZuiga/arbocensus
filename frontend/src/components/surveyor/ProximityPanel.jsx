@@ -91,7 +91,7 @@ function VisitSheet({ onCancel, onConfirm }) {
   const [photo, setPhoto] = useState(null);
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75vh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 shadow-lg">
+    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75dvh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg">
       <p className="text-base font-bold text-slate-900">Registrar visita</p>
       <p className="mt-0.5 text-sm text-muted-foreground">
         La foto se toma con la cámara en el momento de la visita.
@@ -117,14 +117,14 @@ function VisitSheet({ onCancel, onConfirm }) {
         <Button
           type="button"
           variant="ghost"
-          className="flex-1"
+          className="h-12 flex-1"
           onClick={onCancel}
         >
           Cancelar
         </Button>
         <Button
           type="button"
-          className="flex-[2]"
+          className="h-12 flex-[2] text-base font-bold"
           disabled={!photo}
           onClick={() => onConfirm({ status, photo })}
         >
@@ -149,7 +149,7 @@ function SkipSheet({ onCancel, onConfirm, isSkipping }) {
   const canConfirm = !!reason && !isSkipping;
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75vh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 shadow-lg">
+    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75dvh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg">
       <p className="mb-3 text-base font-bold text-slate-900">
         ¿Por qué no se pudo censar?
       </p>
@@ -159,7 +159,7 @@ function SkipSheet({ onCancel, onConfirm, isSkipping }) {
             key={option}
             type="button"
             variant={selected === option ? "default" : "outline"}
-            className="justify-start"
+            className="h-12 justify-start"
             onClick={() => setSelected(option)}
           >
             {option}
@@ -180,14 +180,14 @@ function SkipSheet({ onCancel, onConfirm, isSkipping }) {
         <Button
           type="button"
           variant="ghost"
-          className="flex-1"
+          className="h-12 flex-1"
           onClick={onCancel}
         >
           Cancelar
         </Button>
         <Button
           type="button"
-          className="flex-1"
+          className="h-12 flex-1 text-base font-bold"
           disabled={!canConfirm}
           onClick={() => onConfirm({ reason, photo })}
         >

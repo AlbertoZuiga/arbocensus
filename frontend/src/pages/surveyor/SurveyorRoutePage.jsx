@@ -5,10 +5,9 @@ import { useVisitStop } from "../../hooks/useVisitStop.js";
 import { useSkipStop } from "../../hooks/useSkipStop.js";
 import { useWakeLock } from "../../hooks/useWakeLock.js";
 import RouteMap from "../../components/surveyor/RouteMap.jsx";
-import RouteSelector from "../../components/surveyor/RouteSelector.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
-import UserMenu from "../../components/UserMenu.jsx";
+import SurveyorHeader from "../../components/surveyor/SurveyorHeader.jsx";
 import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 import { isStopLocked, isStopResolved } from "../../utils/stops.js";
 
@@ -80,7 +79,6 @@ export default function SurveyorRoutePage() {
   }
 
   const resolvedCount = stops.filter((stop) => isStopResolved(stop)).length;
-  const progress = stops.length > 0 ? (resolvedCount / stops.length) * 100 : 0;
 
   const handleSelectRoute = (routeId) => {
     visitMutation.reset();
@@ -97,35 +95,17 @@ export default function SurveyorRoutePage() {
 
   return (
     <main className="flex h-dvh flex-col overflow-hidden bg-slate-50">
-      <header className="relative z-[1000] border-b bg-white px-4 py-3">
-        <div className="flex items-center justify-between">
-          {routes.length > 1 ? (
-            <RouteSelector
-              routes={routes}
-              activeRouteId={activeRouteId}
-              onSelect={handleSelectRoute}
-            />
-          ) : (
-            <h1 className="text-lg font-bold text-primary">
-              Ruta {activeIndex + 1} · {stops.length} árboles
-            </h1>
-          )}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold text-slate-700">
-              {resolvedCount}/{stops.length} censados
-            </span>
-            <UserMenu />
-          </div>
-        </div>
-        <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-200">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </header>
+      <SurveyorHeader
+        routes={routes}
+        activeRouteId={activeRouteId}
+        activeIndex={activeIndex}
+        onSelectRoute={handleSelectRoute}
+        stopsCount={stops.length}
+        resolvedCount={resolvedCount}
+        position={position}
+      />
 
-      <div className="h-[55vh] w-full shrink-0">
+      <div className="h-[42dvh] min-h-[200px] w-full shrink-0">
         <RouteMap
           stops={stops}
           selectedStopId={selectedStop?.id ?? null}
@@ -160,7 +140,7 @@ export default function SurveyorRoutePage() {
         skipError={skipMutation.isError ? skipMutation.error : null}
       />
 
-      <section className="flex-1 overflow-y-auto">
+      <section className="pb-safe flex-1 overflow-y-auto" aria-label="Lista de árboles">
         <StopList
           stops={stops}
           selectedStopId={selectedStop?.id ?? null}
