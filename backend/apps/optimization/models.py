@@ -124,6 +124,7 @@ class RoutingSolution(models.Model):
     interleave_total = models.IntegerField(default=0)
     interleave_per_route = models.FloatField(default=0)
     worst_pair_iou = models.FloatField(default=0)
+    timing = models.JSONField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
     generated_at = models.DateTimeField(auto_now_add=True)
 

@@ -1,8 +1,10 @@
 import hashlib
+import time
 
 import numpy as np
 import requests
 from apps.datasets.models import DistanceMatrix
+from apps.optimization.profiling import PhaseTimer
 from django.conf import settings
 
 UNREACHABLE_PENALTY = 9_999_999.0
@@ -17,16 +19,27 @@ OSRM_MAX_MATRIX_DIMENSION = 2000
 
 
 class OSRMCostMatrixBuilder:
-    def build(self, trees):
+    def build(self, trees, timer=None):
+        timer = timer or PhaseTimer()
         trees = sorted(trees, key=lambda tree: tree.id)
         dataset = trees[0].dataset
         source_hash = self._compute_hash(trees)
 
-        cached = self._lookup_cache(dataset, source_hash)
+        with timer.phase("cost_matrix", "cache_lookup"):
+            cached = self._lookup_cache(dataset, source_hash)
         if cached is not None:
             return cached
 
-        matrix = self._fetch_from_osrm(trees)
+        fetch_start = time.perf_counter()
+        matrix = self._fetch_from_osrm(trees, timer)
+        fetch_elapsed = time.perf_counter() - fetch_start
+        osrm_fetch_elapsed = timer.as_dict()["cost_matrix"]["osrm_fetch"]
+        timer.record(
+            "cost_matrix",
+            max(0.0, fetch_elapsed - osrm_fetch_elapsed),
+            "chunk_assembly",
+        )
+
         DistanceMatrix.objects.update_or_create(
             dataset=dataset,
             defaults={
@@ -53,7 +66,8 @@ class OSRMCostMatrixBuilder:
         ordered_ids = sorted(str(tree.id) for tree in trees)
         return hashlib.sha256(",".join(ordered_ids).encode()).hexdigest()
 
-    def _fetch_from_osrm(self, trees):
+    def _fetch_from_osrm(self, trees, timer=None):
+        timer = timer or PhaseTimer()
         if len(trees) > OSRM_MAX_MATRIX_DIMENSION:
             raise ValueError(
                 f"dataset excede la dimensión máxima de matriz OSRM "
@@ -61,12 +75,13 @@ class OSRMCostMatrixBuilder:
             )
         coords = [(tree.location.x, tree.location.y) for tree in trees]
         if len(coords) <= OSRM_MAX_TREES_PER_REQUEST:
-            durations = self._request_table(coords)
+            durations = self._request_table(coords, timer=timer)
         else:
-            durations = self._fetch_chunked(coords)
+            durations = self._fetch_chunked(coords, timer=timer)
         return np.nan_to_num(durations, nan=UNREACHABLE_PENALTY)
 
-    def _fetch_chunked(self, coords, chunk_size=OSRM_CHUNK_SIZE):
+    def _fetch_chunked(self, coords, chunk_size=OSRM_CHUNK_SIZE, timer=None):
+        timer = timer or PhaseTimer()
         n = len(coords)
         matrix = np.empty((n, n), dtype=float)
         blocks = [
@@ -79,7 +94,9 @@ class OSRMCostMatrixBuilder:
                     # Diagonal block: subset == src_block == dst_block, so an
                     # explicit sources/destinations filter is a same-size no-op
                     # that only inflates the URL. Omit it.
-                    block = self._request_table([coords[i] for i in src_block])
+                    block = self._request_table(
+                        [coords[i] for i in src_block], timer=timer
+                    )
                 else:
                     subset = list(dict.fromkeys(src_block + dst_block))
                     position = {original: k for k, original in enumerate(subset)}
@@ -87,17 +104,21 @@ class OSRMCostMatrixBuilder:
                         [coords[i] for i in subset],
                         sources=[position[i] for i in src_block],
                         destinations=[position[i] for i in dst_block],
+                        timer=timer,
                     )
                 matrix[np.ix_(src_block, dst_block)] = block
         return matrix
 
-    def _request_table(self, coords, sources=None, destinations=None):
+    def _request_table(self, coords, sources=None, destinations=None, timer=None):
+        timer = timer or PhaseTimer()
         coord_str = ";".join(f"{lon},{lat}" for lon, lat in coords)
         params = {"annotations": "duration"}
         if sources is not None and destinations is not None:
             params["sources"] = ";".join(str(i) for i in sources)
             params["destinations"] = ";".join(str(i) for i in destinations)
         url = f"{settings.OSRM_URL}/table/v1/foot/{coord_str}"
-        response = requests.get(url, params=params, timeout=60)
-        response.raise_for_status()
-        return np.array(response.json()["durations"], dtype=float)
+        with timer.phase("cost_matrix", "osrm_fetch"):
+            response = requests.get(url, params=params, timeout=60)
+            response.raise_for_status()
+            durations = response.json()["durations"]
+        return np.array(durations, dtype=float)

@@ -2,6 +2,7 @@ from apps.datasets.models import Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingConfig, RoutingSolution
 from apps.optimization.n_estimator import estimate_max_vehicles
+from apps.optimization.profiling import PhaseTimer, merge_timing
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
 from apps.optimization.solver import build_open_matrix
 from apps.optimization.strategies import solve_by_strategy
@@ -51,7 +52,14 @@ class OptimizationPipeline:
 
         time_limit_sec = min(int(30 + 1.5 * len(trees)), SOLVER_TIME_LIMIT_SEC)
 
-        matrix = OSRMCostMatrixBuilder().build(trees)
+        cost_matrix_timer = PhaseTimer()
+        matrix = OSRMCostMatrixBuilder().build(trees, timer=cost_matrix_timer)
+        cost_matrix_timer.record(
+            "cost_matrix",
+            sum(cost_matrix_timer.as_dict()["cost_matrix"].values()),
+            "total",
+        )
+        cost_matrix_timing = cost_matrix_timer.as_dict()
         total_service = len(trees) * self.config.service_time_sec
         max_vehicles = estimate_max_vehicles(
             build_open_matrix(matrix),
@@ -67,8 +75,10 @@ class OptimizationPipeline:
         )
 
         solved = {}
+        timers = {}
         dropped_nodes = set()
         for s in strategies_to_run:
+            timer = PhaseTimer()
             result = solve_by_strategy(
                 s.value,
                 matrix,
@@ -78,6 +88,7 @@ class OptimizationPipeline:
                 service_time_sec=self.config.service_time_sec,
                 max_vehicles=max_vehicles,
                 time_limit_sec=time_limit_sec,
+                timer=timer,
             )
             if result is None:
                 raise ValueError(
@@ -88,13 +99,20 @@ class OptimizationPipeline:
                 )
             routes, dropped = result
             solved[s.value] = routes
+            timers[s.value] = timer
             dropped_nodes.update(dropped)
 
         results = {}
         with transaction.atomic():
             for s_value, routes in solved.items():
                 results[s_value] = self._persist_solution(
-                    trees, matrix, routes, max_vehicles, s_value
+                    trees,
+                    matrix,
+                    routes,
+                    max_vehicles,
+                    s_value,
+                    cost_matrix_timing,
+                    timers[s_value],
                 )
 
         return {
@@ -103,7 +121,14 @@ class OptimizationPipeline:
         }
 
     def _persist_solution(
-        self, trees, matrix, routes, max_vehicles_estimated, strategy
+        self,
+        trees,
+        matrix,
+        routes,
+        max_vehicles_estimated,
+        strategy,
+        cost_matrix_timing,
+        timer,
     ):
         route_times = [self._travel_time(matrix, route) for route in routes]
         estimated_times = [
@@ -111,7 +136,10 @@ class OptimizationPipeline:
             for travel, route in zip(route_times, routes, strict=True)
         ]
 
-        spatial = aggregate_metrics(routes_from_points(routes, trees))
+        with timer.phase("metrics"):
+            spatial = aggregate_metrics(routes_from_points(routes, trees))
+
+        timing = merge_timing(cost_matrix_timing, timer.as_dict())
 
         solution = RoutingSolution.objects.create(
             job=self.job,
@@ -123,6 +151,7 @@ class OptimizationPipeline:
             interleave_total=spatial["interleave_total"],
             interleave_per_route=spatial["interleave_per_route"],
             worst_pair_iou=spatial["worst_pair_iou"],
+            timing=timing,
         )
 
         stops = []
