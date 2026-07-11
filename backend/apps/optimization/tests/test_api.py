@@ -193,6 +193,7 @@ def test_get_solution_shape(make_dataset_with_trees):
         "interleave_total",
         "interleave_per_route",
         "worst_pair_iou",
+        "timing",
         "generated_at",
         "published_at",
         "job",
