@@ -2,8 +2,20 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ProximityPanel from "./ProximityPanel.jsx";
 
+vi.mock("./CameraCapture.jsx", () => ({
+  default: ({ onCapture }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onCapture(new File(["photo"], "tree.jpg", { type: "image/jpeg" }))
+      }
+    >
+      Capturar (mock)
+    </button>
+  ),
+}));
+
 const stop = { id: "s1", sequence: 2, lat: -33.45, lon: -70.65, visited: false };
-const photoFile = new File(["photo"], "tree.jpg", { type: "image/jpeg" });
 
 describe("ProximityPanel", () => {
   it("renders the visit button for the next pending stop", () => {
@@ -43,7 +55,7 @@ describe("ProximityPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("requires a photo before confirming a visit, then submits status + photo", () => {
+  it("requires a camera photo before confirming a visit, then submits status + photo", () => {
     const onVisit = vi.fn();
     render(
       <ProximityPanel
@@ -56,16 +68,37 @@ describe("ProximityPanel", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Marcar visitado" }));
     expect(screen.getByRole("button", { name: "Confirmar visita" })).toBeDisabled();
+    expect(document.querySelector("input[type='file']")).toBeNull();
 
-    const fileInput = screen.getByLabelText("Foto del árbol");
-    fireEvent.change(fileInput, { target: { files: [photoFile] } });
+    fireEvent.click(screen.getByRole("button", { name: "Tomar foto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Capturar (mock)" }));
     fireEvent.click(screen.getByRole("button", { name: "Removido / talado" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar visita" }));
 
     expect(onVisit).toHaveBeenCalledWith("s1", {
       status: "removed",
-      photo: photoFile,
+      photo: expect.any(File),
     });
+  });
+
+  it("allows retaking the photo before confirming", () => {
+    render(
+      <ProximityPanel
+        stop={stop}
+        distance={5}
+        inRange
+        locked={false}
+        onVisit={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Marcar visitado" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tomar foto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Capturar (mock)" }));
+
+    expect(screen.getByAltText("Foto capturada del árbol")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Repetir foto/ })
+    ).toBeInTheDocument();
   });
 
   it("skips the stop with a predefined reason and optional photo", () => {

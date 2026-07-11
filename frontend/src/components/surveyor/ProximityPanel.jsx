@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import CameraCapture from "./CameraCapture.jsx";
 import { PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
 const SKIP_REASONS = ["Árbol inexistente", "Acceso bloqueado", "Otro"];
@@ -22,25 +24,63 @@ function networkErrorMessage(error) {
   return error.response?.data?.detail ?? "No se pudo guardar. Intenta de nuevo.";
 }
 
-function PhotoField({ id, photo, onChange, optional = false }) {
+function PhotoCaptureField({ photo, onChange, optional = false }) {
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
+  useEffect(() => {
+    if (!photo) {
+      setPreviewUrl(null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(photo);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
+
   return (
-    <div className="mt-3">
-      <label
-        htmlFor={id}
-        className="mb-1 block text-sm font-medium text-slate-700"
-      >
-        {optional ? "Foto del árbol (opcional)" : "Foto del árbol"}
-      </label>
-      <input
-        id={id}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(event) => onChange(event.target.files?.[0] ?? null)}
-        className="block w-full text-sm text-slate-600"
-      />
-      {photo && (
-        <p className="mt-1 text-xs text-muted-foreground">{photo.name}</p>
+    <div className="mt-4">
+      <p className="mb-1 text-sm font-medium text-slate-700">
+        Foto del árbol{optional ? " (opcional)" : ""}
+      </p>
+      {photo ? (
+        <div className="relative overflow-hidden rounded-lg">
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Foto capturada del árbol"
+              className="h-36 w-full object-cover"
+            />
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="absolute bottom-2 right-2 shadow"
+            onClick={() => setCameraOpen(true)}
+          >
+            <Camera className="mr-1 h-4 w-4" />
+            Repetir foto
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setCameraOpen(true)}
+          className="flex h-24 w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-600 transition active:bg-slate-100"
+        >
+          <Camera className="h-6 w-6" />
+          <span className="text-sm font-semibold">Tomar foto</span>
+        </button>
+      )}
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={(file) => {
+            onChange(file);
+            setCameraOpen(false);
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
       )}
     </div>
   );
@@ -51,24 +91,28 @@ function VisitSheet({ onCancel, onConfirm }) {
   const [photo, setPhoto] = useState(null);
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[1100] border-t bg-white p-4 shadow-lg">
-      <p className="mb-3 text-sm font-semibold text-slate-700">
-        Registra el estado del árbol
+    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75vh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 shadow-lg">
+      <p className="text-base font-bold text-slate-900">Registrar visita</p>
+      <p className="mt-0.5 text-sm text-muted-foreground">
+        La foto se toma con la cámara en el momento de la visita.
       </p>
-      <div className="flex flex-wrap gap-2">
+      <PhotoCaptureField photo={photo} onChange={setPhoto} />
+      <p className="mb-1 mt-4 text-sm font-medium text-slate-700">
+        Estado del árbol
+      </p>
+      <div className="grid grid-cols-2 gap-2">
         {TREE_STATUSES.map((option) => (
           <Button
             key={option.value}
             type="button"
             variant={status === option.value ? "default" : "outline"}
-            className="justify-start"
+            className="h-12"
             onClick={() => setStatus(option.value)}
           >
             {option.label}
           </Button>
         ))}
       </div>
-      <PhotoField id="visit-photo" photo={photo} onChange={setPhoto} />
       <div className="mt-4 flex gap-2">
         <Button
           type="button"
@@ -80,13 +124,18 @@ function VisitSheet({ onCancel, onConfirm }) {
         </Button>
         <Button
           type="button"
-          className="flex-1"
+          className="flex-[2]"
           disabled={!photo}
           onClick={() => onConfirm({ status, photo })}
         >
           Confirmar visita
         </Button>
       </div>
+      {!photo && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Toma la foto para poder confirmar
+        </p>
+      )}
     </div>
   );
 }
@@ -100,8 +149,8 @@ function SkipSheet({ onCancel, onConfirm, isSkipping }) {
   const canConfirm = !!reason && !isSkipping;
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[1100] border-t bg-white p-4 shadow-lg">
-      <p className="mb-3 text-sm font-semibold text-slate-700">
+    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75vh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 shadow-lg">
+      <p className="mb-3 text-base font-bold text-slate-900">
         ¿Por qué no se pudo censar?
       </p>
       <div className="flex flex-col gap-2">
@@ -126,7 +175,7 @@ function SkipSheet({ onCancel, onConfirm, isSkipping }) {
           className="mt-3"
         />
       )}
-      <PhotoField id="skip-photo" photo={photo} onChange={setPhoto} optional />
+      <PhotoCaptureField photo={photo} onChange={setPhoto} optional />
       <div className="mt-4 flex gap-2">
         <Button
           type="button"
