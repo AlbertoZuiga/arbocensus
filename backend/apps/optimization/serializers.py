@@ -78,6 +78,7 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
             "interleave_total",
             "interleave_per_route",
             "worst_pair_iou",
+            "timing",
             "generated_at",
             "published_at",
             "job",
