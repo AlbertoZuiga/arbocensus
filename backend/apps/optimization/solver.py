@@ -1,4 +1,7 @@
+import time
+
 import numpy as np
+from apps.optimization.profiling import PhaseTimer
 from apps.optimization.route_metrics import haversine
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
@@ -49,72 +52,98 @@ class ArbocensusVRPSolver:
         self.spatial_points = spatial_points
         self.span_coef = span_coef
 
-    def solve(self):
+    def solve(self, timer=None):
+        timer = timer or PhaseTimer()
         n = self.node_count + 1
-        manager = pywrapcp.RoutingIndexManager(n, self.max_vehicles, 0)
-        routing = pywrapcp.RoutingModel(manager)
 
-        def time_callback(from_index, to_index):
-            from_node = manager.IndexToNode(from_index)
-            to_node = manager.IndexToNode(to_index)
-            travel = self.matrix[from_node][to_node]
-            service = self.service_time_sec if from_node != 0 else 0
-            return int(travel + service)
+        with timer.phase("model_build"):
+            manager = pywrapcp.RoutingIndexManager(n, self.max_vehicles, 0)
+            routing = pywrapcp.RoutingModel(manager)
 
-        callback_index = routing.RegisterTransitCallback(time_callback)
-        routing.SetArcCostEvaluatorOfAllVehicles(callback_index)
-
-        routing.AddDimension(
-            callback_index,
-            0,
-            self.max_route_time_sec,
-            True,
-            "Time",
-        )
-        time_dimension = routing.GetDimensionOrDie("Time")
-
-        if self.spatial_points is not None:
-            geo_matrix = build_open_geo_matrix(self.spatial_points)
-
-            def distance_callback(from_index, to_index):
+            def time_callback(from_index, to_index):
                 from_node = manager.IndexToNode(from_index)
                 to_node = manager.IndexToNode(to_index)
-                return int(geo_matrix[from_node][to_node])
+                travel = self.matrix[from_node][to_node]
+                service = self.service_time_sec if from_node != 0 else 0
+                return int(travel + service)
 
-            distance_cb = routing.RegisterTransitCallback(distance_callback)
-            routing.AddDimension(distance_cb, 0, 10_000_000, True, "Distance")
-            distance_dimension = routing.GetDimensionOrDie("Distance")
-            distance_dimension.SetSpanCostCoefficientForAllVehicles(self.span_coef)
+            callback_index = routing.RegisterTransitCallback(time_callback)
+            routing.SetArcCostEvaluatorOfAllVehicles(callback_index)
 
-        routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
-
-        for node in range(1, n):
-            routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
-
-        midpoint = (self.min_route_time_sec + self.max_route_time_sec) // 2
-        for vehicle_id in range(self.max_vehicles):
-            end_index = routing.End(vehicle_id)
-            time_dimension.SetCumulVarSoftLowerBound(
-                end_index, self.min_route_time_sec, SOFT_LOWER_PENALTY
+            routing.AddDimension(
+                callback_index,
+                0,
+                self.max_route_time_sec,
+                True,
+                "Time",
             )
-            time_dimension.SetCumulVarSoftUpperBound(
-                end_index, midpoint, SOFT_UPPER_PENALTY
+            time_dimension = routing.GetDimensionOrDie("Time")
+
+            if self.spatial_points is not None:
+                geo_matrix = build_open_geo_matrix(self.spatial_points)
+
+                def distance_callback(from_index, to_index):
+                    from_node = manager.IndexToNode(from_index)
+                    to_node = manager.IndexToNode(to_index)
+                    return int(geo_matrix[from_node][to_node])
+
+                distance_cb = routing.RegisterTransitCallback(distance_callback)
+                routing.AddDimension(distance_cb, 0, 10_000_000, True, "Distance")
+                distance_dimension = routing.GetDimensionOrDie("Distance")
+                distance_dimension.SetSpanCostCoefficientForAllVehicles(self.span_coef)
+
+            routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
+
+            for node in range(1, n):
+                routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
+
+            midpoint = (self.min_route_time_sec + self.max_route_time_sec) // 2
+            for vehicle_id in range(self.max_vehicles):
+                end_index = routing.End(vehicle_id)
+                time_dimension.SetCumulVarSoftLowerBound(
+                    end_index, self.min_route_time_sec, SOFT_LOWER_PENALTY
+                )
+                time_dimension.SetCumulVarSoftUpperBound(
+                    end_index, midpoint, SOFT_UPPER_PENALTY
+                )
+
+            search_params = pywrapcp.DefaultRoutingSearchParameters()
+            search_params.first_solution_strategy = (
+                routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
             )
+            search_params.local_search_metaheuristic = (
+                routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+            )
+            search_params.time_limit.FromSeconds(self.time_limit_sec)
 
-        search_params = pywrapcp.DefaultRoutingSearchParameters()
-        search_params.first_solution_strategy = (
-            routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-        )
-        search_params.local_search_metaheuristic = (
-            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-        )
-        search_params.time_limit.FromSeconds(self.time_limit_sec)
-
-        solution = routing.SolveWithParameters(search_params)
+        solution = self._solve_with_timing(routing, search_params, timer)
         if solution is None:
             return None
 
-        return self._extract_solution(manager, routing, solution)
+        with timer.phase("solution_extraction"):
+            return self._extract_solution(manager, routing, solution)
+
+    def _solve_with_timing(self, routing, search_params, timer):
+        first_solution_elapsed = None
+        solve_start = time.perf_counter()
+
+        def on_solution():
+            nonlocal first_solution_elapsed
+            if first_solution_elapsed is None:
+                first_solution_elapsed = time.perf_counter() - solve_start
+
+        routing.AddAtSolutionCallback(on_solution)
+        solution = routing.SolveWithParameters(search_params)
+        solve_elapsed = time.perf_counter() - solve_start
+
+        if first_solution_elapsed is None:
+            first_solution_elapsed = 0.0
+        timer.record("solve", solve_elapsed, "total")
+        timer.record("solve", first_solution_elapsed, "first_solution")
+        timer.record(
+            "solve", max(0.0, solve_elapsed - first_solution_elapsed), "metaheuristic"
+        )
+        return solution
 
     def _extract_solution(self, manager, routing, solution):
         return extract_or_tools_routes(manager, routing, solution, self.max_vehicles)

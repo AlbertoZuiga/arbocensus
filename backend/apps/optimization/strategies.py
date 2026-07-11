@@ -19,6 +19,7 @@ def solve_by_strategy(
     service_time_sec,
     max_vehicles,
     time_limit_sec,
+    timer=None,
 ):
     if strategy == RoutingSolution.Strategy.SPATIAL_TERM.value:
         return solve_spatial_term(
@@ -29,6 +30,7 @@ def solve_by_strategy(
             service_time_sec=service_time_sec,
             max_vehicles=max_vehicles,
             time_limit_sec=time_limit_sec,
+            timer=timer,
         )
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
         return solve_cluster_first(
@@ -38,6 +40,7 @@ def solve_by_strategy(
             max_route_time_sec=max_route_time_sec,
             service_time_sec=service_time_sec,
             time_limit_sec=time_limit_sec,
+            timer=timer,
         )
     solver = ArbocensusVRPSolver(
         matrix,
@@ -47,7 +50,7 @@ def solve_by_strategy(
         max_vehicles=max_vehicles,
         time_limit_sec=time_limit_sec,
     )
-    return solver.solve()
+    return solver.solve(timer=timer)
 
 
 def solve_spatial_term(
@@ -60,6 +63,7 @@ def solve_spatial_term(
     max_vehicles,
     time_limit_sec=180,
     span_coef=SPATIAL_SPAN_COEF,
+    timer=None,
 ):
     solver = ArbocensusVRPSolver(
         matrix,
@@ -71,7 +75,7 @@ def solve_spatial_term(
         spatial_points=points,
         span_coef=span_coef,
     )
-    return solver.solve()
+    return solver.solve(timer=timer)
 
 
 def project_equirectangular(points):
@@ -134,6 +138,7 @@ def solve_cluster_first(
     service_time_sec,
     time_limit_sec=180,
     seed=0,
+    timer=None,
 ):
     matrix = np.asarray(matrix, dtype=float)
     n = matrix.shape[0]
@@ -160,7 +165,7 @@ def solve_cluster_first(
             service_time_sec=service_time_sec,
             max_vehicles=max_vehicles,
             time_limit_sec=time_limit_sec,
-        ).solve()
+        ).solve(timer=timer)
         if result is None:
             return None
         sub_routes, sub_dropped = result
