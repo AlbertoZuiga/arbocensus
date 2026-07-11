@@ -1,22 +1,156 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import CameraCapture from "./CameraCapture.jsx";
 import { PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
 const SKIP_REASONS = ["Árbol inexistente", "Acceso bloqueado", "Otro"];
 
+const TREE_STATUSES = [
+  { value: "alive", label: "Vivo" },
+  { value: "removed", label: "Removido / talado" },
+  { value: "not_found", label: "No encontrado" },
+  { value: "other", label: "Otro" },
+];
+
+function networkErrorMessage(error) {
+  if (!error) return null;
+  if (!error.response) {
+    return "Sin conexión. No se guardó el registro — intenta de nuevo cuando tengas señal.";
+  }
+  return error.response?.data?.detail ?? "No se pudo guardar. Intenta de nuevo.";
+}
+
+function PhotoCaptureField({ photo, onChange, optional = false }) {
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
+  useEffect(() => {
+    if (!photo) {
+      setPreviewUrl(null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(photo);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
+
+  return (
+    <div className="mt-4">
+      <p className="mb-1 text-sm font-medium text-slate-700">
+        Foto del árbol{optional ? " (opcional)" : ""}
+      </p>
+      {photo ? (
+        <div className="relative overflow-hidden rounded-lg">
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Foto capturada del árbol"
+              className="h-36 w-full object-cover"
+            />
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="absolute bottom-2 right-2 shadow"
+            onClick={() => setCameraOpen(true)}
+          >
+            <Camera className="mr-1 h-4 w-4" />
+            Repetir foto
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setCameraOpen(true)}
+          className="flex h-24 w-full flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 text-slate-600 transition active:bg-slate-100"
+        >
+          <Camera className="h-6 w-6" />
+          <span className="text-sm font-semibold">Tomar foto</span>
+        </button>
+      )}
+      {cameraOpen && (
+        <CameraCapture
+          onCapture={(file) => {
+            onChange(file);
+            setCameraOpen(false);
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function VisitSheet({ onCancel, onConfirm }) {
+  const [status, setStatus] = useState("alive");
+  const [photo, setPhoto] = useState(null);
+
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75dvh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg">
+      <p className="text-base font-bold text-slate-900">Registrar visita</p>
+      <p className="mt-0.5 text-sm text-muted-foreground">
+        La foto se toma con la cámara en el momento de la visita.
+      </p>
+      <PhotoCaptureField photo={photo} onChange={setPhoto} />
+      <p className="mb-1 mt-4 text-sm font-medium text-slate-700">
+        Estado del árbol
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {TREE_STATUSES.map((option) => (
+          <Button
+            key={option.value}
+            type="button"
+            variant={status === option.value ? "default" : "outline"}
+            className="h-12"
+            onClick={() => setStatus(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+      <div className="mt-4 flex gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-12 flex-1"
+          onClick={onCancel}
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="button"
+          className="h-12 flex-[2] text-base font-bold"
+          disabled={!photo}
+          onClick={() => onConfirm({ status, photo })}
+        >
+          Confirmar visita
+        </Button>
+      </div>
+      {!photo && (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Toma la foto para poder confirmar
+        </p>
+      )}
+    </div>
+  );
+}
+
 function SkipSheet({ onCancel, onConfirm, isSkipping }) {
   const [selected, setSelected] = useState(null);
   const [otherText, setOtherText] = useState("");
+  const [photo, setPhoto] = useState(null);
 
   const reason = selected === "Otro" ? otherText.trim() : selected;
   const canConfirm = !!reason && !isSkipping;
 
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[1100] border-t bg-white p-4 shadow-lg">
-      <p className="mb-3 text-sm font-semibold text-slate-700">
+    <div className="absolute inset-x-0 bottom-0 z-[1100] max-h-[75dvh] overflow-y-auto rounded-t-2xl border-t bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-lg">
+      <p className="mb-3 text-base font-bold text-slate-900">
         ¿Por qué no se pudo censar?
       </p>
       <div className="flex flex-col gap-2">
@@ -25,7 +159,7 @@ function SkipSheet({ onCancel, onConfirm, isSkipping }) {
             key={option}
             type="button"
             variant={selected === option ? "default" : "outline"}
-            className="justify-start"
+            className="h-12 justify-start"
             onClick={() => setSelected(option)}
           >
             {option}
@@ -41,20 +175,21 @@ function SkipSheet({ onCancel, onConfirm, isSkipping }) {
           className="mt-3"
         />
       )}
+      <PhotoCaptureField photo={photo} onChange={setPhoto} optional />
       <div className="mt-4 flex gap-2">
         <Button
           type="button"
           variant="ghost"
-          className="flex-1"
+          className="h-12 flex-1"
           onClick={onCancel}
         >
           Cancelar
         </Button>
         <Button
           type="button"
-          className="flex-1"
+          className="h-12 flex-1 text-base font-bold"
           disabled={!canConfirm}
-          onClick={() => onConfirm(reason)}
+          onClick={() => onConfirm({ reason, photo })}
         >
           Confirmar omisión
         </Button>
@@ -72,18 +207,33 @@ export default function ProximityPanel({
   onSkip,
   isVisiting,
   isSkipping,
+  visitError,
+  skipError,
 }) {
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [visitSheetOpen, setVisitSheetOpen] = useState(false);
+  const [skipSheetOpen, setSkipSheetOpen] = useState(false);
+
+  useEffect(() => {
+    setVisitSheetOpen(false);
+    setSkipSheetOpen(false);
+  }, [stop?.id]);
 
   if (!stop) return null;
 
   const skipped = stop.status === "skipped";
   const resolved = stop.visited || skipped;
 
-  const handleConfirmSkip = (reason) => {
-    onSkip?.(stop.id, reason);
-    setSheetOpen(false);
+  const handleConfirmVisit = (payload) => {
+    onVisit?.(stop.id, payload);
+    setVisitSheetOpen(false);
   };
+
+  const handleConfirmSkip = (payload) => {
+    onSkip?.(stop.id, payload);
+    setSkipSheetOpen(false);
+  };
+
+  const errorMessage = networkErrorMessage(visitError ?? skipError);
 
   return (
     <div className="relative shrink-0">
@@ -138,6 +288,12 @@ export default function ProximityPanel({
           )}
         </div>
 
+        {!resolved && errorMessage && (
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+            {errorMessage}
+          </p>
+        )}
+
         {resolved ? null : (
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
@@ -145,7 +301,7 @@ export default function ProximityPanel({
               size="lg"
               variant="outline"
               className="h-auto min-h-14 w-full whitespace-normal px-3 text-base leading-tight sm:flex-1"
-              onClick={() => setSheetOpen(true)}
+              onClick={() => setSkipSheetOpen(true)}
               disabled={locked || isSkipping}
             >
               No se pudo censar
@@ -153,7 +309,7 @@ export default function ProximityPanel({
             <Button
               type="button"
               size="lg"
-              onClick={() => onVisit(stop.id)}
+              onClick={() => setVisitSheetOpen(true)}
               disabled={isVisiting || locked}
               className={cn(
                 "h-auto min-h-14 w-full whitespace-normal px-3 text-base font-bold leading-tight sm:flex-[2]",
@@ -166,9 +322,16 @@ export default function ProximityPanel({
         )}
       </div>
 
-      {sheetOpen && (
+      {visitSheetOpen && (
+        <VisitSheet
+          onCancel={() => setVisitSheetOpen(false)}
+          onConfirm={handleConfirmVisit}
+        />
+      )}
+
+      {skipSheetOpen && (
         <SkipSheet
-          onCancel={() => setSheetOpen(false)}
+          onCancel={() => setSkipSheetOpen(false)}
           onConfirm={handleConfirmSkip}
           isSkipping={isSkipping}
         />

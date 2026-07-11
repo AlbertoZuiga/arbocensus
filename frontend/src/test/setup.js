@@ -23,6 +23,9 @@ Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
 });
 
+URL.createObjectURL ??= () => "blob:mock";
+URL.revokeObjectURL ??= () => {};
+
 afterEach(() => {
   cleanup();
   globalThis.localStorage.clear();

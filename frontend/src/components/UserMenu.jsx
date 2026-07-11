@@ -36,7 +36,7 @@ export default function UserMenu() {
         aria-expanded={menuOpen}
         aria-controls="user-menu"
         onClick={() => setMenuOpen((open) => !open)}
-        className="text-muted-foreground"
+        className="min-h-11 text-muted-foreground"
       >
         {user?.username}
         <ChevronDown

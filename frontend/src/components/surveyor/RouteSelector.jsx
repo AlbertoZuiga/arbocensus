@@ -9,7 +9,7 @@ import {
 export default function RouteSelector({ routes, activeRouteId, onSelect }) {
   return (
     <Select value={activeRouteId} onValueChange={onSelect}>
-      <SelectTrigger className="w-auto gap-1 border-none bg-transparent px-0 text-lg font-bold text-primary shadow-none focus:ring-0">
+      <SelectTrigger className="min-h-11 w-auto gap-1 border-none bg-transparent px-0 text-lg font-bold text-primary shadow-none focus:ring-0">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
