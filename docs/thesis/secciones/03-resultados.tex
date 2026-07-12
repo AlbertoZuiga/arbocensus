@@ -1,4 +1,5 @@
 \chapter{RESULTADOS OBTENIDOS Y POSIBLES MEJORAS}
+\label{cap:resultados}
 
 \section{RESULTADOS OBTENIDOS}
 \subsection{Métricas de Calidad de Rutas}
@@ -140,7 +141,220 @@ explícito en la partición.
 % TODO: comparar este baseline contra la variante con clustering geográfico
 % como preprocesamiento, una vez implementada (misma métrica vía baseline_sweep).
 
-% ---- 3.2 -------------------------------------------------------
+\section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
+
+Esta sección caracteriza el comportamiento temporal del motor de optimización:
+en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
+varían las soluciones ante los parámetros operacionales (tiempo de servicio por
+árbol y cota dura $T_{\max}$) y cuál es la sensibilidad del sistema al tamaño
+del problema y al presupuesto del solver. Todas las cifras provienen del
+experimento de perfilado ejecutado el 11--12 de julio de 2026, cuyo protocolo y
+datos crudos se encuentran versionados en el directorio
+\texttt{docs/experiments/} del repositorio (reporte
+\texttt{profiling-20260711.md} y archivos CSV asociados), y son reproducibles
+mediante el comando de gestión \texttt{baseline\_sweep}, verificado
+previamente sobre una corrida sintética de $n=80$
+(\texttt{20260711-231139-baseline-sweep.md}).
+
+\subsection{Entorno de medición}
+
+Dado que el sistema no cuenta con un despliegue productivo, las mediciones se
+realizaron sobre una réplica local del entorno de producción definida en
+\texttt{docker-compose.prod.yml}: imágenes construidas con el \textit{target}
+\texttt{prod} del \texttt{Dockerfile} (sin \textit{bind-mounts} de código ni
+recarga en caliente, con usuario no privilegiado), una instancia real de OSRM
+cargada con el extracto completo de Chile de OpenStreetMap
+(\texttt{chile-latest.osm.pbf}), preprocesado con el algoritmo
+\textit{Multi-Level Dijkstra} (MLD) y perfil peatonal, además de PostGIS
+15--3.3 y Redis 7. Las versiones empleadas fueron Python 3.12.11, Django 6.0,
+OR-Tools 9.15 y NumPy 2.4.6.
+
+Este entorno difiere de un despliegue real en tres aspectos que deben
+considerarse al interpretar las cifras absolutas: (i) el hardware es un Apple
+M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con los contenedores de
+base de datos y OSRM emulados en \texttt{linux/amd64} mediante Rosetta,
+mientras que un servidor de producción típico sería x86 nativo con recursos
+menores; (ii) la comunicación con OSRM y la base de datos ocurre por la red
+interna de \textit{compose} en la misma máquina, con latencia cercana a cero,
+mientras que en un centro de datos la latencia de red encarecería la fase de
+consulta a OSRM (100 solicitudes HTTP para $n=1\,607$); y (iii) el punto de
+entrada fue el comando de gestión ejecutado secuencialmente dentro del
+contenedor, en lugar del flujo API~$\rightarrow$~Celery del sistema en
+operación; ambos recorren el mismo código
+(\texttt{OptimizationPipeline.run}), por lo que la diferencia agrega
+únicamente latencia de encolado, no de cómputo.
+
+\subsection{Desglose de tiempo por fase}
+
+El \textit{pipeline} se instrumentó por fases: construcción de la matriz de
+costos (\texttt{cost\_matrix}), construcción del modelo
+(\texttt{model\_build}), resolución (\texttt{solve}, subdividida en primera
+solución y metaheurística), extracción de la solución
+(\texttt{solution\_extraction}) y cálculo de métricas (\texttt{metrics}). El
+hallazgo central es que el perfil depende del estado de la caché de la matriz
+de distancias: en operación normal (caché caliente) el \textit{pipeline} está
+acotado por el solver (\textit{solve-bound}), y solo en el primer contacto con
+un \textit{dataset} está acotado por OSRM (\textit{OSRM-bound}).
+
+Con la caché caliente, la metaheurística \textit{Guided Local Search} (GLS)
+concentra el 98,1\,\% del tiempo total, y todas las demás fases combinadas
+representan menos del 2\,\% (Tabla~\ref{tab:fases-caliente}). Optimizar la
+construcción del modelo, la extracción o el cálculo de métricas no tendría,
+por tanto, ningún efecto medible.
+
+\begin{table}[H]
+  \centering
+  \caption{Desglose de tiempo por fase con caché de matriz caliente ($n=1\,607$; media de las 18 corridas de la grilla).}
+  \label{tab:fases-caliente}
+  \begin{tabularx}{\textwidth}{lXX}
+    \toprule
+    Fase & Tiempo [s] & \% del total \\
+    \midrule
+    \texttt{cost\_matrix} (consulta de caché) & 0{,}57 & 0{,}5\,\% \\
+    \texttt{model\_build} & $<0{,}01$ & $\approx 0$\,\% \\
+    \texttt{solve} (primera solución) & 1{,}4 & 1{,}3\,\% \\
+    \texttt{solve} (metaheurística GLS) & 103{,}4 & \textbf{98{,}1\,\%} \\
+    \texttt{solution\_extraction} & 0{,}01 & $\approx 0$\,\% \\
+    \texttt{metrics} & 0{,}02 & $\approx 0$\,\% \\
+    \midrule
+    Total del \textit{pipeline} & 105{,}4 & 100\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+En frío ---caché de matriz vacía, primera corrida sobre el \textit{dataset}---
+el perfil se invierte: la consulta a OSRM domina con el 97,6\,\% del tiempo
+(Tabla~\ref{tab:fases-frio}). Para $n=1\,607$ la fragmentación por longitud de
+URL (175 coordenadas por bloque) convierte la matriz en una grilla de
+$10 \times 10 = 100$ solicitudes al servicio \texttt{/table}, con un costo
+total de 170,8\,s que escala aproximadamente como $O(n^2)$ con el número de
+celdas. Este costo se paga una única vez por \textit{dataset}: la matriz queda
+almacenada en caché (indexada por el hash SHA-256 de los identificadores de
+árboles activos), de modo que toda corrida posterior es \textit{solve-bound}.
+
+\begin{table}[H]
+  \centering
+  \caption{Desglose de tiempo por fase en frío (caché de matriz vacía; corrida piloto con tiempo de servicio de 2\,min y $T_{\max}=3$\,h).}
+  \label{tab:fases-frio}
+  \begin{tabularx}{\textwidth}{lXX}
+    \toprule
+    Fase & Tiempo [s] & \% del total \\
+    \midrule
+    \texttt{cost\_matrix} (consulta OSRM) & 170{,}8 & \textbf{97{,}6\,\%} \\
+    \texttt{cost\_matrix} (ensamblado y caché) & 0{,}2 & 0{,}1\,\% \\
+    \texttt{solve} & 3{,}9 & 2{,}2\,\% \\
+    Fases restantes & $<0{,}05$ & $\approx 0$\,\% \\
+    \midrule
+    Total del \textit{pipeline} & 174{,}9 & 100\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Cabe notar que en la corrida piloto de la Tabla~\ref{tab:fases-frio} el GLS
+terminó a los 3,9\,s; en la grilla completa el tiempo de resolución observado
+para el mismo \textit{dataset} varió entre 29 y 180\,s, según si la búsqueda
+agota o no el presupuesto de tiempo asignado.
+
+\subsection{Variaciones de duración sobre el dataset real}
+
+Se evaluaron las seis combinaciones de tiempo de servicio por árbol
+$\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h, con
+$T_{\min} = \min(7\,200\,\text{s}, T_{\max})$, sobre el \textit{dataset} real
+completo de $n=1\,607$ árboles (429 provenientes de la fuente
+\texttt{legacy\_api} y 1\,178 de \texttt{legacy\_app}, estas últimas con
+posición mediana por código QR). Cada variante se ejecutó con 3 semillas y un
+límite de solver de 180\,s, valor que coincide exactamente con el que produce
+la heurística de producción ($\min(30 + 1{,}5 \cdot n,\ 180)$) para ese tamaño.
+La Tabla~\ref{tab:grilla-variantes} resume las medias por variante.
+
+\begin{table}[H]
+  \centering
+  \caption{Grilla de seis variantes sobre el dataset real ($n=1\,607$; media de 3 semillas; límite de solver de 180\,s). El total del \textit{pipeline} equivale al tiempo de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
+  \label{tab:grilla-variantes}
+  \small
+  \begin{tabularx}{\textwidth}{rrXXXXXXX}
+    \toprule
+    Serv. [min] & $T_{\max}$ [h] & $k$ & Balance & $\bar{T}$ [s] & $\sigma(T)$ [s] & Descart. & Desplaz. [s] & \texttt{solve} [s] ($\pm$\,sd) \\
+    \midrule
+    1 & 2 & 23{,}0 & 0{,}992 & 7\,229  & 14  & 0     & 69\,868 & 92{,}8 $\pm$ 63{,}8 \\
+    1 & 3 & 15{,}0 & 0{,}877 & 10\,417 & 378 & 0     & 59\,843 & 89{,}0 $\pm$ 3{,}6 \\
+    2 & 2 & 36{,}0 & 0{,}996 & 7\,219  & 6   & 0     & 67\,047 & 131{,}6 $\pm$ 34{,}4 \\
+    2 & 3 & 24{,}0 & 0{,}865 & 10\,399 & 391 & 0     & 56\,750 & 126{,}9 $\pm$ 6{,}7 \\
+    3 & 2 & 49{,}0 & 0{,}998 & 7\,213  & 3   & 1{,}0 & 64\,360 & 139{,}2 $\pm$ 14{,}1 \\
+    3 & 3 & 33{,}0 & 0{,}890 & 10\,554 & 284 & 0     & 59\,023 & 49{,}3 $\pm$ 14{,}1 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Los resultados muestran el compromiso central entre balance y costo total. Con
+$T_{\max}=2$\,h el número de rutas $k$ escala fuertemente con el tiempo de
+servicio ($23 \rightarrow 36 \rightarrow 49$), pues el trabajo de servicio
+domina la capacidad de cada ruta, y el balance se aproxima a 1
+(al coincidir $T_{\min}$ y $T_{\max}$, las rutas resultan de duración casi
+idéntica, con $\sigma(T)$ de 3 a 14\,s). Con $T_{\max}=3$\,h, en cambio, el
+tiempo total de desplazamiento se reduce en torno al 10\,\% y $k$ cae
+alrededor de un 35\,\%, a costa de un balance de $\approx 0{,}87$ con
+$\sigma(T)$ de 284 a 391\,s. La única variante que descarta nodos es la más
+restrictiva (servicio de 3\,min con $T_{\max}=2$\,h), que deja un árbol fuera
+de la solución de forma consistente en las tres semillas.
+
+Respecto de las semillas, corresponde precisar su rol: dados los parámetros,
+el solver de OR-Tools es determinista, por lo que sobre el \textit{dataset}
+real la semilla actúa únicamente como etiqueta de la repetición. La varianza
+observada entre repeticiones (columna sd de \texttt{solve} en la
+Tabla~\ref{tab:grilla-variantes}) proviene del corte por tiempo de reloj
+(\textit{wall-clock}) del GLS: en las variantes en que la búsqueda agota el
+presupuesto, las tres repeticiones convergen a soluciones casi idénticas.
+
+Finalmente, la grilla registra rutas cuyo tiempo estimado excede $T_{\max}$
+en la configuración de 2\,h (por ejemplo, la práctica totalidad de las rutas
+en las variantes con servicio de 2 y 3\,min). Este exceso no constituye una
+infactibilidad del solver, sino un artefacto de redondeo: el \textit{callback}
+de tránsito trunca cada arco a aritmética entera
+(\texttt{int(travel + service)}), mientras que la métrica de duración estimada
+suma los mismos términos en punto flotante; con 30 a 70 arcos por ruta, el
+truncamiento acumula una discrepancia de 10 a 70\,s por ruta. La cota dura
+$T_{\max}$ se respeta estrictamente en la aritmética entera del solver.
+
+\subsection{Sensibilidad al tamaño del problema y al presupuesto del solver}
+
+Para aislar el efecto del tamaño del problema se repitió la grilla sobre un
+área reducida del mismo origen legado ($n=157$). La fase que peor escala es la
+consulta a OSRM en frío: de 1,7\,s con $n=157$ a 170,8\,s con $n=1\,607$
+---un factor de $\approx 100\times$ para $10\times$ el número de nodos,
+consistente con el crecimiento $O(n^2)$ del número de celdas de la matriz---.
+La primera solución del solver pasa de 0,02\,s a 1,4\,s ($\approx 63\times$).
+La metaheurística, en cambio, no escala de forma monótona con $n$ a presupuesto
+fijo: con $n=157$ el GLS agota los 180\,s en casi todas las variantes (media de
+167\,s), mientras que con $n=1\,607$ corta antes en varias (media de 103\,s).
+El límite de tiempo de reloj enmascara el costo por iteración: lo que crece con
+$n$ es el costo de explorar cada vecindario, no el tiempo total observado.
+
+Dado que el GLS domina el tiempo en operación normal, su presupuesto es el
+parámetro de operación relevante. La Tabla~\ref{tab:sensibilidad-tl} muestra la
+sensibilidad de la calidad de la solución al límite de tiempo para la variante
+central (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$): el número de rutas y
+el balance quedan fijos desde los 60\,s, y la mejora de desplazamiento total
+entre 120\,s y 180\,s es de solo 0,1\,\%. Un límite de 120\,s captura por tanto
+$\approx 99$\,\% de la mejora alcanzable con 180\,s, lo que permitiría reducir
+el costo de cada corrida de producción en un tercio sin pérdida de calidad
+medible.
+
+\begin{table}[H]
+  \centering
+  \caption{Sensibilidad al límite de tiempo del solver (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$).}
+  \label{tab:sensibilidad-tl}
+  \begin{tabularx}{\textwidth}{rXXXX}
+    \toprule
+    Límite [s] & $k$ & Balance & Desplaz. total [s] & $\Delta$ desplaz. vs.\ 60\,s \\
+    \midrule
+    60  & 24 & 0{,}867 & 61\,521 & --- \\
+    120 & 24 & 0{,}865 & 56\,830 & $-7{,}6$\,\% \\
+    180 & 24 & 0{,}865 & 56\,750 & $-7{,}8$\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
 \section{POSIBLES MEJORAS}
 
 % TODO (copilot-prompts.md → §3.2):
