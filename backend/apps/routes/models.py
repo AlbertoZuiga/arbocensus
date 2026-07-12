@@ -112,8 +112,9 @@ class TreeObservation(models.Model):
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.UNKNOWN
     )
+    source = models.CharField(max_length=20, blank=True)
     photo = models.ImageField(upload_to="observations/", null=True, blank=True)
-    photo_url = models.URLField(blank=True)
+    photo_url = models.URLField(max_length=500, blank=True)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
