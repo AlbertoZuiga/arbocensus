@@ -1,0 +1,99 @@
+# Production-like stack for the RP2 profiling experiment: images built from the
+# prod Dockerfile target, no source bind-mounts, no hot reload, gunicorn.
+# Shares postgres_data/redis_data volumes with docker-compose.yml (same project).
+# Deviation from a real deploy: ./.local/experiments is mounted read-write so
+# sweep CSV/markdown outputs survive the container; it is not on any code path.
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    platform: linux/amd64
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: arbocensus
+      POSTGRES_USER: arbocensus
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arbocensus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+  osrm:
+    image: osrm/osrm-backend
+    platform: linux/amd64
+    volumes:
+      - ./data/osm:/data
+    command: >
+      sh -c "
+        if [ ! -f /data/chile-latest.osrm ]; then
+          echo 'Processing OSM data (first run, ~10-15 min)...' &&
+          osrm-extract -p /opt/foot.lua /data/chile-latest.osm.pbf &&
+          osrm-partition /data/chile-latest.osrm &&
+          osrm-customize /data/chile-latest.osrm;
+        fi &&
+        osrm-routed --algorithm mld /data/chile-latest.osrm --max-table-size 5000 --port 5000
+      "
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5000; printf 'GET /nearest/v1/foot/-70.65,-33.45 HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '\"code\":\"Ok\"' <&3"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD}@db/arbocensus
+      REDIS_URL: redis://redis:6379/0
+      OSRM_URL: http://osrm:5000
+      SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DEBUG: "False"
+      RUN_MIGRATIONS: "true"
+      SEED_DEV: "false"
+      EXPERIMENTS_DIR: /results
+    volumes:
+      - ./.local/experiments:/results
+    depends_on:
+      db:
+        condition: service_healthy
+      osrm:
+        condition: service_healthy
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD}@db/arbocensus
+      REDIS_URL: redis://redis:6379/0
+      OSRM_URL: http://osrm:5000
+      SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DEBUG: "False"
+      RUN_MIGRATIONS: "false"
+      EXPERIMENTS_DIR: /results
+    volumes:
+      - ./.local/experiments:/results
+    depends_on:
+      - backend
+      - redis
+    command: celery -A config worker --loglevel=info --concurrency=2
+
+volumes:
+  postgres_data:
+  redis_data:
