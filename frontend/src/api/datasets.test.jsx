@@ -3,6 +3,7 @@ import {
   createDatasetFromLegacySelection,
   deleteDataset,
   fetchDatasets,
+  fetchTreeObservations,
   uploadDataset,
 } from "./datasets.js";
 import client from "./client.js";
@@ -55,6 +56,14 @@ describe("createDatasetFromLegacySelection", () => {
     const [url, body] = client.post.mock.calls[0];
     expect(url).toBe("/datasets/from-legacy-selection/");
     expect(body).toEqual({ name: "Selección", trees });
+  });
+});
+
+describe("fetchTreeObservations", () => {
+  it("fetches the observation list for a tree", async () => {
+    client.get.mockResolvedValue({ data: [{ id: "o1" }] });
+    expect(await fetchTreeObservations("t1")).toEqual([{ id: "o1" }]);
+    expect(client.get).toHaveBeenCalledWith("/datasets/trees/t1/observations/");
   });
 });
 

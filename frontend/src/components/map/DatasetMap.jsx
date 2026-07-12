@@ -11,9 +11,11 @@ import {
 import { cn } from "@/lib/utils";
 import BaseMap from "./BaseMap.jsx";
 import { geojsonToRoutes } from "./routeGeojson.js";
+import TreeHistoryPopup from "./TreeHistoryPopup.jsx";
 
 export default function DatasetMap({ markers, solutionId }) {
   const [selectedRoute, setSelectedRoute] = useState(null);
+  const [openTreeId, setOpenTreeId] = useState(null);
 
   const { data } = useQuery({
     queryKey: ["routes-geojson", solutionId],
@@ -34,18 +36,32 @@ export default function DatasetMap({ markers, solutionId }) {
     <div className="relative h-full w-full">
       <BaseMap bounds={bounds}>
         {!hasRoutes &&
-          markers.map((marker) => (
-            <CircleMarker
-              key={marker.id}
-              center={marker.position}
-              radius={5}
-              pathOptions={{
-                color: "#16a34a",
-                fillColor: "#16a34a",
-                fillOpacity: 0.7,
-              }}
-            />
-          ))}
+          markers.map((marker) => {
+            const open = openTreeId === marker.id;
+            return (
+              <CircleMarker
+                key={marker.id}
+                center={marker.position}
+                radius={open ? 7 : 5}
+                pathOptions={{
+                  className: "cursor-pointer",
+                  color: open ? "#fff" : "#16a34a",
+                  weight: open ? 2 : 1,
+                  fillColor: "#16a34a",
+                  fillOpacity: open ? 1 : 0.7,
+                }}
+                eventHandlers={{
+                  popupopen: () => setOpenTreeId(marker.id),
+                  popupclose: () =>
+                    setOpenTreeId((id) => (id === marker.id ? null : id)),
+                }}
+              >
+                <Popup minWidth={248} maxWidth={280} keepInView>
+                  {open && <TreeHistoryPopup treeId={marker.id} />}
+                </Popup>
+              </CircleMarker>
+            );
+          })}
 
         {routes.map((route) => {
           const active =

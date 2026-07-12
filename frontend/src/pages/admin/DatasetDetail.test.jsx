@@ -44,6 +44,7 @@ vi.mock("react-leaflet", () => ({
   CircleMarker: ({ center }) => (
     <div data-testid="tree-marker" data-center={JSON.stringify(center)} />
   ),
+  Popup: ({ children }) => <div>{children}</div>,
   Tooltip: ({ children }) => <span>{children}</span>,
 }));
 

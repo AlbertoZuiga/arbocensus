@@ -181,6 +181,7 @@ class RouteStopSkipView(APIView):
 class TreeObservationListView(ListAPIView):
     serializer_class = TreeObservationSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     queryset = TreeObservation.objects.none()
 
     def get_queryset(self) -> Any:
