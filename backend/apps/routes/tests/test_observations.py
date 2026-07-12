@@ -180,7 +180,7 @@ def test_observations_list_ordered_desc(solution_with_route, surveyor):
         f"/api/datasets/trees/{stops[0].tree.id}/observations/"
     )
     assert response.status_code == 200
-    results = response.data["results"]
+    results = response.data
     assert [r["id"] for r in results] == [
         str(o.id)
         for o in TreeObservation.objects.filter(tree=stops[0].tree).order_by(
@@ -197,7 +197,7 @@ def test_observations_list_accessible_to_surveyor(solution_with_route, surveyor)
     client.post(f"/api/routes/stops/{stops[0].id}/visit/")
     response = client.get(f"/api/datasets/trees/{stops[0].tree.id}/observations/")
     assert response.status_code == 200
-    assert response.data["count"] == 1
+    assert len(response.data) == 1
 
 
 def test_observations_list_rejects_anonymous(solution_with_route):
