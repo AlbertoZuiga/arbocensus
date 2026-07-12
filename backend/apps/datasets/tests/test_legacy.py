@@ -1,6 +1,9 @@
+from datetime import UTC, datetime
+
 import pytest
 from apps.datasets import legacy
 from apps.datasets.models import Dataset, Tree
+from apps.routes.models import TreeObservation
 from rest_framework.test import APIClient
 from tests.factories import CustomUserFactory
 
@@ -37,12 +40,59 @@ APP_TREES = [
 ]
 
 
+LONG_PHOTO_URL = f"https://legacy.example/{'x' * 200}/photo-776.jpg"
+
+API_OBSERVATIONS = {
+    776: [
+        legacy.LegacyObservationRow(
+            source=legacy.SOURCE_API,
+            tree_external_id=776,
+            observed_at=datetime(2023, 6, 17, 22, 24, tzinfo=UTC),
+            completed=True,
+            photo_url=LONG_PHOTO_URL,
+        ),
+        legacy.LegacyObservationRow(
+            source=legacy.SOURCE_API,
+            tree_external_id=776,
+            observed_at=datetime(2024, 8, 25, 17, 15, tzinfo=UTC),
+            completed=False,
+        ),
+    ],
+}
+
+APP_OBSERVATIONS = {
+    96905: [
+        legacy.LegacyObservationRow(
+            source=legacy.SOURCE_APP,
+            tree_external_id=96905,
+            observed_at=datetime(2021, 10, 29, 0, 6, tzinfo=UTC),
+            completed=True,
+            photo_url="https://legacy.example/photo-96905.jpg",
+        ),
+    ],
+}
+
+
+def _observations_loader(catalog):
+    return lambda external_ids: [
+        observation
+        for external_id in external_ids
+        for observation in catalog.get(external_id, [])
+    ]
+
+
 @pytest.fixture
 def legacy_db(monkeypatch, settings):
     settings.LEGACY_API_DB_URL = "postgres://legacy-api/test"
     settings.LEGACY_APP_DB_URL = "postgres://legacy-app/test"
     monkeypatch.setattr(legacy, "_load_api", lambda: (AREAS, API_TREES))
     monkeypatch.setattr(legacy, "_load_app_trees", lambda: list(APP_TREES))
+    monkeypatch.setattr(
+        legacy, "_load_api_observations", _observations_loader(API_OBSERVATIONS)
+    )
+    monkeypatch.setattr(
+        legacy, "_load_app_observations", _observations_loader(APP_OBSERVATIONS)
+    )
 
 
 def _client(role):
@@ -197,6 +247,35 @@ def test_create_datasets_persists_trees_with_point_lon_lat(legacy_db):
 
 
 @pytest.mark.django_db
+def test_create_dataset_imports_legacy_observations(legacy_db):
+    dataset = legacy.create_dataset("Con historial", legacy.import_area(26).trees)
+    tree = Tree.objects.get(dataset=dataset, external_id=776)
+    observations = list(tree.observations.order_by("observed_at"))
+    assert len(observations) == 2
+    first, second = observations
+    assert first.status == TreeObservation.Status.ALIVE
+    assert first.source == legacy.SOURCE_API
+    assert first.photo_url == LONG_PHOTO_URL
+    assert first.observed_at == datetime(2023, 6, 17, 22, 24, tzinfo=UTC)
+    assert first.route_stop is None
+    assert first.created_by is None
+    assert second.status == TreeObservation.Status.UNKNOWN
+    assert second.photo_url == ""
+    other_tree = Tree.objects.get(dataset=dataset, external_id=777)
+    assert not other_tree.observations.exists()
+
+
+@pytest.mark.django_db
+def test_create_dataset_skips_app_source_when_absent(legacy_db, monkeypatch):
+    def app_loader_must_not_run(external_ids):
+        raise AssertionError("app observations loader should not be called")
+
+    monkeypatch.setattr(legacy, "_load_app_observations", app_loader_must_not_run)
+    dataset = legacy.create_dataset("Solo API", legacy.import_area(26).trees)
+    assert TreeObservation.objects.filter(tree__dataset=dataset).count() == 2
+
+
+@pytest.mark.django_db
 def test_legacy_areas_endpoint_returns_counts(legacy_db):
     response = _client("admin").get("/api/datasets/legacy/areas/")
     assert response.status_code == 200
@@ -276,6 +355,12 @@ def test_from_legacy_selection_creates_exact_trees(legacy_db):
         (legacy.SOURCE_API, 776),
         (legacy.SOURCE_APP, 96905),
     }
+    observations = TreeObservation.objects.filter(tree__dataset_id=response.data["id"])
+    assert {(o.source, o.tree.external_id) for o in observations} == {
+        (legacy.SOURCE_API, 776),
+        (legacy.SOURCE_APP, 96905),
+    }
+    assert observations.count() == 3
 
 
 @pytest.mark.django_db
@@ -342,6 +427,12 @@ def test_import_legacy_single_area_creates_dataset(legacy_db):
     assert response.data[0]["name"] == "Campaña Semiponti — Area 1"
     assert response.data[0]["total_trees"] == 2
     assert Tree.objects.filter(dataset_id=response.data[0]["id"]).count() == 2
+    assert (
+        TreeObservation.objects.filter(
+            tree__dataset_id=response.data[0]["id"], source=legacy.SOURCE_API
+        ).count()
+        == 2
+    )
 
 
 @pytest.mark.django_db

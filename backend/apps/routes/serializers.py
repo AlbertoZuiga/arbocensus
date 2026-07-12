@@ -31,6 +31,7 @@ class TreeObservationSerializer(serializers.ModelSerializer):
             "tree",
             "route_stop",
             "status",
+            "source",
             "photo",
             "photo_url",
             "notes",
