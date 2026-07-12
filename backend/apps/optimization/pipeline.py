@@ -1,3 +1,5 @@
+import math
+
 from apps.datasets.models import Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingConfig, RoutingSolution
@@ -163,8 +165,8 @@ class OptimizationPipeline:
                 solution=solution,
                 route_number=route_number,
                 total_trees=len(route),
-                travel_time_sec=int(travel),
-                total_estimated_time_sec=int(estimated),
+                travel_time_sec=math.ceil(travel),
+                total_estimated_time_sec=math.ceil(estimated),
             )
             for sequence, node in enumerate(route, start=1):
                 stops.append(

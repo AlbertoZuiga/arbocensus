@@ -90,6 +90,31 @@ def test_respects_max_route_time():
         assert route_time(open_matrix, route, 300) <= max_route_time
 
 
+def test_fractional_arc_times_never_exceed_max_route_time():
+    matrix = uniform_matrix(5, travel=60.5)
+    service_time = 300
+    # Budget a truncating callback would compute for a single 5-node route
+    # (4 x int(360.5) + 300); its real time is 1742s, i.e. over the budget.
+    max_route_time = 1_740
+
+    solver = ArbocensusVRPSolver(
+        matrix,
+        min_route_time_sec=600,
+        max_route_time_sec=max_route_time,
+        service_time_sec=service_time,
+        max_vehicles=1,
+        time_limit_sec=5,
+    )
+    routes, dropped = unwrap(solver.solve())
+
+    assert len(routes) == 1
+    assert len(dropped) == 1
+
+    open_matrix = build_open_matrix(matrix)
+    for route in routes:
+        assert route_time(open_matrix, route, service_time) <= max_route_time
+
+
 def test_drops_single_unreachable_node():
     matrix = uniform_matrix(6)
     unreachable = 3

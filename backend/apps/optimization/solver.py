@@ -1,3 +1,4 @@
+import math
 import time
 
 import numpy as np
@@ -65,7 +66,10 @@ class ArbocensusVRPSolver:
                 to_node = manager.IndexToNode(to_index)
                 travel = self.matrix[from_node][to_node]
                 service = self.service_time_sec if from_node != 0 else 0
-                return int(travel + service)
+                # Ceil, not truncate: the Time dimension must never accumulate less
+                # than the real (float) route time, or routes within the solver's
+                # T_max bound come out over T_max when metrics are recomputed.
+                return math.ceil(travel + service)
 
             callback_index = routing.RegisterTransitCallback(time_callback)
             routing.SetArcCostEvaluatorOfAllVehicles(callback_index)
