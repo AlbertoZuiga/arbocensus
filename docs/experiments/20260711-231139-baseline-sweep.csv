@@ -1,0 +1,6 @@
+target,n_trees,strategy,service_time_min,t_max_h,seed,time_limit_sec,k,balance,total_travel_time_sec,route_time_mean_sec,route_time_std_sec,routes_over_t_max,dropped_trees,sum_max_radius_m,interleave_total,interleave_per_route,worst_pair_iou,cost_matrix.total,cost_matrix.cache_lookup,cost_matrix.osrm_fetch,cost_matrix.chunk_assembly,model_build.total,solve.total,solve.first_solution,solve.metaheuristic,solution_extraction.total,metrics.total,pipeline_total
+n=80,80,global,5.0,3.0,42,auto,8,0.849866882741058,39514,7939,435,0,0,11103,17,2.12,0.19,0.893,0.001,0.89,0.001,0.003,149.994,0.01,149.984,0.0,0.001,150.891
+n=80,80,global,5.0,3.0,43,auto,8,0.8864164323266903,36911,7614,299,0,0,12170,21,2.62,0.25,0.827,0.0,0.825,0.001,0.0,150.0,0.008,149.993,0.0,0.001,150.829
+n=80,80,global,5.0,3.0,44,auto,8,0.9045296949440023,36373,7546,262,0,0,10276,7,0.88,0.11,0.811,0.0,0.809,0.001,0.0,56.956,0.007,56.949,0.0,0.001,57.768
+n=80,80,global,5.0,3.0,45,auto,8,0.8717396824629078,35900,7487,306,0,0,10904,9,1.12,0.19,0.866,0.0,0.864,0.001,0.0,59.128,0.008,59.12,0.001,0.002,59.996
+n=80,80,global,5.0,3.0,46,auto,8,0.9065716353644026,38415,7801,222,0,0,13559,25,3.12,0.65,1.943,0.001,1.94,0.002,0.001,28.025,0.012,28.013,0.001,0.001,29.97
