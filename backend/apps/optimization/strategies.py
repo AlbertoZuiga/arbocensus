@@ -137,6 +137,10 @@ def choose_k(n, matrix, service_time_sec, min_route_time_sec, max_route_time_sec
     return min(k, n)
 
 
+def cluster_time_limit(time_limit_sec, cluster_size, n):
+    return max(1, round(time_limit_sec * cluster_size / n))
+
+
 def solve_cluster_first(
     matrix,
     *,
@@ -172,7 +176,7 @@ def solve_cluster_first(
             max_route_time_sec=max_route_time_sec,
             service_time_sec=service_time_sec,
             max_vehicles=max_vehicles,
-            time_limit_sec=time_limit_sec,
+            time_limit_sec=cluster_time_limit(time_limit_sec, len(members), n),
         ).solve(timer=timer)
         if result is None:
             return None

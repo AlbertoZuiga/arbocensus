@@ -1,7 +1,9 @@
 import numpy as np
+from apps.optimization import strategies
 from apps.optimization.solver import build_open_matrix
 from apps.optimization.strategies import (
     choose_k,
+    cluster_time_limit,
     kmeans,
     project_equirectangular,
     solve_cluster_first,
@@ -210,6 +212,48 @@ def test_choose_k_never_exceeds_node_count():
     n = 4
     matrix = uniform_matrix(n, travel=10_000.0)
     assert choose_k(n, matrix, 300, 600, 900) == n
+
+
+def test_cluster_time_limit_splits_budget_proportionally():
+    assert cluster_time_limit(120, 50, 100) == 60
+    assert cluster_time_limit(120, 25, 100) == 30
+
+
+def test_cluster_time_limit_floors_at_one_second():
+    assert cluster_time_limit(10, 1, 1_000) == 1
+
+
+class SolverSpy:
+    calls = []
+
+    def __init__(self, matrix, **kwargs):
+        self.node_count = matrix.shape[0]
+        SolverSpy.calls.append(kwargs)
+
+    def solve(self, timer=None):
+        return [list(range(self.node_count))], []
+
+
+def test_cluster_first_apportions_time_limit_across_clusters(monkeypatch):
+    SolverSpy.calls = []
+    monkeypatch.setattr(strategies, "ArbocensusVRPSolver", SolverSpy)
+    monkeypatch.setattr(strategies, "choose_k", lambda *args, **kwargs: 2)
+    per_cluster = 5
+    n = per_cluster * 2
+    time_limit_sec = 40
+
+    solve_cluster_first(
+        uniform_matrix(n),
+        points=two_cluster_points(per_cluster),
+        min_route_time_sec=600,
+        max_route_time_sec=100_000,
+        service_time_sec=300,
+        time_limit_sec=time_limit_sec,
+    )
+
+    limits = [call["time_limit_sec"] for call in SolverSpy.calls]
+    assert limits == [20, 20]
+    assert sum(limits) <= time_limit_sec
 
 
 def test_kmeans_separates_distant_clusters():
