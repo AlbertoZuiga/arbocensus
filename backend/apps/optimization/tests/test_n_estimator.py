@@ -4,7 +4,6 @@ import numpy as np
 from apps.optimization.cost_matrix import UNREACHABLE_PENALTY
 from apps.optimization.n_estimator import (
     VEHICLE_BUFFER,
-    average_pair_travel,
     estimate_max_vehicles,
     mean_nearest_neighbor_travel,
 )
@@ -17,6 +16,13 @@ def uniform_matrix(real_node_count, travel=30.0):
     matrix[0, :] = 0.0
     matrix[:, 0] = 0.0
     return matrix
+
+
+def mean_pair_travel(matrix):
+    real_nodes = np.asarray(matrix, dtype=float)[1:, 1:]
+    upper = real_nodes[np.triu_indices_from(real_nodes, k=1)]
+    reachable = upper[upper < UNREACHABLE_PENALTY]
+    return float(reachable.mean())
 
 
 def test_zero_work_falls_back_to_buffer():
@@ -83,26 +89,6 @@ def test_buffer_param_overrides_default_solver_headroom():
     ) == math.ceil(total_work / min_route)
 
 
-def test_average_pair_travel_uses_upper_triangle_real_nodes():
-    matrix = np.array(
-        [
-            [0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 10.0, 20.0],
-            [0.0, 999.0, 0.0, 30.0],
-            [0.0, 999.0, 999.0, 0.0],
-        ]
-    )
-    assert average_pair_travel(matrix) == 20.0
-
-
-def test_average_pair_travel_excludes_unreachable_penalty():
-    matrix = uniform_matrix(3, travel=20.0)
-    matrix[1, 2] = UNREACHABLE_PENALTY
-    matrix[2, 1] = UNREACHABLE_PENALTY
-
-    assert average_pair_travel(matrix) == 20.0
-
-
 def test_mean_nearest_neighbor_travel_excludes_diagonal():
     matrix = np.array(
         [
@@ -137,7 +123,7 @@ def test_nearest_neighbor_estimate_lower_than_average_pair_estimate_on_sparse_ma
     total_service = 3600
     min_route = 1000
     nn_travel = real_node_count * mean_nearest_neighbor_travel(matrix)
-    avg_travel = real_node_count * average_pair_travel(matrix)
+    avg_travel = real_node_count * mean_pair_travel(matrix)
     assert nn_travel < avg_travel
 
     nn_estimate = min(

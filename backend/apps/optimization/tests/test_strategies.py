@@ -1,6 +1,9 @@
 import numpy as np
+from apps.optimization import strategies
 from apps.optimization.solver import build_open_matrix
 from apps.optimization.strategies import (
+    choose_k,
+    cluster_time_limit,
     kmeans,
     project_equirectangular,
     solve_cluster_first,
@@ -9,6 +12,11 @@ from apps.optimization.strategies import (
 
 SANTIAGO_LAT = -33.45
 SANTIAGO_LON = -70.65
+
+WALKING_SPEED_M_S = 1.2
+SERVICE_TIME_SEC = 120
+MIN_ROUTE_TIME_SEC = 7_200
+MAX_ROUTE_TIME_SEC = 10_800
 
 
 def unwrap(result):
@@ -175,6 +183,77 @@ def test_kmeans_assigns_every_point():
     labels = kmeans(coords, 3, seed=0)
     assert labels.shape[0] == coords.shape[0]
     assert set(labels.tolist()).issubset(set(range(3)))
+
+
+def grid_matrix(side, spacing_m=40.0):
+    cells = np.array([(row, col) for row in range(side) for col in range(side)])
+    manhattan = np.abs(cells[:, None, :] - cells[None, :, :]).sum(axis=2)
+    return manhattan * spacing_m / WALKING_SPEED_M_S
+
+
+def test_choose_k_sizes_fleet_from_nearest_neighbor_travel():
+    side = 40
+    n = side * side
+    k = choose_k(
+        n,
+        grid_matrix(side),
+        SERVICE_TIME_SEC,
+        MIN_ROUTE_TIME_SEC,
+        MAX_ROUTE_TIME_SEC,
+    )
+    # On a regular grid the nearest neighbor is one cell away, so per-tree work
+    # is service + one hop; the mean pairwise travel would be ~20x that.
+    expected = n * (SERVICE_TIME_SEC + 40.0 / WALKING_SPEED_M_S) / 9_000
+    assert 0.5 * expected <= k <= 2 * expected
+    assert k < 100
+
+
+def test_choose_k_never_exceeds_node_count():
+    n = 4
+    matrix = uniform_matrix(n, travel=10_000.0)
+    assert choose_k(n, matrix, 300, 600, 900) == n
+
+
+def test_cluster_time_limit_splits_budget_proportionally():
+    assert cluster_time_limit(120, 50, 100) == 60
+    assert cluster_time_limit(120, 25, 100) == 30
+
+
+def test_cluster_time_limit_floors_at_one_second():
+    assert cluster_time_limit(10, 1, 1_000) == 1
+
+
+class SolverSpy:
+    calls = []
+
+    def __init__(self, matrix, **kwargs):
+        self.node_count = matrix.shape[0]
+        SolverSpy.calls.append(kwargs)
+
+    def solve(self, timer=None):
+        return [list(range(self.node_count))], []
+
+
+def test_cluster_first_apportions_time_limit_across_clusters(monkeypatch):
+    SolverSpy.calls = []
+    monkeypatch.setattr(strategies, "ArbocensusVRPSolver", SolverSpy)
+    monkeypatch.setattr(strategies, "choose_k", lambda *args, **kwargs: 2)
+    per_cluster = 5
+    n = per_cluster * 2
+    time_limit_sec = 40
+
+    solve_cluster_first(
+        uniform_matrix(n),
+        points=two_cluster_points(per_cluster),
+        min_route_time_sec=600,
+        max_route_time_sec=100_000,
+        service_time_sec=300,
+        time_limit_sec=time_limit_sec,
+    )
+
+    limits = [call["time_limit_sec"] for call in SolverSpy.calls]
+    assert limits == [20, 20]
+    assert sum(limits) <= time_limit_sec
 
 
 def test_kmeans_separates_distant_clusters():

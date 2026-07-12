@@ -6,15 +6,6 @@ from apps.optimization.cost_matrix import UNREACHABLE_PENALTY
 VEHICLE_BUFFER = 5
 
 
-def average_pair_travel(matrix):
-    real_nodes = np.asarray(matrix, dtype=float)[1:, 1:]
-    upper = real_nodes[np.triu_indices_from(real_nodes, k=1)]
-    reachable = upper[upper < UNREACHABLE_PENALTY]
-    if reachable.size == 0:
-        return 0.0
-    return float(reachable.mean())
-
-
 def mean_nearest_neighbor_travel(matrix):
     real_nodes = np.asarray(matrix, dtype=float)[1:, 1:]
     masked = np.where(
