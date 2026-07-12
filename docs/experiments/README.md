@@ -8,10 +8,15 @@ la redacción de la tesis.
 ## Quién escribe aquí
 
 - `manage.py seed_demo` (cuando corre la optimización) → `*-seed-demo.md`.
-- `manage.py baseline_sweep` → `*-baseline-sweep.md`. Acepta
-  `--strategy {global,spatial_term,cluster_first}` (por defecto `global`) para
-  barrer cada estrategia de partición espacial; el informe registra la estrategia
-  usada en su cabecera y parámetros.
+- `manage.py baseline_sweep` → `*-baseline-sweep.md` + `*-baseline-sweep.csv`
+  (una fila por corrida, con métricas de rutas y timing por fase). Acepta
+  `--dataset <uuid>` para barrer un dataset real (sin `--dataset` genera datasets
+  sintéticos según `--sizes`/`--distribution`), `--strategies` (lista separada
+  por comas: `global,spatial_term,cluster_first`), `--service-time <min,...>` y
+  `--t-max <h,...>` (producto cartesiano de variantes de duración),
+  `--time-limit <s>` (fija el límite del solver en vez de la heurística del
+  pipeline) y `--csv <ruta>`. Sobre un dataset real la semilla solo etiqueta la
+  repetición: la varianza proviene del corte por tiempo del solver.
 
 La carpeta se resuelve desde `settings.EXPERIMENTS_DIR`
 (`docs/experiments/` por defecto; configurable con la variable de entorno

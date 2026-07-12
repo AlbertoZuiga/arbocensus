@@ -42,7 +42,7 @@ class OptimizationPipeline:
         self.job = job
         self.config = job.config
 
-    def run(self, strategy=None):
+    def run(self, strategy=None, time_limit_sec=None):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
             key=lambda tree: tree.id,
@@ -50,7 +50,8 @@ class OptimizationPipeline:
         if len(trees) < 2:
             raise ValueError("Dataset needs at least 2 active trees to optimize")
 
-        time_limit_sec = min(int(30 + 1.5 * len(trees)), SOLVER_TIME_LIMIT_SEC)
+        if time_limit_sec is None:
+            time_limit_sec = min(int(30 + 1.5 * len(trees)), SOLVER_TIME_LIMIT_SEC)
 
         cost_matrix_timer = PhaseTimer()
         matrix = OSRMCostMatrixBuilder().build(trees, timer=cost_matrix_timer)
