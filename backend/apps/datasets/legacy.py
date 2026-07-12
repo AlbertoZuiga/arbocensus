@@ -1,7 +1,9 @@
 from contextlib import closing
 from dataclasses import dataclass
+from datetime import datetime
 
 import psycopg2
+from apps.routes.models import TreeObservation
 from django.conf import settings
 from django.contrib.gis.geos import Point, Polygon
 from django.db import transaction
@@ -41,6 +43,32 @@ _APP_TREES_SQL = """
     ORDER BY 1
 """
 
+_API_OBSERVATIONS_SQL = """
+    SELECT s.real_tree_id, s.date, s.completed,
+           COALESCE(
+               (SELECT a.answer_url FROM arbocensus_api_app_answer a
+                WHERE a.sample_id = s.id AND a.answer_url <> ''
+                ORDER BY a.id LIMIT 1),
+               ''
+           )
+    FROM arbocensus_api_app_sample s
+    WHERE s.real_tree_id = ANY(%s)
+    ORDER BY s.date
+"""
+
+_APP_OBSERVATIONS_SQL = """
+    SELECT s.qr::bigint, s.date, s.complete,
+           COALESCE(
+               (SELECT a.answer_url FROM arbocensus_app_answer a
+                WHERE a.sample_id = s.id AND a.answer_url LIKE 'http%%'
+                ORDER BY a.id LIMIT 1),
+               ''
+           )
+    FROM arbocensus_app_sample s
+    WHERE s.qr = ANY(%s)
+    ORDER BY s.date
+"""
+
 
 @dataclass
 class LegacyTreeRow:
@@ -58,7 +86,18 @@ class LegacyAreaImport:
     trees: list[LegacyTreeRow]
 
 
-def _fetch(env_name: str, url: str, statements: list[str]) -> list[list[tuple]]:
+@dataclass
+class LegacyObservationRow:
+    source: str
+    tree_external_id: int
+    observed_at: datetime
+    completed: bool
+    photo_url: str = ""
+
+
+def _fetch(
+    env_name: str, url: str, statements: list[tuple[str, tuple | None]]
+) -> list[list[tuple]]:
     if not url:
         raise LegacyDatabaseNotConfiguredError(
             f"{env_name} is not configured; legacy import is unavailable."
@@ -67,8 +106,8 @@ def _fetch(env_name: str, url: str, statements: list[str]) -> list[list[tuple]]:
         conn.set_session(readonly=True, autocommit=True)
         with conn.cursor() as cursor:
             results = []
-            for sql in statements:
-                cursor.execute(sql)
+            for sql, params in statements:
+                cursor.execute(sql, params)
                 results.append(cursor.fetchall())
     return results
 
@@ -77,16 +116,54 @@ def _load_api():
     areas, trees = _fetch(
         "ARBOCENSUS_API_DB_URL",
         settings.LEGACY_API_DB_URL,
-        [_API_AREAS_SQL, _API_TREES_SQL],
+        [(_API_AREAS_SQL, None), (_API_TREES_SQL, None)],
     )
     return areas, trees
 
 
 def _load_app_trees() -> list[LegacyTreeRow]:
-    (rows,) = _fetch("ARBOCENSUS_DB_URL", settings.LEGACY_APP_DB_URL, [_APP_TREES_SQL])
+    (rows,) = _fetch(
+        "ARBOCENSUS_DB_URL", settings.LEGACY_APP_DB_URL, [(_APP_TREES_SQL, None)]
+    )
     return [
         LegacyTreeRow(source=SOURCE_APP, external_id=tree_id, lat=lat, lon=lon)
         for tree_id, lat, lon in rows
+    ]
+
+
+def _load_api_observations(external_ids: list[int]) -> list[LegacyObservationRow]:
+    (rows,) = _fetch(
+        "ARBOCENSUS_API_DB_URL",
+        settings.LEGACY_API_DB_URL,
+        [(_API_OBSERVATIONS_SQL, (external_ids,))],
+    )
+    return [
+        LegacyObservationRow(
+            source=SOURCE_API,
+            tree_external_id=tree_id,
+            observed_at=observed_at,
+            completed=completed,
+            photo_url=photo_url,
+        )
+        for tree_id, observed_at, completed, photo_url in rows
+    ]
+
+
+def _load_app_observations(external_ids: list[int]) -> list[LegacyObservationRow]:
+    (rows,) = _fetch(
+        "ARBOCENSUS_DB_URL",
+        settings.LEGACY_APP_DB_URL,
+        [(_APP_OBSERVATIONS_SQL, ([str(tree_id) for tree_id in external_ids],))],
+    )
+    return [
+        LegacyObservationRow(
+            source=SOURCE_APP,
+            tree_external_id=tree_id,
+            observed_at=observed_at,
+            completed=completed,
+            photo_url=photo_url,
+        )
+        for tree_id, observed_at, completed, photo_url in rows
     ]
 
 
@@ -236,10 +313,26 @@ def import_all() -> list[LegacyAreaImport]:
     return [area_import for area_import in imports if area_import.trees]
 
 
+def _load_observations(
+    rows: list[LegacyTreeRow],
+) -> dict[tuple[str, int], list[LegacyObservationRow]]:
+    loaders = {SOURCE_API: _load_api_observations, SOURCE_APP: _load_app_observations}
+    grouped: dict[tuple[str, int], list[LegacyObservationRow]] = {}
+    for source, loader in loaders.items():
+        external_ids = [row.external_id for row in rows if row.source == source]
+        if not external_ids:
+            continue
+        for observation in loader(external_ids):
+            key = (observation.source, observation.tree_external_id)
+            grouped.setdefault(key, []).append(observation)
+    return grouped
+
+
 def create_dataset(name: str, rows: list[LegacyTreeRow]) -> Dataset:
+    observations = _load_observations(rows)
     with transaction.atomic():
         dataset = Dataset.objects.create(name=name, total_trees=len(rows))
-        Tree.objects.bulk_create(
+        trees = Tree.objects.bulk_create(
             Tree(
                 dataset=dataset,
                 location=Point(row.lon, row.lat),
@@ -248,6 +341,21 @@ def create_dataset(name: str, rows: list[LegacyTreeRow]) -> Dataset:
                 external_id=row.external_id,
             )
             for row in rows
+        )
+        TreeObservation.objects.bulk_create(
+            TreeObservation(
+                tree=tree,
+                status=(
+                    TreeObservation.Status.ALIVE
+                    if observation.completed
+                    else TreeObservation.Status.UNKNOWN
+                ),
+                source=observation.source,
+                photo_url=observation.photo_url,
+                observed_at=observation.observed_at,
+            )
+            for tree in trees
+            for observation in observations.get((tree.source, tree.external_id), [])
         )
     return dataset
 
