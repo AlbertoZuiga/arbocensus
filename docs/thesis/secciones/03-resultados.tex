@@ -5,37 +5,93 @@
 \subsection{Métricas de Calidad de Rutas}
 
 % DRAFT — revisar
-La calidad de la solución producida por el motor de optimización se evalúa sobre un
-\textit{dataset} real de $N =$ [DATO PENDIENTE] árboles correspondiente a la zona de
-[DATO PENDIENTE: zona/comuna], empleando los parámetros temporales por defecto
-($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s) y el tiempo de servicio configurado
-por árbol. Se reportan cinco indicadores: el número de rutas $k$ generado de forma
-automática por el solver, el tiempo promedio por ruta $\bar{T}$, la desviación
-estándar de los tiempos de ruta ---cuyo criterio de aceptación es que no supere el
-15\,\% del promedio, en línea con el objetivo de balance de carga---, el número de
-rutas que exceden la cota dura $T_{\max}$ ---que debe ser cero por construcción--- y el
-tiempo de cómputo del solver. La Tabla~\ref{tab:metricas} resume estos resultados.
+La calidad de la solución producida por el motor de optimización se evalúa sobre el
+\textit{dataset} legado completo descrito en la Sección~\ref{sec:legacy} (ambas
+fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con mediana de posición por
+código QR), de $N = 1\,607$ árboles. El conjunto no corresponde a una única
+comuna: reúne la totalidad del arbolado disponible en ambas bases legadas. Se
+emplean los parámetros temporales por defecto ($T_{\min} = 7\,200$\,s y
+$T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol, la
+estrategia \texttt{global} (\textit{default} de producción) y el tiempo límite
+de solver por defecto (180\,s). Se reportan seis indicadores: el número de
+rutas $k$ generado de forma automática por el solver, el tiempo promedio por
+ruta $\bar{T}$, la desviación estándar de los tiempos de ruta ---cuyo criterio
+de aceptación es que no supere el 15\,\% del promedio, en línea con el objetivo
+de balance de carga---, el número de rutas que exceden la cota dura $T_{\max}$
+---que debe ser cero por construcción---, el número de árboles descartados
+---el modelo admite descartes mediante disyunciones penalizadas, de modo que la
+cobertura total no está garantizada a priori--- y el tiempo de cómputo del
+solver. La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de
+tres repeticiones (semillas 42, 43 y 44).
 
 \begin{table}[H]
   \centering
-  \caption{Métricas de calidad de rutas sobre el dataset de evaluación.}
+  \caption{Métricas de calidad de rutas sobre el dataset de evaluación ($N=1\,607$, media de 3 semillas).}
   \label{tab:metricas}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
     Métrica & Valor & Criterio \\
     \midrule
-    Número de rutas $k$ & [DATO PENDIENTE] & mínimo posible \\
-    Tiempo promedio por ruta & [DATO PENDIENTE] & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
-    Desviación estándar & [DATO PENDIENTE] & $< 15\%$ del promedio \\
-    Rutas que exceden $T_{\max}$ & [DATO PENDIENTE] & $= 0$ \\
-    Tiempo de cómputo (solver) & [DATO PENDIENTE] & $< 5$ min \\
+    Número de rutas $k$ & 25 & mínimo posible \\
+    Tiempo promedio por ruta & 9\,962\,s ($\approx$ 2\,h 46\,min) & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
+    Desviación estándar & 522\,s (5.2\,\% del promedio) & $< 15\,\%$ del promedio \\
+    Rutas que exceden $T_{\max}$ & 0 & $= 0$ \\
+    Árboles descartados & 0 (cobertura 1\,607/1\,607) & $= 0$ \\
+    Tiempo de cómputo (solver) & 158.7\,s ($\approx 2.6$ min) & $< 5$ min \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-% NOTA: medir sobre el dataset real de la tesis ejecutando un OptimizationJob y
-% leyendo total_routes, la media/desviación de total_estimated_time_sec de las Routes,
-% y el tiempo de cómputo del solver (log del pipeline).
+Esta corrida se ejecutó ya con la corrección del cálculo del tiempo de
+tránsito aplicada (redondeo hacia arriba con \texttt{math.ceil} en el
+\textit{callback} de tránsito), lo que
+explica que el número de rutas que exceden $T_{\max}$ sea cero de forma limpia
+---antes de esa corrección, el truncamiento entero del tránsito podía producir
+rutas que excedían la cota por el redondeo hacia abajo---. La cobertura fue
+total: ninguna de las tres repeticiones descartó árboles, pese a que el modelo
+lo permite mediante disyunciones penalizadas.
+
+La desviación estándar reportada es el promedio de las desviaciones estándar
+calculadas dentro de cada repetición (496\,s, 501\,s y 569\,s), no la
+desviación del conjunto agregado de rutas. La semilla, por su parte, solo
+etiqueta la repetición: la estrategia \texttt{global} no consume aleatoriedad
+---a diferencia de \texttt{cluster\_first}, que la usa para inicializar
+$k$-means--- y el solver de OR-Tools es determinista dados sus parámetros de
+entrada. La varianza observada entre repeticiones proviene del corte por reloj
+de pared del metaheurístico GLS (\textit{guided local search}): el número de
+iteraciones alcanzadas antes del corte depende de la carga de la máquina. Dos
+repeticiones agotaron el presupuesto completo de 180\,s y la tercera se detuvo
+en 116.1\,s, lo que arroja una media de 158.7\,s; esa detención temprana no
+implica convergencia a un óptimo, pues esa misma repetición entregó la peor de
+las tres soluciones (58\,429\,s de tiempo total de viaje, frente a 55\,052\,s y
+55\,103\,s de las otras dos).
+
+El criterio de $< 5$ minutos se aplica al tiempo de cómputo del solver. El
+tiempo total del \textit{pipeline} depende de si la matriz de costos está en
+caché: con caché fría, la primera repetición tardó 363.3\,s en total, de los
+cuales 183.2\,s correspondieron a la construcción de la matriz de costos contra
+OSRM; con la matriz ya cacheada ---el caso de operación normal, dado que la
+clave de caché es estable para un mismo conjunto de árboles activos--- las
+repeticiones siguientes tardaron 180.6\,s y 116.8\,s en total.
+
+Comando reproducible (entorno \texttt{docker-compose.prod.yml}):
+
+\begin{verbatim}
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py baseline_sweep \
+    --dataset 98051e52-4785-42c9-9c83-72feb40714ed --strategies global \
+    --service-time 2 --t-max 3 --seeds 3 --time-limit 180 \
+    --csv /results/20260712-real-case-metrics.csv
+\end{verbatim}
+
+Los datos crudos de esta corrida (una fila por semilla) se conservan en el
+repositorio como \texttt{docs/experiments/20260712-real-case-metrics.csv}, que
+es el archivo escrito por el comando anterior dentro del contenedor. Su columna
+\texttt{target} arrastra el nombre del \textit{dataset} en la base de datos
+(\textit{Profiling RP2 - legacy completo}), reutilizado de un trabajo de
+perfilamiento previo; los resultados, en cambio, corresponden a esta corrida y
+no a las de aquel trabajo, que son anteriores a la corrección del redondeo de
+tránsito.
 
 % ---- 3.1.2 ------------------------------------------------------
 \subsection{Comparación con Solución Greedy}
