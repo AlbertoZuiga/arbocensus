@@ -34,15 +34,24 @@ durante la optimización.
 Los modelos de dominio centrales son los siguientes:
 
 \begin{itemize}
-  \item \textbf{Dataset}: agrupa un conjunto de árboles importados desde CSV.
-  \item \textbf{Tree}: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}.
+  \item \textbf{Dataset}: agrupa un conjunto de árboles importados desde CSV o desde una fuente legada.
+  \item \textbf{Tree}: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}. Registra además su procedencia mediante los campos \texttt{source} y \texttt{external\_id}, que identifican la fuente legada y el identificador que el árbol tenía en ella (Sección~\ref{sec:legacy}).
   \item \textbf{RoutingConfig}: parámetros de una sesión de optimización ($T_{\min}$, $T_{\max}$, $s$).
   \item \textbf{OptimizationJob}: tarea de optimización con estado (\texttt{queued}, \texttt{running}, \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
-  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de desplazamiento, el puntaje de balance temporal y las métricas espaciales de la solución (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} del peor par de rutas).
+  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo \texttt{timing}).
   \item \textbf{Route}: ruta individual con tiempos estimados; su asignación a un censador (\texttt{surveyor}) es opcional.
   \item \textbf{RouteStop}: visita de un árbol en una ruta, con número de secuencia y estado de visita.
+  \item \textbf{TreeObservation}: registro histórico del estado de un árbol en un instante dado (Sección~\ref{sec:recenso}). Es la entidad que convierte el sistema en una herramienta de re-censo y no solo de censo inicial.
   \item \textbf{DistanceMatrix}: caché persistente de la matriz $n \times n$ de tiempos OSRM, indexada por un hash SHA-256 de los IDs de árboles activos.
 \end{itemize}
+
+La procedencia se modela en el propio \texttt{Tree} en lugar de en una entidad
+aparte, porque solo se necesita para dos fines: evitar la doble importación de un
+mismo árbol legado y vincular sus observaciones históricas. Una restricción de
+unicidad parcial sobre la terna (\texttt{dataset}, \texttt{source},
+\texttt{external\_id}), condicionada a \texttt{external\_id} no nulo, impide que un
+mismo árbol legado aparezca dos veces en un \textit{dataset} sin restringir a los
+árboles importados desde CSV, que no tienen identificador externo.
 
 El orden de visita de cada ruta se deriva de \texttt{RouteStop.sequence};
 no existe un campo redundante de secuencia en \texttt{Route}.
@@ -107,6 +116,7 @@ Las rutas son abiertas: no existe un punto de inicio ni de término predefinido.
 
 % ---- 2.3.2 ------------------------------------------------------
 \subsection{Construcción de la Matriz de Costos}
+\label{sec:matriz}
 
 % TODO (copilot-prompts.md → §2.3.2):
 % Describir OSRMCostMatrixBuilder: endpoint /table/v1/foot, orden lon,lat,
@@ -126,34 +136,81 @@ Los nodos inalcanzables (devueltos como \texttt{null} por OSRM) se reemplazan po
 una penalización de $9\,999\,999$ segundos, garantizando la viabilidad numérica del
 solver sin alterar la topología de la solución.
 
+El factor que limita el tamaño de una consulta no es el parámetro
+\texttt{--max-table-size} de OSRM (fijado en $5\,000$), sino la longitud máxima de
+la URL: el servicio \texttt{/table} codifica cada coordenada en la propia ruta de la
+petición, de modo que la solicitud falla por longitud de URL antes de alcanzar el
+límite de tabla. El sistema fija por ello un tope de $350$ árboles por solicitud.
+Cuando el \textit{dataset} lo supera, la matriz se construye por fragmentación
+(\textit{chunking}): los puntos se dividen en bloques de $175$ coordenadas
+---la mitad del tope, ya que cada petición fragmentada transporta simultáneamente
+las coordenadas del bloque origen y las del bloque destino--- y se solicita un
+bloque $(i,j)$ de la matriz por cada par de bloques, empleando los parámetros
+\texttt{sources} y \texttt{destinations} de OSRM. El número de solicitudes crece
+así de forma cuadrática con el número de bloques, lo que domina el costo de la
+primera construcción de la matriz para \textit{datasets} grandes
+(Capítulo~\ref{cap:resultados}). Un tope adicional de $2\,000$ árboles acota la
+dimensión de la matriz, cuyo tamaño en disco crece como $O(n^2)$.
+
 % ---- 2.3.3 ------------------------------------------------------
 \subsection{Estimación del Número de Rutas}
 
-% TODO (copilot-prompts.md → §2.3.3):
-% Describir estimate_max_vehicles: N_max como techo generoso para OR-Tools,
-% estrategia de fixed vehicle cost para minimización interna.
+\label{sec:flota}
 
-En lugar de determinar $k$ mediante iteración externa (enfoque frágil con OR-Tools),
-el sistema calcula un techo generoso $N_{\max}$ a partir del tiempo total estimado
-de servicio y el tiempo promedio de desplazamiento entre pares de árboles:
+El número de rutas $k$ ---y por lo tanto el número de censadores que deben salir a
+terreno en una jornada--- no es un dato de entrada del sistema: es una salida del
+solver. El administrador nunca declara cuántos equipos tiene disponibles; declara
+cuánto puede durar una jornada ($T_{\min}$, $T_{\max}$) y cuánto toma censar un
+árbol ($s$), y el sistema deriva la flota necesaria. Esta decisión de diseño evita
+el enfoque de iteración externa ---resolver el modelo con $1, 2, 3, \ldots$
+vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de
+cómputo por el número de intentos y resulta frágil, pues una corrida infactible no
+distingue entre «faltan vehículos» y «el modelo no admite solución».
+
+En su lugar, el sistema entrega a OR-Tools un \textbf{techo} $N_{\max}$ de vehículos
+disponibles y deja que el solver decida cuántos activa. El techo se calcula a partir
+del trabajo total estimado ---servicio más desplazamiento--- dividido por la duración
+mínima de una ruta:
 
 \begin{equation}
-  N_{\max} = \left\lceil \frac{n \cdot s + (n-1) \cdot \bar{c}}{T_{\min}} \right\rceil + 5
+  N_{\max} = \min\!\left(n,\;
+  \left\lceil \frac{n \cdot s + n \cdot \hat{c}_{\text{nn}}}{T_{\min}} \right\rceil + b
+  \right)
+  \label{eq:nmax}
 \end{equation}
 
-donde $\bar{c}$ es el promedio del triángulo superior de la matriz de costos.
+donde $n$ es el número de árboles activos, $s$ el tiempo de servicio por árbol y
+$\hat{c}_{\text{nn}}$ el \textbf{tiempo medio al vecino más cercano}: el promedio,
+sobre todos los nodos, del arco de menor costo que sale de cada nodo, excluyendo la
+diagonal y los pares inalcanzables (aquellos con la penalización de $9\,999\,999$\,s).
+Se emplea el vecino más cercano y no el promedio de todos los pares porque una ruta
+real encadena árboles contiguos, no pares arbitrarios: el promedio general
+sobreestima el desplazamiento por árbol en un factor que crece con la extensión
+geográfica del \textit{dataset}, e inflaría $N_{\max}$ innecesariamente. El término
+$b$ es un margen de holgura de $5$ vehículos, y el mínimo con $n$ impide que el techo
+supere el caso degenerado de un árbol por ruta.
 
-El solver recibe $N_{\max}$ vehículos disponibles y usa un costo fijo por vehículo
-activo de $100\,000$ segundos para penalizar el uso innecesario de rutas,
-llevando al solver a minimizar $k$ de forma interna sin iteración externa.
+Es importante subrayar que $N_{\max}$ es una \textbf{cota superior}, no una
+predicción: solo debe ser lo bastante amplia como para no excluir la solución óptima.
+La minimización efectiva de $k$ ocurre dentro del solver, mediante el costo fijo de
+$100\,000$\,s por vehículo activo (Sección~\ref{sec:solver}): activar una ruta
+adicional es tan caro que el solver solo lo hace cuando las restricciones temporales
+lo obligan. El número de rutas de la solución final es, en la práctica,
+sustancialmente menor que $N_{\max}$.
+
+La misma estimación alimenta un segundo uso, orientado a la planificación operativa
+y no al solver: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite
+al administrador consultar, antes de lanzar una optimización, cuántos censadores
+requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. En
+este caso la Ecuación~\ref{eq:nmax} se evalúa con margen nulo ($b=0$), pues aquí sí
+interesa una estimación ajustada y no un techo. La consulta reutiliza la matriz de
+costos en caché y no dispara ninguna consulta a OSRM: si el \textit{dataset} aún no
+tiene matriz calculada, el sistema responde que la estimación no está disponible en
+lugar de incurrir en el costo de construirla.
 
 % ---- 2.3.4 ------------------------------------------------------
 \subsection{Solver VRP con OR-Tools}
-
-% TODO (copilot-prompts.md → §2.3.4):
-% Describir ArbocensusVRPSolver: dummy depot, AddDimension Time con T_max hard,
-% SetCumulVarSoftLowerBound para T_min, SetCumulVarSoftUpperBound para balance,
-% Guided Local Search + PATH_CHEAPEST_ARC.
+\label{sec:solver}
 
 La formulación en OR-Tools usa el modelo de ruteo vehicular (\textit{Vehicle Routing
 Problem}) con las siguientes características:
@@ -176,13 +233,83 @@ Problem}) con las siguientes características:
         $(T_{\min} + T_{\max})/2$, reduciendo la varianza entre rutas.
   \item \textbf{Minimización de rutas activas}:
         costo fijo de $100\,000$ por vehículo descarta vehículos innecesarios.
+  \item \textbf{Disyunciones por nodo}:
+        cada árbol puede quedar fuera de la solución a un costo de
+        $1\,000\,000$ (Sección~\ref{sec:disyunciones}).
   \item \textbf{Búsqueda local}:
         estrategia \textit{Guided Local Search} (GLS) con solución inicial
         \textit{PATH\_CHEAPEST\_ARC}, con tiempo límite configurable
         (por defecto 180 segundos).
 \end{itemize}
 
+Si el solver no encuentra solución, el \textit{pipeline} no falla en silencio: emite
+un error que reporta el número de árboles y los parámetros de configuración vigentes
+(tiempo de servicio y $T_{\max}$), de modo que el administrador pueda identificar qué
+restricción relajar.
+
 % ---- 2.3.5 ------------------------------------------------------
+\subsection{Disyunciones de nodos}
+\label{sec:disyunciones}
+
+Un modelo VRP en el que todos los nodos son obligatorios es un modelo que puede
+resultar \textbf{infactible}. Basta un único árbol cuyo tiempo de acceso ---ida y
+vuelta desde cualquier otro nodo, más su tiempo de servicio--- exceda la cota dura
+$T_{\max}$ para que no exista ninguna asignación válida y el solver retorne sin
+solución. En el contexto de este problema esa situación es realista: los
+\textit{datasets} provienen de censos reales y contienen árboles geográficamente
+aislados, así como nodos que OSRM no logra enrutar sobre la red peatonal y que, en
+consecuencia, reciben la penalización de $9\,999\,999$\,s en la matriz de costos
+(Sección~\ref{sec:matriz}). Sin un mecanismo de escape, un solo árbol de este tipo invalidaría
+la planificación de todo el \textit{dataset}, que es precisamente el modo de falla
+que el sistema debe evitar.
+
+La solución adoptada consiste en declarar cada nodo real como una
+\textit{disyunción} unitaria mediante \texttt{AddDisjunction}, asignándole una
+penalización $\pi$ por omisión. Formalmente, el modelo deja de exigir que todo árbol
+sea visitado y pasa a minimizar el costo de las rutas más $\pi$ por cada árbol
+descartado. La factibilidad queda así garantizada por construcción: siempre existe
+al menos una solución ---aquella que descarta los nodos problemáticos--- y el solver
+nunca queda sin respuesta por culpa de un puñado de árboles inalcanzables.
+
+La calibración de $\pi$ es la decisión de diseño relevante. El sistema fija
+
+\begin{equation}
+  \pi = 10 \cdot C_{\text{fijo}} = 10 \cdot 100\,000 = 1\,000\,000
+  \label{eq:drop_penalty}
+\end{equation}
+
+es decir, un orden de magnitud por sobre el costo fijo de activar un vehículo. La
+relación entre ambas constantes ---y no sus valores absolutos--- es lo que gobierna
+el comportamiento del solver: descartar un árbol es diez veces más caro que abrir una
+ruta entera para él. En consecuencia, mientras exista alguna ruta factible que pueda
+absorber al árbol, el solver siempre preferirá crearla antes que omitirlo, y el
+descarte queda reservado a los nodos que ninguna ruta puede alojar sin violar la cota
+dura $T_{\max}$. La disyunción actúa entonces como válvula de seguridad, no como
+mecanismo de optimización: no se usa para «podar» árboles caros, sino para no perder
+la solución completa por culpa de los imposibles.
+
+Los árboles descartados no se pierden ni se ocultan: el \textit{pipeline} los extrae
+de la solución ---son los nodos cuya variable de sucesión apunta a sí misma--- y los
+propaga como parte del resultado del trabajo de optimización (campo
+\texttt{dropped\_trees}), de modo que el administrador sabe exactamente qué árboles
+quedaron fuera del plan y puede tratarlos como excepciones. El comportamiento
+observado en el \textit{dataset} real es consistente con la calibración descrita: de
+las seis variantes operacionales evaluadas, solo la más restrictiva (tiempo de
+servicio de $3$\,min con $T_{\max}=2$\,h) descarta árboles, y descarta exactamente
+uno (Capítulo~\ref{cap:resultados}).
+
+El costo de esta garantía es de espacio de búsqueda: cada nodo incorpora una
+decisión binaria adicional ---visitarlo u omitirlo---, lo que amplía el vecindario
+que la metaheurística debe explorar en cada iteración. Dado que la búsqueda local
+está acotada por un límite de tiempo de reloj y que el GLS concentra prácticamente
+todo el tiempo de ejecución del \textit{pipeline}
+(Capítulo~\ref{cap:resultados}), cabe esperar que el efecto no se manifieste como un
+mayor tiempo total sino como una menor calidad alcanzable dentro del mismo
+presupuesto. [COMPLETAR CON DATOS REALES: la magnitud de ese efecto no está medida;
+requiere una ablación con y sin disyunciones sobre el mismo \textit{dataset} y el
+mismo presupuesto de solver.]
+
+% ---- 2.3.6 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
 \label{sec:estrategias}
 
@@ -198,7 +325,7 @@ comportamiento de la formulación anterior sin cambios.
 
 \begin{itemize}
   \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
-        Sección~2.3.4, sin término espacial. Constituye la línea base.
+        Sección~\ref{sec:solver}, sin término espacial. Constituye la línea base.
   \item \textbf{\texttt{spatial\_term}}: añade una segunda dimensión de
         \textit{distancia geográfica} (Haversine entre paradas) y penaliza la
         extensión geográfica de cada ruta mediante
@@ -220,6 +347,180 @@ comportamiento de la formulación anterior sin cambios.
 \end{itemize}
 
 % ---- 2.4 -------------------------------------------------------
+\section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
+\label{sec:legacy}
+
+% DRAFT — revisar
+
+El sistema no parte de cero: existen dos bases de datos operativas de versiones
+anteriores del proyecto Arbocensus, que contienen el arbolado ya catastrado en
+campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
+el campo \texttt{source} del modelo \texttt{Tree}:
+
+\begin{itemize}
+  \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): aporta
+        $429$ árboles con posición explícita y especie, organizados en áreas
+        pertenecientes a campañas de censo.
+  \item \texttt{legacy\_app} (esquema \texttt{arbocensus\_app\_*}): base de la
+        aplicación móvil previa, donde el árbol no tiene una posición canónica sino
+        un conjunto de muestras (\textit{samples}) tomadas en terreno, cada una con
+        su propia lectura de GPS. La posición de cada árbol se reconstruye como la
+        \textbf{mediana} de las latitudes y longitudes de sus muestras, agrupadas por
+        código QR, descartando las lecturas sin coordenada y aquellas con latitud
+        igual a cero ---el valor con que la aplicación previa dejaba constancia de una
+        lectura de GPS fallida---. Se emplea la
+        mediana y no el promedio por su robustez frente a lecturas de GPS
+        atípicas, habituales en captura urbana bajo copa arbórea. De este modo se
+        obtienen $1\,178$ árboles con posición utilizable.
+\end{itemize}
+
+El \textit{dataset} definitivo de la evaluación reúne ambas fuentes y totaliza
+$n = 1\,607$ árboles. El acceso a las bases legadas es estrictamente de \textbf{solo
+lectura} (la conexión se abre con \texttt{readonly}), dado que se trata de sistemas
+que no pertenecen al alcance de este trabajo y cuya integridad no debe verse
+comprometida por el proceso de importación.
+
+\subsection{Selección previa a la creación del dataset}
+
+La decisión de diseño central de este módulo es que \textbf{la importación no crea
+un \textit{dataset} de forma inmediata}. Importar áreas completas a ciegas ---el
+enfoque inicial--- resultaba inadecuado en la práctica: el usuario no sabe, antes de
+importar, qué árboles trae un área, cuáles ya están en el sistema ni si el conjunto
+resultante corresponde al territorio que efectivamente quiere censar. El flujo se
+divide por ello en dos etapas: primero \textbf{explorar y seleccionar}, y solo
+después \textbf{materializar} el \textit{dataset} con la selección confirmada.
+
+La exploración se sirve de dos \textit{endpoints} de solo lectura que no escriben
+nada en la base de datos. El primero,
+\texttt{GET /api/datasets/legacy/areas/}, lista las áreas de censo con su campaña, su
+número de árboles y su polígono; como la fuente \texttt{legacy\_api} almacena las
+áreas como listas de vértices y no como geometrías, el polígono se reconstruye
+---cerrando el anillo si la fuente no lo entrega cerrado--- y la pertenencia de cada
+árbol a un área se determina por inclusión punto-en-polígono, no por una clave
+foránea, que la fuente no provee. El segundo,
+\texttt{GET /api/datasets/legacy/trees/}, devuelve el arbolado de ambas fuentes con
+su posición, su especie, el área que lo contiene y una marca
+\texttt{already\_imported} que indica si ese árbol ya fue traído a un \textit{dataset}
+del sistema. Si la variable de entorno de una fuente no está configurada, el sistema
+responde con un código 503 explícito en lugar de degradarse silenciosamente.
+
+La materialización ocurre en un único paso transaccional mediante
+\texttt{POST /api/datasets/from-legacy-selection/}, que recibe el nombre del
+\textit{dataset} y la lista de árboles seleccionados. Cabe notar que el contrato
+identifica cada árbol por el par (\texttt{source}, \texttt{external\_id}) y no por un
+identificador plano: al coexistir dos fuentes con espacios de identificadores
+independientes, un \texttt{external\_id} por sí solo es ambiguo. El
+\textit{endpoint} crea el \texttt{Dataset}, sus \texttt{Tree} y el histórico de
+observaciones asociado (Sección~\ref{sec:recenso}) dentro de una misma transacción,
+de modo que un fallo parcial no deja \textit{datasets} a medio poblar.
+
+Existe además un \textit{endpoint} auxiliar,
+\texttt{POST /api/datasets/import-legacy/}, que importa un área completa o la
+totalidad de la fuente sin selección previa. No forma parte del flujo del usuario y
+no tiene interfaz asociada: se conserva como atajo programático para construir
+\textit{datasets} de forma reproducible en los experimentos del
+Capítulo~\ref{cap:resultados}.
+
+\subsection{Mapa de selección}
+
+La interfaz de selección (\texttt{LegacyImport}, con el componente
+\texttt{LegacySelectionMap}) presenta sobre un mapa Leaflet la totalidad del arbolado
+legado y los polígonos de las áreas de censo. Cada árbol se dibuja como un marcador
+circular cuyo color codifica su estado: disponible, seleccionado o ya importado ---
+estos últimos, además, no son interactivos, lo que hace imposible seleccionar dos
+veces el mismo árbol---. La selección puede componerse mediante tres mecanismos
+combinables:
+
+\begin{enumerate}
+  \item \textbf{Por área}: al hacer clic sobre el polígono de un área se alternan de
+        una vez todos los árboles contenidos en ella.
+  \item \textbf{Por rectángulo} (\textit{bounding box}): un modo de arrastre permite
+        trazar un rectángulo sobre el mapa y agregar a la selección todos los árboles
+        comprendidos en sus límites, con independencia del área a la que pertenezcan.
+  \item \textbf{Por árbol individual}: el clic sobre un marcador agrega o quita ese
+        árbol de la selección.
+\end{enumerate}
+
+Un panel lateral mantiene visible la selección acumulada y permite la
+\textbf{des-selección manual} de cualquier árbol, de forma que los tres mecanismos
+anteriores actúan como brochas gruesas que el usuario refina antes de confirmar. Solo
+al confirmar ---indicando el nombre del \textit{dataset}--- se emite la solicitud de
+creación. El resultado es que el recorte territorial del censo es una decisión
+explícita del administrador, tomada sobre la evidencia cartográfica, y no una
+consecuencia de cómo estaban organizadas las áreas en el sistema anterior.
+
+% ---- 2.5 -------------------------------------------------------
+\section{RE-CENSO Y REGISTRO DE OBSERVACIONES}
+\label{sec:recenso}
+
+% DRAFT — revisar
+
+Un censo de arbolado urbano no es un evento único sino un proceso recurrente: el
+valor del catastro está en poder comparar el estado de un árbol entre campañas
+sucesivas. El modelo de datos separa por ello dos conceptos que resulta tentador
+confundir. El \texttt{RouteStop} es una \textbf{unidad de trabajo}: pertenece a una
+ruta, tiene una secuencia y un estado de avance (\texttt{pending}, \texttt{visited},
+\texttt{skipped}), y su vida termina cuando la ruta se completa. La
+\texttt{TreeObservation}, en cambio, es un \textbf{hecho histórico}: registra el
+estado en que se encontró un árbol en un instante dado y no caduca. Un árbol acumula
+tantas observaciones como veces haya sido censado, y su relación con el
+\texttt{RouteStop} que la originó es opcional (\texttt{SET\_NULL}), precisamente
+porque una observación debe sobrevivir a la eliminación del plan de rutas que la
+produjo, e incluso puede no provenir de ruta alguna, como es el caso de las
+observaciones importadas de las fuentes legadas.
+
+Cada \texttt{TreeObservation} registra el estado del árbol (\texttt{alive},
+\texttt{removed}, \texttt{not\_found}, \texttt{other} o \texttt{unknown}), una
+fotografía, notas libres, el autor y la marca temporal de la observación. El estado
+\texttt{unknown} es deliberado: permite ingresar una observación cuyo estado no consta
+---típicamente, un registro histórico importado--- sin forzar una afirmación que la
+fuente no respalda.
+
+\subsection{Captura en terreno}
+
+En el portal del censador (Sección~\ref{sec:ui}), toda parada genera una observación,
+tanto si el árbol se visita como si se omite. Al registrar una visita, el censador
+selecciona el estado del árbol y captura una fotografía; la fotografía es
+\textbf{obligatoria} en este caso, y la confirmación permanece deshabilitada mientras
+no se haya tomado. La razón es de auditoría: la fotografía es la única evidencia
+verificable de que el censador estuvo frente al árbol, y sin ella la observación es
+un dato no contrastable.
+
+La captura se realiza con la cámara del dispositivo desde el propio navegador
+---solicitando la cámara trasera y comprimiendo el fotograma a JPEG--- y la
+observación viaja al servidor como \textit{multipart} cuando incluye imagen. Al
+omitir una parada, en cambio, el censador debe indicar un motivo (árbol inexistente,
+acceso bloqueado u otro) y la fotografía es \textbf{opcional}, pues el motivo típico
+de la omisión es justamente que no hay árbol que fotografiar. El estado de la
+observación se deriva del motivo: la omisión por árbol inexistente produce una
+observación \texttt{not\_found}, y cualquier otro motivo, una observación
+\texttt{unknown}. Así, incluso una parada omitida deja constancia histórica de por
+qué no se pudo censar.
+
+\subsection{Instantánea del histórico legado}
+
+La importación de una fuente legada no trae solo la posición de los árboles: trae
+también, en la misma transacción, sus observaciones previas, que se materializan como
+\texttt{TreeObservation} con el campo \texttt{source} marcando su procedencia. El
+resultado es que un árbol recién importado ya llega al sistema con su historial de
+campañas anteriores, y la primera visita del censador se registra como una
+observación más en esa serie ---esto es, como un re-censo y no como un censo inicial.
+
+El vínculo entre una observación legada y su árbol difiere según la fuente, pues los
+esquemas de origen no comparten estructura: en \texttt{legacy\_api} las muestras
+referencian al árbol directamente, mientras que en \texttt{legacy\_app} lo hacen a
+través del código QR físico adherido al árbol. En cuanto a las fotografías
+históricas, se conserva su URL (campo \texttt{photo\_url}) y no el archivo, ya que
+las imágenes residen en el almacenamiento del sistema anterior. En \texttt{legacy\_app}
+solo se importan aquellas cuya referencia comienza con \texttt{http}, descartando las
+rutas locales del dispositivo que la aplicación móvil previa registraba y que hoy no
+apuntan a nada; en \texttt{legacy\_api} basta con que la referencia no esté vacía, pues
+esa fuente solo almacena URL remotas.
+El estado se deriva del único campo disponible en el origen ---si la muestra fue o no
+completada---, mapeando la muestra completada a \texttt{alive} y el resto a
+\texttt{unknown}, en lugar de inferir un estado que la fuente no consigna.
+
+% ---- 2.6 -------------------------------------------------------
 \section{API REST}
 
 % TODO (copilot-prompts.md → §2.4):
@@ -233,9 +534,9 @@ grupos de recursos:
 
 \begin{itemize}
   \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de tokens JWT mediante \textit{djangorestframework-simplejwt}.
-  \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV con detección automática de columnas de coordenadas, consulta de estadísticas y exportación de árboles como \textit{GeoJSON FeatureCollection}.
-  \item \textbf{Optimización} (\texttt{/api/optimization/}): creación de trabajos de optimización, consulta de estado (para \textit{polling} desde el frontend), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
-  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, consulta de la ruta propia del censador y registro de visitas en terreno.
+  \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV con detección automática de columnas de coordenadas, exploración de las fuentes legadas y creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), consulta de estadísticas y exportación de árboles como \textit{GeoJSON FeatureCollection}.
+  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el frontend), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
+  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
 El sistema implementa dos roles: \textbf{Administrador} (acceso completo) y
@@ -255,6 +556,11 @@ el campo \texttt{role} del usuario. La Tabla~\ref{tab:endpoints} resume los
     POST  & \texttt{/api/auth/token/}                       & Autenticación y emisión de par de tokens JWT. \\
     POST  & \texttt{/api/datasets/}                         & Importación de árboles desde CSV. \\
     GET   & \texttt{/api/datasets/\{id\}/trees/}            & Árboles del \textit{dataset} en \textit{GeoJSON}. \\
+    GET   & \texttt{/api/datasets/legacy/areas/}            & Áreas legadas con campaña, conteo y polígono (Admin). \\
+    GET   & \texttt{/api/datasets/legacy/trees/}            & Arbolado legado de ambas fuentes, con marca de ya importado (Admin). \\
+    POST  & \texttt{/api/datasets/from-legacy-selection/}   & Crea un \textit{dataset} con los árboles seleccionados (Admin). \\
+    GET   & \texttt{/api/datasets/trees/\{id\}/observations/} & Historial de observaciones de un árbol. \\
+    GET   & \texttt{/api/optimization/estimate/}            & Estimación de flota sobre la matriz en caché (Admin). \\
     POST  & \texttt{/api/optimization/jobs/}                & Creación de un trabajo de optimización. \\
     GET   & \texttt{/api/optimization/jobs/\{id\}/}         & Estado del trabajo (\textit{polling}). \\
     GET   & \texttt{/api/optimization/solutions/\{id\}/}    & Métricas de una solución. \\
@@ -263,17 +569,15 @@ el campo \texttt{role} del usuario. La Tabla~\ref{tab:endpoints} resume los
     GET   & \texttt{/api/routes/geojson/}                   & Polilíneas de rutas en \textit{GeoJSON}. \\
     PATCH & \texttt{/api/routes/\{id\}/assign/}             & Asigna un censador a una ruta publicada (Admin). \\
     GET   & \texttt{/api/routes/my-route/}                  & Rutas del censador en el plan vigente. \\
-    POST  & \texttt{/api/routes/stops/\{id\}/visit/}        & Registro de visita de una parada. \\
+    POST  & \texttt{/api/routes/stops/\{id\}/visit/}        & Registro de visita de una parada y su observación. \\
+    POST  & \texttt{/api/routes/stops/\{id\}/skip/}         & Omisión de una parada con motivo y observación. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-% ---- 2.5 -------------------------------------------------------
+% ---- 2.7 -------------------------------------------------------
 \section{INTERFAZ DE USUARIO}
-
-% TODO (copilot-prompts.md → §2.5):
-% Describir el panel de administración: flujo CSV → optimización → mapa Leaflet.
-% Mencionar React 18 + Vite, Zustand, React Query (polling), shadcn/ui.
+\label{sec:ui}
 
 % DRAFT — revisar
 La interfaz se implementa como una \textit{Single Page Application} con React~18 y
@@ -283,10 +587,12 @@ de OpenStreetMap. La aplicación distingue dos experiencias según el rol del us
 el panel de administración y el portal del censador.
 
 El panel de administración comprende cinco etapas. En primer lugar, el administrador
-inicia sesión y obtiene un token JWT. En segundo lugar, importa un archivo CSV que
-genera un \textit{dataset} de árboles, visualizados como puntos sobre un mapa
-(\texttt{DatasetMap}). En tercer lugar, configura los parámetros temporales
-($T_{\min}$, $T_{\max}$, tiempo de servicio) y lanza el trabajo de optimización. En
+inicia sesión y obtiene un token JWT. En segundo lugar, constituye un
+\textit{dataset} de árboles, ya sea importando un archivo CSV o seleccionando el
+arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos
+el resultado se visualiza como puntos sobre un mapa (\texttt{DatasetMap}). En tercer
+lugar, configura los parámetros temporales ($T_{\min}$, $T_{\max}$, tiempo de
+servicio) y lanza el trabajo de optimización. En
 cuarto lugar, el estado del trabajo se monitorea mediante \textit{polling} automático
 con React Query, que consulta el endpoint de estado cada 3 segundos mientras el
 trabajo se encuentra en estado \texttt{queued} o \texttt{running} y detiene las
@@ -306,7 +612,10 @@ solo puede marcarse como visitada cuando las anteriores ya lo han sido. La ubica
 del censador se sigue mediante la API de geolocalización del navegador y se calcula la
 distancia \textit{haversine} a la parada activa; el registro de visita se habilita al
 entrar en un radio de proximidad de 30\,m, con la opción de forzar el registro
-(\textit{«Marcar de todos modos»}) cuando la señal GPS es imprecisa. Cada parada ofrece
+(\textit{«Marcar de todos modos»}) cuando la señal GPS es imprecisa. Tanto la visita
+como la omisión de una parada generan una observación del árbol, con captura
+fotográfica y estado, según el diseño descrito en la
+Sección~\ref{sec:recenso}. Cada parada ofrece
 un enlace directo (\textit{deep-link}) a la navegación peatonal de Google Maps. La
 pantalla se mantiene encendida durante el recorrido mediante la \textit{Screen Wake
 Lock API}, y una cola de operaciones offline básica ---persistencia del cliente de
