@@ -64,6 +64,16 @@
   }
 }
 
+@layer components {
+  /* leaflet.css gives popup paragraphs a 17px vertical margin. */
+  .leaflet-popup-content {
+    margin: 12px 14px;
+  }
+  .leaflet-popup-content p {
+    margin: 0;
+  }
+}
+
 @layer utilities {
   .pt-safe {
     padding-top: env(safe-area-inset-top);
