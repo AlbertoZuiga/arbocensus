@@ -1,6 +1,7 @@
 import numpy as np
 from apps.optimization.solver import build_open_matrix
 from apps.optimization.strategies import (
+    choose_k,
     kmeans,
     project_equirectangular,
     solve_cluster_first,
@@ -9,6 +10,11 @@ from apps.optimization.strategies import (
 
 SANTIAGO_LAT = -33.45
 SANTIAGO_LON = -70.65
+
+WALKING_SPEED_M_S = 1.2
+SERVICE_TIME_SEC = 120
+MIN_ROUTE_TIME_SEC = 7_200
+MAX_ROUTE_TIME_SEC = 10_800
 
 
 def unwrap(result):
@@ -175,6 +181,35 @@ def test_kmeans_assigns_every_point():
     labels = kmeans(coords, 3, seed=0)
     assert labels.shape[0] == coords.shape[0]
     assert set(labels.tolist()).issubset(set(range(3)))
+
+
+def grid_matrix(side, spacing_m=40.0):
+    cells = np.array([(row, col) for row in range(side) for col in range(side)])
+    manhattan = np.abs(cells[:, None, :] - cells[None, :, :]).sum(axis=2)
+    return manhattan * spacing_m / WALKING_SPEED_M_S
+
+
+def test_choose_k_sizes_fleet_from_nearest_neighbor_travel():
+    side = 40
+    n = side * side
+    k = choose_k(
+        n,
+        grid_matrix(side),
+        SERVICE_TIME_SEC,
+        MIN_ROUTE_TIME_SEC,
+        MAX_ROUTE_TIME_SEC,
+    )
+    # On a regular grid the nearest neighbor is one cell away, so per-tree work
+    # is service + one hop; the mean pairwise travel would be ~20x that.
+    expected = n * (SERVICE_TIME_SEC + 40.0 / WALKING_SPEED_M_S) / 9_000
+    assert 0.5 * expected <= k <= 2 * expected
+    assert k < 100
+
+
+def test_choose_k_never_exceeds_node_count():
+    n = 4
+    matrix = uniform_matrix(n, travel=10_000.0)
+    assert choose_k(n, matrix, 300, 600, 900) == n
 
 
 def test_kmeans_separates_distant_clusters():

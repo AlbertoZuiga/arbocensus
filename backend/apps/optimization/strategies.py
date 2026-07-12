@@ -1,6 +1,9 @@
 import numpy as np
 from apps.optimization.models import RoutingSolution
-from apps.optimization.n_estimator import average_pair_travel, estimate_max_vehicles
+from apps.optimization.n_estimator import (
+    estimate_max_vehicles,
+    mean_nearest_neighbor_travel,
+)
 from apps.optimization.route_metrics import EARTH_RADIUS_M
 from apps.optimization.solver import ArbocensusVRPSolver, build_open_matrix
 
@@ -123,8 +126,13 @@ def kmeans(coords, k, *, seed=0, max_iters=100):
 
 
 def choose_k(n, matrix, service_time_sec, min_route_time_sec, max_route_time_sec):
+    # Nearest-neighbor travel, not mean pairwise travel: a route visits consecutive
+    # stops, so the mean distance between ALL node pairs of a metro-wide matrix
+    # overstates per-tree travel by orders of magnitude and explodes k.
     t_target = (min_route_time_sec + max_route_time_sec) // 2
-    per_tree_work = service_time_sec + average_pair_travel(build_open_matrix(matrix))
+    per_tree_work = service_time_sec + mean_nearest_neighbor_travel(
+        build_open_matrix(matrix)
+    )
     k = max(1, round(n * per_tree_work / t_target))
     return min(k, n)
 
