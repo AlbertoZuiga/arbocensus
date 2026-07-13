@@ -11,9 +11,12 @@ fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con mediana de posición po
 código QR), de $N = 1\,607$ árboles. El conjunto no corresponde a una única
 comuna: reúne la totalidad del arbolado disponible en ambas bases legadas. Se
 emplean los parámetros temporales por defecto ($T_{\min} = 7\,200$\,s y
-$T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol, la
-estrategia \texttt{global} (\textit{default} de producción) y el tiempo límite
-de solver por defecto (180\,s). Se reportan seis indicadores: el número de
+$T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol y los
+\textit{defaults} de producción del motor: la estrategia \texttt{spatial\_term}
+---que agrega al objetivo un término de dispersión geográfica, véase la
+Sección~\ref{sec:estrategias}--- y un tiempo límite de solver de 120\,s, que es
+el valor que produce la heurística $\min(30 + 1.5\,n,\ 120)$ para cualquier
+\textit{dataset} de este tamaño. Se reportan seis indicadores: el número de
 rutas $k$ generado de forma automática por el solver, el tiempo promedio por
 ruta $\bar{T}$, la desviación estándar de los tiempos de ruta ---cuyo criterio
 de aceptación es que no supere el 15\,\% del promedio, en línea con el objetivo
@@ -33,11 +36,11 @@ tres repeticiones (semillas 42, 43 y 44).
     Métrica & Valor & Criterio \\
     \midrule
     Número de rutas $k$ & 25 & mínimo posible \\
-    Tiempo promedio por ruta & 9\,962\,s ($\approx$ 2\,h 46\,min) & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
-    Desviación estándar & 522\,s (5.2\,\% del promedio) & $< 15\,\%$ del promedio \\
+    Tiempo promedio por ruta & 10\,110\,s ($\approx$ 2\,h 49\,min) & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
+    Desviación estándar & 519\,s (5.1\,\% del promedio) & $< 15\,\%$ del promedio \\
     Rutas que exceden $T_{\max}$ & 0 & $= 0$ \\
     Árboles descartados & 0 (cobertura 1\,607/1\,607) & $= 0$ \\
-    Tiempo de cómputo (solver) & 158.7\,s ($\approx 2.6$ min) & $< 5$ min \\
+    Tiempo de cómputo (solver) & 120.0\,s ($= 2$ min) & $< 5$ min \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -51,47 +54,63 @@ rutas que excedían la cota por el redondeo hacia abajo---. La cobertura fue
 total: ninguna de las tres repeticiones descartó árboles, pese a que el modelo
 lo permite mediante disyunciones penalizadas.
 
-La desviación estándar reportada es el promedio de las desviaciones estándar
-calculadas dentro de cada repetición (496\,s, 501\,s y 569\,s), no la
-desviación del conjunto agregado de rutas. La semilla, por su parte, solo
-etiqueta la repetición: la estrategia \texttt{global} no consume aleatoriedad
+Las tres repeticiones agotaron el presupuesto completo de 120\,s del
+metaheurístico GLS (\textit{guided local search}) y convergieron a soluciones
+prácticamente idénticas: los tres valores de $k$, de balance y de desviación
+estándar coinciden, y el tiempo total de desplazamiento difiere en 19\,s entre
+la mejor y la peor repetición (59\,911\,s, 59\,892\,s y 59\,892\,s; media
+59\,898\,s), esto es, un 0.03\,\% de dispersión. La semilla solo etiqueta la
+repetición: ni \texttt{global} ni \texttt{spatial\_term} consumen aleatoriedad
 ---a diferencia de \texttt{cluster\_first}, que la usa para inicializar
 $k$-means--- y el solver de OR-Tools es determinista dados sus parámetros de
-entrada. La varianza observada entre repeticiones proviene del corte por reloj
-de pared del metaheurístico GLS (\textit{guided local search}): el número de
-iteraciones alcanzadas antes del corte depende de la carga de la máquina. Dos
-repeticiones agotaron el presupuesto completo de 180\,s y la tercera se detuvo
-en 116.1\,s, lo que arroja una media de 158.7\,s; esa detención temprana no
-implica convergencia a un óptimo, pues esa misma repetición entregó la peor de
-las tres soluciones (58\,429\,s de tiempo total de viaje, frente a 55\,052\,s y
-55\,103\,s de las otras dos).
+entrada. La única fuente de varianza es el corte por reloj de pared del GLS:
+agotar el mismo presupuesto de 120\,s no equivale a alcanzar el mismo número de
+iteraciones, que depende de la carga de la máquina. Esa varianza residual es la
+que produce los 19\,s de diferencia entre repeticiones ---las tres entregan la
+misma partición de árboles en rutas y difieren solo en el orden de visita
+interno de alguna de ellas---, y su magnitud, un 0.03\,\% del desplazamiento
+total, la vuelve irrelevante para las conclusiones. La desviación estándar
+reportada en la
+Tabla~\ref{tab:metricas} es el promedio de las desviaciones estándar calculadas
+dentro de cada repetición, no la desviación del conjunto agregado de rutas.
 
 El criterio de $< 5$ minutos se aplica al tiempo de cómputo del solver. El
 tiempo total del \textit{pipeline} depende de si la matriz de costos está en
-caché: con caché fría, la primera repetición tardó 363.3\,s en total, de los
-cuales 183.2\,s correspondieron a la construcción de la matriz de costos contra
+caché: con caché fría, la primera repetición tardó 299.3\,s en total, de los
+cuales 177.4\,s correspondieron a la construcción de la matriz de costos contra
 OSRM; con la matriz ya cacheada ---el caso de operación normal, dado que la
 clave de caché es estable para un mismo conjunto de árboles activos--- las
-repeticiones siguientes tardaron 180.6\,s y 116.8\,s en total.
+dos repeticiones siguientes tardaron 122.3\,s cada una.
 
 Comando reproducible (entorno \texttt{docker-compose.prod.yml}):
 
 \begin{verbatim}
 docker compose -f docker-compose.prod.yml run --rm backend \
   python manage.py baseline_sweep \
-    --dataset 98051e52-4785-42c9-9c83-72feb40714ed --strategies global \
-    --service-time 2 --t-max 3 --seeds 3 --time-limit 180 \
-    --csv /results/20260712-real-case-metrics.csv
+    --dataset 222fd8ff-44a4-43ed-8f3e-8f5b61ff6110 --strategies spatial_term \
+    --service-time 2 --t-max 3 --seeds 3 --time-limit 120 \
+    --csv /results/20260713-real-case-metrics-spatial.csv
 \end{verbatim}
 
 Los datos crudos de esta corrida (una fila por semilla) se conservan en el
-repositorio como \texttt{docs/experiments/20260712-real-case-metrics.csv}, que
-es el archivo escrito por el comando anterior dentro del contenedor. Su columna
-\texttt{target} arrastra el nombre del \textit{dataset} en la base de datos
-(\textit{Profiling RP2 - legacy completo}), reutilizado de un trabajo de
-perfilamiento previo; los resultados, en cambio, corresponden a esta corrida y
-no a las de aquel trabajo, que son anteriores a la corrección del redondeo de
-tránsito.
+repositorio como
+\texttt{docs/experiments/20260713-real-case-metrics-spatial.csv}, que es el
+archivo escrito por el comando anterior dentro del contenedor. El
+\textit{dataset} se reconstruyó para esta corrida con el mismo camino de código
+que la importación por selección desde las bases legadas, de modo que su
+identificador difiere del utilizado en la comparación de estrategias de la
+Sección~\ref{sec:comparacion-estrategias} aunque su contenido sea el mismo (los mismos
+1\,607 árboles: 429 de \texttt{legacy\_api} y 1\,178 de \texttt{legacy\_app}).
+Esa reconstrucción cambia el orden interno de los nodos y, con él, la
+trayectoria del GLS, lo que explica que el tiempo total de desplazamiento aquí
+reportado (59\,898\,s) y el de la corrida de comparación de estrategias para la
+misma variante (60\,611\,s) difieran en un 1.2\,\%; ambas cifras provienen de
+corridas distintas y no deben compararse arco a arco.
+
+Los resultados de la corrida anterior de referencia ---con la estrategia
+\texttt{global} y un tiempo límite de 180\,s, es decir, los \textit{defaults}
+previos al ajuste descrito en la Sección~\ref{sec:comparacion-estrategias}---
+se conservan en \texttt{docs/experiments/20260712-real-case-metrics.csv}.
 
 % ---- 3.1.2 ------------------------------------------------------
 \subsection{Comparación con Solución Greedy}
@@ -133,6 +152,7 @@ Tabla~\ref{tab:comparativa} contrastará ambos enfoques.
 
 % ---- 3.1.3 -----------------------------------------------------
 \subsection{Calidad geográfica de rutas y comparación de estrategias}
+\label{sec:comparacion-estrategias}
 
 Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se
 caracterizó la calidad espacial de la solución producida por la formulación
@@ -501,8 +521,10 @@ $T_{\min} = \min(7\,200\,\text{s}, T_{\max})$, sobre el \textit{dataset} real
 completo de $n=1\,607$ árboles (429 provenientes de la fuente
 \texttt{legacy\_api} y 1\,178 de \texttt{legacy\_app}, estas últimas con
 posición mediana por código QR). Cada variante se ejecutó con 3 semillas y un
-límite de solver de 180\,s, valor que coincide exactamente con el que produce
-la heurística de producción ($\min(30 + 1{,}5 \cdot n,\ 180)$) para ese tamaño.
+límite de solver de 180\,s, que era el tope vigente en producción al momento de
+este perfilamiento ($\min(30 + 1{,}5 \cdot n,\ 180)$ para ese tamaño); el tope
+se bajó a 120\,s justamente a partir del análisis de sensibilidad de la
+Tabla~\ref{tab:sensibilidad-tl}.
 La Tabla~\ref{tab:grilla-variantes} resume las medias por variante.
 
 \begin{table}[H]
