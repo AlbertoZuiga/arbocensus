@@ -24,7 +24,7 @@ const DEFAULTS = {
   minRouteTimeHours: 2,
   maxRouteTimeHours: 3,
   serviceTimeMinutes: 5,
-  strategy: "global",
+  strategy: "spatial_term",
 };
 
 const STRATEGY_OPTIONS = [
