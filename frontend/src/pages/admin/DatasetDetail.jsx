@@ -92,10 +92,12 @@ export default function DatasetDetail() {
           <Link to="/admin/datasets">← Datasets</Link>
         </Button>
         <h1 className="text-2xl font-semibold">{dataset?.name ?? "Dataset"}</h1>
+        <Button variant="outline" size="sm" className="ml-auto" asChild>
+          <Link to={`/admin/datasets/${id}/progress`}>📊 Avance</Link>
+        </Button>
         <Button
           variant={openPanel === "assign" ? "secondary" : "outline"}
           size="sm"
-          className="ml-auto"
           disabled={!solutionId}
           onClick={() => togglePanel("assign")}
         >
