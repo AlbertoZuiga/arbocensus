@@ -9,6 +9,10 @@
 % Nota: En LuaLaTeX / XeLaTeX no se requiere el paquete 'inputenc'
 \usepackage[T1]{fontenc}
 \usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
+% El \% de babel-spanish inspecciona \lastskip, lo que revienta con
+% "Incompatible glue units" en la pasada de medición de una columna X de
+% tabularx. Se desactiva y el espacio fino se escribe explícito (\,\%).
+\spanishplainpercent
 
 % ---- Fuente e Interlineado ------------------------------------
 \usepackage{mathptmx} % Times New Roman
