@@ -1,5 +1,18 @@
 \chapter{DISEÑO DEL PRODUCTO}
 
+% Las capturas de pantalla se depositan en docs/thesis/media/. Mientras un archivo
+% no exista, la figura se compila como marco vacío con la ruta esperada.
+\newcommand{\capturaui}[3]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{media/#1}%
+      {\includegraphics[width=0.9\textwidth]{media/#1}}%
+      {\fbox{\parbox[c][5cm][c]{0.86\textwidth}{\centering\ttfamily media/#1}}}
+    \caption{#2}
+    \label{#3}
+  \end{figure}%
+}
+
 \section{ARQUITECTURA DEL SISTEMA}
 La arquitectura del sistema sigue el patrón de monolito modular: un único servicio
 Django con módulos claramente separados por dominio
@@ -14,22 +27,46 @@ El motor de ruteo peatonal (OSRM) se despliega localmente en Docker, procesando
 datos de OpenStreetMap de Chile, lo que elimina costos de API y dependencias de red
 durante la optimización.
 
-% TODO: incluir diagrama de arquitectura (Figura \ref{fig:arquitectura}).
+La Figura~\ref{fig:arquitectura} resume las capas del sistema y el recorrido de una
+optimización: el navegador solicita el trabajo a la API, esta lo encola en Celery en
+lugar de resolverlo en el ciclo de la petición HTTP, y el \textit{worker} ejecuta el
+\textit{pipeline}, que consulta OSRM para construir la matriz de costos y persiste la
+solución en PostGIS. El \textit{frontend} consulta el estado del trabajo por
+\textit{polling} hasta que alcanza un estado terminal.
 
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=0.9\textwidth]{img/arquitectura.png}
-%   \caption{Arquitectura del sistema Arbocensus.}
-%   \label{fig:arquitectura}
-% \end{figure}
+\begin{figure}[H]
+  \centering
+  % babel-spanish activa '<' y '>'; sin esto, la punta de flecha (>=stealth) no compila
+  \shorthandoff{<>}%
+  \begin{tikzpicture}[
+      scale=0.85, transform shape,
+      capa/.style={draw, rounded corners=2pt, align=center, font=\small,
+                   minimum width=7.2cm, minimum height=1.15cm},
+      externo/.style={draw, dashed, rounded corners=2pt, align=center, font=\small,
+                      minimum width=3.6cm, minimum height=1.15cm},
+      flujo/.style={->, >=stealth, thick},
+      etiqueta/.style={font=\scriptsize, midway}
+    ]
+    \node[capa]    (p) at (0,0)      {Presentación\\ React 18 + Vite · React Query · Leaflet};
+    \node[capa]    (a) at (0,-2.2)   {API REST\\ Django REST Framework · JWT · permisos por rol};
+    \node[capa]    (l) at (0,-4.6)   {Lógica de dominio\\ importadores · \textit{pipeline} · OR-Tools};
+    \node[capa]    (d) at (0,-6.8)   {Datos\\ PostgreSQL + PostGIS};
+    \node[externo] (q) at (6.6,-2.2) {Celery + Redis\\ cola de tareas};
+    \node[externo] (o) at (-7.4,-4.6) {OSRM\\ red peatonal (OSM Chile)};
+
+    \draw[flujo] (p) -- (a) node[etiqueta,right] {JSON · \textit{Bearer} JWT};
+    \draw[flujo] (a) -- (l) node[etiqueta,right] {importación · consultas};
+    \draw[flujo] (l) -- (d) node[etiqueta,right] {GeoDjango · SRID 4326};
+    \draw[flujo] (a.east) -- (q.west) node[etiqueta,above] {encola el \textit{job}};
+    \draw[flujo] (q.south) -- (l.east) node[etiqueta,above,sloped] {ejecuta el \textit{pipeline}};
+    \draw[flujo,<->] (l.west) -- (o.east) node[etiqueta,above] {\texttt{/table} · \texttt{/route}};
+  \end{tikzpicture}
+  \caption{Arquitectura de Arbocensus. Trazo continuo: capas del monolito Django. Trazo discontinuo: servicios de apoyo desplegados como contenedores independientes.}
+  \label{fig:arquitectura}
+\end{figure}
 
 % ---- 2.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
-
-% TODO (copilot-prompts.md → §2.2):
-% Describir las entidades principales: Dataset, Tree, RoutingConfig, OptimizationJob,
-% RoutingSolution, Route, RouteStop, DistanceMatrix. Resaltar decisiones de diseño:
-% DistanceMatrix con SHA256 para caché, RouteStop como fuente de verdad del orden.
 
 Los modelos de dominio centrales son los siguientes:
 
@@ -56,7 +93,6 @@ mismo árbol legado aparezca dos veces en un \textit{dataset} sin restringir a l
 El orden de visita de cada ruta se deriva de \texttt{RouteStop.sequence};
 no existe un campo redundante de secuencia en \texttt{Route}.
 
-% DRAFT — revisar
 Cada \texttt{OptimizationJob} produce una \texttt{RoutingSolution} por cada estrategia
 de partición ejecutada (Sección~\ref{sec:estrategias}), lo que permite comparar los
 enfoques sobre un mismo conjunto de árboles. Para gobernar cuál de estas soluciones
@@ -70,17 +106,52 @@ solo se permite sobre la solución publicada, y el campo \texttt{surveyor} admit
 nulo (\texttt{SET\_NULL}), de modo que las rutas de soluciones no publicadas permanecen
 sin asignar hasta que el administrador defina el plan vigente.
 
-% TODO: incluir diagrama ER simplificado.
+La Figura~\ref{fig:er} presenta el modelo entidad-relación simplificado. Se omiten los
+atributos no estructurales y la relación auxiliar entre \texttt{TreeObservation} y el
+usuario que la registra (\texttt{created\_by}, anulable por la misma razón que
+\texttt{surveyor}). Todas las entidades usan claves primarias UUID.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      scale=0.82, transform shape,
+      entidad/.style={draw, fill=black!4, align=center, font=\small,
+                      minimum width=2.9cm, minimum height=0.95cm},
+      rel/.style={-, thick},
+      card/.style={font=\scriptsize, midway, inner sep=2pt}
+    ]
+    \node[entidad] (dm)  at (-4.4,0)    {DistanceMatrix};
+    \node[entidad] (ds)  at (0,0)       {Dataset};
+    \node[entidad] (rc)  at (4.4,0)     {RoutingConfig};
+    \node[entidad] (job) at (8.8,0)     {OptimizationJob};
+    \node[entidad] (tr)  at (0,-2.2)    {Tree};
+    \node[entidad] (sol) at (8.8,-2.2)  {RoutingSolution};
+    \node[entidad] (rt)  at (8.8,-4.4)  {Route};
+    \node[entidad] (rs)  at (4.4,-4.4)  {RouteStop};
+    \node[entidad] (obs) at (0,-6.6)    {TreeObservation};
+    \node[entidad] (us)  at (8.8,-6.6)  {CustomUser};
+
+    \draw[rel] (ds) -- (dm)  node[card,above] {1 : 1};
+    \draw[rel] (ds) -- (rc)  node[card,above] {1 : N};
+    \draw[rel] (rc) -- (job) node[card,above] {1 : N};
+    \draw[rel] (ds) -- (tr)  node[card,right] {1 : N};
+    \draw[rel] (job) -- (sol) node[card,right] {1 : N};
+    \draw[rel] (sol) -- (rt) node[card,right] {1 : N};
+    \draw[rel] (rt) -- (rs)  node[card,above] {1 : N};
+    \draw[rel] (rs) -- (tr)  node[card,above,sloped] {N : 1};
+    \draw[rel] (tr) -- (obs) node[card,right] {1 : N};
+    \draw[rel] (rs) -- (obs) node[card,above,sloped] {1 : N};
+    \draw[rel] (rt) -- (us)  node[card,right] {N : 1};
+  \end{tikzpicture}
+  \caption{Modelo entidad-relación simplificado. \texttt{DistanceMatrix} cachea la matriz de tiempos del \textit{dataset}; \texttt{RouteStop} es la fuente de verdad del orden de visita; \texttt{TreeObservation} sobrevive al plan de rutas que la originó.}
+  \label{fig:er}
+\end{figure}
 
 % ---- 2.3 -------------------------------------------------------
 \section{MOTOR DE OPTIMIZACIÓN}
 
 % ---- 2.3.1 ------------------------------------------------------
 \subsection{Formulación del Problema}
-
-% TODO (copilot-prompts.md → §2.3.1):
-% Formalizar el Open mTSP con restricciones de tiempo. Usar la notación del
-% PROBLEM_STATEMENT.md. Definir P, c(pi,pj), s, Tmin, Tmax, Tr.
 
 El problema se define formalmente sobre un conjunto de puntos
 $P = \{p_1, p_2, \ldots, p_n\}$ correspondientes a las ubicaciones geográficas
@@ -117,10 +188,6 @@ Las rutas son abiertas: no existe un punto de inicio ni de término predefinido.
 % ---- 2.3.2 ------------------------------------------------------
 \subsection{Construcción de la Matriz de Costos}
 \label{sec:matriz}
-
-% TODO (copilot-prompts.md → §2.3.2):
-% Describir OSRMCostMatrixBuilder: endpoint /table/v1/foot, orden lon,lat,
-% reemplazo de nulls por penalización, caché SHA-256.
 
 La matriz de costos $C \in \mathbb{R}^{n \times n}$ se construye consultando el
 endpoint \texttt{/table/v1/foot} de OSRM, que devuelve los tiempos de caminata
@@ -318,10 +385,15 @@ la duración de las rutas, pero no incorpora ningún criterio geográfico explí
 en la partición de los nodos. Como consecuencia, las rutas se agrupan por
 proximidad temporal y no espacial, lo que produce \textit{solapamiento}
 (\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
-(véase la Sección de resultados). Para comparar enfoques, el sistema ejecuta las tres estrategias automáticamente
-en cada trabajo de optimización y persiste una \texttt{RoutingSolution}
-independiente por estrategia. La estrategia \texttt{global} reproduce el
-comportamiento de la formulación anterior sin cambios.
+(véase la Sección de resultados). El sistema implementa por ello tres estrategias de
+partición, seleccionables al crear el trabajo de optimización mediante el campo
+\texttt{strategy}. Un cuarto valor, \texttt{compare}, ejecuta las tres sobre el mismo
+conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por
+estrategia, lo que permite contrastarlas bajo una misma matriz de costos y un mismo
+presupuesto de solver; es el modo con que se produjeron las comparaciones del
+Capítulo~\ref{cap:resultados}. La estrategia \texttt{global} reproduce el
+comportamiento de la formulación anterior sin cambios y es la seleccionada por
+defecto.
 
 \begin{itemize}
   \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
@@ -349,8 +421,6 @@ comportamiento de la formulación anterior sin cambios.
 % ---- 2.4 -------------------------------------------------------
 \section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
 \label{sec:legacy}
-
-% DRAFT — revisar
 
 El sistema no parte de cero: existen dos bases de datos operativas de versiones
 anteriores del proyecto Arbocensus, que contienen el arbolado ya catastrado en
@@ -449,11 +519,11 @@ creación. El resultado es que el recorte territorial del censo es una decisión
 explícita del administrador, tomada sobre la evidencia cartográfica, y no una
 consecuencia de cómo estaban organizadas las áreas en el sistema anterior.
 
+\capturaui{ui-legacy-import.png}{Mapa de selección de arbolado legado (\texttt{/admin/datasets/legacy-import}): polígonos de las áreas de censo, marcadores coloreados por estado (disponible, seleccionado, ya importado) y panel lateral de la selección acumulada.}{fig:ui_legacy}
+
 % ---- 2.5 -------------------------------------------------------
 \section{RE-CENSO Y REGISTRO DE OBSERVACIONES}
 \label{sec:recenso}
-
-% DRAFT — revisar
 
 Un censo de arbolado urbano no es un evento único sino un proceso recurrente: el
 valor del catastro está en poder comparar el estado de un árbol entre campañas
@@ -523,27 +593,24 @@ completada---, mapeando la muestra completada a \texttt{alive} y el resto a
 % ---- 2.6 -------------------------------------------------------
 \section{API REST}
 
-% TODO (copilot-prompts.md → §2.4):
-% Describir los endpoints principales agrupados por recurso: auth, datasets,
-% optimization, routes. Mencionar autenticación JWT, roles Admin/Surveyor,
-% polling de estado del job.
-
-% DRAFT — revisar
 La API REST se implementa con Django REST Framework y expone los siguientes
 grupos de recursos:
 
 \begin{itemize}
-  \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de tokens JWT mediante \textit{djangorestframework-simplejwt}.
-  \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV con detección automática de columnas de coordenadas, exploración de las fuentes legadas y creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), consulta de estadísticas y exportación de árboles como \textit{GeoJSON FeatureCollection}.
+  \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de tokens JWT mediante \textit{djangorestframework-simplejwt}, consulta del usuario en sesión y administración de las cuentas de censadores.
+  \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV o JSON con detección automática de las columnas de coordenadas, exploración de las fuentes legadas y creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y exportación de árboles como \textit{GeoJSON FeatureCollection}.
   \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el frontend), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
   \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
 El sistema implementa dos roles: \textbf{Administrador} (acceso completo) y
 \textbf{Censador} (lectura de las rutas propias del plan vigente y registro de
-visitas). La autorización se resuelve por rol mediante permisos personalizados sobre
-el campo \texttt{role} del usuario. La Tabla~\ref{tab:endpoints} resume los
-\textit{endpoints} más relevantes.
+visitas). La autorización se resuelve por rol mediante los permisos propios
+\texttt{IsAdminRole} e \texttt{IsSurveyorRole}, definidos sobre el campo
+\texttt{role} del usuario y no sobre los permisos estándar del \textit{framework},
+que validan el atributo \texttt{is\_staff} de Django ---un concepto ajeno al rol de
+negocio. La Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes;
+el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
 
 \begin{table}[H]
   \centering
@@ -554,7 +621,7 @@ el campo \texttt{role} del usuario. La Tabla~\ref{tab:endpoints} resume los
     Método & Ruta & Descripción \\
     \midrule
     POST  & \texttt{/api/auth/token/}                       & Autenticación y emisión de par de tokens JWT. \\
-    POST  & \texttt{/api/datasets/}                         & Importación de árboles desde CSV. \\
+    POST  & \texttt{/api/datasets/}                         & Importación de árboles desde CSV o JSON. \\
     GET   & \texttt{/api/datasets/\{id\}/trees/}            & Árboles del \textit{dataset} en \textit{GeoJSON}. \\
     GET   & \texttt{/api/datasets/legacy/areas/}            & Áreas legadas con campaña, conteo y polígono (Admin). \\
     GET   & \texttt{/api/datasets/legacy/trees/}            & Arbolado legado de ambas fuentes, con marca de ya importado (Admin). \\
@@ -579,7 +646,6 @@ el campo \texttt{role} del usuario. La Tabla~\ref{tab:endpoints} resume los
 \section{INTERFAZ DE USUARIO}
 \label{sec:ui}
 
-% DRAFT — revisar
 La interfaz se implementa como una \textit{Single Page Application} con React~18 y
 Vite. El estado de servidor se gestiona con React Query y el estado de sesión
 (autenticación, notificaciones) con Zustand; los mapas emplean Leaflet sobre teselas
@@ -592,18 +658,27 @@ inicia sesión y obtiene un token JWT. En segundo lugar, constituye un
 arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos
 el resultado se visualiza como puntos sobre un mapa (\texttt{DatasetMap}). En tercer
 lugar, configura los parámetros temporales ($T_{\min}$, $T_{\max}$, tiempo de
-servicio) y lanza el trabajo de optimización. En
+servicio), elige la estrategia de partición ---o la opción \textit{«Comparar las
+3»}--- y lanza el trabajo de optimización. En
 cuarto lugar, el estado del trabajo se monitorea mediante \textit{polling} automático
 con React Query, que consulta el endpoint de estado cada 3 segundos mientras el
 trabajo se encuentra en estado \texttt{queued} o \texttt{running} y detiene las
-consultas al alcanzar un estado terminal. Finalmente, se presentan las rutas
-resultantes: dado que cada trabajo produce una solución por estrategia de partición,
-un componente de pestañas (\texttt{StrategyTabs}) permite alternar entre las
-soluciones \texttt{global}, \texttt{spatial\_term} y \texttt{cluster\_first} y
-comparar sus métricas. Las rutas se dibujan como polilíneas coloreadas que siguen la
+consultas al alcanzar un estado terminal o al superar los 15 minutos desde su
+creación, de modo que un trabajo colgado no deja al navegador consultando
+indefinidamente. Finalmente, se presentan las rutas resultantes: cuando el trabajo
+ejecutó más de una estrategia, un componente de pestañas (\texttt{StrategyTabs})
+permite alternar entre las soluciones \texttt{global}, \texttt{spatial\_term} y
+\texttt{cluster\_first} y comparar sus métricas; cuando ejecutó una sola, la muestra
+como una etiqueta fija. Las rutas se dibujan como polilíneas coloreadas que siguen la
 red de calles real, obtenidas del trazado peatonal que devuelve OSRM. Desde esta vista
 el administrador publica la solución elegida como plan vigente y asigna cada ruta a un
 censador.
+
+\capturaui{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos (\texttt{/admin/datasets}).}{fig:ui_datasets}
+
+\capturaui{ui-optimization.png}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/<id>}): mapa de árboles, formulario de parámetros temporales y de estrategia, y panel de seguimiento del trabajo de optimización.}{fig:ui_optimization}
+
+\capturaui{ui-routes.png}{Rutas de una solución (\texttt{/admin/datasets/<id>/jobs/<job>}): pestañas de estrategia con sus métricas, polilíneas coloreadas sobre la red peatonal y asignación de censadores.}{fig:ui_routes}
 
 El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first}
 orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente
@@ -622,5 +697,4 @@ Lock API}, y una cola de operaciones offline básica ---persistencia del cliente
 React Query en \texttt{localStorage} con reanudación de mutaciones pausadas--- permite
 que el registro de visitas realizado sin conexión se sincronice al recuperar la red.
 
-% TODO: incluir capturas de pantalla de las vistas principales (Figura \ref{fig:ui_datasets},
-%        \ref{fig:ui_optimization}, \ref{fig:ui_routes}).
+\capturaui{ui-surveyor.png}{Portal del censador (\texttt{/}, vista \textit{mobile}): parada activa, distancia a la parada, captura fotográfica y registro de visita u omisión.}{fig:ui_surveyor}

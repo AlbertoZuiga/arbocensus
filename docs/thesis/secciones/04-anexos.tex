@@ -3,12 +3,229 @@
 
 \section*{Anexo 1. Documentación de la API REST}
 \addcontentsline{toc}{section}{Anexo 1. Documentación de la API REST}
-% TODO: incluir tabla de endpoints o referencia.
+
+La API se implementa con Django REST Framework y se publica bajo el prefijo
+\texttt{/api/}. La autenticación es por \textit{JSON Web Token} mediante
+\textit{djangorestframework-simplejwt}: el cliente obtiene un par de tokens en
+\texttt{POST /api/auth/token/} y envía el token de acceso en la cabecera
+\texttt{Authorization: Bearer <token>}. La vigencia por defecto es de 60 minutos
+para el token de acceso y de 7 días para el de refresco, ambas configurables por
+variable de entorno.
+
+La autorización se resuelve sobre el campo \texttt{role} del usuario mediante dos
+permisos propios del proyecto, \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, y no
+sobre los permisos estándar de Django REST Framework: \texttt{IsAdminUser} valida el
+atributo \texttt{is\_staff}, que en este sistema no representa el rol de negocio. En
+las tablas siguientes, la columna \textbf{Permiso} distingue cuatro niveles:
+\textit{Público} (sin autenticación), \textit{Autenticado} (cualquier usuario con
+sesión válida), \textit{Admin} (\texttt{IsAdminRole}) y \textit{Censador}
+(\texttt{IsSurveyorRole}).
+
+Los listados se paginan con \texttt{PageNumberPagination} a 20 elementos por página.
+Las respuestas geográficas siguen el formato \textit{GeoJSON}
+(\textit{FeatureCollection}), con coordenadas en el orden \texttt{[lon, lat]} que
+exige el estándar.
+
+\begin{table}[H]
+  \centering
+  \caption{Anexo 1a. Endpoints de autenticación y administración de usuarios.}
+  \label{tab:anexo_api_auth}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
+    \toprule
+    Método y ruta & Permiso & Devuelve \\
+    \midrule
+    \texttt{POST /api/auth/token/}          & Público      & Par de tokens JWT (\texttt{access}, \texttt{refresh}) a partir de usuario y contraseña. \\
+    \texttt{POST /api/auth/token/refresh/}  & Público      & Nuevo token de acceso a partir de un token de refresco válido. \\
+    \texttt{GET /api/auth/me/}              & Autenticado  & Usuario en sesión: \texttt{id}, \texttt{username}, \texttt{email} y \texttt{role}. Es la consulta que usa el \textit{frontend} para decidir qué interfaz mostrar. \\
+    \texttt{GET /api/auth/surveyors/}       & Admin        & Censadores registrados, para poblar el selector de asignación de rutas. \\
+    \texttt{GET /api/auth/users/}           & Admin        & Listado paginado de usuarios. \\
+    \texttt{POST /api/auth/users/}          & Admin        & Crea un usuario. La contraseña es de solo escritura y se valida con las reglas de contraseña de Django. \\
+    \texttt{GET /api/auth/users/\{id\}/}    & Admin        & Detalle de un usuario. \\
+    \texttt{PATCH /api/auth/users/\{id\}/}  & Admin        & Actualiza rol, estado o contraseña. Rechaza que un administrador se degrade o desactive a sí mismo, y que se elimine el último administrador activo. \\
+    \texttt{DELETE /api/auth/users/\{id\}/} & Admin        & Desactivación lógica (\texttt{is\_active = false}); el usuario no se borra, para no arrastrar sus observaciones históricas. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Anexo 1b. Endpoints de \textit{datasets} e importación legada.}
+  \label{tab:anexo_api_datasets}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
+    \toprule
+    Método y ruta & Permiso & Devuelve \\
+    \midrule
+    \texttt{GET /api/datasets/}                       & Autenticado & Listado paginado de \textit{datasets} con su número de árboles. \\
+    \texttt{POST /api/datasets/}                      & Admin       & Crea un \textit{dataset} importando un archivo \texttt{.csv} o \texttt{.json} (\textit{multipart}). Detecta las columnas de coordenadas por nombre (\texttt{lat}/\texttt{latitude}/\texttt{latitud} y \texttt{lon}/\texttt{lng}/\texttt{longitude}/\texttt{longitud}) e infiere el delimitador del CSV. Devuelve el \textit{dataset} creado y \texttt{skipped\_rows}, el número de filas descartadas por coordenada faltante. \\
+    \texttt{GET /api/datasets/\{id\}/}                & Autenticado & Detalle de un \textit{dataset}. \\
+    \texttt{PATCH /api/datasets/\{id\}/}              & Admin       & Actualiza nombre o descripción. \\
+    \texttt{DELETE /api/datasets/\{id\}/}             & Admin       & Elimina el \textit{dataset} y, en cascada, sus árboles y soluciones. \\
+    \texttt{GET /api/datasets/\{id\}/trees/}          & Autenticado & Árboles activos del \textit{dataset} como \textit{FeatureCollection} de puntos. \\
+    \texttt{GET /api/datasets/legacy/areas/}          & Admin       & Áreas de censo de la fuente legada con su campaña, su número de árboles y su polígono. Responde 503 si la fuente no está configurada. \\
+    \texttt{GET /api/datasets/legacy/trees/}          & Admin       & Arbolado de ambas fuentes legadas con su posición, su especie, el área que lo contiene y la marca \texttt{already\_imported}. \\
+    \texttt{POST /api/datasets/from-legacy-selection/} & Admin      & Crea un \textit{dataset} en una única transacción a partir de una lista de árboles identificados por el par (\texttt{source}, \texttt{external\_id}), junto con su histórico de observaciones. \\
+    \texttt{POST /api/datasets/import-legacy/}        & Admin       & Importa un área completa (\texttt{area\_id}) o la fuente entera (\texttt{area\_id} con valor \texttt{all}) sin selección previa. Atajo programático sin interfaz asociada. \\
+    \texttt{GET /api/datasets/trees/\{id\}/observations/} & Autenticado & Historial completo de observaciones de un árbol, incluidas las importadas de las fuentes legadas. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Anexo 1c. Endpoints del motor de optimización.}
+  \label{tab:anexo_api_optimization}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
+    \toprule
+    Método y ruta & Permiso & Devuelve \\
+    \midrule
+    \texttt{GET /api/optimization/estimate/}                 & Admin       & Estimación de flota para un \textit{dataset} (parámetros de consulta \texttt{dataset}, \texttt{min\_route\_time\_sec} y \texttt{service\_time\_sec}). Se evalúa sobre la matriz de costos en caché y no dispara consultas a OSRM: si el \textit{dataset} no tiene matriz calculada, devuelve \texttt{n\_estimated} nulo. \\
+    \texttt{POST /api/optimization/jobs/}                    & Admin       & Crea la \texttt{RoutingConfig} ($T_{\min}$, $T_{\max}$, tiempo de servicio) y encola el \texttt{OptimizationJob} en Celery. El campo \texttt{strategy} admite \texttt{global}, \texttt{spatial\_term}, \texttt{cluster\_first} o \texttt{compare} (ejecuta las tres y produce una solución por estrategia). \\
+    \texttt{GET /api/optimization/jobs/}                     & Admin       & Historial de trabajos, filtrable por \texttt{dataset}. \\
+    \texttt{GET /api/optimization/jobs/\{id\}/}              & Admin       & Estado del trabajo (\texttt{queued}, \texttt{running}, \texttt{completed}, \texttt{failed}), sus métricas, los árboles descartados y el mapa \texttt{solution\_ids} de estrategia a solución. Es el \textit{endpoint} que el \textit{frontend} consulta por \textit{polling}. \\
+    \texttt{GET /api/optimization/solutions/\{id\}/}         & Autenticado & Métricas de una solución: número de rutas, tiempo total de desplazamiento, puntaje de balance, métricas espaciales y tiempos por fase del \textit{pipeline}. El censador solo accede a las soluciones que contienen rutas suyas. \\
+    \texttt{POST /api/optimization/solutions/\{id\}/publish/}   & Admin    & Publica la solución como plan vigente del \textit{dataset} y despublica atómicamente la anterior. \\
+    \texttt{POST /api/optimization/solutions/\{id\}/unpublish/} & Admin    & Retira la solución del plan vigente. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Anexo 1d. Endpoints de rutas y captura en terreno.}
+  \label{tab:anexo_api_routes}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
+    \toprule
+    Método y ruta & Permiso & Devuelve \\
+    \midrule
+    \texttt{GET /api/routes/}                    & Autenticado & Rutas con sus tiempos y su avance (visitadas, pendientes, omitidas), filtrables por \texttt{solution\_id}. El censador solo ve las rutas asignadas a él. \\
+    \texttt{GET /api/routes/\{id\}/}             & Autenticado & Detalle de una ruta, incluidas sus paradas ordenadas por \texttt{sequence}. \\
+    \texttt{GET /api/routes/geojson/}            & Autenticado & Polilíneas de todas las rutas de una solución (\texttt{solution\_id} obligatorio) como \textit{FeatureCollection} de \textit{LineString}, trazadas sobre la red peatonal real que devuelve OSRM. \\
+    \texttt{GET /api/routes/\{id\}/path/}        & Autenticado & Trazado peatonal de una sola ruta. \\
+    \texttt{PATCH /api/routes/\{id\}/assign/}    & Admin       & Asigna o desasigna un censador. Solo se permite sobre rutas de la solución publicada. \\
+    \texttt{GET /api/routes/my-route/}           & Censador    & Rutas propias del plan vigente; excluye por construcción las rutas de soluciones no publicadas. \\
+    \texttt{POST /api/routes/stops/\{id\}/visit/} & Censador   & Marca la parada como visitada y crea su \texttt{TreeObservation} (estado, fotografía y notas; \textit{multipart} cuando incluye imagen). Rechaza la visita si alguna parada anterior sigue pendiente. \\
+    \texttt{POST /api/routes/stops/\{id\}/skip/}  & Censador   & Omite la parada con un motivo obligatorio y crea la observación correspondiente, derivando su estado del motivo. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
 \section*{Anexo 2. Script de Demostración (\texttt{seed\_demo})}
 \addcontentsline{toc}{section}{Anexo 2. Script de Demostración}
-% TODO: describir el management command seed_demo:
-%   - perfiles de carga --profile {light=15, medium=50, heavy=200} y el flag
-%     --optimize/--no-optimize (light sólo siembra datos; medium/heavy resuelven).
-%   - distribuciones --distribution {uniform, clustered, multizone} y --snap (OSRM).
-%   - el comando baseline_sweep y el registro de experimentos en docs/experiments/.
+
+El comando de gestión \texttt{seed\_demo} construye un \textit{dataset} sintético y
+reproducible sobre un rectángulo de Santiago
+(latitud $[-33{,}45,\,-33{,}41]$; longitud $[-70{,}66,\,-70{,}58]$), de modo que la
+plataforma pueda demostrarse y perfilarse sin depender de la disponibilidad de las
+bases legadas. La generación es determinista: fijada la semilla
+(\texttt{--seed}, $42$ por defecto), el mismo comando produce siempre el mismo
+conjunto de puntos.
+
+Se ejecuta dentro del contenedor \textit{backend}, que es donde residen las
+dependencias geográficas (GDAL) y la conexión a PostGIS:
+
+\begin{verbatim}
+docker compose exec backend python manage.py seed_demo --profile light
+docker compose exec backend python manage.py seed_demo \
+    --trees 80 --distribution clustered --clusters 5 --snap
+\end{verbatim}
+
+\begin{table}[H]
+  \centering
+  \caption{Anexo 2. Parámetros del comando \texttt{seed\_demo}.}
+  \label{tab:anexo_seed_demo}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} X@{}}
+    \toprule
+    Parámetro & Efecto \\
+    \midrule
+    \texttt{--profile \{light, medium, heavy\}} & Perfiles predefinidos de carga: $15$, $50$ y $200$ árboles. \texttt{light} solo siembra datos; \texttt{medium} y \texttt{heavy} además resuelven el problema de ruteo. \\
+    \texttt{--trees N}                          & Número de árboles cuando no se usa un perfil (por defecto $40$; mínimo $2$). \\
+    \texttt{--distribution \{uniform, clustered, multizone\}} & Distribución espacial de los puntos. \texttt{uniform} muestrea el rectángulo completo; \texttt{clustered} genera nubes gaussianas de $250$\,m de dispersión en torno a centros aleatorios; \texttt{multizone} reparte los árboles entre tres zonas fijas de radios y pesos distintos, imitando la densidad desigual de un censo real. \\
+    \texttt{--clusters K}                       & Número de centros de la distribución \texttt{clustered} (por defecto $4$). \\
+    \texttt{--snap}                             & Proyecta cada punto generado al segmento de calle más cercano consultando \texttt{/nearest/v1/foot} de OSRM. Sin esta opción los árboles pueden caer en el interior de manzanas, lo que degrada los tiempos de la matriz de costos. \\
+    \texttt{--seed S}                           & Semilla del generador pseudoaleatorio (por defecto $42$). \\
+    \texttt{--name}                             & Nombre del \textit{dataset} creado (por defecto \textit{«Demo Santiago»}). \\
+    \texttt{--optimize / --no-optimize}         & Fuerza o inhibe la ejecución del \textit{pipeline} de optimización sobre el \textit{dataset} recién creado, con independencia del perfil. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+El comando crea un \texttt{Dataset} y sus \texttt{Tree} (un \texttt{PointField} por
+árbol, SRID 4326) y, cuando el perfil o el \textit{flag} lo indican, crea además la
+\texttt{RoutingConfig} con los parámetros por defecto ($T_{\min} = 7\,200$\,s,
+$T_{\max} = 10\,800$\,s, tiempo de servicio $300$\,s), el \texttt{OptimizationJob}
+correspondiente y ejecuta el \textit{pipeline} de forma síncrona ---sin pasar por
+Celery---, lo que persiste la \texttt{RoutingSolution} con sus \texttt{Route} y
+\texttt{RouteStop}. La ejecución síncrona es deliberada: permite reproducir una
+corrida completa desde la línea de comandos sin levantar el \textit{worker}.
+
+El \textit{dataset} de la evaluación de esta memoria no proviene de este comando sino
+de las fuentes legadas (Sección~\ref{sec:legacy}); \texttt{seed\_demo} cubre la
+demostración funcional y las pruebas de carga sintéticas.
+
+\section*{Anexo 3. Comandos reproducibles de los experimentos}
+\addcontentsline{toc}{section}{Anexo 3. Comandos reproducibles de los experimentos}
+
+Los resultados del Capítulo~\ref{cap:resultados} se obtuvieron con el comando de
+gestión \texttt{baseline\_sweep}, que barre el producto cartesiano de estrategias,
+tiempos de servicio, cotas $T_{\max}$ y repeticiones sobre un mismo \textit{dataset},
+y emite una fila de CSV por corrida con las métricas de calidad de ruta y los tiempos
+por fase del \textit{pipeline}. Cada ejecución escribe además un informe en
+\texttt{docs/experiments/}, con su comando, sus parámetros y sus métricas.
+
+\begin{table}[H]
+  \centering
+  \caption{Anexo 3. Parámetros del comando \texttt{baseline\_sweep}.}
+  \label{tab:anexo_baseline_sweep}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} X@{}}
+    \toprule
+    Parámetro & Efecto \\
+    \midrule
+    \texttt{--dataset <uuid>}       & Barre un \textit{dataset} real ya existente. Si se omite, el comando genera \textit{datasets} sintéticos según \texttt{--sizes} y \texttt{--distribution}. \\
+    \texttt{--strategies}           & Lista separada por comas: \texttt{global}, \texttt{spatial\_term}, \texttt{cluster\_first}. \\
+    \texttt{--service-time}         & Lista de tiempos de servicio por árbol, en minutos. \\
+    \texttt{--t-max}                & Lista de duraciones máximas de ruta, en horas. \\
+    \texttt{--seeds N} / \texttt{--base-seed} & Número de repeticiones y semilla inicial. Sobre un \textit{dataset} real la semilla solo etiqueta la repetición: el solver es determinista dados sus parámetros y la varianza observable proviene del corte por tiempo de reloj de la búsqueda local. \\
+    \texttt{--time-limit <s>}       & Fija el límite de tiempo del solver, en lugar de la heurística del \textit{pipeline} ($\min(30 + 1{,}5\,n,\;180)$ segundos). \\
+    \texttt{--csv <ruta>}           & Ruta del CSV de salida. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+El barrido de perfilado por fases ---seis variantes operacionales de tiempo de
+servicio y $T_{\max}$ sobre el \textit{dataset} real, con la estrategia \texttt{global}
+y tres repeticiones--- se reproduce con:
+
+\begin{verbatim}
+docker compose -f docker-compose.prod.yml run --rm backend \
+    python manage.py baseline_sweep \
+      --dataset <uuid> --strategies global \
+      --service-time 1,2,3 --t-max 2,3 --seeds 3 --time-limit 180 \
+      --csv /results/profiling-grid-full.csv
+\end{verbatim}
+
+Y la comparación directa de las tres estrategias de partición, bajo una misma
+variante operacional y un mismo presupuesto de solver, con:
+
+\begin{verbatim}
+docker compose -f docker-compose.prod.yml run --rm backend \
+    python manage.py baseline_sweep \
+      --dataset <uuid> \
+      --strategies global,spatial_term,cluster_first \
+      --service-time 2 --t-max 3 --seeds 3 --base-seed 42 --time-limit 120 \
+      --csv /results/strategy-comparison.csv
+\end{verbatim}
+
+Ambos barridos se ejecutan sobre las imágenes de producción
+(\texttt{docker-compose.prod.yml}) para que los tiempos medidos correspondan al
+entorno desplegado y no al de desarrollo. El protocolo completo de cada experimento
+---entorno, criterios de decisión fijados antes de correr, resultados y su análisis---
+se documenta en \texttt{docs/experiments/profiling-20260711.md} (perfilado por fases) y
+\texttt{docs/experiments/route-quality-20260712.md} (comparación de estrategias). Las
+cifras que sustentan el Capítulo~\ref{cap:resultados} provienen de los CSV
+depositados en ese mismo directorio.
