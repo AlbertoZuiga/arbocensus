@@ -9,12 +9,17 @@
 \tableofcontents
 \newpage
 
-\listoftables
+% \phantomsection antes de cada \addcontentsline: sin él las tres entradas
+% comparten el ancla del capítulo sin numerar anterior y sus enlaces del PDF
+% apuntan todos a AGRADECIMIENTOS.
+\phantomsection
 \addcontentsline{toc}{chapter}{ÍNDICE DE TABLAS}
+\listoftables
 \newpage
 
-\listoffigures
+\phantomsection
 \addcontentsline{toc}{chapter}{ÍNDICE DE ILUSTRACIONES}
+\listoffigures
 \newpage
 
 \chapter*{RESUMEN}

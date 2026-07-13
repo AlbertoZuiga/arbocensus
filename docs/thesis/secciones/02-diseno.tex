@@ -1,9 +1,11 @@
 \chapter{DISEÑO DEL PRODUCTO}
 
+% La cota de altura es obligatoria: la captura del portal del censador es
+% vertical, y a 0.9\textwidth su alto excede la caja de texto.
 \newcommand{\capturaui}[4]{%
   \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{media/#1}
+    \includegraphics[width=0.9\textwidth,height=0.75\textheight,keepaspectratio]{media/#1}
     \caption[#2]{#3}
     \label{#4}
   \end{figure}%
@@ -471,6 +473,7 @@ su posición, su especie, el área que lo contiene y una marca
 del sistema. Si la variable de entorno de una fuente no está configurada, el sistema
 responde con un código 503 explícito en lugar de degradarse silenciosamente.
 
+\begin{sloppypar}
 La materialización ocurre en un único paso transaccional mediante
 \texttt{POST /api/datasets/from-legacy-selection/}, que recibe el nombre del
 \textit{dataset} y la lista de árboles seleccionados. Cabe notar que el contrato
@@ -480,6 +483,7 @@ independientes, un \texttt{external\_id} por sí solo es ambiguo. El
 \textit{endpoint} crea el \texttt{Dataset}, sus \texttt{Tree} y el histórico de
 observaciones asociado (Sección~\ref{sec:recenso}) dentro de una misma transacción,
 de modo que un fallo parcial no deja \textit{datasets} a medio poblar.
+\end{sloppypar}
 
 Existe además un \textit{endpoint} auxiliar,
 \texttt{POST /api/datasets/import-legacy/}, que importa un área completa o la
@@ -609,14 +613,21 @@ que validan el atributo \texttt{is\_staff} de Django ---un concepto ajeno al rol
 negocio. La Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes;
 el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
 
-\begin{table}[H]
-  \centering
-  \caption{Endpoints principales de la API REST agrupados por recurso.}
-  \label{tab:endpoints}
-  \begin{tabularx}{\textwidth}{llX}
+% xltabular y no table+tabularx: con 18 filas la tabla no cabe en una página y,
+% al no poder partirse, se derramaba fuera de la caja de texto.
+\begin{xltabular}{\textwidth}{llX}
+    \caption{Endpoints principales de la API REST agrupados por recurso.}
+    \label{tab:endpoints} \\
     \toprule
     Método & Ruta & Descripción \\
     \midrule
+    \endfirsthead
+    \toprule
+    Método & Ruta & Descripción \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endlastfoot
     POST  & \texttt{/api/auth/token/}                       & Autenticación y emisión de par de tokens JWT. \\
     POST  & \texttt{/api/datasets/}                         & Importación de árboles desde CSV o JSON. \\
     GET   & \texttt{/api/datasets/\{id\}/trees/}            & Árboles del \textit{dataset} en \textit{GeoJSON}. \\
@@ -635,9 +646,7 @@ el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
     GET   & \texttt{/api/routes/my-route/}                  & Rutas del censador en el plan vigente. \\
     POST  & \texttt{/api/routes/stops/\{id\}/visit/}        & Registro de visita de una parada y su observación. \\
     POST  & \texttt{/api/routes/stops/\{id\}/skip/}         & Omisión de una parada con motivo y observación. \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+\end{xltabular}
 
 % ---- 2.7 -------------------------------------------------------
 \section{INTERFAZ DE USUARIO}

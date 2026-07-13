@@ -9,6 +9,10 @@
 % Nota: En LuaLaTeX / XeLaTeX no se requiere el paquete 'inputenc'
 \usepackage[T1]{fontenc}
 \usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
+% El \% de babel-spanish inspecciona \lastskip, lo que revienta con
+% "Incompatible glue units" en la pasada de medición de una columna X de
+% tabularx. Se desactiva y el espacio fino se escribe explícito (\,\%).
+\spanishplainpercent
 
 % ---- Fuente e Interlineado ------------------------------------
 \usepackage{mathptmx} % Times New Roman
@@ -19,7 +23,6 @@
 % ---- Formato de títulos (CORREGIDO PARA EVITAR ERRORES DE BABEL) ---
 \usepackage[explicit]{titlesec}
 
-\usepackage{graphicx}
 \usepackage{tikz}
 \usetikzlibrary{calc}
 
@@ -84,12 +87,15 @@
 \usepackage{float}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{xltabular}   % tabularx que puede partirse entre páginas
 \usepackage{amsmath}
 \usepackage{amssymb}     % Necesario para símbolos matemáticos como \mathbb{R}
-\usepackage{listings}
 \usepackage{xcolor}
-\usepackage{pdflscape}   
-\usepackage{pdfpages}    
+
+% Los identificadores de código (SetSpanCostCoefficientForAllVehicles, rutas de la
+% API) son palabras sin puntos de corte: sin esto desbordan el margen derecho.
+\usepackage[htt]{hyphenat}
+\emergencystretch=3em
 
 % ---- Citas y Metadatos -----------------------------------------
 \usepackage[authoryear,round]{natbib}
@@ -120,6 +126,10 @@
 \input{secciones/03-resultados}
 
 % Bibliografía
+% El \clearpage es necesario: sin él \addcontentsline registra la página en que
+% termina el capítulo 3, no aquella en que empieza la bibliografía.
+\clearpage
+\phantomsection
 \addcontentsline{toc}{chapter}{BIBLIOGRAFÍA}
 \bibliography{bibliography}
 
