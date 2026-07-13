@@ -11,7 +11,7 @@ from apps.optimization.strategies import solve_by_strategy
 from apps.routes.models import Route, RouteStop
 from django.db import transaction
 
-SOLVER_TIME_LIMIT_SEC = 180
+SOLVER_TIME_LIMIT_SEC = 120
 
 
 def estimate_fleet_from_cache(
