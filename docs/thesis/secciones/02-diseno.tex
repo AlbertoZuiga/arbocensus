@@ -473,6 +473,7 @@ su posición, su especie, el área que lo contiene y una marca
 del sistema. Si la variable de entorno de una fuente no está configurada, el sistema
 responde con un código 503 explícito en lugar de degradarse silenciosamente.
 
+\begin{sloppypar}
 La materialización ocurre en un único paso transaccional mediante
 \texttt{POST /api/datasets/from-legacy-selection/}, que recibe el nombre del
 \textit{dataset} y la lista de árboles seleccionados. Cabe notar que el contrato
@@ -482,6 +483,7 @@ independientes, un \texttt{external\_id} por sí solo es ambiguo. El
 \textit{endpoint} crea el \texttt{Dataset}, sus \texttt{Tree} y el histórico de
 observaciones asociado (Sección~\ref{sec:recenso}) dentro de una misma transacción,
 de modo que un fallo parcial no deja \textit{datasets} a medio poblar.
+\end{sloppypar}
 
 Existe además un \textit{endpoint} auxiliar,
 \texttt{POST /api/datasets/import-legacy/}, que importa un área completa o la
