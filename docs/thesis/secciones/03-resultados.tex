@@ -458,6 +458,27 @@ mediante el comando de gestión \texttt{baseline\_sweep}, verificado
 previamente sobre una corrida sintética de $n=80$
 (\texttt{20260711-231139-baseline-sweep.md}).
 
+Corresponde advertir que las cifras de esta sección provienen de un
+\textbf{régimen de medición anterior} al de la
+Sección~\ref{sec:comparacion-estrategias}: se obtuvieron con la estrategia
+\texttt{global}, un límite de solver de 180\,s y una versión del código previa a
+la corrección del redondeo del tránsito (el truncamiento entero descrito al
+final de la Sección~\ref{sec:variantes-duracion}). Ese régimen era el vigente
+durante el perfilamiento, y son precisamente sus resultados ---el análisis de
+sensibilidad de la Tabla~\ref{tab:sensibilidad-tl}--- los que motivaron el
+cambio de los \textit{defaults} de producción a \texttt{spatial\_term} con un
+límite de 120\,s; el perfil documenta, por tanto, el estado previo a esa
+decisión y no se reejecutó bajo el régimen nuevo. En consecuencia, sus tablas
+---en particular la grilla de seis variantes de la
+Tabla~\ref{tab:grilla-variantes}--- \textbf{no son comparables arco a arco} con
+las de la Sección~\ref{sec:comparacion-estrategias}, y no deben cruzarse con
+ellas como si midieran lo mismo: cualquier diferencia entre ambas estaría
+confundida entre tres causas simultáneas (estrategia, redondeo del tránsito y
+presupuesto de solver). La sección se conserva porque sus hallazgos son de
+\textit{tiempo} ---la dominancia del GLS, el carácter \textit{OSRM-bound} en
+frío y la sensibilidad de la calidad al presupuesto del solver--- y ninguno de
+los tres depende de esos factores.
+
 \subsection{Entorno de medición}
 
 Dado que el sistema no cuenta con un despliegue productivo, las mediciones se
@@ -558,6 +579,7 @@ para el mismo \textit{dataset} varió entre 29 y 180\,s, según si la búsqueda
 agota o no el presupuesto de tiempo asignado.
 
 \subsection{Variaciones de duración sobre el dataset real}
+\label{sec:variantes-duracion}
 
 Se evaluaron las seis combinaciones de tiempo de servicio por árbol
 $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h, con
