@@ -461,6 +461,28 @@ mediante el comando de gestión \texttt{baseline\_sweep}, verificado
 previamente sobre una corrida sintética de $n=80$
 (\texttt{20260711-231139-baseline-sweep.md}).
 
+Corresponde advertir que las cifras de esta sección provienen de un
+\textbf{régimen de medición anterior} al de la
+Sección~\ref{sec:comparacion-estrategias}: se obtuvieron con la estrategia
+\texttt{global}, un límite de solver de 180\,s y una versión del código previa a
+la corrección del redondeo del tránsito (el truncamiento entero descrito al
+final de la Sección~\ref{sec:variantes-duracion}). Ese era el régimen vigente en
+producción al momento del perfilamiento, y son sus propios resultados los que lo
+dejaron obsoleto: el análisis de sensibilidad de la
+Tabla~\ref{tab:sensibilidad-tl} es el que motivó bajar el límite de solver de
+180 a 120\,s, mientras que la adopción de \texttt{spatial\_term} como estrategia
+por defecto proviene del experimento de comparación de la
+Sección~\ref{sec:comparacion-estrategias}. El perfil documenta, por tanto, el
+estado previo a ambas decisiones y no se reejecutó bajo el régimen nuevo: sus
+tablas ---en particular la grilla de seis variantes de la
+Tabla~\ref{tab:grilla-variantes}--- \textbf{no deben cruzarse arco a arco} con
+las de la Sección~\ref{sec:comparacion-estrategias}, por las razones que allí se
+detallan. La sección se conserva porque sus hallazgos son de \textit{tiempo}
+---la dominancia del GLS y el carácter \textit{OSRM-bound} en frío---, que no
+dependen de la estrategia ni del redondeo, y porque el barrido de la
+Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de solver como variable del
+experimento y no como constante del régimen.
+
 \subsection{Entorno de medición}
 
 Dado que el sistema no cuenta con un despliegue productivo, las mediciones se
@@ -561,6 +583,7 @@ para el mismo \textit{dataset} varió entre 29 y 180\,s, según si la búsqueda
 agota o no el presupuesto de tiempo asignado.
 
 \subsection{Variaciones de duración sobre el dataset real}
+\label{sec:variantes-duracion}
 
 Se evaluaron las seis combinaciones de tiempo de servicio por árbol
 $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h, con
