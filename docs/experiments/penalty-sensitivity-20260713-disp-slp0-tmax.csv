@@ -1,0 +1,6 @@
+route,n_trees,duration_sec,service_total_sec,travel_sec,walk_ratio,shortfall_sec,saturation,self_crossings
+1,13,10336,3900,6436,0.623,0,0.957,0
+2,12,8198,3600,4598,0.561,0,0.759,0
+3,7,6109,2100,4009,0.656,1091,0.566,0
+4,8,9429,2400,7029,0.745,0,0.873,0
+summary,40,34072,12000,22072,0.648,1091,0.789,0
