@@ -419,7 +419,8 @@ Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head}
 de la Tabla~\ref{tab:estrategias}, que es el único contraste homogéneo
 disponible: mismo código, mismo presupuesto de solver y mismas semillas. La
 grilla de seis variantes del perfil de rendimiento
-(Tabla~\ref{tab:grilla-variantes}) proviene de un régimen de medición
+(Sección~\ref{sec:perfil-rendimiento}, Tabla~\ref{tab:grilla-variantes})
+proviene de un régimen de medición
 \textbf{distinto} ---estrategia \texttt{global}, código previo a la corrección
 del redondeo del tránsito y límite de solver de 180\,s--- y por tanto \textbf{no
 es comparable arco a arco} con la Tabla~\ref{tab:grilla-spatial}: cualquier
@@ -446,7 +447,11 @@ El protocolo completo, los comandos reproducibles y los datos crudos de este
 experimento se encuentran versionados en \texttt{docs/experiments/} (reporte
 \texttt{route-quality-20260712.md} y los archivos CSV asociados).
 
+% ---- 3.1.4 ------------------------------------------------------
+% Aquí va la subsección «Discusión de calidad de rutas», última de la Sección 3.1.
+
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
+\label{sec:perfil-rendimiento}
 
 Esta sección caracteriza el comportamiento temporal del motor de optimización:
 en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
@@ -460,6 +465,28 @@ datos crudos se encuentran versionados en el directorio
 mediante el comando de gestión \texttt{baseline\_sweep}, verificado
 previamente sobre una corrida sintética de $n=80$
 (\texttt{20260711-231139-baseline-sweep.md}).
+
+Corresponde advertir que las cifras de esta sección provienen de un
+\textbf{régimen de medición anterior} al de la
+Sección~\ref{sec:comparacion-estrategias}: se obtuvieron con la estrategia
+\texttt{global}, un límite de solver de 180\,s y una versión del código previa a
+la corrección del redondeo del tránsito (el truncamiento entero descrito al
+final de la Sección~\ref{sec:variantes-duracion}). Ese era el régimen vigente en
+producción al momento del perfilamiento, y son sus propios resultados los que lo
+dejaron obsoleto: el análisis de sensibilidad de la
+Tabla~\ref{tab:sensibilidad-tl} es el que motivó bajar el límite de solver de
+180 a 120\,s, mientras que la adopción de \texttt{spatial\_term} como estrategia
+por defecto proviene del experimento de comparación de la
+Sección~\ref{sec:comparacion-estrategias}. El perfil documenta, por tanto, el
+estado previo a ambas decisiones y no se reejecutó bajo el régimen nuevo: sus
+tablas ---en particular la grilla de seis variantes de la
+Tabla~\ref{tab:grilla-variantes}--- \textbf{no deben cruzarse arco a arco} con
+las de la Sección~\ref{sec:comparacion-estrategias}, por las razones que allí se
+detallan. La sección se conserva porque sus hallazgos son de \textit{tiempo}
+---la dominancia del GLS y el carácter \textit{OSRM-bound} en frío---, que no
+dependen de la estrategia ni del redondeo, y porque el barrido de la
+Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de solver como variable del
+experimento y no como constante del régimen.
 
 \subsection{Entorno de medición}
 
@@ -561,6 +588,7 @@ para el mismo \textit{dataset} varió entre 29 y 180\,s, según si la búsqueda
 agota o no el presupuesto de tiempo asignado.
 
 \subsection{Variaciones de duración sobre el dataset real}
+\label{sec:variantes-duracion}
 
 Se evaluaron las seis combinaciones de tiempo de servicio por árbol
 $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h, con
@@ -664,20 +692,12 @@ medible.
 
 \section{POSIBLES MEJORAS}
 
-% TODO (copilot-prompts.md → §3.2):
-% Describir las mejoras V2 identificadas: portal del censador mobile-first,
-% importación GeoJSON y legacy DB, chunking OSRM para datasets >5000 puntos,
-% análisis de sensibilidad del tiempo de solver, Playwright E2E.
-
-% DRAFT — revisar
 Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
 
 \begin{itemize}
-  \item \textbf{Disjunciones por nodo}: incorporar restricciones de disjunción (\texttt{AddDisjunction}) con penalización, de modo que el solver pueda descartar árboles atípicos (\textit{outliers}) geográficamente aislados cuando su inclusión degrade excesivamente la compacidad de una ruta.
   \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para \textit{datasets} que superen los 5\,000 puntos activos, superando el límite \texttt{--max-table-size} de una única solicitud.
-  \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
-  \item \textbf{Importación de formatos adicionales}: soporte GeoJSON e importación directa desde bases de datos legadas del sistema Arbocensus previo.
-  \item \textbf{Análisis de sensibilidad}: estudio sistemático de la relación entre el tiempo límite del solver y la calidad de la solución.
+  \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual (Sección~\ref{sec:ui}) por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
+  \item \textbf{Importación de formatos adicionales}: soporte de GeoJSON como formato de entrada de \textit{datasets}, que actualmente se importan desde archivos CSV o JSON, o bien desde las fuentes legadas (Sección~\ref{sec:legacy}).
   \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos completos de administrador y censador mediante Playwright.
 \end{itemize}
 
