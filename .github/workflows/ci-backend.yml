@@ -43,6 +43,7 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f backend/dev-requirements.txt ]; then pip install -r backend/dev-requirements.txt; fi
           if [ -f tools/requirements-dev.txt ]; then pip install -r tools/requirements-dev.txt; fi
+          pip install -r scripts/requirements-figures.txt
           pip install ruff==0.5.0 pyright==1.1.407
 
       - name: Lint with Ruff
@@ -109,7 +110,14 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f backend/dev-requirements.txt ]; then pip install -r backend/dev-requirements.txt; fi
           if [ -f tools/requirements-dev.txt ]; then pip install -r tools/requirements-dev.txt; fi
+          pip install -r scripts/requirements-figures.txt
 
       - name: Run tests with Pytest
         working-directory: backend
         run: pytest -v
+
+      # The figure renderer is standalone (no Django, no database): it runs from the
+      # repo root, outside backend's pytest.ini.
+      - name: Run figure renderer tests
+        if: ${{ !cancelled() }}
+        run: pytest scripts/tests -v
