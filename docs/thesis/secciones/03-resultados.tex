@@ -419,7 +419,8 @@ Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head}
 de la Tabla~\ref{tab:estrategias}, que es el único contraste homogéneo
 disponible: mismo código, mismo presupuesto de solver y mismas semillas. La
 grilla de seis variantes del perfil de rendimiento
-(Tabla~\ref{tab:grilla-variantes}) proviene de un régimen de medición
+(Sección~\ref{sec:perfil-rendimiento}, Tabla~\ref{tab:grilla-variantes})
+proviene de un régimen de medición
 \textbf{distinto} ---estrategia \texttt{global}, código previo a la corrección
 del redondeo del tránsito y límite de solver de 180\,s--- y por tanto \textbf{no
 es comparable arco a arco} con la Tabla~\ref{tab:grilla-spatial}: cualquier
@@ -446,7 +447,11 @@ El protocolo completo, los comandos reproducibles y los datos crudos de este
 experimento se encuentran versionados en \texttt{docs/experiments/} (reporte
 \texttt{route-quality-20260712.md} y los archivos CSV asociados).
 
+% ---- 3.1.4 ------------------------------------------------------
+% Aquí va la subsección «Discusión de calidad de rutas», última de la Sección 3.1.
+
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
+\label{sec:perfil-rendimiento}
 
 Esta sección caracteriza el comportamiento temporal del motor de optimización:
 en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
