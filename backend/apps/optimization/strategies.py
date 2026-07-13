@@ -64,7 +64,7 @@ def solve_spatial_term(
     max_route_time_sec,
     service_time_sec,
     max_vehicles,
-    time_limit_sec=180,
+    time_limit_sec,
     span_coef=SPATIAL_SPAN_COEF,
     timer=None,
 ):
@@ -148,7 +148,7 @@ def solve_cluster_first(
     min_route_time_sec,
     max_route_time_sec,
     service_time_sec,
-    time_limit_sec=180,
+    time_limit_sec,
     seed=0,
     timer=None,
 ):

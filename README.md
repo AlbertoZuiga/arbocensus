@@ -119,7 +119,7 @@ celery -A config worker --loglevel=info
 # Seed / datos (dentro del contenedor backend)
 make seed                                         # seed_dev idempotente (usuarios + dataset light, sin solver)
 python manage.py seed_demo --profile light        # 15 árboles, solo siembra (--no-optimize por defecto)
-python manage.py seed_demo --profile medium       # 50 árboles + optimización (solver 180s)
+python manage.py seed_demo --profile medium       # 50 árboles + optimización (solver con tiempo automático)
 python manage.py seed_demo --profile heavy        # 200 árboles + optimización
 python manage.py seed_demo --distribution clustered --snap  # distribución realista + snap a calles (OSRM)
 python manage.py baseline_sweep                   # barrido reproducible de calidad geográfica

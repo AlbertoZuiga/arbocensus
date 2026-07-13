@@ -39,7 +39,7 @@ class ArbocensusVRPSolver:
         max_route_time_sec,
         service_time_sec,
         max_vehicles,
-        time_limit_sec=180,
+        time_limit_sec,
         spatial_points=None,
         span_coef=0,
     ):
