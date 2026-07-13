@@ -41,7 +41,9 @@ def test_admin_creates_job_and_triggers_task(make_dataset_with_trees, monkeypatc
     delay.assert_called_once_with(str(job.id))
 
 
-def test_create_job_defaults_to_global_strategy(make_dataset_with_trees, monkeypatch):
+def test_create_job_defaults_to_spatial_term_strategy(
+    make_dataset_with_trees, monkeypatch
+):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
     monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
 
@@ -51,7 +53,7 @@ def test_create_job_defaults_to_global_strategy(make_dataset_with_trees, monkeyp
 
     assert response.status_code == 201
     job = OptimizationJob.objects.get(id=response.data["id"])
-    assert job.strategy == OptimizationJob.Strategy.GLOBAL
+    assert job.strategy == OptimizationJob.Strategy.SPATIAL_TERM
 
 
 def test_create_job_persists_chosen_strategy(make_dataset_with_trees, monkeypatch):
