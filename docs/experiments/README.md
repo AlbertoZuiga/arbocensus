@@ -17,6 +17,11 @@ la redacción de la tesis.
   `--time-limit <s>` (fija el límite del solver en vez de la heurística del
   pipeline) y `--csv <ruta>`. Sobre un dataset real la semilla solo etiqueta la
   repetición: la varianza proviene del corte por tiempo del solver.
+- `manage.py greedy_baseline` → `*-greedy-baseline.md` + CSV con `--csv <ruta>`.
+  Baseline de vecino más cercano sobre un dataset real (`--dataset <uuid>`,
+  `--service-time <min>`, `--t-max <h>`), con las mismas métricas de calidad de
+  rutas que `baseline_sweep` para que ambas corridas sean comparables. Es
+  determinista: una sola fila, sin semillas.
 
 La carpeta se resuelve desde `settings.EXPERIMENTS_DIR`
 (`docs/experiments/` por defecto; configurable con la variable de entorno

@@ -115,40 +115,84 @@ se conservan en \texttt{docs/experiments/20260712-real-case-metrics.csv}.
 % ---- 3.1.2 ------------------------------------------------------
 \subsection{Comparación con Solución Greedy}
 
-% TODO (copilot-prompts.md → §3.1.2):
-% Comparar Arbocensus (OR-Tools VRP) vs baseline greedy (vecino más cercano).
-% Métricas: tiempo total de desplazamiento, balance (std dev), N de rutas.
-% El baseline se genera programáticamente con el mismo dataset.
-
 % DRAFT — revisar
-Como referencia de comparación se define una solución \textit{greedy} basada
-en el heurístico del vecino más cercano, que se generará programáticamente sobre el
-mismo \textit{dataset} y con los mismos parámetros temporales ($T_{\min}$, $T_{\max}$ y
-tiempo de servicio) que la solución de OR-Tools. Este \textit{baseline} construirá
-rutas encadenando en cada paso el árbol no visitado más cercano hasta agotar el
-presupuesto temporal de la ruta, sin optimización global ni balance explícito, lo que
-permitirá cuantificar el valor agregado del solver frente a una heurística voraz. La
-Tabla~\ref{tab:comparativa} contrastará ambos enfoques.
+Como referencia de comparación se implementó una solución \textit{greedy} basada
+en el heurístico del vecino más cercano, generada programáticamente sobre el
+mismo \textit{dataset} ($N = 1\,607$), con la misma matriz de costos de OSRM
+---la caché de la corrida anterior--- y con los mismos parámetros temporales
+($T_{\max} = 10\,800$\,s y 2 minutos de servicio por árbol) que la solución de
+OR-Tools de la Sección anterior. El \textit{baseline} construye cada ruta
+encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el
+siguiente salto haría exceder el presupuesto temporal de la ruta; entonces abre
+una ruta nueva con el primer árbol que quede sin visitar. No hay optimización
+global, ni balance de carga, ni reasignación posterior de árboles entre rutas.
+La Tabla~\ref{tab:comparativa} contrasta ambos enfoques.
 
 \begin{table}[H]
   \centering
-  \caption{Comparación entre la solución de OR-Tools y el baseline greedy.}
+  \caption{Comparación entre la solución de OR-Tools y el baseline greedy ($N=1\,607$, servicio 2\,min, $T_{\max}=3$\,h).}
   \label{tab:comparativa}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
     Métrica & OR-Tools (VRP) & Greedy (vecino más cercano) \\
     \midrule
-    Número de rutas $k$ & [DATO PENDIENTE] & [DATO PENDIENTE] \\
-    Tiempo total de desplazamiento & [DATO PENDIENTE] & [DATO PENDIENTE] \\
-    Desviación estándar de $T_r$ & [DATO PENDIENTE] & [DATO PENDIENTE] \\
-    Rutas que exceden $T_{\max}$ & [DATO PENDIENTE] & [DATO PENDIENTE] \\
+    Número de rutas $k$ & 25 & 24 \\
+    Tiempo total de desplazamiento & 59\,898\,s ($\approx$ 16\,h 38\,min) & 62\,585\,s ($\approx$ 17\,h 23\,min) \\
+    Desviación estándar de $T_r$ & 519\,s & 213\,s \\
+    Rutas que exceden $T_{\max}$ & 0 & 0 \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-% NOTA: generar el baseline greedy programáticamente sobre el dataset real y comparar
-% total_travel_time_sec, desviación estándar de los tiempos por ruta y k contra la
-% RoutingSolution de estrategia global.
+En la métrica que el modelo efectivamente minimiza ---el tiempo total de
+desplazamiento--- OR-Tools supera al \textit{baseline}: ahorra 2\,687\,s
+($-4.3$\,\%) de caminata sobre el censo completo, cerca de 45 minutos de trabajo
+de terreno. Las otras dos filas de la tabla favorecen aparentemente al
+\textit{greedy} y requieren lectura cuidadosa, porque ambas son consecuencia de
+un mismo comportamiento: la heurística voraz llena cada ruta hasta el borde de
+la cota dura. Su duración media por ruta es de 10\,643\,s, un 98.5\,\% de
+$T_{\max}$, mientras que la de OR-Tools es de 10\,110\,s (93.6\,\% de
+$T_{\max}$), porque el modelo empuja las duraciones hacia el punto medio del
+intervalo $[T_{\min}, T_{\max}]$ mediante la penalización blanda superior. De
+ahí que el \textit{greedy} necesite una ruta menos (24 frente a 25) y que la
+desviación estándar de sus duraciones sea menor: no es balance de carga, es
+saturación. Un plan cuyas rutas ocupan el 98.5\,\% de la jornada no deja holgura
+alguna ante cualquier imprevisto de terreno, y el número de rutas no es un
+objetivo del problema una vez que todas caben dentro de la jornada.
+
+La tabla tampoco alcanza a mostrar un defecto estructural del \textit{baseline}:
+la ausencia de reasignación produce rutas degeneradas. Su última ruta visita 4
+árboles con 9\,267\,s de desplazamiento
+---más de dos horas y media de caminata para censar cuatro árboles---, porque
+son los árboles aislados que las cadenas de proximidad anteriores fueron
+dejando atrás. Ninguna ruta de la solución de OR-Tools presenta esa patología:
+las disyunciones penalizadas y la minimización global permiten repartir esos
+árboles entre rutas vecinas.
+
+El costo de esa calidad es tiempo de cómputo: el \textit{greedy} resuelve en
+0.008\,s sobre la matriz ya cacheada, frente a los 120\,s de presupuesto del
+metaheurístico de OR-Tools. Para una planificación que se ejecuta una vez por
+campaña de censo, 120\,s de cómputo a cambio de un $4.3$\,\% menos de caminata y
+de rutas sin degenerar es un intercambio favorable.
+
+Comando reproducible (entorno \texttt{docker-compose.prod.yml}, sobre el mismo
+\textit{dataset} de la Sección anterior):
+
+\begin{verbatim}
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py greedy_baseline \
+    --dataset 222fd8ff-44a4-43ed-8f3e-8f5b61ff6110 \
+    --service-time 2 --t-max 3 \
+    --csv /results/20260713-greedy-baseline.csv
+\end{verbatim}
+
+Los datos crudos del \textit{baseline} se conservan en el repositorio como
+\texttt{docs/experiments/20260713-greedy-baseline.csv}; las cifras por ruta que
+se citan en los párrafos anteriores ---el desglose de árboles y desplazamiento
+de cada ruta, y el tiempo de cómputo del heurístico--- las imprime el mismo
+comando junto con las métricas agregadas. El heurístico es determinista ---no
+consume aleatoriedad---, por lo que se ejecuta una sola vez y no requiere
+repeticiones con semillas distintas.
 
 % ---- 3.1.3 -----------------------------------------------------
 \subsection{Calidad geográfica de rutas y comparación de estrategias}

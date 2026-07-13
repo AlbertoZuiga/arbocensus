@@ -1,0 +1,2 @@
+target,n_trees,service_time_min,t_max_h,k,balance,total_travel_time_sec,route_time_mean_sec,route_time_std_sec,routes_over_t_max,dropped_trees,sum_max_radius_m,interleave_total,interleave_per_route,worst_pair_iou
+Referencia 3.1.1 - legacy completo (ambas fuentes),1607,2.0,3.0,24,0.903,62585,10643,213,0,0,21286,3326,138.58,0.45
