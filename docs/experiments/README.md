@@ -17,6 +17,14 @@ la redacción de la tesis.
   `--time-limit <s>` (fija el límite del solver en vez de la heurística del
   pipeline) y `--csv <ruta>`. Sobre un dataset real la semilla solo etiqueta la
   repetición: la varianza proviene del corte por tiempo del solver.
+- `manage.py route_audit` → `*-route-audit.md` + CSV por ruta (`--csv <ruta>`) +
+  GeoJSON (`--geojson <ruta>`). Radiografía de UNA corrida del pipeline sobre un
+  dataset real (`--dataset <uuid>`, `--strategy`, `--service-time <s>`, `--t-min <s>`,
+  `--t-max <s>`, `--time-limit <s>`, `--seed`): walk_ratio, servicio, caminata,
+  shortfall contra T_min, saturación contra T_max y auto-cruces de la secuencia de
+  paradas, por ruta y en una fila `summary`. El GeoJSON trae un LineString por ruta y
+  un Point por parada, para inspección visual (geojson.io / QGIS). Con
+  `--worst-pair-geojson <ruta>` emite además el peor par de rutas por IoU de bbox.
 - `manage.py greedy_baseline` → `*-greedy-baseline.md` + CSV con `--csv <ruta>`.
   Baseline de vecino más cercano sobre un dataset real (`--dataset <uuid>`,
   `--service-time <min>`, `--t-max <h>`), con las mismas métricas de calidad de
