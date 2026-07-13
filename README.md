@@ -127,12 +127,22 @@ python manage.py baseline_sweep                   # barrido reproducible de cali
 # Análisis
 python manage.py analyze_solution                 # métricas de la última solución
 # Los informes de baseline_sweep / seed_demo se guardan en docs/experiments/.
+
+# Tesis (LaTeX)
+make -C docs/thesis pdf       # compila docs/thesis/main.pdf
+make -C docs/thesis clean     # borra los artefactos (.aux, .log, ...)
 ```
 
 > Los tests corren **dentro del contenedor backend**, no en el host. Los modelos
 > geográficos (`PointField`) requieren GDAL y una base PostGIS, ambos provistos por
 > la imagen `dev` y el servicio `db`. `make -C backend test` construye el target
 > `dev` (con las dependencias de testing) y ejecuta pytest contra `db`.
+
+La tesis compila con el `latexmk` local si existe (MacTeX) y, si no, cae a Docker
+con una imagen TeX Live pineada por digest, sin necesidad de instalar TeX. En el
+camino Docker la imagen se puede cambiar con `TEX_IMAGE`:
+`make -C docs/thesis pdf TEX_IMAGE=texlive/texlive:latest` (con `latexmk` local la
+variable no se usa).
 
 ### Estructura del Proyecto
 
