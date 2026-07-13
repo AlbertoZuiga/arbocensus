@@ -124,6 +124,10 @@
 \input{secciones/03-resultados}
 
 % Bibliografía
+% El \clearpage es necesario: sin él \addcontentsline registra la página en que
+% termina el capítulo 3, no aquella en que empieza la bibliografía.
+\clearpage
+\phantomsection
 \addcontentsline{toc}{chapter}{BIBLIOGRAFÍA}
 \bibliography{bibliography}
 
