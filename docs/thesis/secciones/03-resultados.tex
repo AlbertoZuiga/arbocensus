@@ -692,20 +692,12 @@ medible.
 
 \section{POSIBLES MEJORAS}
 
-% TODO (copilot-prompts.md → §3.2):
-% Describir las mejoras V2 identificadas: portal del censador mobile-first,
-% importación GeoJSON y legacy DB, chunking OSRM para datasets >5000 puntos,
-% análisis de sensibilidad del tiempo de solver, Playwright E2E.
-
-% DRAFT — revisar
 Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
 
 \begin{itemize}
-  \item \textbf{Disjunciones por nodo}: incorporar restricciones de disjunción (\texttt{AddDisjunction}) con penalización, de modo que el solver pueda descartar árboles atípicos (\textit{outliers}) geográficamente aislados cuando su inclusión degrade excesivamente la compacidad de una ruta.
   \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para \textit{datasets} que superen los 5\,000 puntos activos, superando el límite \texttt{--max-table-size} de una única solicitud.
-  \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
-  \item \textbf{Importación de formatos adicionales}: soporte GeoJSON e importación directa desde bases de datos legadas del sistema Arbocensus previo.
-  \item \textbf{Análisis de sensibilidad}: estudio sistemático de la relación entre el tiempo límite del solver y la calidad de la solución.
+  \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual (Sección~\ref{sec:ui}) por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
+  \item \textbf{Importación de formatos adicionales}: soporte de GeoJSON como formato de entrada de \textit{datasets}, que actualmente se importan desde archivos CSV o JSON, o bien desde las fuentes legadas (Sección~\ref{sec:legacy}).
   \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos completos de administrador y censador mediante Playwright.
 \end{itemize}
 
