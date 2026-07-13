@@ -68,17 +68,20 @@ class Command(BaseCommand):
 
         try:
             job.set_status("running")
-            metrics = OptimizationPipeline(job).run()
+            metrics = OptimizationPipeline(job).run(strategy=job.strategy)
             job.set_completed(metrics)
         except Exception as exc:
             job.set_error(str(exc))
             raise CommandError(f"Optimization failed: {exc}") from exc
 
-        report_path = self._record(metrics, options, n_trees, profile)
-        self._print_summary(dataset, job, metrics, report_path)
+        solution_metrics = metrics["solutions"][job.strategy]
+        solution = RoutingSolution.objects.get(id=solution_metrics["solution_id"])
+        report_path = self._record(
+            solution, solution_metrics, options, n_trees, profile
+        )
+        self._print_summary(dataset, job, solution, solution_metrics, report_path)
 
-    def _record(self, metrics, options, n_trees, profile):
-        solution = RoutingSolution.objects.get(id=metrics["solution_id"])
+    def _record(self, solution, metrics, options, n_trees, profile):
         geo = aggregate_metrics(routes_from_solution(solution))
         return record_experiment(
             slug="seed-demo",
@@ -90,6 +93,7 @@ class Command(BaseCommand):
                 "seed": options["seed"],
                 "distribution": options["distribution"],
                 "snap": options["snap"],
+                "strategy": solution.strategy,
             },
             metrics={
                 "total_routes": metrics["total_routes"],
@@ -101,20 +105,21 @@ class Command(BaseCommand):
             analysis={
                 "que_ocurrio": (
                     f"Se sembró un dataset de {n_trees} árboles "
-                    f"({options['distribution']}) y se resolvió el Open mTSP global, "
-                    f"produciendo {metrics['total_routes']} rutas con balance "
+                    f"({options['distribution']}) y se resolvió el Open mTSP con la "
+                    f"estrategia {solution.strategy}, produciendo "
+                    f"{metrics['total_routes']} rutas con balance "
                     f"{metrics['balance_score']:.3f}."
                 )
             },
         )
 
-    def _print_summary(self, dataset, job, metrics, report_path):
+    def _print_summary(self, dataset, job, solution, metrics, report_path):
         w = self.stdout.write
         w(self.style.SUCCESS(f"Dataset {dataset.id} ({dataset.total_trees} trees)"))
         w(f"Job {job.id} -> {job.status}")
         w("")
 
-        for route in job.solution.routes.all().order_by("route_number"):
+        for route in solution.routes.all().order_by("route_number"):
             w(
                 f"Route {route.route_number}: "
                 f"{route.total_trees} trees, "
