@@ -114,6 +114,15 @@ def summarize_audit(audited):
     }
 
 
+def tmin_gap_coverage(rows, *, min_route_time_sec):
+    coverage = []
+    for row in rows:
+        gap = min_route_time_sec - row["service_total_sec"]
+        if gap > 0:
+            coverage.append(round(row["travel_sec"] / gap, 3))
+    return coverage
+
+
 def worst_overlap_pair(audited):
     if len(audited) < 2:
         return None

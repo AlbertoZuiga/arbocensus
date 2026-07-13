@@ -1,6 +1,7 @@
 import csv
 import json
 from datetime import UTC, datetime
+from statistics import mean
 
 from apps.datasets.models import Dataset
 from apps.optimization.experiment_log import record_experiment
@@ -11,7 +12,15 @@ from apps.optimization.route_audit import (
     audit_solution,
     routes_geojson,
     summarize_audit,
+    tmin_gap_coverage,
     worst_overlap_pair,
+)
+from apps.optimization.solver import (
+    SOFT_LOWER_PENALTY,
+    SOFT_UPPER_PENALTY,
+    SOFT_UPPER_TARGET_MIDPOINT,
+    SOFT_UPPER_TARGETS,
+    PenaltyConfig,
 )
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -62,6 +71,25 @@ class Command(BaseCommand):
             default=SOLVER_TIME_LIMIT_SEC,
             help="Solver time limit in seconds",
         )
+        parser.add_argument(
+            "--soft-lower-penalty",
+            type=int,
+            default=SOFT_LOWER_PENALTY,
+            help="Cost per second below T_min at the end of a route",
+        )
+        parser.add_argument(
+            "--soft-upper-target",
+            type=str,
+            default=SOFT_UPPER_TARGET_MIDPOINT,
+            choices=list(SOFT_UPPER_TARGETS),
+            help="Where the soft upper bound of the Time dimension sits",
+        )
+        parser.add_argument(
+            "--soft-upper-penalty",
+            type=int,
+            default=SOFT_UPPER_PENALTY,
+            help="Cost per second above the soft upper target",
+        )
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument("--csv", type=str, default=None)
         parser.add_argument("--geojson", type=str, default=None)
@@ -81,6 +109,11 @@ class Command(BaseCommand):
             raise CommandError("--t-min must not exceed --t-max")
 
         strategy = options["strategy"]
+        penalties = PenaltyConfig(
+            soft_lower_penalty=options["soft_lower_penalty"],
+            soft_upper_penalty=options["soft_upper_penalty"],
+            soft_upper_target=options["soft_upper_target"],
+        )
         solution, dropped = self._run_pipeline(
             dataset,
             strategy,
@@ -88,6 +121,7 @@ class Command(BaseCommand):
             min_route_time_sec,
             max_route_time_sec,
             options["time_limit"],
+            penalties,
         )
 
         audited = audit_solution(
@@ -113,12 +147,15 @@ class Command(BaseCommand):
                     "--worst-pair-geojson skipped: the solution has a single route"
                 )
 
+        coverage = tmin_gap_coverage(rows[:-1], min_route_time_sec=min_route_time_sec)
         self._print_report(
             dataset,
             solution,
             strategy,
+            penalties,
             rows,
             summary,
+            coverage,
             worst_pair,
             dropped,
             csv_path,
@@ -137,6 +174,9 @@ class Command(BaseCommand):
                 "t_min_sec": min_route_time_sec,
                 "t_max_sec": max_route_time_sec,
                 "time_limit_sec": options["time_limit"],
+                "soft_lower_penalty": penalties.soft_lower_penalty,
+                "soft_upper_target": penalties.soft_upper_target,
+                "soft_upper_penalty": penalties.soft_upper_penalty,
                 "seed": options["seed"],
                 "csv": str(csv_path),
                 "geojson": str(geojson_path),
@@ -145,8 +185,13 @@ class Command(BaseCommand):
                 "k": solution.total_routes,
                 "dropped_trees": len(dropped),
                 "total_travel_time_sec": round(solution.total_travel_time_sec),
+                "balance_score": solution.balance_score,
                 "walk_ratio_aggregate": summary["walk_ratio"],
                 "walk_ratio_worst": max(row["walk_ratio"] for row in rows[:-1]),
+                "tmin_gap_routes": len(coverage),
+                "tmin_gap_coverage_mean": (
+                    round(mean(coverage), 3) if coverage else None
+                ),
                 "shortfall_total_sec": summary["shortfall_sec"],
                 "saturation_mean": summary["saturation"],
                 "self_crossings_total": summary["self_crossings"],
@@ -169,6 +214,7 @@ class Command(BaseCommand):
         min_route_time_sec,
         max_route_time_sec,
         time_limit_sec,
+        penalties,
     ):
         with transaction.atomic():
             config = RoutingConfig.objects.create(
@@ -181,7 +227,7 @@ class Command(BaseCommand):
 
         job.set_status("running")
         metrics = OptimizationPipeline(job).run(
-            strategy=strategy, time_limit_sec=time_limit_sec
+            strategy=strategy, time_limit_sec=time_limit_sec, penalties=penalties
         )
         job.set_completed(metrics)
 
@@ -215,8 +261,10 @@ class Command(BaseCommand):
         dataset,
         solution,
         strategy,
+        penalties,
         rows,
         summary,
+        coverage,
         worst_pair,
         dropped,
         csv_path,
@@ -226,6 +274,11 @@ class Command(BaseCommand):
         w = self.stdout.write
         w(f"Dataset {dataset.id} ({dataset.name})")
         w(f"strategy={strategy} k={solution.total_routes} dropped={len(dropped)}")
+        w(
+            f"soft_lower_penalty={penalties.soft_lower_penalty} "
+            f"soft_upper_target={penalties.soft_upper_target} "
+            f"soft_upper_penalty={penalties.soft_upper_penalty}"
+        )
         w("")
         w(",".join(AUDIT_COLUMNS))
         for row in rows:
@@ -245,6 +298,12 @@ class Command(BaseCommand):
             f"(worst route {worst_shortfall['route']}: "
             f"{worst_shortfall['shortfall_sec']}s)"
         )
+        if coverage:
+            w(
+                f"T_min gap coverage: mean {round(mean(coverage), 3)} over "
+                f"{len(coverage)} routes with service below T_min "
+                f"(min {min(coverage)}, max {max(coverage)})"
+            )
         w(f"saturation mean: {summary['saturation']}")
         w(f"self_crossings total: {summary['self_crossings']}")
         if worst_pair:

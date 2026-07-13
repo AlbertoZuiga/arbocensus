@@ -1,6 +1,8 @@
 import numpy as np
+import pytest
 from apps.optimization import strategies
-from apps.optimization.solver import build_open_matrix
+from apps.optimization.models import RoutingSolution
+from apps.optimization.solver import PenaltyConfig, build_open_matrix
 from apps.optimization.strategies import (
     choose_k,
     cluster_time_limit,
@@ -262,3 +264,49 @@ def test_kmeans_separates_distant_clusters():
     assert len(set(labels[:5].tolist())) == 1
     assert len(set(labels[5:].tolist())) == 1
     assert labels[0] != labels[5]
+
+
+@pytest.mark.parametrize("strategy", [s.value for s in RoutingSolution.Strategy])
+def test_solve_by_strategy_forwards_penalties(monkeypatch, strategy):
+    SolverSpy.calls = []
+    monkeypatch.setattr(strategies, "ArbocensusVRPSolver", SolverSpy)
+    penalties = PenaltyConfig(soft_lower_penalty=100, soft_upper_target="tmax")
+
+    strategies.solve_by_strategy(
+        strategy,
+        uniform_matrix(6),
+        points=line_points(6),
+        min_route_time_sec=MIN_ROUTE_TIME_SEC,
+        max_route_time_sec=MAX_ROUTE_TIME_SEC,
+        service_time_sec=SERVICE_TIME_SEC,
+        max_vehicles=3,
+        time_limit_sec=1,
+        penalties=penalties,
+    )
+
+    assert SolverSpy.calls
+    assert [call["penalties"] for call in SolverSpy.calls] == [penalties] * len(
+        SolverSpy.calls
+    )
+
+
+@pytest.mark.parametrize("strategy", [s.value for s in RoutingSolution.Strategy])
+def test_solve_by_strategy_defaults_to_production_penalties(monkeypatch, strategy):
+    SolverSpy.calls = []
+    monkeypatch.setattr(strategies, "ArbocensusVRPSolver", SolverSpy)
+
+    strategies.solve_by_strategy(
+        strategy,
+        uniform_matrix(6),
+        points=line_points(6),
+        min_route_time_sec=MIN_ROUTE_TIME_SEC,
+        max_route_time_sec=MAX_ROUTE_TIME_SEC,
+        service_time_sec=SERVICE_TIME_SEC,
+        max_vehicles=3,
+        time_limit_sec=1,
+    )
+
+    assert SolverSpy.calls
+    assert [call["penalties"] for call in SolverSpy.calls] == [PenaltyConfig()] * len(
+        SolverSpy.calls
+    )

@@ -6,7 +6,7 @@ from apps.optimization.models import RoutingConfig, RoutingSolution
 from apps.optimization.n_estimator import estimate_max_vehicles
 from apps.optimization.profiling import PhaseTimer, merge_timing
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
-from apps.optimization.solver import build_open_matrix
+from apps.optimization.solver import DEFAULT_PENALTIES, build_open_matrix
 from apps.optimization.strategies import solve_by_strategy
 from apps.routes.models import Route, RouteStop
 from django.db import transaction
@@ -44,7 +44,7 @@ class OptimizationPipeline:
         self.job = job
         self.config = job.config
 
-    def run(self, strategy=None, time_limit_sec=None):
+    def run(self, strategy=None, time_limit_sec=None, penalties=DEFAULT_PENALTIES):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
             key=lambda tree: tree.id,
@@ -91,6 +91,7 @@ class OptimizationPipeline:
                 service_time_sec=self.config.service_time_sec,
                 max_vehicles=max_vehicles,
                 time_limit_sec=time_limit_sec,
+                penalties=penalties,
                 timer=timer,
             )
             if result is None:
