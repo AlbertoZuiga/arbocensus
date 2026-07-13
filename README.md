@@ -92,6 +92,12 @@ pip-compile requirements.in -o requirements.txt
 pip-compile dev-requirements.in -o dev-requirements.txt
 ```
 
+Las figuras de la tesis (`scripts/route_figures.py`) tienen su propio par `.in`/`.txt`, fuera del backend, y se recompilan desde la raíz:
+
+```bash
+pip-compile scripts/requirements-figures.in -o scripts/requirements-figures.txt
+```
+
 ### Comandos Comunes
 
 ```bash
