@@ -41,7 +41,9 @@ jobs:
         run: npm run lint
 
       - name: Test
+        if: ${{ !cancelled() }}
         run: npm run test
 
       - name: Build
+        if: ${{ !cancelled() }}
         run: npm run build

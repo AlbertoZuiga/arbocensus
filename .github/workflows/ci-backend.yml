@@ -36,9 +36,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: |
-            backend/dev-requirements.txt
-            tools/requirements-dev.txt
+          cache-dependency-path: backend/dev-requirements.txt
 
       - name: Install dependencies
         run: |
@@ -51,9 +49,11 @@ jobs:
         run: ruff check .
 
       - name: Format check with Ruff
+        if: ${{ !cancelled() }}
         run: ruff format . --check
 
       - name: Type check with Pyright
+        if: ${{ !cancelled() }}
         run: pyright .
 
   test:
@@ -97,9 +97,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: |
-            backend/dev-requirements.txt
-            tools/requirements-dev.txt
+          cache-dependency-path: backend/dev-requirements.txt
 
       - name: Install GDAL system libraries
         run: |
