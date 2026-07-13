@@ -132,7 +132,7 @@ Tabla~\ref{tab:comparativa} contrastará ambos enfoques.
 % RoutingSolution de estrategia global.
 
 % ---- 3.1.3 -----------------------------------------------------
-\subsection{Baseline de calidad geográfica de rutas (VRP global sin clustering)}
+\subsection{Calidad geográfica de rutas y comparación de estrategias}
 
 Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se
 caracterizó la calidad espacial de la solución producida por la formulación
@@ -194,8 +194,182 @@ envolvente de otra más extensa. Esto es coherente con que el modelo optimiza
 tiempo total con un término de balance blando, sin ningún criterio espacial
 explícito en la partición.
 
-% TODO: comparar este baseline contra la variante con clustering geográfico
-% como preprocesamiento, una vez implementada (misma métrica vía baseline_sweep).
+% DRAFT — revisar
+\subsubsection*{Estrategias evaluadas}
+
+A partir de ese diagnóstico se evaluaron las dos estrategias de partición
+espacial descritas en la Sección~\ref{sec:estrategias} ---\texttt{spatial\_term},
+que penaliza el \textit{span} geográfico de cada ruta dentro del mismo modelo
+global, y \texttt{cluster\_first}, que particiona los nodos con $k$-medias antes
+de resolver un VRP independiente por grupo--- contra la formulación vigente
+(\texttt{global}) sobre el \textit{dataset} real de $n = 1\,607$ árboles.
+
+Medir \texttt{cluster\_first} exigió corregir antes dos defectos de su
+implementación: la estimación de $k$ usaba el viaje promedio entre
+\textit{todos} los pares de la matriz metropolitana como sustituto del viaje
+entre paradas consecutivas ---lo que sobrestima el trabajo por árbol en órdenes
+de magnitud y dispara $k$ a cientos de grupos---, y cada sub-problema recibía el
+presupuesto de tiempo \textit{completo} del solver, de modo que la estrategia
+consumía $k$ veces el cómputo de sus competidoras. Una corrida con el código
+previo superó las 8 horas y debió abortarse. La corrección reemplaza el
+estimador por el viaje medio al vecino más cercano y reparte el presupuesto
+entre los grupos en proporción a su tamaño; las cifras aquí reportadas
+corresponden a la versión corregida.
+
+\subsubsection*{Protocolo}
+
+Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones
+idénticas: mismo \textit{dataset} ($n = 1\,607$), misma variante operacional
+(tiempo de servicio de 2\,min y $T_{\max} = 3$\,h, la configuración censal de
+referencia), mismo límite de solver (120\,s, justificado en la
+Tabla~\ref{tab:sensibilidad-tl}), las mismas tres semillas (42, 43 y 44) y la
+misma versión del código, posterior a la corrección del redondeo del tránsito.
+El criterio de decisión se fijó antes de ejecutar el experimento: una estrategia
+supera a la \textit{baseline} si reduce el solapamiento por ruta o mejora el IoU
+del peor par \textit{sin} degradar el balance temporal respecto de
+\texttt{global}, sin producir rutas que excedan $T_{\max}$ y con un tiempo total
+de desplazamiento dentro de un 10\,\% del de \texttt{global}. La
+Tabla~\ref{tab:estrategias} resume los resultados como media de las tres
+repeticiones.
+
+\begin{table}[H]
+  \centering
+  \caption{Comparación de estrategias sobre el dataset real ($n=1\,607$; servicio de 2\,min, $T_{\max}=3$\,h; límite de solver de 120\,s; media de 3 semillas).}
+  \label{tab:estrategias}
+  \small
+  \begin{tabularx}{\textwidth}{lXXXXXXX}
+    \toprule
+    Estrategia & $k$ & Balance & Descart. & Desplaz. [s] & $\sum r_{\max}$ [m] & Solap./ruta & IoU peor par \\
+    \midrule
+    \texttt{global}        & 25{,}0 & 0{,}838 & 0  & 59\,725 & 22\,455 & 168{,}0 & 0{,}51 \\
+    \texttt{spatial\_term} & 25{,}0 & 0{,}833 & 0  & 60\,611 & 19\,578 & 77{,}3  & 0{,}55 \\
+    \texttt{cluster\_first}& 34{,}0 & 0{,}698 & 12 & 69\,813 & 9\,714  & 20{,}0  & 0{,}48 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsubsection*{Resultados}
+
+\texttt{spatial\_term} reduce el solapamiento por ruta a menos de la mitad
+($168{,}0 \rightarrow 77{,}3$, un $-54$\,\%) y comprime las rutas
+($\sum r_{\max}$ cae un $12{,}8$\,\%), a cambio de un $+1{,}5$\,\% de tiempo
+total de desplazamiento ---muy por debajo del margen del 10\,\% admitido---, con
+el mismo número de rutas, cobertura total y un balance de $0{,}833$ frente a
+$0{,}838$ de la \textit{baseline}, diferencia inferior a la dispersión entre
+semillas de la propia \texttt{global}. Cumple, por tanto, el criterio de
+decisión.
+
+El resultado admite una matización que conviene explicitar: el IoU del peor par
+\textbf{no mejora}, sino que empeora levemente ($0{,}51 \rightarrow 0{,}55$; en
+esta métrica un valor mayor es peor). La penalización del \textit{span} actúa
+sobre la extensión de cada ruta considerada de forma individual, de modo que
+comprime las cajas envolventes, pero no separa el par de rutas vecinas que se
+superponen en la zona más densa del \textit{dataset}: ese par persiste como
+problema de geometría local y no lo resuelve un coeficiente global. La ganancia
+de \texttt{spatial\_term} es, en consecuencia, agregada (menos paradas ajenas
+dentro de cada caja, rutas más compactas) y no la eliminación del peor caso.
+
+Conviene además notar que las métricas de forma son las más sensibles a la
+semilla, pese a que las de coste no lo son: las tres repeticiones de cada
+estrategia convergen a soluciones prácticamente idénticas en $k$, balance y
+desplazamiento (dispersión $\leq 0{,}5$\,\%), pero \texttt{global} produce
+solapamientos por ruta de $177$, $150$ y $177$ e IoU de $0{,}54$, $0{,}45$ y
+$0{,}55$ según la repetición, de modo que su media esconde una repetición
+notoriamente mejor. Aun contra esa mejor repetición de \texttt{global} ($150$),
+\texttt{spatial\_term} ($81$, $75$ y $75$) reduce el solapamiento en al menos un
+$45$\,\%, por lo que la conclusión no depende de la agregación.
+
+\texttt{cluster\_first} queda descartada \textit{con datos}, incluso en su
+versión corregida. Alcanza, como era esperable, la mejor separación espacial de
+las tres ---solapamiento de $20$ por ruta ($-88$\,\%) y $\sum r_{\max}$ de
+$9\,714$\,m ($-57$\,\%)---, cifras que sirven como cota de la separación
+alcanzable, pero lo hace a un costo inadmisible en las tres dimensiones que el
+criterio protege: deja \textbf{12 árboles fuera} de la solución de forma
+consistente en las tres repeticiones, emplea $k=34$ rutas ($+36$\,\% de flota),
+degrada el balance a $0{,}698$ y encarece el desplazamiento total en un
+$16{,}9$\,\%. La causa es estructural: el particionamiento duro impide reasignar
+árboles de borde cuando el grupo que los contiene no alcanza a cubrirlos dentro
+de $T_{\max}$, y los sub-problemas ---que ahora reciben una fracción del
+presupuesto de tiempo, repartida entre los $\approx 34$ grupos--- activan las
+disyunciones penalizadas antes de encontrar una asignación completa.
+
+\subsubsection*{Grilla operacional de la estrategia ganadora}
+
+Confirmada \texttt{spatial\_term}, se repitió sobre ella la grilla de seis
+variantes operacionales (tiempo de servicio $\{1,2,3\}$\,min $\times$
+$T_{\max} \in \{2,3\}$\,h), con el mismo límite de 120\,s y tres semillas
+(Tabla~\ref{tab:grilla-spatial}).
+
+\begin{table}[H]
+  \centering
+  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term} ($n=1\,607$; límite de solver de 120\,s; media de 3 semillas).}
+  \label{tab:grilla-spatial}
+  \small
+  \begin{tabularx}{\textwidth}{rrXXXXXXX}
+    \toprule
+    Serv. [min] & $T_{\max}$ [h] & $k$ & Balance & $\sigma(T)$ [s] & Descart. & Desplaz. [s] & $\sum r_{\max}$ [m] & Solap./ruta \\
+    \midrule
+    1 & 2 & 23{,}0 & 0{,}996 & 7   & 0     & 68\,410 & 20\,937 & 109{,}2 \\
+    1 & 3 & 16{,}0 & 0{,}835 & 601 & 0     & 59\,491 & 19\,905 & 146{,}1 \\
+    2 & 2 & 36{,}0 & 0{,}998 & 3   & 1{,}0 & 65\,727 & 16\,917 & 82{,}8  \\
+    2 & 3 & 25{,}0 & 0{,}833 & 606 & 0     & 60\,588 & 19\,588 & 75{,}2  \\
+    3 & 2 & 49{,}0 & 0{,}998 & 2   & 2{,}0 & 63\,146 & 17\,347 & 55{,}8  \\
+    3 & 3 & 34{,}0 & 0{,}836 & 522 & 0     & 61\,611 & 24\,267 & 79{,}9  \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+La estructura de la grilla es la ya descrita para el compromiso entre balance y
+costo: $T_{\max}=2$\,h fuerza un balance $\approx 1{,}0$ y dispara la flota
+($23 \rightarrow 36 \rightarrow 49$ conforme crece el tiempo de servicio),
+mientras que $T_{\max}=3$\,h reduce $k$ en torno a un 30\,\% con un balance de
+$\approx 0{,}83$. El número de rutas coincide variante a variante con el que
+produce \texttt{global}, lo que confirma que el término espacial \textit{no}
+infla la flota. La observación operacional relevante es que las variantes de
+$T_{\max}=2$\,h con tiempo de servicio alto descartan árboles (uno con servicio
+de 2\,min, dos con 3\,min, de forma consistente en las tres semillas): esa
+configuración opera al límite de la capacidad temporal, de modo que si el censo
+exige cobertura total debe emplearse $T_{\max}=3$\,h.
+
+Debe notarse que la fila de servicio 2\,min con $T_{\max}=3$\,h de la
+Tabla~\ref{tab:grilla-spatial} es la misma configuración de la
+Tabla~\ref{tab:estrategias}, ejecutada en una corrida distinta; las pequeñas
+diferencias observadas (desplazamiento de $60\,588$ frente a $60\,611$\,s,
+solapamiento de $75{,}2$ frente a $77{,}3$) provienen del corte por reloj de
+pared del GLS y acotan la precisión con que deben leerse todas las comparaciones
+de esta subsección.
+
+\subsubsection*{Alcance de las comparaciones y decisión}
+
+Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head}
+de la Tabla~\ref{tab:estrategias}, que es el único contraste homogéneo
+disponible: mismo código, mismo presupuesto de solver y mismas semillas. La
+grilla de seis variantes del perfil de rendimiento
+(Tabla~\ref{tab:grilla-variantes}) proviene de un régimen de medición
+\textbf{distinto} ---estrategia \texttt{global}, código previo a la corrección
+del redondeo del tránsito y límite de solver de 180\,s--- y por tanto \textbf{no
+es comparable arco a arco} con la Tabla~\ref{tab:grilla-spatial}: cualquier
+diferencia entre ambas estaría confundida entre tres causas simultáneas
+(estrategia, redondeo y presupuesto de tiempo). Se la conserva porque sus
+hallazgos de \textit{tiempo} ---la dominancia del GLS y el carácter
+\textit{OSRM-bound} en frío--- no dependen de ninguno de esos tres factores.
+
+No se ejecutó un ajuste fino del coeficiente \texttt{SPAN\_COEF}. La razón es
+que \texttt{spatial\_term} ya satisface el criterio de decisión con su valor de
+fábrica y consume solo $1{,}5$ de los 10 puntos porcentuales de desplazamiento
+adicional admitidos, mientras que el único eje con señal pendiente ---el IoU del
+peor par--- es, como se argumentó, un problema de geometría local que un
+coeficiente global no separa sin penalizar al resto de las rutas. La decisión
+que se desprende del experimento es, en consecuencia, adoptar
+\texttt{spatial\_term} como estrategia por defecto del sistema, con
+\texttt{SPAN\_COEF} $=3$, un límite de solver de 120\,s y la configuración
+censal de referencia de 2\,min de servicio con $T_{\max}=3$\,h;
+\texttt{cluster\_first} se mantiene disponible como opción de comparación, pero
+no como \textit{default} de producción.
+
+El protocolo completo, los comandos reproducibles y los datos crudos de este
+experimento se encuentran versionados en \texttt{docs/experiments/} (reporte
+\texttt{route-quality-20260712.md} y los archivos CSV asociados).
 
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 
