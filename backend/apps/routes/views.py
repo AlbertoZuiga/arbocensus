@@ -2,6 +2,7 @@ from typing import Any
 
 from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
+from apps.datasets.models import Dataset
 from django.contrib.gis.geos import Point
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
@@ -13,7 +14,9 @@ from rest_framework.views import APIView
 
 from .models import Route, RouteStop, TreeObservation
 from .osrm import fetch_route_path
+from .progress import census_progress, census_progress_geojson
 from .serializers import (
+    DatasetQuerySerializer,
     RouteAssignSerializer,
     RouteDetailSerializer,
     RouteSerializer,
@@ -29,7 +32,7 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self) -> Any:
-        if self.action == "assign":
+        if self.action in ("assign", "progress", "progress_geojson"):
             return [IsAdminRole()]
         if self.action == "my_route":
             return [IsSurveyorRole()]
@@ -106,6 +109,20 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         route.surveyor = surveyor
         route.save(update_fields=["surveyor"])
         return Response(RouteSerializer(route).data)
+
+    def _dataset_id(self, request):
+        query = DatasetQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        data: Any = query.validated_data
+        return get_object_or_404(Dataset, pk=data["dataset"]).id
+
+    @action(detail=False, methods=["get"])
+    def progress(self, request):
+        return Response(census_progress(self._dataset_id(request)))
+
+    @action(detail=False, methods=["get"], url_path="progress-geojson")
+    def progress_geojson(self, request):
+        return Response(census_progress_geojson(self._dataset_id(request)))
 
     @action(detail=False, methods=["get"], url_path="my-route")
     def my_route(self, request):

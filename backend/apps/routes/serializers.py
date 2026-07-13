@@ -6,6 +6,10 @@ from .models import Route, RouteStop, TreeObservation
 CustomUser = get_user_model()
 
 
+class DatasetQuerySerializer(serializers.Serializer):
+    dataset = serializers.UUIDField()
+
+
 class RouteAssignSerializer(serializers.Serializer):
     surveyor_id = serializers.PrimaryKeyRelatedField(
         queryset=CustomUser.objects.filter(role=CustomUser.Role.SURVEYOR),
