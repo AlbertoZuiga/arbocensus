@@ -48,7 +48,7 @@ describe("RoutingConfigForm", () => {
         minRouteTimeSec: 7200,
         maxRouteTimeSec: 10800,
         serviceTimeSec: 300,
-        strategy: "global",
+        strategy: "spatial_term",
       })
     );
   });
@@ -82,7 +82,7 @@ describe("RoutingConfigForm", () => {
     await waitFor(() => expect(onJobCreated).toHaveBeenCalledWith(job));
   });
 
-  it("sends the default global strategy", async () => {
+  it("sends the default spatial_term strategy", async () => {
     createJob.mockResolvedValue({ id: "j1" });
     const user = userEvent.setup();
     renderForm();
@@ -91,7 +91,7 @@ describe("RoutingConfigForm", () => {
 
     await waitFor(() =>
       expect(createJob).toHaveBeenCalledWith(
-        expect.objectContaining({ strategy: "global" })
+        expect.objectContaining({ strategy: "spatial_term" })
       )
     );
   });
