@@ -7,7 +7,9 @@
 
 % ---- Trabajo previo en el mismo proyecto ---------------------
 
-@thesis{pizarro-zumaeta2024,
+% El tipo 'thesis' es de biblatex; plainnat.bst no lo define y BibTeX lo degrada
+% a 'misc', descartando 'school' y 'type'. 'mastersthesis' sí los imprime.
+@mastersthesis{pizarro-zumaeta2024,
   author = {Pizarro Suazo, Camila Paz and Zumaeta Gómez, Camila Alejandra},
   title = {Arbocensus: Sistema de Medición de Cobertura de Censos Urbanos de Árboles},
   type = {Trabajo de Titulación},
@@ -30,7 +32,7 @@
   title        = {{OSRM}: Open Source Routing Machine},
   year         = {2011},
   howpublished = {\url{http://project-osrm.org}},
-  note         = {Accedido en \today}
+  note         = {Accedido en julio de 2026}
 }
 
 @misc{openstreetmap,
