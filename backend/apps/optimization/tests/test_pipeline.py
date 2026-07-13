@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
 from apps.datasets.models import Dataset, Tree
+from apps.optimization import pipeline
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.pipeline import OptimizationPipeline
+from apps.optimization.solver import PenaltyConfig
 from apps.routes.models import Route, RouteStop
 from django.contrib.gis.geos import Point
 from requests_mock import ANY
@@ -182,3 +184,38 @@ def test_pipeline_drops_all_when_time_budget_too_tight(requests_mock):
     metrics = OptimizationPipeline(job).run()
 
     assert len(metrics["dropped_trees"]) == tree_count
+
+
+def capture_penalties(monkeypatch):
+    captured = []
+    real_solve = pipeline.solve_by_strategy
+
+    def spy(strategy, matrix, **kwargs):
+        captured.append(kwargs["penalties"])
+        return real_solve(strategy, matrix, **kwargs)
+
+    monkeypatch.setattr(pipeline, "solve_by_strategy", spy)
+    return captured
+
+
+def test_pipeline_defaults_to_production_penalties(requests_mock, monkeypatch):
+    job = make_job(10)
+    requests_mock.get(ANY, json=osrm_durations(10))
+    captured = capture_penalties(monkeypatch)
+
+    OptimizationPipeline(job).run(strategy="global", time_limit_sec=2)
+
+    assert captured == [PenaltyConfig()]
+
+
+def test_pipeline_forwards_penalty_overrides(requests_mock, monkeypatch):
+    job = make_job(10)
+    requests_mock.get(ANY, json=osrm_durations(10))
+    captured = capture_penalties(monkeypatch)
+    penalties = PenaltyConfig(soft_lower_penalty=0, soft_upper_target="tmax")
+
+    OptimizationPipeline(job).run(
+        strategy="global", time_limit_sec=2, penalties=penalties
+    )
+
+    assert captured == [penalties]

@@ -1,5 +1,6 @@
 import math
 import time
+from dataclasses import dataclass
 
 import numpy as np
 from apps.optimization.profiling import PhaseTimer
@@ -10,6 +11,32 @@ FIXED_VEHICLE_COST = 100_000
 SOFT_LOWER_PENALTY = 10_000
 SOFT_UPPER_PENALTY = 500
 DROP_PENALTY = 10 * FIXED_VEHICLE_COST
+
+SOFT_UPPER_TARGET_MIDPOINT = "midpoint"
+SOFT_UPPER_TARGET_TMAX = "tmax"
+SOFT_UPPER_TARGETS = (SOFT_UPPER_TARGET_MIDPOINT, SOFT_UPPER_TARGET_TMAX)
+
+
+@dataclass(frozen=True)
+class PenaltyConfig:
+    soft_lower_penalty: int = SOFT_LOWER_PENALTY
+    soft_upper_penalty: int = SOFT_UPPER_PENALTY
+    soft_upper_target: str = SOFT_UPPER_TARGET_MIDPOINT
+
+    def __post_init__(self):
+        if self.soft_upper_target not in SOFT_UPPER_TARGETS:
+            raise ValueError(
+                f"soft_upper_target must be one of {SOFT_UPPER_TARGETS}, "
+                f"got '{self.soft_upper_target}'"
+            )
+
+    def soft_upper_bound(self, min_route_time_sec, max_route_time_sec):
+        if self.soft_upper_target == SOFT_UPPER_TARGET_TMAX:
+            return max_route_time_sec
+        return (min_route_time_sec + max_route_time_sec) // 2
+
+
+DEFAULT_PENALTIES = PenaltyConfig()
 
 
 def build_open_matrix(matrix):
@@ -42,6 +69,7 @@ class ArbocensusVRPSolver:
         time_limit_sec,
         spatial_points=None,
         span_coef=0,
+        penalties=DEFAULT_PENALTIES,
     ):
         self.matrix = build_open_matrix(matrix)
         self.node_count = self.matrix.shape[0] - 1
@@ -52,6 +80,7 @@ class ArbocensusVRPSolver:
         self.time_limit_sec = time_limit_sec
         self.spatial_points = spatial_points
         self.span_coef = span_coef
+        self.penalties = penalties
 
     def solve(self, timer=None):
         timer = timer or PhaseTimer()
@@ -100,14 +129,18 @@ class ArbocensusVRPSolver:
             for node in range(1, n):
                 routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
 
-            midpoint = (self.min_route_time_sec + self.max_route_time_sec) // 2
+            soft_upper = self.penalties.soft_upper_bound(
+                self.min_route_time_sec, self.max_route_time_sec
+            )
             for vehicle_id in range(self.max_vehicles):
                 end_index = routing.End(vehicle_id)
                 time_dimension.SetCumulVarSoftLowerBound(
-                    end_index, self.min_route_time_sec, SOFT_LOWER_PENALTY
+                    end_index,
+                    self.min_route_time_sec,
+                    self.penalties.soft_lower_penalty,
                 )
                 time_dimension.SetCumulVarSoftUpperBound(
-                    end_index, midpoint, SOFT_UPPER_PENALTY
+                    end_index, soft_upper, self.penalties.soft_upper_penalty
                 )
 
             search_params = pywrapcp.DefaultRoutingSearchParameters()
