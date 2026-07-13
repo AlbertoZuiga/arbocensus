@@ -6,7 +6,7 @@ from .models import OptimizationJob, RoutingConfig, RoutingSolution
 class RoutingConfigSerializer(serializers.ModelSerializer):
     strategy = serializers.ChoiceField(
         choices=OptimizationJob.Strategy.choices,
-        default=OptimizationJob.Strategy.GLOBAL,
+        default=OptimizationJob.Strategy.SPATIAL_TERM,
     )
 
     class Meta:
