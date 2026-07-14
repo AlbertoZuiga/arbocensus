@@ -7,6 +7,7 @@ import Datasets from "./pages/admin/Datasets.jsx";
 import DatasetDetail from "./pages/admin/DatasetDetail.jsx";
 import LegacyImport from "./pages/admin/LegacyImport.jsx";
 import JobDetail from "./pages/admin/JobDetail.jsx";
+import CensusProgress from "./pages/admin/CensusProgress.jsx";
 import Usuarios from "./pages/admin/Usuarios.jsx";
 import { useSession } from "./hooks/useSession.js";
 import { useAuthStore } from "./store/authStore.js";
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="datasets" element={<Datasets />} />
         <Route path="datasets/legacy-import" element={<LegacyImport />} />
         <Route path="datasets/:id" element={<DatasetDetail />} />
+        <Route path="datasets/:id/progress" element={<CensusProgress />} />
         <Route path="datasets/:id/jobs/:jobId" element={<JobDetail />} />
         <Route path="usuarios" element={<Usuarios />} />
       </Route>
