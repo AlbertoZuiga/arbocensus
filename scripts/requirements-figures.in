@@ -1,0 +1,12 @@
+# Rendering deps for scripts/route_figures.py (thesis map figures).
+# Deliberately NOT a backend dependency: the figures are rendered offline from the
+# versioned route-audit artifacts, without Django, database, OSRM or Docker.
+#
+# Compiled with pip-tools, like the backend:
+#     pip-compile scripts/requirements-figures.in -o scripts/requirements-figures.txt
+#
+# The lockfile pins the whole transitive tree on purpose: the versioned PDFs must
+# re-render byte for byte, and their bytes depend on fonttools (Type42 subsetting) and
+# numpy/kiwisolver (layout), not only on matplotlib.
+matplotlib>=3.8
+pytest>=7.4
