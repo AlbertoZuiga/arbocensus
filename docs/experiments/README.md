@@ -31,6 +31,10 @@ la redacción de la tesis.
   rutas que `baseline_sweep` para que ambas corridas sean comparables. Es
   determinista: una sola fila, sin semillas.
 
+Las instancias reales sobre las que corren estos comandos viven congeladas en
+[`instances/`](instances/README.md) (`manage.py freeze_legacy` las vuelca desde la
+base legacy; `manage.py load_instances` las carga con UUID deterministas).
+
 La carpeta se resuelve desde `settings.EXPERIMENTS_DIR`
 (`docs/experiments/` por defecto; configurable con la variable de entorno
 `EXPERIMENTS_DIR`). En Docker se monta `./docs:/docs`, por lo que los informes
