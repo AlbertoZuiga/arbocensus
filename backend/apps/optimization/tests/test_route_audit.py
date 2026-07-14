@@ -5,6 +5,7 @@ from io import StringIO
 import numpy as np
 import pytest
 from apps.datasets.models import Dataset, Tree
+from apps.optimization.pipeline import OptimizationPipeline
 from apps.optimization.route_audit import (
     AUDIT_COLUMNS,
     SUMMARY_LABEL,
@@ -12,8 +13,10 @@ from apps.optimization.route_audit import (
     routes_geojson,
     self_crossings,
     summarize_audit,
+    tmin_gap_coverage,
     worst_overlap_pair,
 )
+from apps.optimization.solver import PenaltyConfig
 from django.contrib.gis.geos import Point
 from django.core.management import CommandError, call_command
 from requests_mock import ANY
@@ -259,3 +262,60 @@ def test_route_audit_rejects_t_min_over_t_max(tmp_path, real_dataset):
 def test_route_audit_rejects_missing_dataset(tmp_path):
     with pytest.raises(CommandError, match="not found"):
         call_command("route_audit", dataset="not-a-uuid", csv=str(tmp_path / "x.csv"))
+
+
+def test_tmin_gap_coverage_only_counts_routes_short_on_service():
+    rows = [
+        {"service_total_sec": 2_100, "travel_sec": 5_215},
+        {"service_total_sec": 8_000, "travel_sec": 1_000},
+    ]
+
+    assert tmin_gap_coverage(rows, min_route_time_sec=7_200) == [1.023]
+
+
+def capture_penalties(monkeypatch):
+    captured = []
+    real_run = OptimizationPipeline.run
+
+    def spy(self, **kwargs):
+        captured.append(kwargs["penalties"])
+        return real_run(self, **kwargs)
+
+    monkeypatch.setattr(OptimizationPipeline, "run", spy)
+    return captured
+
+
+def test_route_audit_defaults_keep_the_production_penalties(
+    tmp_path, real_dataset, requests_mock, monkeypatch, settings
+):
+    settings.EXPERIMENTS_DIR = tmp_path / "experiments"
+    mock_osrm(requests_mock, 6)
+    captured = capture_penalties(monkeypatch)
+
+    _, _, output = run_audit(tmp_path, real_dataset)
+
+    assert captured == [PenaltyConfig()]
+    assert "soft_lower_penalty=10000" in output
+    assert "soft_upper_target=midpoint" in output
+
+
+def test_route_audit_forwards_penalty_overrides(
+    tmp_path, real_dataset, requests_mock, monkeypatch, settings
+):
+    settings.EXPERIMENTS_DIR = tmp_path / "experiments"
+    mock_osrm(requests_mock, 6)
+    captured = capture_penalties(monkeypatch)
+
+    run_audit(
+        tmp_path,
+        real_dataset,
+        soft_lower_penalty=100,
+        soft_upper_target="tmax",
+        soft_upper_penalty=0,
+    )
+
+    assert captured == [
+        PenaltyConfig(
+            soft_lower_penalty=100, soft_upper_penalty=0, soft_upper_target="tmax"
+        )
+    ]

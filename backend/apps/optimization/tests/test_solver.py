@@ -1,6 +1,13 @@
 import numpy as np
+import pytest
 from apps.optimization.cost_matrix import UNREACHABLE_PENALTY
-from apps.optimization.solver import ArbocensusVRPSolver, build_open_matrix
+from apps.optimization.solver import (
+    SOFT_LOWER_PENALTY,
+    SOFT_UPPER_PENALTY,
+    ArbocensusVRPSolver,
+    PenaltyConfig,
+    build_open_matrix,
+)
 
 
 def unwrap(result):
@@ -150,3 +157,102 @@ def test_drops_all_when_time_budget_too_tight():
 
     assert routes == []
     assert sorted(dropped) == list(range(5))
+
+
+def two_cluster_matrix(per_cluster=3, within=10.0, across=3_000.0):
+    n = 2 * per_cluster
+    m = np.full((n, n), across)
+    for block in (range(per_cluster), range(per_cluster, n)):
+        for i in block:
+            for j in block:
+                m[i][j] = within
+    np.fill_diagonal(m, 0.0)
+    return m
+
+
+def total_travel(open_matrix, routes):
+    return sum(
+        open_matrix[a + 1][b + 1]
+        for route in routes
+        for a, b in zip(route[:-1], route[1:], strict=True)
+    )
+
+
+def test_penalty_defaults_reproduce_module_constants():
+    penalties = PenaltyConfig()
+
+    assert penalties.soft_lower_penalty == SOFT_LOWER_PENALTY
+    assert penalties.soft_upper_penalty == SOFT_UPPER_PENALTY
+    assert penalties.soft_upper_bound(7_200, 10_800) == 9_000
+
+
+def test_soft_upper_target_tmax_moves_the_bound_to_max_route_time():
+    penalties = PenaltyConfig(soft_upper_target="tmax")
+
+    assert penalties.soft_upper_bound(7_200, 10_800) == 10_800
+
+
+def test_unknown_soft_upper_target_is_rejected():
+    with pytest.raises(ValueError, match="soft_upper_target"):
+        PenaltyConfig(soft_upper_target="midpoint_ish")
+
+
+def test_solver_defaults_to_the_module_penalties():
+    solver = ArbocensusVRPSolver(
+        uniform_matrix(4),
+        min_route_time_sec=600,
+        max_route_time_sec=100_000,
+        service_time_sec=300,
+        max_vehicles=2,
+        time_limit_sec=5,
+    )
+
+    assert solver.penalties == PenaltyConfig()
+
+
+def solve_two_clusters(penalties):
+    # One vehicle for the six nodes: the only lever left is the visit ORDER, so any
+    # extra travel is padding to reach T_min, not a different fleet size.
+    matrix = two_cluster_matrix()
+    solver = ArbocensusVRPSolver(
+        matrix,
+        min_route_time_sec=15_000,
+        max_route_time_sec=25_000,
+        service_time_sec=1_000,
+        max_vehicles=1,
+        time_limit_sec=10,
+        penalties=penalties,
+    )
+    routes, dropped = unwrap(solver.solve())
+    assert dropped == []
+    return routes, total_travel(build_open_matrix(matrix), routes)
+
+
+def test_zero_soft_lower_penalty_stops_padding_routes_with_travel():
+    _, padded_travel = solve_two_clusters(PenaltyConfig())
+    routes, lean_travel = solve_two_clusters(PenaltyConfig(soft_lower_penalty=0))
+
+    assert lean_travel < padded_travel
+    assert sorted(routes[0]) == list(range(6))
+
+
+def solve_four_close_nodes(penalties):
+    solver = ArbocensusVRPSolver(
+        uniform_matrix(4, travel=100.0),
+        min_route_time_sec=0,
+        max_route_time_sec=10_000,
+        service_time_sec=2_000,
+        max_vehicles=4,
+        time_limit_sec=10,
+        penalties=penalties,
+    )
+    routes, _ = unwrap(solver.solve())
+    return routes
+
+
+def test_soft_upper_at_the_midpoint_splits_what_tmax_keeps_in_one_route():
+    split = solve_four_close_nodes(PenaltyConfig())
+    kept = solve_four_close_nodes(PenaltyConfig(soft_upper_target="tmax"))
+
+    assert len(split) > 1
+    assert len(kept) == 1
