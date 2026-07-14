@@ -84,6 +84,7 @@ class LegacyTreeRow:
 class LegacyAreaImport:
     dataset_name: str
     trees: list[LegacyTreeRow]
+    area_id: int | None = None
 
 
 @dataclass
@@ -299,6 +300,45 @@ def import_area(area_id: int) -> LegacyAreaImport:
                 trees=area_trees,
             )
     raise ValueError(f"Legacy area {area_id} does not exist")
+
+
+def list_distinct_areas() -> list[LegacyAreaImport]:
+    """Non-empty areas deduplicated by polygon geometry.
+
+    The same area is re-created for every campaign it takes part in, and area names
+    are reused across unrelated geometries, so the geometry is the only stable key.
+    Areas arrive ordered by id, so the first occurrence is the canonical one.
+    """
+    areas, trees = _load_api()
+    distinct: dict[tuple, LegacyAreaImport] = {}
+    for area_id, name, campaign, coordinates in areas:
+        polygon = _polygon(coordinates)
+        if polygon is None:
+            continue
+        area_trees = _trees_in_area(polygon, trees)
+        if not area_trees:
+            continue
+        key = tuple(polygon.coords[0])
+        distinct.setdefault(
+            key,
+            LegacyAreaImport(
+                dataset_name=f"{campaign} — {name}",
+                trees=area_trees,
+                area_id=area_id,
+            ),
+        )
+    return list(distinct.values())
+
+
+def all_tree_rows() -> list[LegacyTreeRow]:
+    _, trees = _load_api()
+    api_rows = [
+        LegacyTreeRow(
+            source=SOURCE_API, external_id=tree_id, lat=lat, lon=lon, species=species
+        )
+        for tree_id, lat, lon, species in trees
+    ]
+    return api_rows + _load_app_trees()
 
 
 def import_all() -> list[LegacyAreaImport]:
