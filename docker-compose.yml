@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: arbocensus
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - arbocensus_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U arbocensus"]
       interval: 10s
@@ -110,5 +110,6 @@ services:
     command: celery -A config worker --loglevel=info --concurrency=2
 
 volumes:
-  postgres_data:
+  arbocensus_postgres_data:
+    external: true
   redis_data:
