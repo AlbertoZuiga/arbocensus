@@ -23,8 +23,17 @@ class TreeObservationInputSerializer(serializers.Serializer):
     )
     photo = serializers.ImageField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
-    lat = serializers.FloatField(required=False, allow_null=True)
-    lon = serializers.FloatField(required=False, allow_null=True)
+    lat = serializers.FloatField(
+        required=False, allow_null=True, min_value=-90.0, max_value=90.0
+    )
+    lon = serializers.FloatField(
+        required=False, allow_null=True, min_value=-180.0, max_value=180.0
+    )
+
+    def validate(self, attrs):
+        if (attrs.get("lat") is None) != (attrs.get("lon") is None):
+            raise serializers.ValidationError("lat y lon deben enviarse juntos.")
+        return attrs
 
 
 class TreeObservationSerializer(serializers.ModelSerializer):
