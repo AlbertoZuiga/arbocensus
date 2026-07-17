@@ -101,11 +101,94 @@ def test_visit_with_valid_latlon_saves_location(solution_with_route, surveyor):
     assert stops[0].visit_location.y == pytest.approx(-33.45)
 
 
+def test_visit_with_boundary_latlon_saves_location(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": -90, "lon": 180},
+        format="json",
+    )
+    assert response.status_code == 200
+    stops[0].refresh_from_db()
+    assert stops[0].visit_location.x == pytest.approx(180)
+    assert stops[0].visit_location.y == pytest.approx(-90)
+
+
+def test_visit_with_lat_just_over_boundary_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": 90.0001, "lon": -70.65},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert stops[0].visit_location is None
+    assert TreeObservation.objects.count() == 0
+
+
 def test_visit_with_garbage_latlon_returns_400(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     response = _client(surveyor).post(
         f"/api/routes/stops/{stops[0].id}/visit/",
         {"lat": "no-soy-un-numero", "lon": ""},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert stops[0].visit_location is None
+    assert TreeObservation.objects.count() == 0
+
+
+def test_visit_with_out_of_range_lat_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": 9999, "lon": -70.65},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert stops[0].visit_location is None
+    assert TreeObservation.objects.count() == 0
+
+
+def test_visit_with_out_of_range_lon_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": -33.45, "lon": 9999},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert stops[0].visit_location is None
+    assert TreeObservation.objects.count() == 0
+
+
+def test_visit_with_only_lat_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": -33.45},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert stops[0].visit_location is None
+    assert TreeObservation.objects.count() == 0
+
+
+def test_visit_with_only_lon_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lon": -70.65},
         format="json",
     )
     assert response.status_code == 400
