@@ -49,12 +49,13 @@ a equipos de trabajo mediante una planificación eficiente de rutas de desplazam
 
 La escala real del problema se evidencia en las dos bases de datos que dejaron las
 iteraciones anteriores del proyecto \citep{binder-cortes2023,pizarro-zumaeta2024}. La
-primera, la base de datos \texttt{legacy\_api}, contiene 429 árboles georreferenciados,
-3.961 muestras (\textit{samples}), 10.008 fotografías y 48 áreas de censo distribuidas
-en 10 campañas. La segunda, la base \texttt{legacy\_app}, de la aplicación de censado
-previa desplegada en Heroku, contiene 1.205 registros de árboles (\texttt{mltree}), de
-los cuales aproximadamente 1.178 resultan importables al determinar una posición
-geográfica única a través de la mediana de las 17.208 muestras asociadas por código QR.
+más antigua, la base \texttt{legacy\_app} de la aplicación de censado previa desplegada
+en Heroku, contiene 1.205 registros de árboles (\texttt{mltree}), de los cuales
+aproximadamente 1.178 resultan importables al determinar una posición geográfica única
+a través de la mediana de las 17.208 muestras asociadas por código QR. La posterior, la
+base de datos \texttt{legacy\_api}, contiene 429 árboles georreferenciados, 3.961
+muestras (\textit{samples}), 10.008 fotografías y 48 áreas de censo distribuidas en 10
+campañas.
 Al combinar ambas fuentes, el conjunto total de árboles a rutear supera los 350 nodos,
 umbral que excede la capacidad de una única consulta a la matriz de distancias de OSRM
 y que evidencia la necesidad de mecanismos de particionamiento (\textit{chunking}) de

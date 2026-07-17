@@ -427,19 +427,19 @@ anteriores del proyecto Arbocensus
 en campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
 el campo \texttt{source} del modelo \texttt{Tree}:
 
-% ASUMIDO: la asignación de cada base a una iteración es inferencia por esquema, no
-% consta en las fuentes. legacy_app (esquema arbocensus_app_*, muestras por QR) mapea a
-% la app de censado de 2021 (repo mrecabarren/arbocensus). legacy_api (posición y especie
-% explícitas, real_tree_id) mapea a la iteración de identificación/cobertura de 2024
-% (Pizarro y Zumaeta); NO a la ludificación 2023 (fastAPI, cuyos modelos son
-% badge/score/campaign, sin datos de identificación de árboles). Por eso el texto cita
-% ambas memorias en conjunto y no atribuye una base a cada una.
+% Orden cronológico confirmado por los volcados de las bases (migraciones y muestras):
+% legacy_app (esquema arbocensus_app_*, muestras por QR) es la más antigua: génesis de
+% base 2021-10 y capturas de terreno desde 2021-10; mapea a la app de censado inicial
+% (repo mrecabarren/arbocensus). legacy_api (arbocensus_api_app_*, posición/especie
+% explícitas, real_tree_id) es posterior: génesis 2023-06 y capturas desde 2023-06; NO
+% corresponde a la ludificación 2023 (fastAPI, modelos badge/score/campaign, sin datos de
+% identificación de árboles). La asignación de cada base a una MEMORIA concreta sigue
+% siendo inferencia por esquema (no consta en las fuentes), por lo que el texto cita ambas
+% memorias en conjunto; pero el orden relativo app-antes-que-api sí está respaldado por
+% los timestamps de los volcados. Por eso se presenta primero legacy_app.
 \begin{itemize}
-  \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): aporta
-        $429$ árboles con posición explícita y especie, organizados en áreas
-        pertenecientes a campañas de censo.
-  \item \texttt{legacy\_app} (esquema \texttt{arbocensus\_app\_*}): base de la
-        aplicación de censado previa ---una aplicación web orientada a dispositivos
+  \item \texttt{legacy\_app} (esquema \texttt{arbocensus\_app\_*}): la más antigua, base
+        de la aplicación de censado previa ---una aplicación web orientada a dispositivos
         móviles---, donde el árbol no tiene una posición canónica sino
         un conjunto de muestras (\textit{samples}) tomadas en terreno, cada una con
         su propia lectura de GPS. La posición de cada árbol se reconstruye como la
@@ -450,6 +450,9 @@ el campo \texttt{source} del modelo \texttt{Tree}:
         mediana y no el promedio por su robustez frente a lecturas de GPS
         atípicas, habituales en captura urbana bajo copa arbórea. De este modo se
         obtienen $1\,178$ árboles con posición utilizable.
+  \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): posterior a la
+        anterior, aporta $429$ árboles con posición explícita y especie, organizados en
+        áreas pertenecientes a campañas de censo.
 \end{itemize}
 
 El \textit{dataset} definitivo de la evaluación reúne ambas fuentes y totaliza
