@@ -14,22 +14,22 @@ emplean los parámetros temporales por defecto ($T_{\min} = 7\,200$\,s y
 $T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol y los
 \textit{defaults} de producción del motor: la estrategia \texttt{spatial\_term}
 ---que agrega al objetivo un término de dispersión geográfica, véase la
-Sección~\ref{sec:estrategias}--- y un tiempo límite de solver de 120\,s, que es
+Sección~\ref{sec:estrategias}--- y un tiempo límite de \textit{solver} de 120\,s, que es
 el valor que produce la heurística $\min(30 + 1.5\,n,\ 120)$ para cualquier
 \textit{dataset} de este tamaño. Se reportan seis indicadores: el número de
-rutas $k$ generado de forma automática por el solver, el tiempo promedio por
+rutas $k$ generado de forma automática por el \textit{solver}, el tiempo promedio por
 ruta $\bar{T}$, la desviación estándar de los tiempos de ruta ---cuyo criterio
 de aceptación es que no supere el 15\,\% del promedio, en línea con el objetivo
 de balance de carga---, el número de rutas que exceden la cota dura $T_{\max}$
 ---que debe ser cero por construcción---, el número de árboles descartados
 ---el modelo admite descartes mediante disyunciones penalizadas, de modo que la
 cobertura total no está garantizada a priori--- y el tiempo de cómputo del
-solver. La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de
+\textit{solver}. La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de
 tres repeticiones (semillas 42, 43 y 44).
 
 \begin{table}[H]
   \centering
-  \caption{Métricas de calidad de rutas sobre el dataset de evaluación ($N=1\,607$, media de 3 semillas).}
+  \caption{Métricas de calidad de rutas sobre el \textit{dataset} de evaluación ($N=1\,607$, media de 3 semillas).}
   \label{tab:metricas}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
@@ -40,7 +40,7 @@ tres repeticiones (semillas 42, 43 y 44).
     Desviación estándar & 519\,s (5.1\,\% del promedio) & $< 15\,\%$ del promedio \\
     Rutas que exceden $T_{\max}$ & 0 & $= 0$ \\
     Árboles descartados & 0 (cobertura 1\,607/1\,607) & $= 0$ \\
-    Tiempo de cómputo (solver) & 120.0\,s ($= 2$ min) & $< 5$ min \\
+    Tiempo de cómputo (\textit{solver}) & 120.0\,s ($= 2$ min) & $< 5$ min \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -62,7 +62,7 @@ la mejor y la peor repetición (59\,911\,s, 59\,892\,s y 59\,892\,s; media
 59\,898\,s), esto es, un 0.03\,\% de dispersión. La semilla solo etiqueta la
 repetición: ni \texttt{global} ni \texttt{spatial\_term} consumen aleatoriedad
 ---a diferencia de \texttt{cluster\_first}, que la usa para inicializar
-$k$-means--- y el solver de OR-Tools es determinista dados sus parámetros de
+$k$-means--- y el \textit{solver} de \textit{OR-Tools} es determinista dados sus parámetros de
 entrada. La única fuente de varianza es el corte por reloj de pared del GLS:
 agotar el mismo presupuesto de 120\,s no equivale a alcanzar el mismo número de
 iteraciones, que depende de la carga de la máquina. Esa varianza residual es la
@@ -74,7 +74,7 @@ reportada en la
 Tabla~\ref{tab:metricas} es el promedio de las desviaciones estándar calculadas
 dentro de cada repetición, no la desviación del conjunto agregado de rutas.
 
-El criterio de $< 5$ minutos se aplica al tiempo de cómputo del solver. El
+El criterio de $< 5$ minutos se aplica al tiempo de cómputo del \textit{solver}. El
 tiempo total del \textit{pipeline} depende de si la matriz de costos está en
 caché: con caché fría, la primera repetición tardó 299.3\,s en total, de los
 cuales 177.4\,s correspondieron a la construcción de la matriz de costos contra
@@ -122,7 +122,7 @@ en el heurístico del vecino más cercano, generada programáticamente sobre el
 mismo \textit{dataset} ($N = 1\,607$), con la misma matriz de costos de OSRM
 ---la caché de la corrida anterior--- y con los mismos parámetros temporales
 ($T_{\max} = 10\,800$\,s y 2 minutos de servicio por árbol) que la solución de
-OR-Tools de la Sección anterior. El \textit{baseline} construye cada ruta
+\textit{OR-Tools} de la Sección anterior. El \textit{baseline} construye cada ruta
 encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el
 siguiente salto haría exceder el presupuesto temporal de la ruta; entonces abre
 una ruta nueva con el primer árbol que quede sin visitar. No hay optimización
@@ -131,11 +131,11 @@ La Tabla~\ref{tab:comparativa} contrasta ambos enfoques.
 
 \begin{table}[H]
   \centering
-  \caption{Comparación entre la solución de OR-Tools y el baseline greedy ($N=1\,607$, servicio 2\,min, $T_{\max}=3$\,h).}
+  \caption{Comparación entre la solución de \textit{OR-Tools} y el \textit{baseline} \textit{greedy} ($N=1\,607$, servicio 2\,min, $T_{\max}=3$\,h).}
   \label{tab:comparativa}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
-    Métrica & OR-Tools (VRP) & Greedy (vecino más cercano) \\
+    Métrica & \textit{OR-Tools} (VRP) & \textit{Greedy} (vecino más cercano) \\
     \midrule
     Número de rutas $k$ & 25 & 24 \\
     Tiempo total de desplazamiento & 59\,898\,s ($\approx$ 16\,h 38\,min) & 62\,585\,s ($\approx$ 17\,h 23\,min) \\
@@ -146,13 +146,13 @@ La Tabla~\ref{tab:comparativa} contrasta ambos enfoques.
 \end{table}
 
 En la métrica que el modelo efectivamente minimiza ---el tiempo total de
-desplazamiento--- OR-Tools supera al \textit{baseline}: ahorra 2\,687\,s
+desplazamiento--- \textit{OR-Tools} supera al \textit{baseline}: ahorra 2\,687\,s
 ($-4.3$\,\%) de caminata sobre el censo completo, cerca de 45 minutos de trabajo
 de terreno. Las otras dos filas de la tabla favorecen aparentemente al
 \textit{greedy} y requieren lectura cuidadosa, porque ambas son consecuencia de
 un mismo comportamiento: la heurística voraz llena cada ruta hasta el borde de
 la cota dura. Su duración media por ruta es de 10\,643\,s, un 98.5\,\% de
-$T_{\max}$, mientras que la de OR-Tools es de 10\,110\,s (93.6\,\% de
+$T_{\max}$, mientras que la de \textit{OR-Tools} es de 10\,110\,s (93.6\,\% de
 $T_{\max}$), porque el modelo empuja las duraciones hacia el punto medio del
 intervalo $[T_{\min}, T_{\max}]$ mediante la penalización blanda superior. De
 ahí que el \textit{greedy} necesite una ruta menos (24 frente a 25) y que la
@@ -166,13 +166,13 @@ la ausencia de reasignación produce rutas degeneradas. Su última ruta visita 4
 árboles con 9\,267\,s de desplazamiento
 ---más de dos horas y media de caminata para censar cuatro árboles---, porque
 son los árboles aislados que las cadenas de proximidad anteriores fueron
-dejando atrás. Ninguna ruta de la solución de OR-Tools presenta esa patología:
+dejando atrás. Ninguna ruta de la solución de \textit{OR-Tools} presenta esa patología:
 las disyunciones penalizadas y la minimización global permiten repartir esos
 árboles entre rutas vecinas.
 
 El costo de esa calidad es tiempo de cómputo: el \textit{greedy} resuelve en
 0.008\,s sobre la matriz ya cacheada, frente a los 120\,s de presupuesto del
-metaheurístico de OR-Tools. Para una planificación que se ejecuta una vez por
+metaheurístico de \textit{OR-Tools}. Para una planificación que se ejecuta una vez por
 campaña de censo, 120\,s de cómputo a cambio de un $4.3$\,\% menos de caminata y
 de rutas sin degenerar es un intercambio favorable.
 
@@ -203,7 +203,7 @@ repeticiones con semillas distintas.
 
 Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se
 caracterizó la calidad espacial de la solución producida por la formulación
-actual: un único \textit{Open mTSP} global resuelto con OR-Tools, sin
+actual: un único \textit{Open mTSP} global resuelto con \textit{OR-Tools}, sin
 agrupamiento previo de los nodos. El interés no es el balance temporal ---ya
 controlado por la penalización blanda sobre $T_{\min}$--- sino la
 \textit{compacidad geográfica} de cada ruta y el grado de
@@ -220,7 +220,7 @@ paradas (\texttt{RouteStop}), usando distancia de \textit{haversine}:
   (\textit{bounding box}) de una ruta dada, sumado sobre todas las rutas. Se
   reporta tanto el total como su valor normalizado por número de rutas
   ($\overline{\text{solap}} = \text{total}/k$), para permitir comparar entre
-  tamaños de dataset. Mayor indica peor partición espacial.
+  tamaños de \textit{dataset}. Mayor indica peor partición espacial.
   \item \textbf{IoU peor par}: intersección sobre unión de las cajas
   envolventes del par de rutas con mayor superposición. Mayor indica mayor
   solapamiento espacial entre dos rutas.
@@ -229,13 +229,13 @@ paradas (\texttt{RouteStop}), usando distancia de \textit{haversine}:
 El balance temporal se reporta como $\min_r T_r / \max_r T_r$
 (\textit{balance\_score} del modelo). Se ejecutó un barrido reproducible
 mediante el comando \texttt{baseline\_sweep} ($5$ semillas $\times$ $3$ tamaños
-de dataset, $n \in \{20, 40, 80\}$) sobre la zona de Providencia/Santiago
-Centro, con distribución uniforme de nodos y el límite de solver por defecto de
+de \textit{dataset}, $n \in \{20, 40, 80\}$) sobre la zona de Providencia/Santiago
+Centro, con distribución uniforme de nodos y el límite de \textit{solver} por defecto de
 $180$\,s, promediando las métricas por semilla (Tabla~\ref{tab:baseline-geo}).
 
 \begin{table}[H]
   \centering
-  \caption{Baseline de calidad geográfica del VRP global (media de 5 semillas por $n$).}
+  \caption{\textit{Baseline} de calidad geográfica del VRP global (media de 5 semillas por $n$).}
   \label{tab:baseline-geo}
   \begin{tabularx}{\textwidth}{rXXXXXX}
     \toprule
@@ -248,15 +248,15 @@ $180$\,s, promediando las métricas por semilla (Tabla~\ref{tab:baseline-geo}).
   \end{tabularx}
 \end{table}
 
-El hallazgo principal es un \textbf{desacople entre balance temporal y calidad
-geográfica}: el balance se mantiene alto ($0.87$--$0.95$) mientras el
+El hallazgo principal es un desacople entre balance temporal y calidad
+geográfica: el balance se mantiene alto ($0.87$--$0.95$) mientras el
 solapamiento entre rutas crece de forma monótona con la densidad, tanto en
 términos absolutos ($0.4 \to 6.6 \to 25.8$) como normalizado por ruta
 ($0.13 \to 1.32 \to 3.23$). El IoU del peor par sigue la misma tendencia
-($0.01 \to 0.13 \to 0.28$). El efecto es \textbf{sistémico y dependiente de la
-densidad}: con $n=20$ el solapamiento es prácticamente nulo, pero crece de
-forma sostenida al aumentar la densidad de nodos, observándose el caso
-recurrente de una ruta compacta geográficamente contenida dentro de la caja
+($0.01 \to 0.13 \to 0.28$). El efecto es sistémico y dependiente de la
+densidad: con $n=20$ el solapamiento es prácticamente nulo, pero crece de
+forma sostenida al aumentar la densidad de nodos, con un caso
+recurrente: una ruta compacta geográficamente contenida dentro de la caja
 envolvente de otra más extensa. Esto es coherente con que el modelo optimiza
 tiempo total con un término de balance blando, sin ningún criterio espacial
 explícito en la partición.
@@ -275,7 +275,7 @@ implementación: la estimación de $k$ usaba el viaje promedio entre
 \textit{todos} los pares de la matriz metropolitana como sustituto del viaje
 entre paradas consecutivas ---lo que sobrestima el trabajo por árbol en órdenes
 de magnitud y dispara $k$ a cientos de grupos---, y cada sub-problema recibía el
-presupuesto de tiempo \textit{completo} del solver, de modo que la estrategia
+presupuesto de tiempo \textit{completo} del \textit{solver}, de modo que la estrategia
 consumía $k$ veces el cómputo de sus competidoras. Una corrida con el código
 previo superó las 8 horas y debió abortarse. La corrección reemplaza el
 estimador por el viaje medio al vecino más cercano y reparte el presupuesto
@@ -287,8 +287,8 @@ corresponden a la versión corregida.
 Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones
 idénticas: mismo \textit{dataset} ($n = 1\,607$), misma variante operacional
 (tiempo de servicio de 2\,min y $T_{\max} = 3$\,h, la configuración censal de
-referencia), mismo límite de solver (120\,s, justificado en la
-Tabla~\ref{tab:sensibilidad-tl}, que acota el presupuesto de tiempo del solver y
+referencia), mismo límite de \textit{solver} (120\,s, justificado en la
+Tabla~\ref{tab:sensibilidad-tl}, que acota el presupuesto de tiempo del \textit{solver} y
 no compara estrategias entre sí), las mismas tres semillas (42, 43 y 44) y la
 misma versión del código, posterior a la corrección del redondeo del tránsito.
 El criterio de decisión se fijó antes de ejecutar el experimento: una estrategia
@@ -301,7 +301,7 @@ repeticiones.
 
 \begin{table}[H]
   \centering
-  \caption{Comparación de estrategias sobre el dataset real ($n=1\,607$; servicio de 2\,min, $T_{\max}=3$\,h; límite de solver de 120\,s; media de 3 semillas).}
+  \caption{Comparación de estrategias sobre el \textit{dataset} real ($n=1\,607$; servicio de 2\,min, $T_{\max}=3$\,h; límite de \textit{solver} de 120\,s; media de 3 semillas).}
   \label{tab:estrategias}
   \small
   \begin{tabularx}{\textwidth}{lXXXXXXX}
@@ -327,7 +327,7 @@ semillas de la propia \texttt{global}. Cumple, por tanto, el criterio de
 decisión.
 
 El resultado admite una matización que conviene explicitar: el IoU del peor par
-\textbf{no mejora}, sino que empeora levemente ($0{,}51 \rightarrow 0{,}55$; en
+no mejora, sino que empeora levemente ($0{,}51 \rightarrow 0{,}55$; en
 esta métrica un valor mayor es peor). La penalización del \textit{span} actúa
 sobre la extensión de cada ruta considerada de forma individual, de modo que
 comprime las cajas envolventes, pero no separa el par de rutas vecinas que se
@@ -351,7 +351,7 @@ versión corregida. Alcanza, como era esperable, la mejor separación espacial d
 las tres ---solapamiento de $20$ por ruta ($-88$\,\%) y $\sum r_{\max}$ de
 $9\,714$\,m ($-57$\,\%)---, cifras que sirven como cota de la separación
 alcanzable, pero lo hace a un costo inadmisible en las tres dimensiones que el
-criterio protege: deja \textbf{12 árboles fuera} de la solución ---la estrategia
+criterio protege: deja 12 árboles fuera de la solución ---la estrategia
 es determinista, pues el $k$-medias emplea una semilla propia fija y las tres
 repeticiones producen exactamente la misma partición---, usa $k=34$ rutas
 ($+36$\,\% de flota), degrada el balance a $0{,}698$ y encarece el
@@ -371,7 +371,7 @@ $T_{\max} \in \{2,3\}$\,h), con el mismo límite de 120\,s y tres semillas
 
 \begin{table}[H]
   \centering
-  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term} ($n=1\,607$; límite de solver de 120\,s; media de 3 semillas).}
+  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term} ($n=1\,607$; límite de \textit{solver} de 120\,s; media de 3 semillas).}
   \label{tab:grilla-spatial}
   \small
   \begin{tabularx}{\textwidth}{rrXXXXXXX}
@@ -417,13 +417,13 @@ de esta subsección.
 
 Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head}
 de la Tabla~\ref{tab:estrategias}, que es el único contraste homogéneo
-disponible: mismo código, mismo presupuesto de solver y mismas semillas. La
+disponible: mismo código, mismo presupuesto de \textit{solver} y mismas semillas. La
 grilla de seis variantes del perfil de rendimiento
 (Sección~\ref{sec:perfil-rendimiento}, Tabla~\ref{tab:grilla-variantes})
 proviene de un régimen de medición
-\textbf{distinto} ---estrategia \texttt{global}, código previo a la corrección
-del redondeo del tránsito y límite de solver de 180\,s--- y por tanto \textbf{no
-es comparable arco a arco} con la Tabla~\ref{tab:grilla-spatial}: cualquier
+distinto ---estrategia \texttt{global}, código previo a la corrección
+del redondeo del tránsito y límite de \textit{solver} de 180\,s--- y por tanto no
+es comparable arco a arco con la Tabla~\ref{tab:grilla-spatial}: cualquier
 diferencia entre ambas estaría confundida entre tres causas simultáneas
 (estrategia, redondeo y presupuesto de tiempo). Se la conserva porque sus
 hallazgos de \textit{tiempo} ---la dominancia del GLS y el carácter
@@ -438,7 +438,7 @@ geometría local que un
 coeficiente global no separa sin penalizar al resto de las rutas. La decisión
 que se desprende del experimento es, en consecuencia, adoptar
 \texttt{spatial\_term} como estrategia por defecto del sistema, con
-\texttt{SPATIAL\_SPAN\_COEF} $=3$, un límite de solver de 120\,s y la
+\texttt{SPATIAL\_SPAN\_COEF} $=3$, un límite de \textit{solver} de 120\,s y la
 configuración censal de referencia de 2\,min de servicio con $T_{\max}=3$\,h;
 \texttt{cluster\_first} se mantiene disponible como opción de comparación, pero
 no como \textit{default} de producción.
@@ -457,7 +457,7 @@ Esta sección caracteriza el comportamiento temporal del motor de optimización:
 en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
 varían las soluciones ante los parámetros operacionales (tiempo de servicio por
 árbol y cota dura $T_{\max}$) y cuál es la sensibilidad del sistema al tamaño
-del problema y al presupuesto del solver. Todas las cifras provienen del
+del problema y al presupuesto del \textit{solver}. Todas las cifras provienen del
 experimento de perfilado ejecutado el 11--12 de julio de 2026, cuyo protocolo y
 datos crudos se encuentran versionados en el directorio
 \texttt{docs/experiments/} del repositorio (reporte
@@ -467,25 +467,25 @@ previamente sobre una corrida sintética de $n=80$
 (\texttt{20260711-231139-baseline-sweep.md}).
 
 Corresponde advertir que las cifras de esta sección provienen de un
-\textbf{régimen de medición anterior} al de la
+régimen de medición anterior al de la
 Sección~\ref{sec:comparacion-estrategias}: se obtuvieron con la estrategia
-\texttt{global}, un límite de solver de 180\,s y una versión del código previa a
+\texttt{global}, un límite de \textit{solver} de 180\,s y una versión del código previa a
 la corrección del redondeo del tránsito (el truncamiento entero descrito al
 final de la Sección~\ref{sec:variantes-duracion}). Ese era el régimen vigente en
 producción al momento del perfilamiento, y son sus propios resultados los que lo
 dejaron obsoleto: el análisis de sensibilidad de la
-Tabla~\ref{tab:sensibilidad-tl} es el que motivó bajar el límite de solver de
+Tabla~\ref{tab:sensibilidad-tl} es el que motivó bajar el límite de \textit{solver} de
 180 a 120\,s, mientras que la adopción de \texttt{spatial\_term} como estrategia
 por defecto proviene del experimento de comparación de la
 Sección~\ref{sec:comparacion-estrategias}. El perfil documenta, por tanto, el
 estado previo a ambas decisiones y no se reejecutó bajo el régimen nuevo: sus
 tablas ---en particular la grilla de seis variantes de la
-Tabla~\ref{tab:grilla-variantes}--- \textbf{no deben cruzarse arco a arco} con
+Tabla~\ref{tab:grilla-variantes}--- no deben cruzarse arco a arco con
 las de la Sección~\ref{sec:comparacion-estrategias}, por las razones que allí se
 detallan. La sección se conserva porque sus hallazgos son de \textit{tiempo}
 ---la dominancia del GLS y el carácter \textit{OSRM-bound} en frío---, que no
 dependen de la estrategia ni del redondeo, y porque el barrido de la
-Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de solver como variable del
+Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de \textit{solver} como variable del
 experimento y no como constante del régimen.
 
 \subsection{Entorno de medición}
@@ -495,11 +495,11 @@ realizaron sobre una réplica local del entorno de producción definida en
 \texttt{docker-compose.prod.yml}: imágenes construidas con el \textit{target}
 \texttt{prod} del \texttt{Dockerfile} (sin \textit{bind-mounts} de código ni
 recarga en caliente, con usuario no privilegiado), una instancia real de OSRM
-cargada con el extracto completo de Chile de OpenStreetMap
+cargada con el extracto completo de Chile de \textit{OpenStreetMap}
 (\texttt{chile-latest.osm.pbf}), preprocesado con el algoritmo
 \textit{Multi-Level Dijkstra} (MLD) y perfil peatonal, además de PostGIS
 15--3.3 y Redis 7. Las versiones empleadas fueron Python 3.12.11, Django 6.0,
-OR-Tools 9.15 y NumPy 2.4.6.
+\textit{OR-Tools} 9.15 y NumPy 2.4.6.
 
 Este entorno difiere de un despliegue real en tres aspectos que deben
 considerarse al interpretar las cifras absolutas: (i) el hardware es un Apple
@@ -525,7 +525,7 @@ solución y metaheurística), extracción de la solución
 (\texttt{solution\_extraction}) y cálculo de métricas (\texttt{metrics}). El
 hallazgo central es que el perfil depende del estado de la caché de la matriz
 de distancias: en operación normal (caché caliente) el \textit{pipeline} está
-acotado por el solver (\textit{solve-bound}), y solo en el primer contacto con
+acotado por el \textit{solver} (\textit{solve-bound}), y solo en el primer contacto con
 un \textit{dataset} está acotado por OSRM (\textit{OSRM-bound}).
 
 Con la caché caliente, la metaheurística \textit{Guided Local Search} (GLS)
@@ -587,7 +587,7 @@ terminó a los 3,9\,s; en la grilla completa el tiempo de resolución observado
 para el mismo \textit{dataset} varió entre 29 y 180\,s, según si la búsqueda
 agota o no el presupuesto de tiempo asignado.
 
-\subsection{Variaciones de duración sobre el dataset real}
+\subsection{Variaciones de duración sobre el \textit{dataset} real}
 \label{sec:variantes-duracion}
 
 Se evaluaron las seis combinaciones de tiempo de servicio por árbol
@@ -596,7 +596,7 @@ $T_{\min} = \min(7\,200\,\text{s}, T_{\max})$, sobre el \textit{dataset} real
 completo de $n=1\,607$ árboles (429 provenientes de la fuente
 \texttt{legacy\_api} y 1\,178 de \texttt{legacy\_app}, estas últimas con
 posición mediana por código QR). Cada variante se ejecutó con 3 semillas y un
-límite de solver de 180\,s, que era el tope vigente en producción al momento de
+límite de \textit{solver} de 180\,s, que era el tope vigente en producción al momento de
 este perfilamiento ($\min(30 + 1{,}5 \cdot n,\ 180)$ para ese tamaño); el tope
 se bajó a 120\,s justamente a partir del análisis de sensibilidad de la
 Tabla~\ref{tab:sensibilidad-tl}.
@@ -604,7 +604,7 @@ La Tabla~\ref{tab:grilla-variantes} resume las medias por variante.
 
 \begin{table}[H]
   \centering
-  \caption{Grilla de seis variantes sobre el dataset real ($n=1\,607$; media de 3 semillas; límite de solver de 180\,s). El total del \textit{pipeline} equivale al tiempo de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
+  \caption{Grilla de seis variantes sobre el \textit{dataset} real ($n=1\,607$; media de 3 semillas; límite de \textit{solver} de 180\,s). El total del \textit{pipeline} equivale al tiempo de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
   \label{tab:grilla-variantes}
   \small
   \begin{tabularx}{\textwidth}{rrXXXXXXX}
@@ -634,7 +634,7 @@ restrictiva (servicio de 3\,min con $T_{\max}=2$\,h), que deja un árbol fuera
 de la solución de forma consistente en las tres semillas.
 
 Respecto de las semillas, corresponde precisar su rol: dados los parámetros,
-el solver de OR-Tools es determinista, por lo que sobre el \textit{dataset}
+el \textit{solver} de \textit{OR-Tools} es determinista, por lo que sobre el \textit{dataset}
 real la semilla actúa únicamente como etiqueta de la repetición. La varianza
 observada entre repeticiones (columna sd de \texttt{solve} en la
 Tabla~\ref{tab:grilla-variantes}) proviene del corte por tiempo de reloj
@@ -644,12 +644,12 @@ presupuesto, las tres repeticiones convergen a soluciones casi idénticas.
 Finalmente, la grilla registra rutas cuyo tiempo estimado excede $T_{\max}$
 en la configuración de 2\,h (por ejemplo, la práctica totalidad de las rutas
 en las variantes con servicio de 2 y 3\,min). Este exceso no constituye una
-infactibilidad del solver, sino un artefacto de redondeo: el \textit{callback}
+infactibilidad del \textit{solver}, sino un artefacto de redondeo: el \textit{callback}
 de tránsito trunca cada arco a aritmética entera
 (\texttt{int(travel + service)}), mientras que la métrica de duración estimada
 suma los mismos términos en punto flotante; con 30 a 70 arcos por ruta, el
 truncamiento acumula una discrepancia de 10 a 70\,s por ruta. La cota dura
-$T_{\max}$ se respeta estrictamente en la aritmética entera del solver.
+$T_{\max}$ se respeta estrictamente en la aritmética entera del \textit{solver}.
 
 \subsection{Sensibilidad al tamaño del problema y al presupuesto del solver}
 
@@ -658,7 +658,7 @@ Para aislar el efecto del tamaño del problema se repitió la grilla sobre un
 consulta a OSRM en frío: de 1,7\,s con $n=157$ a 170,8\,s con $n=1\,607$
 ---un factor de $\approx 100\times$ para $10\times$ el número de nodos,
 consistente con el crecimiento $O(n^2)$ del número de celdas de la matriz---.
-La primera solución del solver pasa de 0,02\,s a 1,4\,s ($\approx 63\times$).
+La primera solución del \textit{solver} pasa de 0,02\,s a 1,4\,s ($\approx 63\times$).
 La metaheurística, en cambio, no escala de forma monótona con $n$ a presupuesto
 fijo: con $n=157$ el GLS agota los 180\,s en casi todas las variantes (media de
 167\,s), mientras que con $n=1\,607$ corta antes en varias (media de 103\,s).
@@ -677,7 +677,7 @@ medible.
 
 \begin{table}[H]
   \centering
-  \caption{Sensibilidad al límite de tiempo del solver (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$).}
+  \caption{Sensibilidad al límite de tiempo del \textit{solver} (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$).}
   \label{tab:sensibilidad-tl}
   \begin{tabularx}{\textwidth}{rXXXX}
     \toprule
@@ -695,7 +695,7 @@ medible.
 Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
 
 \begin{itemize}
-  \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para \textit{datasets} que superen los 5\,000 puntos activos, superando el límite \texttt{--max-table-size} de una única solicitud.
+  \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para \textit{datasets} que superen los 5\,000 puntos activos, límite \texttt{--max-table-size} de una única solicitud.
   \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual (Sección~\ref{sec:ui}) por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
   \item \textbf{Importación de formatos adicionales}: soporte de GeoJSON como formato de entrada de \textit{datasets}, que actualmente se importan desde archivos CSV o JSON, o bien desde las fuentes legadas (Sección~\ref{sec:legacy}).
   \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos completos de administrador y censador mediante Playwright.

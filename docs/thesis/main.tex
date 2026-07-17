@@ -58,6 +58,13 @@
   \renewcommand{\chaptername}{}
 }
 
+% Los índices de tablas e ilustraciones deben repetir el rótulo del caption:
+% «TABLA 1 Título», «ILUSTRACIÓN 1 Título». tocloft antepone el rótulo al número.
+\renewcommand{\cfttabpresnum}{TABLA }
+\renewcommand{\cftfigpresnum}{ILUSTRACIÓN }
+\settowidth{\cfttabnumwidth}{\cfttabpresnum 10\quad}
+\settowidth{\cftfignumwidth}{\cftfigpresnum 10\quad}
+
 % ---- Pie de página --------------------------------------------
 \usepackage{fancyhdr}
 \pagestyle{fancy}
@@ -78,9 +85,10 @@
 \counterwithout{table}{chapter}
 
 % ---- Captions -------------------------------------------------
+% Formato exigido por el centro de escritura: «TABLA 1 Título», «ILUSTRACIÓN 1 Título».
 \usepackage{caption}
-\captionsetup[table]{name=Tabla, labelsep=colon, position=above}
-\captionsetup[figure]{name=Ilustración, labelsep=colon, position=below}
+\captionsetup[table]{name=TABLA, labelsep=space, position=above}
+\captionsetup[figure]{name=ILUSTRACIÓN, labelsep=space, position=below}
 
 % ---- Paquetes de contenido ------------------------------------
 \usepackage{graphicx}
