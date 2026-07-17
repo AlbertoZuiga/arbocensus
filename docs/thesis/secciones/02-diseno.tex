@@ -18,11 +18,11 @@ Django con módulos claramente separados por dominio
 
 Las tareas de optimización se ejecutan de forma asíncrona mediante Celery con Redis
 como broker, dado que el proceso de construcción de la matriz de costos y la
-ejecución del solver pueden tardar varios minutos para conjuntos de cien o más
+ejecución del \textit{solver} pueden tardar varios minutos para conjuntos de cien o más
 puntos.
 
-El motor de ruteo peatonal (OSRM) se despliega localmente en Docker, procesando
-datos de OpenStreetMap de Chile, lo que elimina costos de API y dependencias de red
+El motor de ruteo peatonal (OSRM) se despliega localmente en Docker y procesa
+datos de \textit{OpenStreetMap} de Chile, lo que elimina costos de API y dependencias de red
 durante la optimización.
 
 La Figura~\ref{fig:arquitectura} resume las capas del sistema y el recorrido de una
@@ -188,18 +188,18 @@ Las rutas son abiertas: no existe un punto de inicio ni de término predefinido.
 \label{sec:matriz}
 
 La matriz de costos $C \in \mathbb{R}^{n \times n}$ se construye consultando el
-endpoint \texttt{/table/v1/foot} de OSRM, que devuelve los tiempos de caminata
+\textit{endpoint} \texttt{/table/v1/foot} de OSRM, que devuelve los tiempos de caminata
 reales entre todos los pares de puntos en una única solicitud HTTP.
 
 Para evitar recomputaciones costosas, la matriz se persiste en el modelo
-\texttt{DistanceMatrix} asociado al dataset.
+\texttt{DistanceMatrix} asociado al \textit{dataset}.
 La clave de caché es un hash SHA-256 calculado sobre los identificadores de los
 árboles activos ordenados; si el conjunto de árboles cambia, el hash no coincide
 y la matriz se recalcula automáticamente.
 
 Los nodos inalcanzables (devueltos como \texttt{null} por OSRM) se reemplazan por
 una penalización de $9\,999\,999$ segundos, garantizando la viabilidad numérica del
-solver sin alterar la topología de la solución.
+\textit{solver} sin alterar la topología de la solución.
 
 El factor que limita el tamaño de una consulta no es el parámetro
 \texttt{--max-table-size} de OSRM (fijado en $5\,000$), sino la longitud máxima de
@@ -224,7 +224,7 @@ dimensión de la matriz, cuyo tamaño en disco crece como $O(n^2)$.
 
 El número de rutas $k$ ---y por lo tanto el número de censadores que deben salir a
 terreno en una jornada--- no es un dato de entrada del sistema: es una salida del
-solver. El administrador nunca declara cuántos equipos tiene disponibles; declara
+\textit{solver}. El administrador nunca declara cuántos equipos tiene disponibles; declara
 cuánto puede durar una jornada ($T_{\min}$, $T_{\max}$) y cuánto toma censar un
 árbol ($s$), y el sistema deriva la flota necesaria. Esta decisión de diseño evita
 el enfoque de iteración externa ---resolver el modelo con $1, 2, 3, \ldots$
@@ -232,8 +232,8 @@ vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de
 cómputo por el número de intentos y resulta frágil, pues una corrida infactible no
 distingue entre «faltan vehículos» y «el modelo no admite solución».
 
-En su lugar, el sistema entrega a OR-Tools un \textbf{techo} $N_{\max}$ de vehículos
-disponibles y deja que el solver decida cuántos activa. El techo se calcula a partir
+En su lugar, el sistema entrega a \textit{OR-Tools} un techo $N_{\max}$ de vehículos
+disponibles y deja que el \textit{solver} decida cuántos activa. El techo se calcula a partir
 del trabajo total estimado ---servicio más desplazamiento--- dividido por la duración
 mínima de una ruta:
 
@@ -245,7 +245,7 @@ mínima de una ruta:
 \end{equation}
 
 donde $n$ es el número de árboles activos, $s$ el tiempo de servicio por árbol y
-$\hat{c}_{\text{nn}}$ el \textbf{tiempo medio al vecino más cercano}: el promedio,
+$\hat{c}_{\text{nn}}$ el tiempo medio al vecino más cercano: el promedio,
 sobre todos los nodos, del arco de menor costo que sale de cada nodo, excluyendo la
 diagonal y los pares inalcanzables (aquellos con la penalización de $9\,999\,999$\,s).
 Se emplea el vecino más cercano y no el promedio de todos los pares porque una ruta
@@ -255,16 +255,16 @@ geográfica del \textit{dataset}, e inflaría $N_{\max}$ innecesariamente. El t�
 $b$ es un margen de holgura de $5$ vehículos, y el mínimo con $n$ impide que el techo
 supere el caso degenerado de un árbol por ruta.
 
-Es importante subrayar que $N_{\max}$ es una \textbf{cota superior}, no una
+Es importante subrayar que $N_{\max}$ es una cota superior, no una
 predicción: solo debe ser lo bastante amplia como para no excluir la solución óptima.
-La minimización efectiva de $k$ ocurre dentro del solver, mediante el costo fijo de
+La minimización efectiva de $k$ ocurre dentro del \textit{solver}, mediante el costo fijo de
 $100\,000$\,s por vehículo activo (Sección~\ref{sec:solver}): activar una ruta
-adicional es tan caro que el solver solo lo hace cuando las restricciones temporales
+adicional es tan caro que el \textit{solver} solo lo hace cuando las restricciones temporales
 lo obligan. El número de rutas de la solución final es, en la práctica,
 sustancialmente menor que $N_{\max}$.
 
 La misma estimación alimenta un segundo uso, orientado a la planificación operativa
-y no al solver: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite
+y no al \textit{solver}: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite
 al administrador consultar, antes de lanzar una optimización, cuántos censadores
 requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. En
 este caso la Ecuación~\ref{eq:nmax} se evalúa con margen nulo ($b=0$), pues aquí sí
@@ -277,7 +277,7 @@ lugar de incurrir en el costo de construirla.
 \subsection{Solver VRP con OR-Tools}
 \label{sec:solver}
 
-La formulación en OR-Tools usa el modelo de ruteo vehicular (\textit{Vehicle Routing
+La formulación en \textit{OR-Tools} usa el modelo de ruteo vehicular (\textit{Vehicle Routing
 Problem}) con las siguientes características:
 
 \begin{itemize}
@@ -291,11 +291,11 @@ Problem}) con las siguientes características:
         implementada mediante \texttt{SetCumulVarSoftLowerBound} en el nodo terminal
         de cada vehículo, con coeficiente de penalización $10\,000$.
         Las restricciones duras de cota inferior tienden a generar infactibilidad;
-        la formulación blanda permite al solver explorar el espacio de búsqueda con
+        la formulación blanda permite al \textit{solver} explorar el espacio de búsqueda con
         mayor robustez.
   \item \textbf{Balance de rutas}:
         \texttt{SetCumulVarSoftUpperBound} dirige las rutas hacia el punto medio
-        $(T_{\min} + T_{\max})/2$, reduciendo la varianza entre rutas.
+        $(T_{\min} + T_{\max})/2$, lo que reduce la varianza entre rutas.
   \item \textbf{Minimización de rutas activas}:
         costo fijo de $100\,000$ por vehículo descarta vehículos innecesarios.
   \item \textbf{Disyunciones por nodo}:
@@ -307,7 +307,7 @@ Problem}) con las siguientes características:
         (por defecto 120 segundos).
 \end{itemize}
 
-Si el solver no encuentra solución, el \textit{pipeline} no falla en silencio: emite
+Si el \textit{solver} no encuentra solución, el \textit{pipeline} no falla en silencio: emite
 un error que reporta el número de árboles y los parámetros de configuración vigentes
 (tiempo de servicio y $T_{\max}$), de modo que el administrador pueda identificar qué
 restricción relajar.
@@ -317,9 +317,9 @@ restricción relajar.
 \label{sec:disyunciones}
 
 Un modelo VRP en el que todos los nodos son obligatorios es un modelo que puede
-resultar \textbf{infactible}. Basta un único árbol cuyo tiempo de acceso ---ida y
+resultar infactible. Basta un único árbol cuyo tiempo de acceso ---ida y
 vuelta desde cualquier otro nodo, más su tiempo de servicio--- exceda la cota dura
-$T_{\max}$ para que no exista ninguna asignación válida y el solver retorne sin
+$T_{\max}$ para que no exista ninguna asignación válida y el \textit{solver} retorne sin
 solución. En el contexto de este problema esa situación es realista: los
 \textit{datasets} provienen de censos reales y contienen árboles geográficamente
 aislados, así como nodos que OSRM no logra enrutar sobre la red peatonal y que, en
@@ -333,7 +333,7 @@ La solución adoptada consiste en declarar cada nodo real como una
 penalización $\pi$ por omisión. Formalmente, el modelo deja de exigir que todo árbol
 sea visitado y pasa a minimizar el costo de las rutas más $\pi$ por cada árbol
 descartado. La factibilidad queda así garantizada por construcción: siempre existe
-al menos una solución ---aquella que descarta los nodos problemáticos--- y el solver
+al menos una solución ---aquella que descarta los nodos problemáticos--- y el \textit{solver}
 nunca queda sin respuesta por culpa de un puñado de árboles inalcanzables.
 
 La calibración de $\pi$ es la decisión de diseño relevante. El sistema fija
@@ -345,9 +345,9 @@ La calibración de $\pi$ es la decisión de diseño relevante. El sistema fija
 
 es decir, un orden de magnitud por sobre el costo fijo de activar un vehículo. La
 relación entre ambas constantes ---y no sus valores absolutos--- es lo que gobierna
-el comportamiento del solver: descartar un árbol es diez veces más caro que abrir una
+el comportamiento del \textit{solver}: descartar un árbol es diez veces más caro que abrir una
 ruta entera para él. En consecuencia, mientras exista alguna ruta factible que pueda
-absorber al árbol, el solver siempre preferirá crearla antes que omitirlo, y el
+absorber al árbol, el \textit{solver} siempre preferirá crearla antes que omitirlo, y el
 descarte queda reservado a los nodos que ninguna ruta puede alojar sin violar la cota
 dura $T_{\max}$. La disyunción actúa entonces como válvula de seguridad, no como
 mecanismo de optimización: no se usa para «podar» árboles caros, sino para no perder
@@ -372,7 +372,7 @@ todo el tiempo de ejecución del \textit{pipeline}
 mayor tiempo total sino como una menor calidad alcanzable dentro del mismo
 presupuesto. [COMPLETAR CON DATOS REALES: la magnitud de ese efecto no está medida;
 requiere una ablación con y sin disyunciones sobre el mismo \textit{dataset} y el
-mismo presupuesto de solver.]
+mismo presupuesto de \textit{solver}.]
 
 % ---- 2.3.6 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
@@ -388,7 +388,7 @@ partición, seleccionables al crear el trabajo de optimización mediante el camp
 \texttt{strategy}. Un cuarto valor, \texttt{compare}, ejecuta las tres sobre el mismo
 conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por
 estrategia, lo que permite contrastarlas bajo una misma matriz de costos y un mismo
-presupuesto de solver; es el modo con que se produjeron las comparaciones del
+presupuesto de \textit{solver}; es el modo con que se produjeron las comparaciones del
 Capítulo~\ref{cap:resultados}. La estrategia \texttt{global} reproduce el
 comportamiento de la formulación anterior sin cambios y constituye la línea base;
 la estrategia seleccionada por defecto es \texttt{spatial\_term}, a la luz de los
@@ -403,7 +403,7 @@ resultados de la comparación (Capítulo~\ref{cap:resultados}).
         \texttt{SetSpanCostCoefficientForAllVehicles} con coeficiente
         $\lambda_{\text{span}} = 3$. El \textit{span} de una ruta es la diferencia
         entre el máximo y el mínimo acumulado de la dimensión a lo largo del
-        vehículo; penalizarlo empuja al solver hacia rutas más compactas a costa
+        vehículo; penalizarlo empuja al \textit{solver} hacia rutas más compactas a costa
         de mayor tiempo total. La cota superior temporal se ajusta al punto medio
         $(T_{\min} + T_{\max})/2$ para preservar el balance.
   \item \textbf{\texttt{cluster\_first}}: enfoque \textit{cluster-first,
@@ -434,7 +434,7 @@ el campo \texttt{source} del modelo \texttt{Tree}:
         aplicación móvil previa, donde el árbol no tiene una posición canónica sino
         un conjunto de muestras (\textit{samples}) tomadas en terreno, cada una con
         su propia lectura de GPS. La posición de cada árbol se reconstruye como la
-        \textbf{mediana} de las latitudes y longitudes de sus muestras, agrupadas por
+        mediana de las latitudes y longitudes de sus muestras, agrupadas por
         código QR, descartando las lecturas sin coordenada y aquellas con latitud
         igual a cero ---el valor con que la aplicación previa dejaba constancia de una
         lectura de GPS fallida---. Se emplea la
@@ -444,9 +444,9 @@ el campo \texttt{source} del modelo \texttt{Tree}:
 \end{itemize}
 
 El \textit{dataset} definitivo de la evaluación reúne ambas fuentes y totaliza
-$n = 1\,607$ árboles. El acceso a las bases legadas es estrictamente de \textbf{solo
-lectura} (la conexión se abre con \texttt{readonly}), dado que se trata de sistemas
-que no pertenecen al alcance de este trabajo y cuya integridad no debe verse
+$n = 1\,607$ árboles. El acceso a las bases legadas es estrictamente de solo
+lectura (la conexión se abre con \texttt{readonly}), dado que se trata de sistemas
+que no pertenecen al alcance de esta iteración del proyecto y cuya integridad no debe verse
 comprometida por el proceso de importación.
 
 \subsection{Selección previa a la creación del dataset}
@@ -495,7 +495,7 @@ Capítulo~\ref{cap:resultados}.
 \subsection{Mapa de selección}
 
 La interfaz de selección (\texttt{LegacyImport}, con el componente
-\texttt{LegacySelectionMap}) presenta sobre un mapa Leaflet la totalidad del arbolado
+\texttt{LegacySelectionMap}) presenta sobre un mapa \textit{Leaflet} la totalidad del arbolado
 legado y los polígonos de las áreas de censo. Cada árbol se dibuja como un marcador
 circular cuyo color codifica su estado: disponible, seleccionado o ya importado ---
 estos últimos, además, no son interactivos, lo que hace imposible seleccionar dos
@@ -572,7 +572,7 @@ qué no se pudo censar.
 
 La importación de una fuente legada no trae solo la posición de los árboles: trae
 también, en la misma transacción, sus observaciones previas, que se materializan como
-\texttt{TreeObservation} con el campo \texttt{source} marcando su procedencia. El
+\texttt{TreeObservation} con el campo \texttt{source}, que registra su procedencia. El
 resultado es que un árbol recién importado ya llega al sistema con su historial de
 campañas anteriores, y la primera visita del censador se registra como una
 observación más en esa serie ---esto es, como un re-censo y no como un censo inicial.
@@ -600,7 +600,7 @@ grupos de recursos:
 \begin{itemize}
   \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de tokens JWT mediante \textit{djangorestframework-simplejwt}, consulta del usuario en sesión y administración de las cuentas de censadores.
   \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV o JSON con detección automática de las columnas de coordenadas, exploración de las fuentes legadas y creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y exportación de árboles como \textit{GeoJSON FeatureCollection}.
-  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el frontend), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
+  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el \textit{frontend}), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
   \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
@@ -652,10 +652,10 @@ el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
 \section{INTERFAZ DE USUARIO}
 \label{sec:ui}
 
-La interfaz se implementa como una \textit{Single Page Application} con React~18 y
-Vite. El estado de servidor se gestiona con React Query y el estado de sesión
-(autenticación, notificaciones) con Zustand; los mapas emplean Leaflet sobre teselas
-de OpenStreetMap. La aplicación distingue dos experiencias según el rol del usuario:
+La interfaz se implementa como una \textit{Single Page Application} con \textit{React}~18 y
+Vite. El estado de servidor se gestiona con \textit{React Query} y el estado de sesión
+(autenticación, notificaciones) con Zustand; los mapas emplean \textit{Leaflet} sobre teselas
+de \textit{OpenStreetMap}. La aplicación distingue dos experiencias según el rol del usuario:
 el panel de administración y el portal del censador.
 
 El panel de administración comprende cinco etapas. En primer lugar, el administrador
@@ -667,7 +667,7 @@ lugar, configura los parámetros temporales ($T_{\min}$, $T_{\max}$, tiempo de
 servicio), elige la estrategia de partición ---o la opción \textit{«Comparar las
 3»}--- y lanza el trabajo de optimización. En
 cuarto lugar, el estado del trabajo se monitorea mediante \textit{polling} automático
-con React Query, que consulta el endpoint de estado cada 3 segundos mientras el
+con \textit{React Query}, que consulta el \textit{endpoint} de estado cada 3 segundos mientras el
 trabajo se encuentra en estado \texttt{queued} o \texttt{running} y detiene las
 consultas al alcanzar un estado terminal o al superar los 15 minutos desde su
 creación, de modo que un trabajo colgado no deja al navegador consultando
@@ -700,7 +700,7 @@ Sección~\ref{sec:recenso}. Cada parada ofrece
 un enlace directo (\textit{deep-link}) a la navegación peatonal de Google Maps. La
 pantalla se mantiene encendida durante el recorrido mediante la \textit{Screen Wake
 Lock API}, y una cola de operaciones offline básica ---persistencia del cliente de
-React Query en \texttt{localStorage} con reanudación de mutaciones pausadas--- permite
+\textit{React Query} en \texttt{localStorage} con reanudación de mutaciones pausadas--- permite
 que el registro de visitas realizado sin conexión se sincronice al recuperar la red.
 
 \capturaui{ui-surveyor.png}{Portal del censador en vista \textit{mobile}}{Portal del censador (\texttt{/}, vista \textit{mobile}): parada activa, distancia a la parada, captura fotográfica y registro de visita u omisión.}{fig:ui_surveyor}

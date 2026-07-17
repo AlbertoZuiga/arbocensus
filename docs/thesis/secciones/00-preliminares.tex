@@ -4,6 +4,9 @@
 \chapter*{AGRADECIMIENTOS}
 \addcontentsline{toc}{chapter}{AGRADECIMIENTOS}
 
+{
+\itshape
+
 A mi familia, por el apoyo sostenido a lo largo de toda la carrera.
 
 A los profesores de la Facultad de Ingeniería y Ciencias Aplicadas de la
@@ -14,6 +17,8 @@ observaciones durante el desarrollo del proyecto.
 A quienes participaron en las etapas previas de Arbocensus: el levantamiento de
 datos realizado entonces es el que permitió evaluar este trabajo sobre un censo
 real y no sobre un conjunto sintético.
+}
+
 \newpage
 
 \tableofcontents
@@ -35,36 +40,40 @@ real y no sobre un conjunto sintético.
 \chapter*{RESUMEN}
 \addcontentsline{toc}{chapter}{RESUMEN}
 
-El presente trabajo de titulación constituye la continuación del proyecto Arbocensus,
-iniciado previamente con un enfoque en medición de cobertura de censos urbanos de árboles
-en ciudades como Santiago y Valparaíso. Este trabajo se concentra en el diseño e implementación
-de una plataforma web para la optimización automática de rutas de censo, permitiendo que los
-equipos de censadores ejecuten sus jornadas de forma eficiente y balanceada.
+Arbocensus es un proyecto orientado a automatizar la gestión de censos de árboles
+urbanos. Su primera iteración, desarrollada por Pizarro y Zumaeta en 2024, midió la
+cobertura alcanzada en ciudades como Santiago y Valparaíso; la fase que documenta
+esta memoria aborda la etapa siguiente: la planificación de las jornadas en terreno.
+Dado un conjunto de árboles georreferenciados, se requiere generar rutas que garanticen
+la cobertura total, minimicen los tiempos de desplazamiento y respeten jornadas
+laborales acotadas, tarea que hasta ahora se resolvía de forma manual.
 
 El problema se formula como un \textit{Open Multiple Travelling Salesman Problem}
-(Open mTSP) con restricciones temporales globales por ruta, resuelto mediante el solver
-de ruteo vehicular de OR-Tools de Google. Las distancias de desplazamiento se calculan
-a partir de OpenStreetMap mediante el motor OSRM, eliminando costos de APIs externas
-y garantizando reproducibilidad en ambientes sin conexión a internet.
+(\textit{Open mTSP}) con restricciones temporales globales por ruta y se resuelve
+mediante el \textit{solver} de ruteo vehicular de \textit{OR-Tools}. Los tiempos de
+desplazamiento peatonal se calculan sobre la red vial real de \textit{OpenStreetMap}
+mediante el motor OSRM, lo que elimina costos de APIs externas y garantiza la
+reproducibilidad de los resultados. La plataforma web construida sobre este motor
+cubre el ciclo operacional completo: el administrador importa los árboles, configura
+los parámetros, ejecuta la optimización y publica el plan resultante, mientras que el
+censador accede desde su dispositivo móvil a la ruta asignada con navegación asistida.
+La formulación aborda restricciones operacionales reales: minimización automática del
+número de rutas necesarias, jornadas acotadas por ruta, balance de carga entre
+equipos, rutas abiertas sin depósito obligatorio y distancias sobre redes viales
+reales.
 
-La plataforma integra: (a) un backend Django 4.2 con PostgreSQL/PostGIS para
-almacenamiento geoespacial; (b) un motor de optimización asíncrono con Celery y Redis
-para procesar grandes conjuntos de árboles; (c) una API REST con autenticación JWT que
-expone endpoints de importación de datasets, optimización y visualización de rutas;
-(d) una interfaz de administración en React 18 + Vite que permite importar datos,
-configurar parámetros y visualizar rutas optimizadas sobre mapas Leaflet. En el MVP,
-la plataforma se enfoca en la interfaz de administración; el portal del censador y
-funcionalidades adicionales están planificadas para versiones futuras.
+Sobre el censo real consolidado de 1\,607 árboles, Arbocensus genera 25 rutas en
+120\,s de cómputo, con una desviación estándar de las duraciones equivalente al
+5.1\,\% del promedio (el criterio de aceptación es 15\,\%), cobertura total y ninguna
+ruta que exceda la jornada máxima. Frente a un heurístico \textit{greedy} de vecino
+más cercano, la solución reduce el tiempo total de desplazamiento en un 4.3\,\%
+---cerca de 45 minutos por campaña--- y elimina las rutas degeneradas que dicho
+heurístico produce. El Capítulo~\ref{cap:resultados} detalla estos resultados.
 
-La solución aborda restricciones operacionales reales: (1) minimización automática del
-número de rutas necesarias, (2) cumplimiento de jornadas acotadas por ruta (2--3 horas
-por defecto, configurables), (3) balance de carga entre equipos, (4) rutas abiertas
-sin depósito obligatorio, y (5) cálculos de distancia sobre redes viales reales.
-
-Se espera que Arbocensus resuelva instancias de censos urbanos típicos
-(cientos de árboles) en tiempos computacionales prácticos ($< 5$ minutos), con mejoras
-significativas respecto a heurísticos greedy en términos de número de rutas, tiempo de
-desplazamiento y balance de carga. La sección \ref{cap:resultados} presenta resultados
-experimentales concretos que validan estos objetivos.
+Se concluye que la formulación \textit{Open mTSP} con ventanas temporales globales
+por ruta, combinada con distancias peatonales reales, resuelve censos urbanos a
+escala real en tiempos prácticos y con calidad operacional verificable. Arbocensus
+queda disponible como una plataforma reproducible sobre la cual planificar el
+re-censo estructurado y las campañas futuras del proyecto.
 
 \newpage

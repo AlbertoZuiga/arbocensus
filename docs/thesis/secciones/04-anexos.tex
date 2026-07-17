@@ -1,6 +1,9 @@
 \chapter*{ANEXOS}
 \addcontentsline{toc}{chapter}{ANEXOS}
 
+% Las tablas de los anexos no van al índice de tablas (corrección del centro de escritura).
+\captionsetup{list=false}
+
 \phantomsection
 \section*{Anexo 1. Documentación de la API REST}
 \addcontentsline{toc}{section}{Anexo 1. Documentación de la API REST}
@@ -29,7 +32,7 @@ exige el estándar.
 
 \begin{table}[H]
   \centering
-  \caption{Anexo 1a. Endpoints de autenticación y administración de usuarios.}
+  \caption{Endpoints de autenticación y administración de usuarios.}
   \label{tab:anexo_api_auth}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
@@ -51,7 +54,7 @@ exige el estándar.
 
 \begin{table}[H]
   \centering
-  \caption{Anexo 1b. Endpoints de \textit{datasets} e importación legada.}
+  \caption{Endpoints de \textit{datasets} e importación legada.}
   \label{tab:anexo_api_datasets}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
@@ -75,7 +78,7 @@ exige el estándar.
 
 \begin{table}[H]
   \centering
-  \caption{Anexo 1c. Endpoints del motor de optimización.}
+  \caption{Endpoints del motor de optimización.}
   \label{tab:anexo_api_optimization}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
@@ -95,7 +98,7 @@ exige el estándar.
 
 \begin{table}[H]
   \centering
-  \caption{Anexo 1d. Endpoints de rutas y captura en terreno.}
+  \caption{Endpoints de rutas y captura en terreno.}
   \label{tab:anexo_api_routes}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
@@ -137,7 +140,7 @@ docker compose exec backend python manage.py seed_demo \
 
 \begin{table}[H]
   \centering
-  \caption{Anexo 2. Parámetros del comando \texttt{seed\_demo}.}
+  \caption{Parámetros del comando \texttt{seed\_demo}.}
   \label{tab:anexo_seed_demo}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} X@{}}
@@ -182,7 +185,7 @@ por fase del \textit{pipeline}. Cada ejecución escribe además un informe en
 
 \begin{table}[H]
   \centering
-  \caption{Anexo 3. Parámetros del comando \texttt{baseline\_sweep}.}
+  \caption{Parámetros del comando \texttt{baseline\_sweep}.}
   \label{tab:anexo_baseline_sweep}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} X@{}}
@@ -193,8 +196,8 @@ por fase del \textit{pipeline}. Cada ejecución escribe además un informe en
     \texttt{--strategies}           & Lista separada por comas: \texttt{global}, \texttt{spatial\_term}, \texttt{cluster\_first}. \\
     \texttt{--service-time}         & Lista de tiempos de servicio por árbol, en minutos. \\
     \texttt{--t-max}                & Lista de duraciones máximas de ruta, en horas. \\
-    \texttt{--seeds N} / \texttt{--base-seed} & Número de repeticiones y semilla inicial. Sobre un \textit{dataset} real la semilla solo etiqueta la repetición: el solver es determinista dados sus parámetros y la varianza observable proviene del corte por tiempo de reloj de la búsqueda local. \\
-    \texttt{--time-limit <s>}       & Fija el límite de tiempo del solver, en lugar de la heurística del \textit{pipeline} ($\min(30 + 1{,}5\,n,\;120)$ segundos). \\
+    \texttt{--seeds N} / \texttt{--base-seed} & Número de repeticiones y semilla inicial. Sobre un \textit{dataset} real la semilla solo etiqueta la repetición: el \textit{solver} es determinista dados sus parámetros y la varianza observable proviene del corte por tiempo de reloj de la búsqueda local. \\
+    \texttt{--time-limit <s>}       & Fija el límite de tiempo del \textit{solver}, en lugar de la heurística del \textit{pipeline} ($\min(30 + 1{,}5\,n,\;120)$ segundos). \\
     \texttt{--csv <ruta>}           & Ruta del CSV de salida. \\
     \bottomrule
   \end{tabularx}
@@ -214,7 +217,7 @@ docker compose -f docker-compose.prod.yml run --rm backend \
 \end{verbatim}
 
 Y la comparación directa de las tres estrategias de partición, bajo una misma
-variante operacional y un mismo presupuesto de solver, con:
+variante operacional y un mismo presupuesto de \textit{solver}, con:
 
 \begin{verbatim}
 docker compose -f docker-compose.prod.yml run --rm backend \

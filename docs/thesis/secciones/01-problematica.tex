@@ -5,57 +5,59 @@
 Los censos de árboles urbanos constituyen una actividad de gestión ambiental de
 primera importancia para los municipios, ya que permiten caracterizar el patrimonio
 verde de la ciudad, evaluar su cobertura y planificar intervenciones de mantenimiento.
-Esta información crítica es esencial para mitigar riesgos ambientales, prevenir accidentes
+Esta información es esencial para mitigar riesgos ambientales, prevenir accidentes
 por caídas de árboles y optimizar recursos municipales.
 
 El proyecto Arbocensus nace como una iniciativa integral para automatizar y mejorar la
-gestión de censos arbóreos urbanos. Un trabajo previo, desarrollado por Pizarro y Zumaeta \citep{pizarro-zumaeta2024},
-realizó el \textbf{censo inicial} que recopiló información crítica de los árboles urbanos.
+gestión de censos arbóreos urbanos. En su primera iteración, Pizarro y
+Zumaeta \citeyearpar{pizarro-zumaeta2024} realizaron el censo inicial que recopiló información detallada de los árboles urbanos.
 Sin embargo, para maximizar la eficiencia operacional y la calidad de los datos en futuras
-campañas de monitoreo y capacitar modelos de inteligencia artificial, surge una necesidad crítica:
-realizar un \textbf{re-censo estructurado} que permita entrenar algoritmos de clasificación automática
-de árboles por niveles de riesgo (riesgoso/no-riesgoso). Para lograr esto, es fundamental optimizar
-la asignación de puntos a equipos de trabajo mediante una planificación eficiente de rutas de desplazamiento.
+campañas de monitoreo, así como para entrenar modelos de inteligencia artificial, surge una
+necesidad crítica: realizar un re-censo estructurado que provea datos etiquetados para la
+clasificación automática de árboles por niveles de riesgo (riesgoso/no-riesgoso). Con este
+fin, es fundamental optimizar la asignación de coordenadas a equipos de trabajo mediante
+una planificación eficiente de rutas de desplazamiento.
 
 La escala real del problema se evidencia en las dos fuentes de datos preexistentes del
-censo inicial. La primera, denominada \texttt{legacy\_api}, contiene 429 árboles
-georreferenciados, 3.961 muestras (\textit{samples}), 10.008 fotografías y 48 áreas de
-censo distribuidas en 10 campañas. La segunda, \texttt{legacy\_app} (aplicación Heroku del
-censo original), contiene 1.205 registros de árboles (\texttt{mltree}), de los cuales
-aproximadamente 1.178 resultan importables al determinar una posición geográfica única
-mediante la mediana de las 17.208 muestras asociadas por código QR. Al combinar ambas
-fuentes, el conjunto total de árboles a rutear supera los 350 nodos, umbral que excede la
-capacidad de una única consulta a la matriz de distancias de OSRM y que por sí solo
-evidencia la necesidad de mecanismos de particionamiento (\textit{chunking}) de las
-solicitudes al servicio de ruteo.
+censo inicial \citep{pizarro-zumaeta2024}. La primera, la base de datos \texttt{legacy\_api},
+contiene 429 árboles georreferenciados, 3.961 muestras (\textit{samples}), 10.008
+fotografías y 48 áreas de censo distribuidas en 10 campañas. La segunda, la base
+\texttt{legacy\_app} (aplicación Heroku del censo original), contiene 1.205 registros de
+árboles (\texttt{mltree}), de los cuales aproximadamente 1.178 resultan importables al
+determinar una posición geográfica única a través de la mediana de las 17.208 muestras
+asociadas por código QR. Al combinar ambas fuentes, el conjunto total de árboles a rutear
+supera los 350 nodos, umbral que excede la capacidad de una única consulta a la matriz de
+distancias de OSRM y que evidencia la necesidad de mecanismos de particionamiento
+(\textit{chunking}) de las solicitudes al servicio de ruteo.
 
-Actualmente, con las coordenadas geográficas de los árboles disponibles, la organización
+Actualmente, con las coordenadas geográficas disponibles de los árboles, la organización
 de los censadores en terreno representa un desafío logístico significativo: dado un
 conjunto de $n$ puntos geográficos correspondientes a árboles distribuidos en el espacio
 urbano, se requiere generar un conjunto de rutas que garanticen la cobertura total,
-minimicen tiempos de desplazamiento, y respeten jornadas acotadas temporalmente.
+minimicen tiempos de desplazamiento y respeten jornadas acotadas temporalmente.
 
 La planificación inadecuada de rutas genera consecuencias operacionales inmediatas:
 viajes innecesarios entre puntos lejanos, sobrecarga de ciertos equipos mientras otros
-subutilizan su jornada, imposibilidad de cubrir todos los árboles en una jornada, y
+subutilizan su tiempo, imposibilidad de cubrir todos los árboles en una jornada y
 aumento de costos logísticos. Sin herramientas especializadas de optimización, esta
-planificación se realiza manualmente o mediante heurísticos greedy, resultando en
-soluciones subóptimas.
+planificación se realiza manualmente o mediante heurísticos \textit{greedy}, lo que
+resulta en soluciones subóptimas.
 
 \section{ESTADO ACTUAL DEL PROBLEMA}
 
 En la práctica, la planificación de rutas para censos urbanos se realiza de forma
 manual mediante hojas de cálculo o herramientas GIS de propósito general, sin capacidad
 de optimización combinatoria. Los administradores de bases de datos arbóreas deben
-asignar manualmente árboles a censadores considerando apenas factores espaciales
-rudimentarios (proximidad euclidiana), ignorando costos reales de desplazamiento y
+asignar manualmente árboles a censadores con apenas factores espaciales rudimentarios
+(proximidad euclidiana), sin considerar costos reales de desplazamiento ni
 restricciones de jornada.
 
-Las soluciones greedy (vecino más cercano, clustering geométrico) generan resultados
-sub-óptimos: viajes innecesariamente largos, desbalance severo en cargas de trabajo,
-o incapacidad para cumplir restricciones temporales por jornada laboral. La literatura
-en ruteo vehicular demuestra que estos heurísticos pueden producir soluciones 30--40\,\%
-peores que soluciones óptimas.
+Las soluciones \textit{greedy} (vecino más cercano, \textit{clustering} geométrico) generan resultados
+subóptimos: viajes innecesariamente largos, desbalance severo en cargas de trabajo
+o incapacidad para cumplir restricciones temporales por jornada laboral. La comparación
+del Capítulo~\ref{cap:resultados} ilustra estas deficiencias sobre el censo real: el
+heurístico del vecino más cercano produce rutas saturadas al borde de la jornada y
+rutas degeneradas de caminata desproporcionada.
 
 El problema de ruteo de censos se relaciona con variantes conocidas de la investigación
 operativa: el \textit{Multiple Travelling Salesman Problem} (mTSP) \citep{bektas2006multiple},
@@ -66,20 +68,20 @@ efectiva para problemas de optimización combinatoria \citep{voudouris1999guided
 
 Sin embargo, los problemas de ruteo urbano reales presentan características específicas:
 (1) jornadas globales por ruta (no ventanas en nodos individuales), (2) rutas abiertas
-sin depósito obligatorio, (3) determinación automática del número de rutas necesarias,
+sin depósito obligatorio, (3) determinación automática del número de rutas necesarias
 y (4) distancias caminables sobre redes viales reales (OSM), no euclidianas. Las
 herramientas comerciales (ESRI ArcGIS, QGIS con extensiones) carecen de soportes robustos
-para estas restricciones específicas, y sus interfaces no son accesibles a administradores
+para estas restricciones, y sus interfaces no son accesibles a administradores
 sin formación técnica en optimización.
 
 \section{SOLUCIÓN PLANTEADA}
 
 Se propone el desarrollo de una plataforma web que formula el problema
-de ruteo de censo como un \textit{Open mTSP con restricciones de tiempo global por ruta}
-y lo resuelve mediante programación con restricciones usando el solver de ruteo vehicular
-de OR-Tools \citep{ortools}.
+de ruteo de censo como un \textit{Open mTSP} con restricciones de tiempo global por ruta
+y lo resuelve mediante el \textit{solver} de ruteo vehicular de \textit{OR-Tools},
+basado en programación con restricciones \citep{ortools}.
 
-Arbocensus es una plataforma especializada que resuelve automáticamente los aspectos
+Arbocensus es una plataforma especializada que resuelve los aspectos
 críticos que las herramientas genéricas no abordan: (1) determina automáticamente el
 número mínimo de rutas necesarias $k$ dado el conjunto de árboles $P = \{p_1, \ldots, p_n\}$
 y los parámetros $T_{\min}$, $T_{\max}$, $s$ (tiempo de servicio por árbol), sin intervención
@@ -89,12 +91,13 @@ simultáneamente el número de rutas, el tiempo total de desplazamiento y el des
 de carga entre equipos.
 
 Las distancias de desplazamiento se calculan sobre la red vial peatonal real
-(OpenStreetMap), procesada localmente mediante OSRM \citep{osrm}, eliminando la
-dependencia de APIs externas de pago y garantizando reproducibilidad de resultados
-sin conexión a internet.
+(\textit{OpenStreetMap}), procesada localmente mediante OSRM \citep{osrm}, lo que
+elimina la dependencia de APIs externas de pago y garantiza la reproducibilidad de
+los resultados sin conexión a internet.
 
-En el \textit{Minimum Viable Product} (MVP), la plataforma está diseñada para el
-\textbf{Administrador}: importa datasets de árboles desde CSV, configura parámetros
-operacionales y visualiza las rutas optimizadas sobre un mapa interactivo. Las funcionalidades
-de portal censador y exportación de rutas (PDF, GPX) están planificadas como mejoras futuras
-posteriores al MVP.
+La plataforma distingue dos actores. El Administrador importa \textit{datasets} de
+árboles desde CSV o desde las bases legadas, configura parámetros operacionales,
+ejecuta la optimización y visualiza las rutas resultantes sobre un mapa interactivo.
+El Censador accede desde su dispositivo móvil a la ruta que le fue asignada, con las
+paradas en secuencia y navegación asistida hacia cada árbol. La exportación de rutas
+(PDF, GPX) está planificada como mejora futura.
