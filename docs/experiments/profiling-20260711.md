@@ -1,4 +1,4 @@
-# RP2 — Profiling del pipeline de optimización (6 variantes de duración)
+# Profiling del pipeline de optimización (6 variantes de duración)
 
 - Fecha: 2026-07-11/12 (UTC)
 - Branch: `experiment/solver-profiling-6-variants` (sobre PR #125, que aporta el harness `baseline_sweep`)
@@ -31,9 +31,9 @@ Versiones: Python 3.12.11, Django 6.0, ortools 9.15.6755, numpy 2.4.6.
 
 ## b. Dataset
 
-Definitivo según E0a (ambas fuentes legacy, import de PR #112):
+Definitivo (ambas fuentes legacy, import de PR #112):
 
-- **Completo**: "Profiling RP2 - legacy completo (ambas fuentes)", **n=1607**
+- **Completo**: "Profiling - legacy completo (ambas fuentes)", **n=1607**
   (429 `legacy_api` + 1178 `legacy_app` con mediana de posición por QR).
   Creado con el mismo code path que `POST /api/datasets/from-legacy-selection/`:
 
@@ -41,7 +41,7 @@ Definitivo según E0a (ambas fuentes legacy, import de PR #112):
   from apps.datasets import legacy
   rows = legacy.list_trees()
   loaded = legacy.load_selection([(r["source"], r["external_id"]) for r in rows])
-  legacy.create_dataset("Profiling RP2 - legacy completo (ambas fuentes)", loaded)
+  legacy.create_dataset("Profiling - legacy completo (ambas fuentes)", loaded)
   ```
 
 - **Área chica** (sensibilidad a n): área legacy 40 vía `legacy.import_area(40)`, **n=157**.
@@ -57,7 +57,7 @@ Definitivo según E0a (ambas fuentes legacy, import de PR #112):
 - **time_limit fijado ANTES de la grilla: 180 s** = exactamente lo que produce la
   heurística de producción (`min(30 + 1.5·n, SOLVER_TIME_LIMIT_SEC=180)`) para
   n=1607. Presupuesto real: 18 corridas × ~2–3 min ≈ 40 min (grilla completa).
-- Comando reproducible (harness de PR R1):
+- Comando reproducible (harness `baseline_sweep`, PR #125):
 
   ```bash
   docker compose -f docker-compose.prod.yml run --rm backend \
@@ -152,7 +152,8 @@ corta antes.)
 
    k y balance quedan fijos desde 60 s; la mejora de travel entre 120 s y 180 s
    es 0.1 %. **Para n=1607 un time_limit de 120 s captura ~99 % de la mejora** —
-   insumo directo para R2 (tuning) y para bajar el costo de corridas de
+   insumo directo para el experimento de comparación de estrategias
+   (`route-quality-20260712.md`, tuning) y para bajar el costo de corridas de
    producción un 33 % sin pérdida medible.
 
 ## Conclusiones para §3 de la tesis
