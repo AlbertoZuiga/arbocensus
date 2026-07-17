@@ -28,14 +28,14 @@ describe("RoutingConfigForm", () => {
     fetchFleetEstimate.mockResolvedValue(null);
   });
 
-  it("renders editable defaults (2h / 3h / 5min)", () => {
+  it("renders editable defaults (120min / 180min / 3min)", () => {
     renderForm();
-    expect(screen.getByLabelText(/Tiempo mínimo por ruta/)).toHaveValue(2);
-    expect(screen.getByLabelText(/Tiempo máximo por ruta/)).toHaveValue(3);
-    expect(screen.getByLabelText(/Tiempo de censo por árbol/)).toHaveValue(5);
+    expect(screen.getByLabelText(/Tiempo mínimo por ruta/)).toHaveValue(120);
+    expect(screen.getByLabelText(/Tiempo máximo por ruta/)).toHaveValue(180);
+    expect(screen.getByLabelText(/Tiempo de censo por árbol/)).toHaveValue(3);
   });
 
-  it("submits with hours converted to seconds", async () => {
+  it("submits with minutes converted to seconds", async () => {
     createJob.mockResolvedValue({ id: "j1", status: "queued" });
     const user = userEvent.setup();
     renderForm();
@@ -47,20 +47,20 @@ describe("RoutingConfigForm", () => {
         dataset: "d1",
         minRouteTimeSec: 7200,
         maxRouteTimeSec: 10800,
-        serviceTimeSec: 300,
+        serviceTimeSec: 180,
         strategy: "spatial_term",
       })
     );
   });
 
-  it("converts edited hour values to seconds", async () => {
+  it("converts edited minute values to seconds", async () => {
     createJob.mockResolvedValue({ id: "j1" });
     const user = userEvent.setup();
     renderForm();
 
     const minInput = screen.getByLabelText(/Tiempo mínimo por ruta/);
     await user.clear(minInput);
-    await user.type(minInput, "1.5");
+    await user.type(minInput, "90");
     await user.click(screen.getByRole("button", { name: "Generar rutas" }));
 
     await waitFor(() =>
@@ -119,7 +119,7 @@ describe("RoutingConfigForm", () => {
     renderForm();
 
     await waitFor(() =>
-      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 300)
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 180)
     );
     expect(screen.queryByText(/rutas aprox\./)).not.toBeInTheDocument();
   });
@@ -130,7 +130,7 @@ describe("RoutingConfigForm", () => {
     renderForm();
 
     await waitFor(() =>
-      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 300)
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 180)
     );
 
     const serviceInput = screen.getByLabelText(/Tiempo de censo por árbol/);

@@ -21,9 +21,9 @@ import {
 } from "@/components/ui/select";
 
 const DEFAULTS = {
-  minRouteTimeHours: 2,
-  maxRouteTimeHours: 3,
-  serviceTimeMinutes: 5,
+  minRouteTimeMinutes: 120,
+  maxRouteTimeMinutes: 180,
+  serviceTimeMinutes: 3,
   strategy: "spatial_term",
 };
 
@@ -34,7 +34,6 @@ const STRATEGY_OPTIONS = [
   { value: "compare", label: "Comparar las 3" },
 ];
 
-const hoursToSeconds = (hours) => Math.round(Number(hours) * 3600);
 const minutesToSeconds = (minutes) => Math.round(Number(minutes) * 60);
 
 export default function RoutingConfigForm({
@@ -42,11 +41,11 @@ export default function RoutingConfigForm({
   onJobCreated,
   hasActiveJob = false,
 }) {
-  const [minRouteTimeHours, setMinRouteTimeHours] = useState(
-    DEFAULTS.minRouteTimeHours
+  const [minRouteTimeMinutes, setMinRouteTimeMinutes] = useState(
+    DEFAULTS.minRouteTimeMinutes
   );
-  const [maxRouteTimeHours, setMaxRouteTimeHours] = useState(
-    DEFAULTS.maxRouteTimeHours
+  const [maxRouteTimeMinutes, setMaxRouteTimeMinutes] = useState(
+    DEFAULTS.maxRouteTimeMinutes
   );
   const [serviceTimeMinutes, setServiceTimeMinutes] = useState(
     DEFAULTS.serviceTimeMinutes
@@ -54,8 +53,8 @@ export default function RoutingConfigForm({
   const [strategy, setStrategy] = useState(DEFAULTS.strategy);
 
   const hasEmptyField = [
-    minRouteTimeHours,
-    maxRouteTimeHours,
+    minRouteTimeMinutes,
+    maxRouteTimeMinutes,
     serviceTimeMinutes,
   ].some((value) => value === "" || Number.isNaN(Number(value)));
 
@@ -63,13 +62,13 @@ export default function RoutingConfigForm({
     queryKey: [
       "fleet-estimate",
       datasetId,
-      minRouteTimeHours,
+      minRouteTimeMinutes,
       serviceTimeMinutes,
     ],
     queryFn: () =>
       fetchFleetEstimate(
         datasetId,
-        hoursToSeconds(minRouteTimeHours),
+        minutesToSeconds(minRouteTimeMinutes),
         minutesToSeconds(serviceTimeMinutes),
       ),
     enabled: !!datasetId && !hasEmptyField,
@@ -77,14 +76,14 @@ export default function RoutingConfigForm({
     staleTime: 5_000,
   });
   const rangeInvalid =
-    !hasEmptyField && Number(maxRouteTimeHours) < Number(minRouteTimeHours);
+    !hasEmptyField && Number(maxRouteTimeMinutes) < Number(minRouteTimeMinutes);
 
   const mutation = useMutation({
     mutationFn: () =>
       createJob({
         dataset: datasetId,
-        minRouteTimeSec: hoursToSeconds(minRouteTimeHours),
-        maxRouteTimeSec: hoursToSeconds(maxRouteTimeHours),
+        minRouteTimeSec: minutesToSeconds(minRouteTimeMinutes),
+        maxRouteTimeSec: minutesToSeconds(maxRouteTimeMinutes),
         serviceTimeSec: minutesToSeconds(serviceTimeMinutes),
         strategy,
       }),
@@ -107,26 +106,33 @@ export default function RoutingConfigForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="min-route-time">Tiempo mínimo por ruta (h)</Label>
+            <Label htmlFor="min-route-time">Tiempo mínimo por ruta (min)</Label>
             <Input
               id="min-route-time"
               type="number"
               min="0"
-              step="0.25"
-              value={minRouteTimeHours}
-              onChange={(e) => setMinRouteTimeHours(e.target.value)}
+              step="5"
+              value={minRouteTimeMinutes}
+              onChange={(e) => setMinRouteTimeMinutes(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Duración mínima objetivo de cada ruta; el optimizador intenta que
+              no queden rutas más cortas.
+            </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="max-route-time">Tiempo máximo por ruta (h)</Label>
+            <Label htmlFor="max-route-time">Tiempo máximo por ruta (min)</Label>
             <Input
               id="max-route-time"
               type="number"
               min="0"
-              step="0.25"
-              value={maxRouteTimeHours}
-              onChange={(e) => setMaxRouteTimeHours(e.target.value)}
+              step="5"
+              value={maxRouteTimeMinutes}
+              onChange={(e) => setMaxRouteTimeMinutes(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Tope máximo de duración de una ruta; ninguna ruta puede superarlo.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="service-time">
