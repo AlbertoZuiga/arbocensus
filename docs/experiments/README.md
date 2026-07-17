@@ -1,8 +1,8 @@
 # Registro de experimentos
 
 Cada ejecución del pipeline de optimización que produce un resultado analizable
-escribe aquí un informe Markdown con marca de tiempo
-(`AAAAMMDD-HHMMSS-<slug>.md`). El objetivo es acumular material reutilizable para
+escribe aquí un informe Markdown. Los informes se archivan con el nombre
+`<slug>-AAAAMMDD.md`. El objetivo es acumular material reutilizable para
 la redacción de la tesis.
 
 ## Quién escribe aquí
