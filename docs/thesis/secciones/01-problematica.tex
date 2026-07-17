@@ -8,27 +8,41 @@ verde de la ciudad, evaluar su cobertura y planificar intervenciones de mantenim
 Esta información es esencial para mitigar riesgos ambientales, prevenir accidentes
 por caídas de árboles y optimizar recursos municipales.
 
-El proyecto Arbocensus nace como una iniciativa integral para automatizar y mejorar la
-gestión de censos arbóreos urbanos. En su primera iteración, Pizarro y
-Zumaeta \citeyearpar{pizarro-zumaeta2024} realizaron el censo inicial que recopiló información detallada de los árboles urbanos.
-Sin embargo, para maximizar la eficiencia operacional y la calidad de los datos en futuras
-campañas de monitoreo, así como para entrenar modelos de inteligencia artificial, surge una
-necesidad crítica: realizar un re-censo estructurado que provea datos etiquetados para la
-clasificación automática de árboles por niveles de riesgo (riesgoso/no-riesgoso). Con este
-fin, es fundamental optimizar la asignación de coordenadas a equipos de trabajo mediante
-una planificación eficiente de rutas de desplazamiento.
+% DRAFT — revisar
+El proyecto Arbocensus, desarrollado en la Universidad de los Andes en el marco del
+proyecto Fondef ID21110360, tiene por objetivo censar el arbolado urbano mediante
+visión artificial y participación ciudadana \citep{binder-cortes2022,pizarro-zumaeta2024}.
+La plataforma de censado se construyó en iteraciones sucesivas de trabajos de
+titulación: una primera versión web orientada a dispositivos móviles, que permitió a los
+participantes tomar muestras de árboles organizadas en campañas, zonas y equipos; un
+rediseño que incorporó elementos de ludificación ---puntos, logros, desafíos y tablas de
+posiciones--- para incentivar la participación \citep{binder-cortes2022}; y una tercera
+iteración que integró el procesamiento de imágenes del Sistema de Análisis de Imágenes
+de Árboles (SAIdA) y un modelo de estimación de cobertura del censo
+\citep{pizarro-zumaeta2024}. Las campañas de censado ejecutadas durante esas iteraciones
+produjeron el catastro de árboles georreferenciados que esta iteración utiliza como
+punto de partida.
 
-La escala real del problema se evidencia en las dos fuentes de datos preexistentes del
-censo inicial \citep{pizarro-zumaeta2024}. La primera, la base de datos \texttt{legacy\_api},
-contiene 429 árboles georreferenciados, 3.961 muestras (\textit{samples}), 10.008
-fotografías y 48 áreas de censo distribuidas en 10 campañas. La segunda, la base
-\texttt{legacy\_app} (aplicación Heroku del censo original), contiene 1.205 registros de
-árboles (\texttt{mltree}), de los cuales aproximadamente 1.178 resultan importables al
-determinar una posición geográfica única a través de la mediana de las 17.208 muestras
-asociadas por código QR. Al combinar ambas fuentes, el conjunto total de árboles a rutear
-supera los 350 nodos, umbral que excede la capacidad de una única consulta a la matriz de
-distancias de OSRM y que evidencia la necesidad de mecanismos de particionamiento
-(\textit{chunking}) de las solicitudes al servicio de ruteo.
+Sin embargo, para mejorar la calidad de los datos en futuras campañas de monitoreo, así
+como para entrenar modelos de inteligencia artificial, surge una necesidad crítica:
+realizar un re-censo estructurado que permita construir un historial de observaciones
+por árbol ---objetivo declarado del proyecto \citep{pizarro-zumaeta2024}--- y provea
+datos etiquetados para la clasificación automática de árboles por niveles de riesgo
+(riesgoso/no-riesgoso). Con este fin, es fundamental optimizar la asignación de árboles
+a equipos de trabajo mediante una planificación eficiente de rutas de desplazamiento.
+
+La escala real del problema se evidencia en las dos bases de datos que dejaron las
+iteraciones anteriores del proyecto \citep{binder-cortes2022,pizarro-zumaeta2024}. La
+primera, la base de datos \texttt{legacy\_api}, contiene 429 árboles georreferenciados,
+3.961 muestras (\textit{samples}), 10.008 fotografías y 48 áreas de censo distribuidas
+en 10 campañas. La segunda, la base \texttt{legacy\_app}, de la aplicación de censado
+previa desplegada en Heroku, contiene 1.205 registros de árboles (\texttt{mltree}), de
+los cuales aproximadamente 1.178 resultan importables al determinar una posición
+geográfica única a través de la mediana de las 17.208 muestras asociadas por código QR.
+Al combinar ambas fuentes, el conjunto total de árboles a rutear supera los 350 nodos,
+umbral que excede la capacidad de una única consulta a la matriz de distancias de OSRM
+y que evidencia la necesidad de mecanismos de particionamiento (\textit{chunking}) de
+las solicitudes al servicio de ruteo.
 
 Actualmente, con las coordenadas geográficas disponibles de los árboles, la organización
 de los censadores en terreno representa un desafío logístico significativo: dado un
