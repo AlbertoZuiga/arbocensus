@@ -422,17 +422,16 @@ resultados de la comparación (Capítulo~\ref{cap:resultados}).
 \label{sec:legacy}
 
 El sistema no parte de cero: existen dos bases de datos operativas de versiones
-anteriores del proyecto Arbocensus, que contienen el arbolado ya catastrado en
-campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
+anteriores del proyecto Arbocensus
+\citep{binder-cortes2022,pizarro-zumaeta2024}, que contienen el arbolado ya catastrado
+en campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
 el campo \texttt{source} del modelo \texttt{Tree}:
 
 \begin{itemize}
-  \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*})
-        \citep{pizarro-zumaeta2024}: aporta
+  \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): aporta
         $429$ árboles con posición explícita y especie, organizados en áreas
         pertenecientes a campañas de censo.
-  \item \texttt{legacy\_app} (esquema \texttt{arbocensus\_app\_*})
-        \citep{binder-cortes2022}: base de la
+  \item \texttt{legacy\_app} (esquema \texttt{arbocensus\_app\_*}): base de la
         aplicación de censado previa ---una aplicación web orientada a dispositivos
         móviles---, donde el árbol no tiene una posición canónica sino
         un conjunto de muestras (\textit{samples}) tomadas en terreno, cada una con
