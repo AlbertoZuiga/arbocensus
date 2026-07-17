@@ -427,6 +427,13 @@ anteriores del proyecto Arbocensus
 en campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
 el campo \texttt{source} del modelo \texttt{Tree}:
 
+% ASUMIDO: la asignación de cada base a una iteración es inferencia por esquema, no
+% consta en las fuentes. legacy_app (esquema arbocensus_app_*, muestras por QR) mapea a
+% la app de censado de 2021 (repo mrecabarren/arbocensus). legacy_api (posición y especie
+% explícitas, real_tree_id) mapea a la iteración de identificación/cobertura de 2024
+% (Pizarro y Zumaeta); NO a la ludificación 2023 (fastAPI, cuyos modelos son
+% badge/score/campaign, sin datos de identificación de árboles). Por eso el texto cita
+% ambas memorias en conjunto y no atribuye una base a cada una.
 \begin{itemize}
   \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): aporta
         $429$ árboles con posición explícita y especie, organizados en áreas

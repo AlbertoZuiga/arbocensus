@@ -8,13 +8,13 @@ verde de la ciudad, evaluar su cobertura y planificar intervenciones de mantenim
 Esta información es esencial para mitigar riesgos ambientales, prevenir accidentes
 por caídas de árboles y optimizar recursos municipales.
 
-% DRAFT — revisar
 El proyecto Arbocensus, desarrollado en la Universidad de los Andes en el marco del
 proyecto Fondef ID21110360, tiene por objetivo censar el arbolado urbano mediante
 visión artificial y participación ciudadana \citep{binder-cortes2022,pizarro-zumaeta2024}.
 La plataforma de censado se construyó en iteraciones sucesivas de trabajos de
-titulación: una primera versión web orientada a dispositivos móviles, que permitió a los
-participantes tomar muestras de árboles organizadas en campañas, zonas y equipos; un
+titulación desde 2021: una primera versión web orientada a dispositivos móviles, que
+permitió a los participantes tomar muestras de árboles ---mediante lectura de códigos
+QR y captura de GPS--- organizadas en campañas, zonas y equipos; un
 rediseño que incorporó elementos de ludificación ---puntos, logros, desafíos y tablas de
 posiciones--- para incentivar la participación \citep{binder-cortes2022}; y una tercera
 iteración que integró el procesamiento de imágenes del Sistema de Análisis de Imágenes
@@ -22,6 +22,22 @@ de Árboles (SAIdA) y un modelo de estimación de cobertura del censo
 \citep{pizarro-zumaeta2024}. Las campañas de censado ejecutadas durante esas iteraciones
 produjeron el catastro de árboles georreferenciados que esta iteración utiliza como
 punto de partida.
+% Historia verificada contra los repositorios de código del proyecto (jul 2026):
+%   - github.com/mrecabarren/arbocensus: commit inicial 2021-10-01 (Matías Recabarren,
+%     profesor guía). Django + templates HTML/JS, escaneo de QR con cámara, Google auth,
+%     despliegue en Heroku, modelos Sampling/{sample,question,answer,step,results}.
+%     = primera versión: app web de censado orientada a móviles. Fija el inicio en 2021.
+%   - github.com/Arbocensus/ArbocensusGamification: primer commit de código 2023-03-17
+%     (Julio Cortés), repo de la organización creado 2023-10-25. fastAPI + alembic,
+%     modelos badge/campaign/challenge/achievement/score/ranking = capa de ludificación.
+%     => la ludificación de Binder y Cortés se desarrolló en 2023; el documento se cita
+%     como 2022 (año de la memoria), lo que explica que su contenido refiera hechos de 2023.
+% ASUMIDO (no confirmable con las fuentes disponibles):
+%   - Autoría de la primera versión: Binder y Cortés la atribuyen a un trabajo de título
+%     anterior (Castro y Díaz), pero el historial git muestra como autores a Recabarren,
+%     "Richard Le May" y "Track-tor", no esos nombres. No se afirma autoría en el texto.
+%   - Discrepancia de año de inicio entre fuentes (Binder/Cortés: 2022; Pizarro/Zumaeta:
+%     2021) queda resuelta a 2021 por el commit inicial del repositorio original.
 
 Sin embargo, para mejorar la calidad de los datos en futuras campañas de monitoreo, así
 como para entrenar modelos de inteligencia artificial, surge una necesidad crítica:
