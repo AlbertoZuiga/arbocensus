@@ -1,9 +1,9 @@
-# Q0 — Radiografía de las rutas actuales (walk_ratio, relleno por T_min, solapamiento)
+# Radiografía de las rutas actuales (walk_ratio, relleno por T_min, solapamiento)
 
 - Fecha: 2026-07-13 (UTC)
-- Branch: `experiment/route-audit` (sobre main `31631b7`, que incluye T1' + greedy, PR #151)
-- Objetivo: cuantificar F11 (las penalizaciones de duración dominan al término de
-  desplazamiento) y clasificar, ANTES de proponer cualquier recalibración, qué causa
+- Branch: `experiment/route-audit` (sobre main `31631b7`, que incluye la instancia de referencia y el baseline greedy, PR #151)
+- Objetivo: cuantificar la hipótesis de que las penalizaciones de duración dominan al
+  término de desplazamiento y clasificar, ANTES de proponer cualquier recalibración, qué causa
   cada ruta visualmente sospechosa. Este reporte mide; no cambia ninguna constante ni
   default de producción.
 - Datos crudos (versionados junto a este reporte):
@@ -16,7 +16,7 @@
 
 ## a. Entorno y reproducción
 
-Idéntico a RP2 (`profiling-20260711.md` §a) y R2 (`route-quality-20260712.md` §a):
+Idéntico a `profiling-20260711.md` §a y `route-quality-20260712.md` §a:
 `docker-compose.prod.yml`, imágenes target `prod`, OSRM real con el PBF completo de
 Chile (MLD, perfil foot, `--max-table-size 5000`), PostGIS 15-3.3, Redis 7, MacBook
 M4 Pro con Docker Desktop. El worktree nace con volúmenes vacíos: los datasets se
@@ -36,10 +36,10 @@ docker compose -f docker-compose.prod.yml run --rm backend python manage.py shel
 from apps.datasets import legacy
 rows = legacy.list_trees()
 loaded = legacy.load_selection([(r['source'], r['external_id']) for r in rows])
-full = legacy.create_dataset('Route audit Q0 - legacy completo (ambas fuentes)', loaded)
+full = legacy.create_dataset('Route audit - legacy completo (ambas fuentes)', loaded)
 print('FULL', full.id, full.total_trees)
 area = legacy.import_area(40)
-small = legacy.create_dataset(f'Route audit Q0 - {area.dataset_name}', area.trees)
+small = legacy.create_dataset(f'Route audit - {area.dataset_name}', area.trees)
 print('SMALL', small.id, small.total_trees)
 "
 ```
@@ -51,7 +51,7 @@ print('SMALL', small.id, small.total_trees)
   ```bash
   docker compose -f docker-compose.prod.yml run --rm backend python manage.py seed_demo \
     --trees 40 --seed 42 --distribution uniform \
-    --name "Route audit Q0 - seed_demo disperso n40" --no-optimize
+    --name "Route audit - seed_demo disperso n40" --no-optimize
   ```
 
 Las cuatro corridas (comando nuevo `route_audit`, una semilla cada una — esto es una
@@ -132,9 +132,9 @@ el agregado ponderado, ligeramente distinto: 0.233 en R1, 0.239 en R2.)
 **R1 reproduce la referencia publicada** (`20260713-real-case-metrics-spatial.csv`,
 semilla 42): k=25 = 25 ✓, 0 drops ✓, 0 excesos de T_max ✓, σ 526 vs 519, T̄ 10061 vs
 10111, balance 0.842 vs 0.839. El travel total queda en 58664 s vs 59911 s (−2.1 %):
-dentro de la variación por corte de wall-clock del GLS documentada en R2 §d, y en la
+dentro de la variación por corte de wall-clock del GLS documentada en `route-quality-20260712.md` §d, y en la
 dirección buena. Las métricas de forma sí dispersan entre repeticiones, como ya
-advertía R2 §c: IoU del peor par 0.30 vs 0.46, solapamiento/ruta 91.9 vs 120.2. **No
+advertía `route-quality-20260712.md` §c: IoU del peor par 0.30 vs 0.46, solapamiento/ruta 91.9 vs 120.2. **No
 se contradice ninguna cifra publicada**; k, drops y excesos —los invariantes— coinciden.
 
 Nota de determinismo: R2 se corrió dos veces (la segunda para emitir el GeoJSON del
@@ -229,9 +229,9 @@ la corrida original (matriz fría en la misma corrida), no del comando.
 | 5 | 6 | 7209 | 1800 | 5409 | 0.75 | 0 | 0.667 | 0 |
 | **resumen** | 40 | 36394 | 12000 | 24394 | 0.67 | 0 | 0.674 | 0 |
 
-## c. Veredicto sobre F11, sub-afirmación por sub-afirmación
+## c. Veredicto sobre la hipótesis, sub-afirmación por sub-afirmación
 
-**F11.1 — "quedar corto de T_min se arregla caminando": CONFIRMADA en régimen
+**Afirmación 1 — "quedar corto de T_min se arregla caminando": CONFIRMADA en régimen
 disperso, con la evidencia más nítida de todo el experimento.**
 
 En R3b las 5 rutas tienen servicio < T_min y la caminata cubre el hueco **casi
@@ -256,7 +256,7 @@ En R1 la firma aparece en la ruta 1: 9 árboles, 1080 s de censo y **8316 s cami
 (247–1632 %): ahí la caminata no es relleno, es geometría (rutas grandes y dispersas
 que además llegan cerca de T_max).
 
-**F11.2 — "el soft upper empuja todo hacia el punto medio [T_min, midpoint]":
+**Afirmación 2 — "el soft upper empuja todo hacia el punto medio [T_min, midpoint]":
 REFUTADA tal como está escrita.** Con los defaults, midpoint = 9000 s. En R1 **las 25
 rutas terminan POR ENCIMA del midpoint** (9038–10730 s, T̄ 10061, saturación media
 0.932, mínima 0.837); en R2, idéntico (25/25, T̄ 10132). Es decir: la penalización de
@@ -267,25 +267,26 @@ a la banda. El atractor observado no es el punto medio:
   0.93–0.94, máximo 0.994, sin excederlo nunca);
 - con servicio escaso (n=40 disperso): se pegan a **T_min** (saturación 0.674).
 
-Consecuencia práctica para Q1: el término que realmente ordena las duraciones no es
+Consecuencia práctica para el experimento de sensibilidad a penalizaciones
+(`penalty-sensitivity-20260713.md`): el término que realmente ordena las duraciones no es
 el soft upper en el midpoint, sino la combinación T_min (desde abajo) + T_max/tamaño
-de flota (desde arriba). Observación adicional **no medida** (hipótesis para Q1, no
-afirmación): bajo la función objetivo actual, 25 rutas pagando ~1060 s de exceso sobre
+de flota (desde arriba). Observación adicional **no medida** (hipótesis para ese
+experimento, no afirmación): bajo la función objetivo actual, 25 rutas pagando ~1060 s de exceso sobre
 el midpoint cuestan ~13 M en penalización, mientras que abrir vehículos adicionales
 cuesta 100 k cada uno; que el solver no llegue a esa configuración sugiere que el GLS
 no la alcanza en 120 s (las cuatro corridas agotaron el presupuesto: `solve.total` =
 120.0 s) o que el término de travel lo compensa. No lo aíslo aquí.
 
-**F11.3 — "minimizar desplazamiento queda como desempate": consistente con los datos.**
+**Afirmación 3 — "minimizar desplazamiento queda como desempate": consistente con los datos.**
 spatial_term y global entregan k idéntico (25), travel dentro del 3 % (58 664 vs
 60 460 s) y walk_ratio agregado casi igual (0.233 vs 0.239), pero difieren fuerte en
 forma: solapamiento/ruta 91.9 vs 132.4, cruces 83 vs 111, IoU del peor par 0.30 vs
 0.58. Cambiar el término espacial reordena la geometría sin mover las duraciones —
 las duraciones las fijan las penalizaciones, no el desplazamiento.
 
-**F11.4 — "el síntoma depende del dataset": CONFIRMADA.** walk_ratio agregado: 0.233
+**Afirmación 4 — "el síntoma depende del dataset": CONFIRMADA.** walk_ratio agregado: 0.233
 (n=1607, st=2 min) · 0.092 (n=157, defaults de UI) · **0.670** (n=40 disperso,
-defaults de UI). El caso patológico candidato del backlog (área legacy n=157) **NO es
+defaults de UI). El caso patológico candidato inicial (área legacy n=157) **NO es
 patológico**: es una zona densa donde 300 s de censo por árbol dominan (walk_ratio
 0.09, la mejor de las cuatro corridas). La patología necesita **dispersión**, no
 tamaño chico: aparece cuando los árboles están lejos entre sí y el servicio por ruta
@@ -293,7 +294,8 @@ no alcanza T_min.
 
 ## d. Preclasificación de las rutas sospechosas
 
-Hecha **antes** de mirar cualquier idea de recalibración; alimenta el diseño de Q1.
+Hecha **antes** de mirar cualquier idea de recalibración; alimenta el diseño del
+experimento de sensibilidad a penalizaciones (`penalty-sensitivity-20260713.md`).
 
 **(a) Relleno por T_min — 8 rutas.** Criterio: servicio < T_min y caminata ≈ el hueco
 (100–150 %).
@@ -313,7 +315,8 @@ Hecha **antes** de mirar cualquier idea de recalibración; alimenta el diseño d
 | R1 rutas 4 y 15 (spatial_term) | IoU 0.303, peor par de la referencia → `route-audit-20260713-r4-worst-pair.geojson` |
 
 A nivel de corrida, global solapa 44 % más por ruta que spatial_term (132.4 vs 91.9
-puntos ajenos dentro del bbox), consistente con F8/R2.
+puntos ajenos dentro del bbox), consistente con `route-quality-20260712.md` (global
+solapa más por ruta que spatial_term).
 
 **(c) Secuencia intra-ruta subóptima (corte por wall-clock del GLS) — 13 rutas** con
 ≥6 auto-cruces del polyline (7 en R1, 6 en R2), lideradas por:
@@ -379,7 +382,8 @@ se ven en el mapa del caso real son mayormente (c)**, y (d) es real pero margina
 
 1. **R1 ruta 1 y R2 rutas 1–2** (`r1.geojson`, `r2.geojson`): ¿son rutas "de relleno"
    en la periferia (árboles sueltos lejos del núcleo) o atraviesan zonas ya cubiertas
-   por otras rutas? Si es lo segundo, es (a)+(b) y Q1 debería atacar la penalización;
+   por otras rutas? Si es lo segundo, es (a)+(b) y el experimento de sensibilidad a
+   penalizaciones debería atacar la penalización;
    si es lo primero, es geometría del dataset y va a limitaciones.
 2. **Peor par de global (R2 rutas 4 y 8, IoU 0.576)** vs **peor par de spatial_term
    (R1 rutas 4 y 15, IoU 0.303)**: ¿entrelazado real (dos rutas mezcladas calle a
@@ -393,21 +397,22 @@ se ven en el mapa del caso real son mayormente (c)**, y (d) es real pero margina
    no captura.
 5. **R3b (disperso, walk 0.67)**: ¿la caminata se ve como "recorrer la ciudad" (dataset
    imposible) o como "vueltas sobre el mismo barrio" (relleno artificial)? Es la
-   diferencia entre documentar F11 como limitación y recalibrar en Q1.
+   diferencia entre documentar la limitación y recalibrar en el experimento de
+   sensibilidad a penalizaciones.
 6. Arcos de factor > 5 (14 en R1, p. ej. R5 parada 1: 26 m → 212 s): ¿corresponden a
    pares de árboles separados por bandejón/reja? Confirmarlo cierra (d) como artefacto
    conocido y acotado.
 
-## f. Qué queda fijado para Q1
+## f. Qué queda fijado para el experimento de sensibilidad a penalizaciones
 
-- La sensibilidad debe barrer `SOFT_LOWER_PENALTY` (F11.1 confirmada) **y** el objetivo
-  del soft upper (F11.2 refutada: hoy no cumple ninguna función salvo pagar penalización
+- La sensibilidad debe barrer `SOFT_LOWER_PENALTY` (Afirmación 1 confirmada) **y** el objetivo
+  del soft upper (Afirmación 2 refutada: hoy no cumple ninguna función salvo pagar penalización
   en todas las rutas), midiendo walk_ratio y cobertura del hueco de T_min además de las
   métricas agregadas.
-- El caso patológico de Q1 debe ser el **disperso** (n=40, `add84a64-…`), no el área
+- El caso patológico de ese experimento debe ser el **disperso** (n=40, `add84a64-…`), no el área
   n=157: es el único que reproduce "más caminata que censo".
 - La referencia n=1607 es reproducible desde este comando y no contradice §3.1.1; la
-  comparación de Q1 contra ella es válida.
-- Si Q1 no encuentra variante ganadora, el material honesto para §3.1.4 ya está aquí:
+  comparación de ese experimento contra ella es válida.
+- Si ese experimento no encuentra variante ganadora, el material honesto para §3.1.4 ya está aquí:
   el solver optimiza duración objetivo, no desplazamiento, y eso es visible en 25/25
   rutas de la referencia.

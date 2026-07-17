@@ -21,7 +21,7 @@
 
 ## a. Entorno y reproducción
 
-Idéntico a Q0 (`route-audit-20260713.md` §a), Q1 (`penalty-sensitivity-20260713.md` §a), RP2 y R2:
+Idéntico a `route-audit-20260713.md` §a, `penalty-sensitivity-20260713.md` §a, `profiling-20260711.md` y `route-quality-20260712.md`:
 `docker-compose.prod.yml`, imágenes target `prod`, OSRM real con el PBF completo de Chile (MLD,
 perfil foot, `--max-table-size 5000`), PostGIS 15-3.3, Redis 7, MacBook M4 Pro con Docker Desktop.
 **Un solo stack corriendo** durante toda la medición (la contención de CPU falsearía los tiempos).
@@ -49,7 +49,7 @@ Datasets (UUID deterministas, función pura del CSV):
 - **reference-n1607** (`legacy_api` + `legacy_app`, n=1607): la instancia de la queja visual.
 - **area-26-n157**, **area-27-n72**, **area-29-n43**: tres áreas reales.
 
-Cada celda se corre con el comando `route_audit` (mismos overrides que Q1). Config censal de
+Cada celda se corre con el comando `route_audit` (mismos overrides que `penalty-sensitivity-20260713.md`). Config censal de
 referencia fija en toda la grilla: `service_time = 120 s` (2 min), `T_max = 10800 s` (3 h),
 `strategy = spatial_term`, 3 semillas (42, 43, 44). En un dataset real la semilla sólo etiqueta la
 repetición: el solver no la consume, la varianza viene del corte por wall-clock del GLS.
@@ -61,14 +61,14 @@ no es código de producción y no se versiona). Los per-route CSV y los GeoJSON 
 emite ese driver a `/results` (bind-mount de `.local/experiments`); de ahí se copian a
 `docs/experiments/`.
 
-Definiciones (idénticas a Q0/Q1): `self_crossings` = pares de aristas NO adyacentes de la secuencia
+Definiciones (idénticas a `route-audit-20260713.md` y `penalty-sensitivity-20260713.md`): `self_crossings` = pares de aristas NO adyacentes de la secuencia
 de paradas que se cruzan propiamente (proyección equirectangular local; tocarse en una parada
 compartida no cuenta); `solapamiento/ruta` = `interleave_per_route` de `RoutingSolution` (puntos de
 otras rutas dentro del bbox de cada ruta, promediado); `IoU peor par` = `worst_pair_iou` (IoU de
 bounding boxes del peor par); `balance` = duración mínima / duración máxima (`balance_score`);
 `σ(T)` = desviación estándar de las duraciones por ruta; `travel` = `total_travel_time_sec`;
 `drops` = árboles sin asignar. **`walk_ratio` NO se usa como métrica de calidad en este experimento**
-(Q1 lo cerró: es geometría del dataset, no relleno del solver).
+(`penalty-sensitivity-20260713.md` lo cerró: es geometría del dataset, no relleno del solver).
 
 ## b. Grilla y criterio de éxito — FIJADOS ANTES DE LA PRIMERA CORRIDA
 
@@ -78,18 +78,18 @@ bounding boxes del peor par); `balance` = duración mínima / duración máxima 
 | celda | `soft_upper_target` | `T_min` | midpoint resultante | rol |
 | --- | --- | --- | --- | --- |
 | A | midpoint | 7200 s (2 h) | 9000 s | **config actual (baseline)** |
-| B | tmax | 7200 s (2 h) | — (soft upper apagado) | eje soft upper aislado (= el hallazgo lateral de Q1) |
+| B | tmax | 7200 s (2 h) | — (soft upper apagado) | eje soft upper aislado (= el hallazgo lateral de `penalty-sensitivity-20260713.md`) |
 | C | midpoint | 9000 s (2,5 h) | 9900 s | eje T_min aislado |
 | D | tmax | 9000 s (2,5 h) | — (soft upper apagado) | **la apuesta** (banda angosta + soft upper libre) |
 
-Recordatorio (Q1 §a): la dimensión Time ya tiene capacidad **dura** `T_max`, así que un soft upper
+Recordatorio (`penalty-sensitivity-20260713.md` §a): la dimensión Time ya tiene capacidad **dura** `T_max`, así que un soft upper
 parado en `T_max` no se puede violar nunca — `soft_upper_target=tmax` **apaga** el soft upper, no lo
 mueve. Subir `T_min` a 9000 s sube el objetivo del soft lower (piso de duración) y, en las celdas
 midpoint, también sube el midpoint a 9900 s.
 
 **Control de cómputo** (sólo sobre n=1607, config actual A = midpoint / T_min 7200):
 `time_limit ∈ {120 (actual), 300}`, semillas 42/43/44. Testea si más presupuesto GLS baja los cruces
-por sí solo (Q0 §d.c atribuyó los cruces a secuencia no terminada de optimizar: las 4 corridas
+por sí solo (`route-audit-20260713.md` §d.c atribuyó los cruces a secuencia no terminada de optimizar: las 4 corridas
 agotaron los 120 s sin converger).
 
 **Arm opcional `FIXED_VEHICLE_COST` reducido: NO se corre.** El comando `route_audit` no expone ese
@@ -130,7 +130,7 @@ Lectura por eje, que separa las dos causas:
 
 - **B aísla el soft upper.** Apagarlo (target = T_max) con `T_min` intacto baja los cruces de
   89 a 5 (−94 %) y el solapamiento/ruta de 95,2 a 68,2 (−28 %), con travel y k iguales —
-  reproduce el hallazgo lateral de Q1 (`penalty-sensitivity-20260713.md` §c). **Pero rompe el
+  reproduce el hallazgo lateral de `penalty-sensitivity-20260713.md` §c. **Pero rompe el
   balance: 0,833 → 0,739**, bajo el umbral del cliente. Sin el soft upper que tira las duraciones
   hacia el midpoint, y con `T_min` todavía en 7200 s, el soft lower deja pasar rutas cortas.
 - **C aísla `T_min`.** Subirlo a 9000 s (banda [9000, 10800], midpoint 9900) sube el balance a
@@ -151,10 +151,10 @@ Config actual (A: midpoint / T_min 7200), sólo se cambia el presupuesto del GLS
 | 300 s | 25 | 54 761 | 0,828 | 619 | 78,9 | **50,0** |
 
 Más presupuesto GLS **sí** baja los cruces por sí solo (89 → 50, −44 %) y el travel (−9,6 %): parte
-de los cruces del baseline es secuencia no terminada de optimizar, como anticipó Q0 §d.c. **Pero el
+de los cruces del baseline es secuencia no terminada de optimizar, como anticipó `route-audit-20260713.md` §d.c. **Pero el
 efecto del cómputo es parcial y mucho menor que el del objetivo:** D, con sólo 120 s, deja 6 cruces
 contra los 50 que deja el baseline con 300 s. La geometría la manda la función objetivo (dónde se
-para el soft upper), no el reloj — matiza la nota de Q1 (F13) sin contradecirla: el wall-clock
+para el soft upper), no el reloj — matiza la nota de `penalty-sensitivity-20260713.md` (que el wall-clock contribuye a los cruces) sin contradecirla: el wall-clock
 contribuye, pero apagar el soft upper del midpoint contribuye ~10× más.
 
 ### c.3 Áreas reales (n=157, n=72, n=43)
@@ -178,7 +178,7 @@ Dos lecturas, ambas contra la intuición que traía la apuesta desde n=1607:
    no porque las paradas se mezclen). Ninguna se acerca a los 89 cruces de n=1607. **El desorden que
    la revisión visual señala vive en n=1607, no en las áreas operativas reales.**
 2. **La apuesta (D) EMPEORA las áreas.** Sube los cruces en las tres: n=157 0→2, n=72 6→27, n=43
-   0→15. La causa es la que Q0/Q1 documentaron como F11.1: en un área chica el servicio total
+   0→15. La causa es el relleno de caminata hasta T_min documentado en `route-audit-20260713.md` y `penalty-sensitivity-20260713.md`: en un área chica el servicio total
    (43·120 = 5160 s, 72·120 = 8640 s) queda **muy por debajo de** `T_min = 9000 s`, así que subir
    `T_min` obliga a las rutas a **caminar de relleno** para tocar el piso (travel n=43: 2022 → 3821;
    n=72: 5737 → 9331), y esa caminata de relleno serpentea y se cruza. En n=1607 esto no pasa porque
@@ -211,7 +211,7 @@ geometría libre. B lo demuestra por descarte: apagar el soft upper sin angostar
 misma geometría pero hunde el balance; C demuestra que angostar la banda sin apagar el soft upper
 arregla el balance pero no la geometría. Sólo la combinación (D) consigue las dos cosas a la vez.
 
-A diferencia de Q1 —donde ninguna variante ganó—, este eje **sí** produce una recalibración que
+A diferencia del experimento de sensibilidad a penalizaciones (`penalty-sensitivity-20260713.md`) —donde ninguna variante ganó—, este eje **sí** produce una recalibración que
 cumple el criterio a priori entero. **Importante:** esto NO ejecuta ningún cambio en producción;
 `solver.py` queda intacto. Lo que el experimento entrega es la evidencia medida de que existe una
 combinación `(soft_upper_target=tmax, T_min=9000)` que domina a la config actual en geometría sin
@@ -225,16 +225,16 @@ a la revisión visual humana de los GeoJSON (§e) — el ojo es el juez final de
 - **La respuesta a la pregunta del experimento es sí:** existe una combinación —soft upper apagado
   (`target=tmax`) más banda angosta (`T_min=9000`)— que **reduce los cruces un 93 % y el
   solapamiento/ruta un 30 % sin pagar el balance** (0,837 ≥ 0,80), a k, drops y travel esencialmente
-  iguales. Es la celda D, y gana el criterio a priori en las seis condiciones. A diferencia de Q1
-  (ninguna variante ganó), este experimento **sí** encuentra la variante buscada.
+  iguales. Es la celda D, y gana el criterio a priori en las seis condiciones. A diferencia del
+  experimento de sensibilidad a penalizaciones (ninguna variante ganó), este experimento **sí** encuentra la variante buscada.
 - **El mecanismo quedó aislado por el diseño 2×2:** la geometría la controla el soft upper (B la
   arregla, C no), el balance lo controla `T_min` vía el soft lower (C lo arregla, B no); sólo
-  combinarlos (D) consigue ambas cosas. Esto confirma la jerarquía de penalizaciones que Q1 midió
-  (soft lower domina 20:1) y la refutación de F11.2 de Q0 (el soft upper del midpoint no ordena
-  duraciones — retuerce secuencias).
+  combinarlos (D) consigue ambas cosas. Esto confirma la jerarquía de penalizaciones que midió
+  `penalty-sensitivity-20260713.md` (soft lower domina 20:1) y la refutación, en `route-audit-20260713.md`,
+  de que el soft upper del midpoint ordene las duraciones (no las ordena — retuerce secuencias).
 - **El cómputo importa, pero menos que el objetivo:** subir el time_limit de 120 a 300 s baja los
   cruces de 89 a 50 (−44 %), no a 6. La forma de las rutas es sobre todo función objetivo, no
-  wall-clock — matiza F13 sin contradecirla.
+  wall-clock — matiza la nota de `penalty-sensitivity-20260713.md` (que el wall-clock contribuye a los cruces) sin contradecirla.
 
 **Sobre las áreas reales (n=157, n=72, n=43):**
 
@@ -246,7 +246,7 @@ a la revisión visual humana de los GeoJSON (§e) — el ojo es el juez final de
   planes que de verdad se ejecutan.
 - **La recalibración ganadora de n=1607 no es universal: degrada las áreas** (cruces 0→2, 6→27,
   0→15), porque en instancias con servicio escaso frente a `T_min` la banda angosta fuerza caminata
-  de relleno que serpentea (F11.1). Cualquier adopción en producción tendría que condicionar el eje
+  de relleno que serpentea (el relleno de caminata hasta T_min). Cualquier adopción en producción tendría que condicionar el eje
   `T_min` al régimen (servicio disponible por ruta), no aplicarlo plano.
 
 **El régimen en que D gana no ocurre en producción.** La saturación (duración/`T_max`) separa
