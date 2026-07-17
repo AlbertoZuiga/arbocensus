@@ -23,6 +23,8 @@ class TreeObservationInputSerializer(serializers.Serializer):
     )
     photo = serializers.ImageField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+    lat = serializers.FloatField(required=False, allow_null=True)
+    lon = serializers.FloatField(required=False, allow_null=True)
 
 
 class TreeObservationSerializer(serializers.ModelSerializer):

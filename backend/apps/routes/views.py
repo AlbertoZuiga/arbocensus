@@ -148,13 +148,13 @@ class RouteStopVisitView(APIView):
             return Response(RouteStopSerializer(stop).data)
         if stop.has_pending_predecessor():
             return Response({"detail": ORDER_ERROR}, status=400)
-        location = None
-        lat = request.data.get("lat")
-        lon = request.data.get("lon")
-        if lat is not None and lon is not None:
-            location = Point(float(lon), float(lat), srid=4326)
-        stop.mark_visited(location=location, notes=request.data.get("notes"))
         data: Any = observation.validated_data
+        location = None
+        lat = data.get("lat")
+        lon = data.get("lon")
+        if lat is not None and lon is not None:
+            location = Point(lon, lat, srid=4326)
+        stop.mark_visited(location=location, notes=data.get("notes"))
         TreeObservation.objects.create(
             tree=stop.tree,
             route_stop=stop,

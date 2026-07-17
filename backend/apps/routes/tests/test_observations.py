@@ -88,6 +88,41 @@ def test_visit_without_photo_creates_observation(solution_with_route, surveyor):
     assert not observation.photo
 
 
+def test_visit_with_valid_latlon_saves_location(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": -33.45, "lon": -70.65},
+        format="json",
+    )
+    assert response.status_code == 200
+    stops[0].refresh_from_db()
+    assert stops[0].visit_location.x == pytest.approx(-70.65)
+    assert stops[0].visit_location.y == pytest.approx(-33.45)
+
+
+def test_visit_with_garbage_latlon_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"lat": "no-soy-un-numero", "lon": ""},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert stops[0].visit_location is None
+    assert TreeObservation.objects.count() == 0
+
+
+def test_visit_without_latlon_saves_no_location(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    assert response.status_code == 200
+    stops[0].refresh_from_db()
+    assert stops[0].visit_location is None
+
+
 def test_visit_with_invalid_status_returns_400(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     response = _client(surveyor).post(
