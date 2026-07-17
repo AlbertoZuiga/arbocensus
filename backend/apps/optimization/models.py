@@ -10,7 +10,7 @@ from django.utils import timezone
 class RoutingConfig(models.Model):
     DEFAULT_MIN_ROUTE_TIME_SEC = 7200
     DEFAULT_MAX_ROUTE_TIME_SEC = 10800
-    DEFAULT_SERVICE_TIME_SEC = 300
+    DEFAULT_SERVICE_TIME_SEC = 180
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE)
