@@ -270,28 +270,44 @@ class Command(BaseCommand):
             "## Vehículos vacíos — veredicto",
         ]
 
-        # Per-vacant-vehicle analysis
-        vacant_penalties = []
-        for v, c in enumerate(end_cumuls):
-            if c == 0:
-                vp = max(0, lower_target - c) * SOFT_LOWER_PENALTY
-                vacant_penalties.append((v, vp))
+        # Split the manual soft-lower charge between active and vacant vehicles,
+        # then let the delta against ObjectiveValue() decide whether OR-Tools
+        # actually charges the vacant ones.
+        soft_lower_active = sum(
+            max(0, lower_target - c) * SOFT_LOWER_PENALTY for c in end_cumuls if c > 0
+        )
+        soft_lower_vacant = soft_lower_cost - soft_lower_active
+        n_vacant = sum(1 for c in end_cumuls if c == 0)
+        tolerance = max(1000, n_trees)
 
-        if vacant_penalties:
+        if n_vacant:
             lines.append(
-                f"Hay {len(vacant_penalties)} vehículo(s) con end_cumul=0 "
-                f"(vacíos). Cada uno paga {lower_target} × {SOFT_LOWER_PENALTY:,} "
-                f"= {lower_target * SOFT_LOWER_PENALTY:,} en soft_lower_penalty."
+                f"Hay {n_vacant} vehículo(s) con end_cumul=0 (vacíos). "
+                f"Si pagaran, cada uno aportaría {lower_target} × "
+                f"{SOFT_LOWER_PENALTY:,} = {lower_target * SOFT_LOWER_PENALTY:,} "
+                f"en soft_lower_penalty."
             )
             lines.append(
-                f"Costo total por vehículos vacíos: "
-                f"{sum(vp for _, vp in vacant_penalties):,}"
+                f"soft_lower manual: activos = {soft_lower_active:,}  "
+                f"vacíos = {soft_lower_vacant:,}"
             )
-            lines.append(
-                "**VEREDICTO: CONFIRMADO — los vehículos vacíos sí pagan el "
-                "soft lower bound. Esto presiona al solver a llenar todos los "
-                "vehículos del buffer hasta T_min (relleno).**"
-            )
+            if abs(delta) <= tolerance:
+                lines.append(
+                    "**VEREDICTO: SÍ PAGAN — el objetivo de OR-Tools coincide con "
+                    "la reconstrucción que incluye a los vacíos (delta ≈ 0).**"
+                )
+            elif abs(delta + soft_lower_vacant) <= tolerance:
+                lines.append(
+                    "**VEREDICTO: NO PAGAN — el objetivo de OR-Tools es exactamente "
+                    "la reconstrucción MENOS el cargo de los vacíos "
+                    f"(delta = −soft_lower_vacant = {-soft_lower_vacant:,}). "
+                    "OR-Tools omite los costos de vehículos no usados.**"
+                )
+            else:
+                lines.append(
+                    "**VEREDICTO: INCONCLUSO — el delta no coincide ni con cobrar "
+                    "ni con omitir a los vacíos; revisar la reconstrucción.**"
+                )
         else:
             lines.append(
                 "No hay vehículos con end_cumul=0: todos los vehículos fueron "
