@@ -86,7 +86,7 @@ def test_synthetic_default_matches_previous_behavior(tmp_path, requests_mock, se
     assert row["strategy"] == "global"
     assert Dataset.objects.filter(name="Sweep n5 s42").exists()
     config = RoutingConfig.objects.earliest("created_at")
-    assert config.service_time_sec == RoutingConfig.DEFAULT_SERVICE_TIME_SEC
+    assert config.service_time_sec == 300
     assert config.max_route_time_sec == RoutingConfig.DEFAULT_MAX_ROUTE_TIME_SEC
 
 
