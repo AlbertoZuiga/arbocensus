@@ -30,6 +30,13 @@ la redacción de la tesis.
   `--service-time <min>`, `--t-max <h>`), con las mismas métricas de calidad de
   rutas que `baseline_sweep` para que ambas corridas sean comparables. Es
   determinista: una sola fila, sin semillas.
+- `manage.py config_algorithm_sweep` → CSV con `--csv <ruta>` (una fila por celda).
+  Barre configuración × algoritmo × tamaño sobre la suite de instancias congeladas
+  (config censal: servicio 2 min, T_max 3 h). Reanudable (salta celdas ya presentes)
+  y `--only-instance` / `--only-cell` / `--seeds` para acotar. Las celdas OR-Tools
+  corren dentro de una transacción revertida para no ensuciar la base compartida.
+  Los overrides de configuración que barre existen como flags en `route_audit`
+  (`--balance-arm`, `--span-cost-coefficient`); son opt-in y no alteran el default.
 
 Las instancias reales sobre las que corren estos comandos viven congeladas en
 [`instances/`](instances/README.md) (`manage.py freeze_legacy` las vuelca desde la
