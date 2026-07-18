@@ -44,7 +44,13 @@ class OptimizationPipeline:
         self.job = job
         self.config = job.config
 
-    def run(self, strategy=None, time_limit_sec=None, penalties=DEFAULT_PENALTIES):
+    def run(
+        self,
+        strategy=None,
+        time_limit_sec=None,
+        penalties=DEFAULT_PENALTIES,
+        time_span_coef=0,
+    ):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
             key=lambda tree: tree.id,
@@ -92,6 +98,7 @@ class OptimizationPipeline:
                 max_vehicles=max_vehicles,
                 time_limit_sec=time_limit_sec,
                 penalties=penalties,
+                time_span_coef=time_span_coef,
                 timer=timer,
             )
             if result is None:

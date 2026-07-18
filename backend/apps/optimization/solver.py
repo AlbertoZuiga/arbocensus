@@ -16,12 +16,31 @@ SOFT_UPPER_TARGET_MIDPOINT = "midpoint"
 SOFT_UPPER_TARGET_TMAX = "tmax"
 SOFT_UPPER_TARGETS = (SOFT_UPPER_TARGET_MIDPOINT, SOFT_UPPER_TARGET_TMAX)
 
+BALANCE_ARM_ACTUAL = "actual"
+BALANCE_ARM_UPPER_TMAX_TMIN9000 = "upper-tmax-tmin9000"
+BALANCE_ARM_TMIN_SCALED = "tmin-scaled"
+BALANCE_ARM_SERVICE_FLOOR = "service-floor"
+BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST = "tmin-scaled+exempt-last"
+BALANCE_ARMS = (
+    BALANCE_ARM_ACTUAL,
+    BALANCE_ARM_UPPER_TMAX_TMIN9000,
+    BALANCE_ARM_TMIN_SCALED,
+    BALANCE_ARM_SERVICE_FLOOR,
+    BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
+)
+
+# The `upper-tmax-tmin9000` arm anchors the soft lower bound just under the census
+# floor (T_min≈9000s) so routes are still discouraged from staying tiny, while the
+# upper target rides at T_max to pull duration up and unwind spatial crossings.
+TIGHT_TMIN_SEC = 9000
+
 
 @dataclass(frozen=True)
 class PenaltyConfig:
     soft_lower_penalty: int = SOFT_LOWER_PENALTY
     soft_upper_penalty: int = SOFT_UPPER_PENALTY
     soft_upper_target: str = SOFT_UPPER_TARGET_MIDPOINT
+    balance_arm: str = BALANCE_ARM_ACTUAL
 
     def __post_init__(self):
         if self.soft_upper_target not in SOFT_UPPER_TARGETS:
@@ -29,11 +48,49 @@ class PenaltyConfig:
                 f"soft_upper_target must be one of {SOFT_UPPER_TARGETS}, "
                 f"got '{self.soft_upper_target}'"
             )
+        if self.balance_arm not in BALANCE_ARMS:
+            raise ValueError(
+                f"balance_arm must be one of {BALANCE_ARMS}, got '{self.balance_arm}'"
+            )
 
     def soft_upper_bound(self, min_route_time_sec, max_route_time_sec):
         if self.soft_upper_target == SOFT_UPPER_TARGET_TMAX:
             return max_route_time_sec
         return (min_route_time_sec + max_route_time_sec) // 2
+
+    def vehicle_bounds(
+        self,
+        *,
+        min_route_time_sec,
+        max_route_time_sec,
+        total_service_sec,
+        max_vehicles,
+        is_last,
+    ):
+        # Returns (lower, upper) where each is either (target_sec, penalty) applied to
+        # the route end cumul, or None to leave that side of the balance band open.
+        arm = self.balance_arm
+        if arm == BALANCE_ARM_ACTUAL:
+            lower = (min_route_time_sec, self.soft_lower_penalty)
+            upper = (
+                self.soft_upper_bound(min_route_time_sec, max_route_time_sec),
+                self.soft_upper_penalty,
+            )
+        elif arm == BALANCE_ARM_UPPER_TMAX_TMIN9000:
+            lower = (TIGHT_TMIN_SEC, self.soft_lower_penalty)
+            upper = (max_route_time_sec, self.soft_upper_penalty)
+        elif arm == BALANCE_ARM_SERVICE_FLOOR:
+            lower = None
+            upper = (
+                self.soft_upper_bound(min_route_time_sec, max_route_time_sec),
+                self.soft_upper_penalty,
+            )
+        else:
+            floor = min(min_route_time_sec, total_service_sec // max_vehicles)
+            exempt = arm == BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST and is_last
+            lower = None if exempt else (floor, self.soft_lower_penalty)
+            upper = ((floor + max_route_time_sec) // 2, self.soft_upper_penalty)
+        return lower, upper
 
 
 DEFAULT_PENALTIES = PenaltyConfig()
@@ -69,6 +126,7 @@ class ArbocensusVRPSolver:
         time_limit_sec,
         spatial_points=None,
         span_coef=0,
+        time_span_coef=0,
         penalties=DEFAULT_PENALTIES,
     ):
         self.matrix = build_open_matrix(matrix)
@@ -80,6 +138,7 @@ class ArbocensusVRPSolver:
         self.time_limit_sec = time_limit_sec
         self.spatial_points = spatial_points
         self.span_coef = span_coef
+        self.time_span_coef = time_span_coef
         self.penalties = penalties
 
     def solve(self, timer=None):
@@ -124,24 +183,32 @@ class ArbocensusVRPSolver:
                 distance_dimension = routing.GetDimensionOrDie("Distance")
                 distance_dimension.SetSpanCostCoefficientForAllVehicles(self.span_coef)
 
+            if self.time_span_coef:
+                time_dimension.SetSpanCostCoefficientForAllVehicles(self.time_span_coef)
+
             routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
 
             for node in range(1, n):
                 routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
 
-            soft_upper = self.penalties.soft_upper_bound(
-                self.min_route_time_sec, self.max_route_time_sec
-            )
+            total_service_sec = self.node_count * self.service_time_sec
             for vehicle_id in range(self.max_vehicles):
                 end_index = routing.End(vehicle_id)
-                time_dimension.SetCumulVarSoftLowerBound(
-                    end_index,
-                    self.min_route_time_sec,
-                    self.penalties.soft_lower_penalty,
+                lower, upper = self.penalties.vehicle_bounds(
+                    min_route_time_sec=self.min_route_time_sec,
+                    max_route_time_sec=self.max_route_time_sec,
+                    total_service_sec=total_service_sec,
+                    max_vehicles=self.max_vehicles,
+                    is_last=vehicle_id == self.max_vehicles - 1,
                 )
-                time_dimension.SetCumulVarSoftUpperBound(
-                    end_index, soft_upper, self.penalties.soft_upper_penalty
-                )
+                if lower is not None:
+                    time_dimension.SetCumulVarSoftLowerBound(
+                        end_index, lower[0], lower[1]
+                    )
+                if upper is not None:
+                    time_dimension.SetCumulVarSoftUpperBound(
+                        end_index, upper[0], upper[1]
+                    )
 
             search_params = pywrapcp.DefaultRoutingSearchParameters()
             search_params.first_solution_strategy = (

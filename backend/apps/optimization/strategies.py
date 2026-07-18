@@ -27,6 +27,7 @@ def solve_by_strategy(
     max_vehicles,
     time_limit_sec,
     penalties=DEFAULT_PENALTIES,
+    time_span_coef=0,
     timer=None,
 ):
     if strategy == RoutingSolution.Strategy.SPATIAL_TERM.value:
@@ -39,6 +40,7 @@ def solve_by_strategy(
             max_vehicles=max_vehicles,
             time_limit_sec=time_limit_sec,
             penalties=penalties,
+            time_span_coef=time_span_coef,
             timer=timer,
         )
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
@@ -50,6 +52,7 @@ def solve_by_strategy(
             service_time_sec=service_time_sec,
             time_limit_sec=time_limit_sec,
             penalties=penalties,
+            time_span_coef=time_span_coef,
             timer=timer,
         )
     solver = ArbocensusVRPSolver(
@@ -59,6 +62,7 @@ def solve_by_strategy(
         service_time_sec=service_time_sec,
         max_vehicles=max_vehicles,
         time_limit_sec=time_limit_sec,
+        time_span_coef=time_span_coef,
         penalties=penalties,
     )
     return solver.solve(timer=timer)
@@ -74,6 +78,7 @@ def solve_spatial_term(
     max_vehicles,
     time_limit_sec,
     span_coef=SPATIAL_SPAN_COEF,
+    time_span_coef=0,
     penalties=DEFAULT_PENALTIES,
     timer=None,
 ):
@@ -86,6 +91,7 @@ def solve_spatial_term(
         time_limit_sec=time_limit_sec,
         spatial_points=points,
         span_coef=span_coef,
+        time_span_coef=time_span_coef,
         penalties=penalties,
     )
     return solver.solve(timer=timer)
@@ -161,6 +167,7 @@ def solve_cluster_first(
     time_limit_sec,
     seed=0,
     penalties=DEFAULT_PENALTIES,
+    time_span_coef=0,
     timer=None,
 ):
     matrix = np.asarray(matrix, dtype=float)
@@ -188,6 +195,7 @@ def solve_cluster_first(
             service_time_sec=service_time_sec,
             max_vehicles=max_vehicles,
             time_limit_sec=cluster_time_limit(time_limit_sec, len(members), n),
+            time_span_coef=time_span_coef,
             penalties=penalties,
         ).solve(timer=timer)
         if result is None:
