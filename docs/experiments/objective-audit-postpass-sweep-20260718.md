@@ -125,7 +125,80 @@ Flag: `config_algorithm_sweep --only-cell actual+reseq` y `upper-tmax-tmin9000+r
 
 ### Resultados
 
-<!-- Llenar con tabla antes/después: celda, instancia, crossings_antes, crossings_después, travel_antes, travel_después, balance_antes, balance_después -->
+Celdas corridas sobre las 12 instancias de la suite, 3 semillas por celda (144 filas en el
+CSV; media sobre semillas — la dispersión entre semillas fue casi nula, spread de cruces
+0–1 en todas las celdas). Nota metodológica: cada celda `+reseq` es una corrida de solver
+**independiente** de su control (no la misma solución base re-secuenciada); las diferencias
+de travel de ±0,2 % (p. ej. battery-n800, +0,1 %) son ruido entre corridas, no un 2-opt
+empeorando su propia ruta — por construcción el 2-opt es monótono sobre el travel de red.
+
+#### `actual` vs `actual+reseq`
+
+| Instancia | k | Cruces antes → después | Travel antes → después (s) | Δ travel | Balance antes → después |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| battery-n50 | 2 | 5.0 → 4.0 | 8399 → 4359 | −48.1 % | 0.998 → 0.992 |
+| battery-n100 | 2 | 3.0 → 2.0 | 4244 → 3944 | −7.1 % | 0.946 → 0.969 |
+| battery-n200 | 4 | 2.0 → 8.0 | 8254 → 7247 | −12.2 % | 0.832 → 0.824 |
+| battery-n400 | 7 | 2.0 → 20.0 | 14557 → 13990 | −3.9 % | 0.987 → 0.968 |
+| battery-n800 | 12 | 29.0 → 28.0 | 19702 → 19729 | +0.1 % | 0.851 → 0.851 |
+| battery-n1000 | 15 | 56.0 → 51.0 | 26598 → 25605 | −3.7 % | 0.847 → 0.842 |
+| battery-sparse-n250 | 5 | 2.0 → 3.0 | 15734 → 15682 | −0.3 % | 0.946 → 0.941 |
+| battery-sparse-n500 | 9 | 12.3 → 17.0 | 23016 → 22095 | −4.0 % | 0.834 → 0.814 |
+| area-26-n157 | 3 | 0.0 → 4.0 | 4962 → 4835 | −2.6 % | 0.877 → 0.874 |
+| area-27-n72 | 2 | 6.0 → 3.0 | 5738 → 2538 | −55.8 % | 1.000 → 0.807 |
+| area-29-n43 | 1 | 0.0 → 6.0 | 2022 → 1024 | −49.4 % | 1.000 → 1.000 |
+| reference-n1607 | 25 | 88.7 → 64.0 | 60566 → 58818 | −2.9 % | 0.833 → 0.829 |
+
+#### `upper-tmax-tmin9000` vs `upper-tmax-tmin9000+reseq`
+
+| Instancia | k | Cruces antes → después | Travel antes → después (s) | Δ travel | Balance antes → después |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| battery-n50 | 1 | 0.0 → 3.0 | 3419 → 3333 | −2.5 % | 1.000 → 1.000 |
+| battery-n100 | 2 | 4.0 → 8.0 | 5961 → 4292 | −28.0 % | 1.000 → 0.982 |
+| battery-n200 | 4 | 4.0 → 5.0 | 12024 → 10536 | −12.4 % | 0.990 → 0.943 |
+| battery-n400 | 6 | 7.0 → 30.0 | 13730 → 12222 | −11.0 % | 0.836 → 0.820 |
+| battery-n800 | 12 | 5.0 → 31.0 | 22400 → 20134 | −10.1 % | 0.839 → 0.840 |
+| battery-n1000 | 15 | 5.0 → 49.0 | 28670 → 25714 | −10.3 % | 0.842 → 0.833 |
+| battery-sparse-n250 | 5 | 2.0 → 6.0 | 17231 → 16054 | −6.8 % | 0.905 → 0.886 |
+| battery-sparse-n500 | 8 | 4.0 → 19.7 | 20950 → 19631 | −6.3 % | 0.851 → 0.854 |
+| area-26-n157 | 3 | 2.0 → 7.0 | 8140 → 5711 | −29.8 % | 0.995 → 0.802 |
+| area-27-n72 | 2 | 27.0 → 4.0 | 9332 → 2410 | −74.2 % | 1.000 → 0.885 |
+| area-29-n43 | 1 | 15.0 → 2.0 | 3821 → 1069 | −72.0 % | 1.000 → 1.000 |
+| reference-n1607 | 25 | 6.0 → 51.0 | 60367 → 56764 | −6.0 % | 0.837 → 0.801 |
+
+#### Estado de cada criterio
+
+| Criterio | Estado | Detalle |
+| --- | --- | --- |
+| Cruces ≤ control | **NO cumple (global)** | Sobre `actual`: cumple en n=1607 (88.7 → 64, −28 %), n=1000, n=800, n=100, n=50 y area-27; falla en n=200 (2 → 8), n=400 (2 → 20), dispersas y áreas ya limpias (area-26 0 → 4, area-29 0 → 6). Sobre `upper-tmax-tmin9000`: falla en casi todo el rango denso — el control ya tenía cruces casi nulos y el re-secuenciado los **reintroduce** (n=1607: 6 → 51; n=1000: 5 → 49; n=800: 5 → 31); solo mejora en áreas con relleno alto (area-27 27 → 4, area-29 15 → 2). |
+| Travel ≤ control | **Cumple** | Reducción en 23 de 24 pares (hasta −74 % en áreas con relleno); la única alza es +0,1 % en battery-n800 sobre `actual`, dentro del ruido entre corridas independientes de solver. |
+| k igual al control | **Cumple** | k idéntico en los 24 pares; drops = 0 en todas las celdas. |
+| Balance (reportar antes/después) | **Baja moderada** | Peores caídas: area-26 sobre `upper` 0.995 → 0.802, area-27 sobre `actual` 1.000 → 0.807, n=1607 sobre `upper` 0.837 → 0.801. Nunca cae bajo 0.80. En denso sobre `actual` la caída es marginal (n=1607: 0.833 → 0.829). |
+
+#### Lectura
+
+- El 2-opt minimiza travel de **red** (matriz OSRM); los cruces se miden sobre las cuerdas
+  geométricas entre paradas consecutivas. Camino de red mínimo ≠ geometría limpia: por eso
+  el re-secuenciado puede bajar travel y a la vez **subir** cruces, y lo hace de forma
+  sistemática cuando la solución base ya era geométricamente limpia (todo el rango denso de
+  `upper-tmax-tmin9000`, y las áreas limpias de `actual`).
+- En régimen de relleno (áreas chicas bajo T\_min), el 2-opt destruye el relleno: travel
+  −50 a −74 % y la duración de esas rutas cae muy por debajo de T\_min (el déficit de
+  servicio no cambia porque la asignación es intacta). Esto rompe el contrato del piso
+  T\_min aunque mejore travel y cruces locales.
+- El único uso donde el post-pass cumple todos los criterios a la vez es sobre `actual`
+  en el denso real n=1607: cruces −28 %, travel −2.9 %, balance −0.004, k y drops
+  intactos, con costo de cómputo despreciable (2-opt corre en milisegundos frente a los
+  120 s del solver).
+
+#### Veredicto Fase 2
+
+El criterio a priori "cruces ≤ control" **no se cumple globalmente**, así que el post-pass
+no queda verificado como mejora general. Resultado condicional: como post-pass de
+`actual` en instancias densas saturadas (n=1607) es una mejora gratuita (−28 % cruces,
+−2.9 % travel); combinado con `upper-tmax-tmin9000` es contraproducente (reintroduce los
+cruces que ese brazo elimina), y en régimen de relleno vacía las rutas por debajo de
+T\_min. No se propone cambio de defaults de producción.
 
 ---
 
