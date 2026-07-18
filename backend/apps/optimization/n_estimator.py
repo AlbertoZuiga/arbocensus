@@ -20,6 +20,20 @@ def mean_nearest_neighbor_travel(matrix):
     return float(reachable_minima.mean())
 
 
+def p95_nearest_neighbor_travel(matrix):
+    real_nodes = np.asarray(matrix, dtype=float)[1:, 1:]
+    masked = np.where(
+        (real_nodes >= UNREACHABLE_PENALTY) | np.eye(real_nodes.shape[0], dtype=bool),
+        np.inf,
+        real_nodes,
+    )
+    row_minima = masked.min(axis=1)
+    reachable = row_minima[np.isfinite(row_minima)]
+    if reachable.size == 0:
+        return 0.0
+    return float(np.percentile(reachable, 95))
+
+
 def estimate_max_vehicles(
     matrix, total_service_time_sec, min_route_time_sec, buffer=VEHICLE_BUFFER
 ):

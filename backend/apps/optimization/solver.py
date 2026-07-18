@@ -3,6 +3,10 @@ import time
 from dataclasses import dataclass
 
 import numpy as np
+from apps.optimization.n_estimator import (
+    mean_nearest_neighbor_travel,
+    p95_nearest_neighbor_travel,
+)
 from apps.optimization.profiling import PhaseTimer
 from apps.optimization.route_metrics import haversine
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
@@ -21,12 +25,18 @@ BALANCE_ARM_UPPER_TMAX_TMIN9000 = "upper-tmax-tmin9000"
 BALANCE_ARM_TMIN_SCALED = "tmin-scaled"
 BALANCE_ARM_SERVICE_FLOOR = "service-floor"
 BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST = "tmin-scaled+exempt-last"
+BALANCE_ARM_FEASIBLE_FLOOR_B085 = "feasible-floor-b085"
+BALANCE_ARM_FEASIBLE_FLOOR_B090 = "feasible-floor-b090"
+BALANCE_ARM_FEASIBLE_FLOOR_B095 = "feasible-floor-b095"
 BALANCE_ARMS = (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
+    BALANCE_ARM_FEASIBLE_FLOOR_B085,
+    BALANCE_ARM_FEASIBLE_FLOOR_B090,
+    BALANCE_ARM_FEASIBLE_FLOOR_B095,
 )
 
 # The `upper-tmax-tmin9000` arm anchors the soft lower bound just under the census
@@ -85,6 +95,10 @@ class PenaltyConfig:
                 self.soft_upper_bound(min_route_time_sec, max_route_time_sec),
                 self.soft_upper_penalty,
             )
+        elif arm.startswith("feasible-floor"):
+            # min_route_time_sec is already T_min_eff (pre-computed by the solver).
+            lower = (min_route_time_sec, self.soft_lower_penalty)
+            upper = (max_route_time_sec, self.soft_upper_penalty)
         else:
             floor = min(min_route_time_sec, total_service_sec // max_vehicles)
             exempt = arm == BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST and is_last
@@ -128,6 +142,7 @@ class ArbocensusVRPSolver:
         span_coef=0,
         time_span_coef=0,
         penalties=DEFAULT_PENALTIES,
+        convex_arc_lambda=0.0,
     ):
         self.matrix = build_open_matrix(matrix)
         self.node_count = self.matrix.shape[0] - 1
@@ -140,10 +155,23 @@ class ArbocensusVRPSolver:
         self.span_coef = span_coef
         self.time_span_coef = time_span_coef
         self.penalties = penalties
+        self.convex_arc_lambda = convex_arc_lambda
 
     def solve(self, timer=None):
+        result = self._solve_core(timer)
+        if result is None:
+            return None
+        routes, dropped, _ = result
+        return routes, dropped
+
+    def solve_and_debug(self, timer=None):
+        """Same as solve() but also returns an objective decomposition dict."""
+        return self._solve_core(timer)
+
+    def _solve_core(self, timer):
         timer = timer or PhaseTimer()
         n = self.node_count + 1
+        effective_tmin = self._compute_effective_tmin()
 
         with timer.phase("model_build"):
             manager = pywrapcp.RoutingIndexManager(n, self.max_vehicles, 0)
@@ -158,11 +186,28 @@ class ArbocensusVRPSolver:
                 # real float route time, or routes within T_max exceed it in metrics.
                 return math.ceil(travel + service)
 
-            callback_index = routing.RegisterTransitCallback(time_callback)
-            routing.SetArcCostEvaluatorOfAllVehicles(callback_index)
+            time_cb_index = routing.RegisterTransitCallback(time_callback)
+
+            # Arc cost evaluator: convex variant when lambda > 0, else same as time.
+            if self.convex_arc_lambda > 0:
+                lam = self.convex_arc_lambda
+                tau = self._p95_arc_travel()
+
+                def convex_cost_callback(from_index, to_index):
+                    from_node = manager.IndexToNode(from_index)
+                    to_node = manager.IndexToNode(to_index)
+                    travel = self.matrix[from_node][to_node]
+                    convex = lam * max(0.0, travel - tau) ** 2 / tau if tau > 0 else 0.0
+                    return math.ceil(travel + convex)
+
+                arc_cb_index = routing.RegisterTransitCallback(convex_cost_callback)
+            else:
+                arc_cb_index = time_cb_index
+
+            routing.SetArcCostEvaluatorOfAllVehicles(arc_cb_index)
 
             routing.AddDimension(
-                callback_index,
+                time_cb_index,
                 0,
                 self.max_route_time_sec,
                 True,
@@ -195,7 +240,7 @@ class ArbocensusVRPSolver:
             for vehicle_id in range(self.max_vehicles):
                 end_index = routing.End(vehicle_id)
                 lower, upper = self.penalties.vehicle_bounds(
-                    min_route_time_sec=self.min_route_time_sec,
+                    min_route_time_sec=effective_tmin,
                     max_route_time_sec=self.max_route_time_sec,
                     total_service_sec=total_service_sec,
                     max_vehicles=self.max_vehicles,
@@ -224,7 +269,48 @@ class ArbocensusVRPSolver:
             return None
 
         with timer.phase("solution_extraction"):
-            return self._extract_solution(manager, routing, solution)
+            result = self._extract_solution(manager, routing, solution)
+
+        routes, dropped = result
+        time_end_cumuls = [
+            time_dimension.CumulVar(routing.End(v)).Value(solution)
+            for v in range(self.max_vehicles)
+        ]
+        dist_end_cumuls = None
+        if self.spatial_points is not None:
+            dist_dim = routing.GetDimensionOrDie("Distance")
+            dist_end_cumuls = [
+                dist_dim.CumulVar(routing.End(v)).Value(solution)
+                for v in range(self.max_vehicles)
+            ]
+        debug = {
+            "objective_ortools": solution.ObjectiveValue(),
+            "time_end_cumuls": time_end_cumuls,
+            "dist_end_cumuls": dist_end_cumuls,
+            "max_vehicles": self.max_vehicles,
+            "k_active": len(routes),
+            "dropped_count": len(dropped),
+            "effective_tmin": effective_tmin,
+            "span_coef": self.span_coef,
+            "convex_arc_lambda": self.convex_arc_lambda,
+        }
+        return routes, dropped, debug
+
+    def _compute_effective_tmin(self):
+        arm = self.penalties.balance_arm
+        if not arm.startswith("feasible-floor"):
+            return self.min_route_time_sec
+        beta = float(arm.split("-b")[1]) / 100
+        total_service = self.node_count * self.service_time_sec
+        nn = mean_nearest_neighbor_travel(self.matrix)
+        total_work = total_service + self.node_count * nn
+        k_est = max(
+            1, min(math.ceil(total_work / self.min_route_time_sec), self.node_count)
+        )
+        return int(min(self.min_route_time_sec, beta * total_work / k_est))
+
+    def _p95_arc_travel(self):
+        return p95_nearest_neighbor_travel(self.matrix)
 
     def _solve_with_timing(self, routing, search_params, timer):
         first_solution_elapsed = None

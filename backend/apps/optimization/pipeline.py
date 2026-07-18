@@ -50,6 +50,7 @@ class OptimizationPipeline:
         time_limit_sec=None,
         penalties=DEFAULT_PENALTIES,
         time_span_coef=0,
+        convex_arc_lambda=0.0,
     ):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
@@ -99,6 +100,7 @@ class OptimizationPipeline:
                 time_limit_sec=time_limit_sec,
                 penalties=penalties,
                 time_span_coef=time_span_coef,
+                convex_arc_lambda=convex_arc_lambda,
                 timer=timer,
             )
             if result is None:

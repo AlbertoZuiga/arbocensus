@@ -1,4 +1,5 @@
 import csv
+import math
 import time
 from statistics import mean, pstdev
 
@@ -7,7 +8,10 @@ from apps.datasets.models import Dataset, Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.greedy import solve_greedy
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
-from apps.optimization.n_estimator import mean_nearest_neighbor_travel
+from apps.optimization.n_estimator import (
+    mean_nearest_neighbor_travel,
+    p95_nearest_neighbor_travel,
+)
 from apps.optimization.pipeline import OptimizationPipeline
 from apps.optimization.route_audit import (
     audit_route,
@@ -15,8 +19,12 @@ from apps.optimization.route_audit import (
     worst_overlap_pair,
 )
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
+from apps.optimization.route_resequencer import resequence_routes
 from apps.optimization.solver import (
     BALANCE_ARM_ACTUAL,
+    BALANCE_ARM_FEASIBLE_FLOOR_B085,
+    BALANCE_ARM_FEASIBLE_FLOOR_B090,
+    BALANCE_ARM_FEASIBLE_FLOOR_B095,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
@@ -51,20 +59,46 @@ SPATIAL = RoutingSolution.Strategy.SPATIAL_TERM.value
 GLOBAL = RoutingSolution.Strategy.GLOBAL.value
 GREEDY = "greedy"
 
-# (label, strategy, balance_arm, span_coef). The config axis fixes the strategy at
-# spatial_term and sweeps the duration soft-bound arms plus one Time-span cell; the
-# algorithm axis fixes the arm at `actual` and sweeps the strategy.
+# (label, strategy, balance_arm, span_coef, post_resequence, arc_lambda).
+# Config axis fixes strategy at spatial_term and sweeps duration soft-bound arms,
+# post-pass resequencing (Phase 2), feasible-floor arms (Phase 3a), and convex arc
+# cost (Phase 3b). Algorithm axis fixes arm at `actual` and sweeps the strategy.
 CONFIG_AXIS = [
-    ("actual", SPATIAL, BALANCE_ARM_ACTUAL, 0),
-    ("upper-tmax-tmin9000", SPATIAL, BALANCE_ARM_UPPER_TMAX_TMIN9000, 0),
-    ("tmin-scaled", SPATIAL, BALANCE_ARM_TMIN_SCALED, 0),
-    ("service-floor", SPATIAL, BALANCE_ARM_SERVICE_FLOOR, 0),
-    ("tmin-scaled+exempt-last", SPATIAL, BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST, 0),
-    ("span-c100", SPATIAL, BALANCE_ARM_ACTUAL, 100),
+    ("actual", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 0.0),
+    ("upper-tmax-tmin9000", SPATIAL, BALANCE_ARM_UPPER_TMAX_TMIN9000, 0, False, 0.0),
+    ("tmin-scaled", SPATIAL, BALANCE_ARM_TMIN_SCALED, 0, False, 0.0),
+    ("service-floor", SPATIAL, BALANCE_ARM_SERVICE_FLOOR, 0, False, 0.0),
+    (
+        "tmin-scaled+exempt-last",
+        SPATIAL,
+        BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
+        0,
+        False,
+        0.0,
+    ),
+    ("span-c100", SPATIAL, BALANCE_ARM_ACTUAL, 100, False, 0.0),
+    # Phase 2 — post-pass intra-route resequencing
+    ("actual+reseq", SPATIAL, BALANCE_ARM_ACTUAL, 0, True, 0.0),
+    (
+        "upper-tmax-tmin9000+reseq",
+        SPATIAL,
+        BALANCE_ARM_UPPER_TMAX_TMIN9000,
+        0,
+        True,
+        0.0,
+    ),
+    # Phase 3a — feasible floor (T_min_eff = min(T_min, β·total_work/k_est))
+    ("feasible-floor-b085", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B085, 0, False, 0.0),
+    ("feasible-floor-b090", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B090, 0, False, 0.0),
+    ("feasible-floor-b095", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B095, 0, False, 0.0),
+    # Phase 3b — convex arc cost (arc_cost = travel + λ·max(0,travel−τ)²/τ)
+    ("arc-convex-l1", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 1.0),
+    ("arc-convex-l5", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 5.0),
+    ("arc-convex-l20", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 20.0),
 ]
 ALGO_AXIS = [
-    ("global", GLOBAL, BALANCE_ARM_ACTUAL, 0),
-    ("greedy", GREEDY, BALANCE_ARM_ACTUAL, 0),
+    ("global", GLOBAL, BALANCE_ARM_ACTUAL, 0, False, 0.0),
+    ("greedy", GREEDY, BALANCE_ARM_ACTUAL, 0, False, 0.0),
 ]
 
 SEEDS = [1, 2, 3]
@@ -77,6 +111,9 @@ COLUMNS = [
     "strategy",
     "balance_arm",
     "span_coef",
+    "post_resequence",
+    "arc_lambda",
+    "arc_tau",
     "seed",
     "k",
     "drops",
@@ -154,10 +191,21 @@ class Command(BaseCommand):
 
         for slug in instances:
             trees, matrix = self._prepare_instance(slug)
-            nn_travel = mean_nearest_neighbor_travel(build_open_matrix(matrix))
-            for axis, cell, strategy, arm, span in cells:
+            open_m = build_open_matrix(matrix)
+            nn_travel = mean_nearest_neighbor_travel(open_m)
+            arc_tau = p95_nearest_neighbor_travel(open_m)
+            for axis, cell, strategy, arm, span, post_reseq, arc_lam in cells:
                 for seed in options["seeds"]:
-                    key = (slug, cell, strategy, arm, str(span), str(seed))
+                    key = (
+                        slug,
+                        cell,
+                        strategy,
+                        arm,
+                        str(span),
+                        str(post_reseq),
+                        str(arc_lam),
+                        str(seed),
+                    )
                     if key in done:
                         self.stdout.write(f"skip {slug} {cell} seed={seed}")
                         continue
@@ -166,11 +214,14 @@ class Command(BaseCommand):
                         trees,
                         matrix,
                         nn_travel,
+                        arc_tau,
                         axis,
                         cell,
                         strategy,
                         arm,
                         span,
+                        post_reseq,
+                        arc_lam,
                         seed,
                     )
                     self._append(csv_path, row)
@@ -193,6 +244,8 @@ class Command(BaseCommand):
                     r["strategy"],
                     r["balance_arm"],
                     r["span_coef"],
+                    r.get("post_resequence", "False"),
+                    r.get("arc_lambda", "0.0"),
                     r["seed"],
                 )
                 for r in csv.DictReader(handle)
@@ -213,14 +266,27 @@ class Command(BaseCommand):
         return trees, matrix
 
     def _run_cell(
-        self, slug, trees, matrix, nn_travel, axis, cell, strategy, arm, span, seed
+        self,
+        slug,
+        trees,
+        matrix,
+        nn_travel,
+        arc_tau,
+        axis,
+        cell,
+        strategy,
+        arm,
+        span,
+        post_reseq,
+        arc_lam,
+        seed,
     ):
         wall_start = time.perf_counter()
         if strategy == GREEDY:
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
         else:
             rows, worst_iou, interleave, timing = self._ortools_cell(
-                trees, strategy, arm, span
+                trees, matrix, strategy, arm, span, post_reseq, arc_lam
             )
         wall = round(time.perf_counter() - wall_start, 2)
         return self._metrics_row(
@@ -231,6 +297,9 @@ class Command(BaseCommand):
             strategy,
             arm,
             span,
+            post_reseq,
+            arc_lam,
+            arc_tau,
             seed,
             rows,
             worst_iou,
@@ -240,10 +309,11 @@ class Command(BaseCommand):
             wall,
         )
 
-    def _ortools_cell(self, trees, strategy, arm, span):
+    def _ortools_cell(self, trees, matrix, strategy, arm, span, post_reseq, arc_lam):
         penalties = PenaltyConfig(balance_arm=arm)
         dataset = trees[0].dataset
-        rows = worst = interleave = timing = None
+        raw_routes = None
+        rows = worst = interleave = timing = drops_count = None
         try:
             with transaction.atomic():
                 config = RoutingConfig.objects.create(
@@ -255,25 +325,74 @@ class Command(BaseCommand):
                 job = OptimizationJob.objects.create(config=config, strategy=strategy)
                 job.set_status("running")
                 metrics = OptimizationPipeline(job).run(
-                    strategy=strategy, penalties=penalties, time_span_coef=span
+                    strategy=strategy,
+                    penalties=penalties,
+                    time_span_coef=span,
+                    convex_arc_lambda=arc_lam,
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
-                audited = audit_solution(
-                    solution,
-                    min_route_time_sec=CENSUS_MIN_ROUTE_TIME_SEC,
-                    max_route_time_sec=CENSUS_MAX_ROUTE_TIME_SEC,
-                )
-                pair = worst_overlap_pair(audited)
-                rows = [entry["row"] for entry in audited]
-                for row in rows:
-                    row["drops"] = len(metrics["dropped_trees"])
-                worst = pair[2] if pair else 0.0
-                interleave = solution.interleave_per_route
+                drops_count = len(metrics["dropped_trees"])
                 timing = solution.timing
+
+                if post_reseq:
+                    tree_id_to_idx = {tree.id: i for i, tree in enumerate(trees)}
+                    raw_routes = []
+                    for route in solution.routes.order_by("route_number"):
+                        stops = list(route.stops.order_by("sequence"))
+                        raw_routes.append(
+                            [tree_id_to_idx[stop.tree_id] for stop in stops]
+                        )
+                else:
+                    audited = audit_solution(
+                        solution,
+                        min_route_time_sec=CENSUS_MIN_ROUTE_TIME_SEC,
+                        max_route_time_sec=CENSUS_MAX_ROUTE_TIME_SEC,
+                    )
+                    pair = worst_overlap_pair(audited)
+                    rows = [entry["row"] for entry in audited]
+                    for row in rows:
+                        row["drops"] = drops_count
+                    worst = pair[2] if pair else 0.0
+                    interleave = solution.interleave_per_route
+
                 raise _RollbackError
         except _RollbackError:
             pass
+
+        if post_reseq and raw_routes is not None:
+            reseq = resequence_routes(raw_routes, matrix)
+            rows, worst, interleave = self._compute_route_metrics(
+                reseq, trees, matrix, drops_count
+            )
+
         return rows, worst, interleave, timing
+
+    def _compute_route_metrics(self, routes, trees, matrix, drops_count):
+        rows = []
+        for i, route in enumerate(routes, start=1):
+            points = [(trees[n].location.y, trees[n].location.x) for n in route]
+            travel = (
+                math.ceil(
+                    sum(
+                        matrix[a][b] for a, b in zip(route[:-1], route[1:], strict=True)
+                    )
+                )
+                if len(route) > 1
+                else 0
+            )
+            duration = travel + len(route) * CENSUS_SERVICE_TIME_SEC
+            row = audit_route(
+                i,
+                points,
+                duration,
+                travel,
+                min_route_time_sec=CENSUS_MIN_ROUTE_TIME_SEC,
+                max_route_time_sec=CENSUS_MAX_ROUTE_TIME_SEC,
+            )
+            row["drops"] = drops_count
+            rows.append(row)
+        spatial = aggregate_metrics(routes_from_points(routes, trees))
+        return rows, spatial["worst_pair_iou"], spatial["interleave_per_route"]
 
     def _greedy_cell(self, trees, matrix):
         routes = solve_greedy(
@@ -312,6 +431,9 @@ class Command(BaseCommand):
         strategy,
         arm,
         span,
+        post_reseq,
+        arc_lam,
+        arc_tau,
         seed,
         rows,
         worst_iou,
@@ -345,6 +467,9 @@ class Command(BaseCommand):
             "strategy": strategy,
             "balance_arm": arm,
             "span_coef": span,
+            "post_resequence": post_reseq,
+            "arc_lambda": arc_lam,
+            "arc_tau": round(arc_tau, 1),
             "seed": seed,
             "k": k,
             "drops": rows[0]["drops"] if rows else 0,
