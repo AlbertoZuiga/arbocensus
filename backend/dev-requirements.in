@@ -18,6 +18,9 @@ requests-mock>=1.11
 ruff>=0.1
 pre-commit>=3.5
 
+# Profiling (dev only — never install in production)
+line-profiler>=4.0
+
 # Type checking
 django-stubs>=4.2
 pyright>=1.1

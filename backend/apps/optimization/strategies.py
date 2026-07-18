@@ -11,6 +11,14 @@ from apps.optimization.solver import (
     build_open_matrix,
 )
 
+try:
+    from line_profiler import profile  # type: ignore[import-untyped]
+except ImportError:
+
+    def profile(f):  # type: ignore[misc]
+        return f
+
+
 # Meters of route geographic span cost one unit of objective per coefficient.
 # Higher → tighter, less overlapping routes at the price of more total travel time.
 SPATIAL_SPAN_COEF = 3
@@ -97,6 +105,7 @@ def solve_spatial_term(
     return solver.solve(timer=timer)
 
 
+@profile
 def project_equirectangular(points):
     arr = np.asarray(points, dtype=float)
     lat0 = np.radians(arr[:, 0].mean())
@@ -119,6 +128,7 @@ def _kmeans_plusplus_init(coords, k, rng):
     return np.asarray(centroids)
 
 
+@profile
 def kmeans(coords, k, *, seed=0, max_iters=100):
     coords = np.asarray(coords, dtype=float)
     rng = np.random.default_rng(seed)
@@ -141,6 +151,7 @@ def kmeans(coords, k, *, seed=0, max_iters=100):
     return labels
 
 
+@profile
 def choose_k(n, matrix, service_time_sec, min_route_time_sec, max_route_time_sec):
     # Nearest-neighbor travel, not mean pairwise travel: a route visits consecutive
     # stops, so the mean distance between ALL node pairs of a metro-wide matrix
@@ -157,6 +168,7 @@ def cluster_time_limit(time_limit_sec, cluster_size, n):
     return max(1, round(time_limit_sec * cluster_size / n))
 
 
+@profile
 def solve_cluster_first(
     matrix,
     *,
