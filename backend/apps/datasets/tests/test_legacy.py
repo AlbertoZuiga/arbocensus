@@ -219,6 +219,32 @@ def test_list_trees_without_any_url_raises_not_configured(settings):
         legacy.list_trees()
 
 
+def test_app_trees_sql_does_not_depend_on_mltree():
+    assert "mltree" not in legacy._APP_TREES_SQL
+    assert "s.latitude BETWEEN -56 AND -17" in legacy._APP_TREES_SQL
+    assert "s.longitude BETWEEN -76 AND -66" in legacy._APP_TREES_SQL
+    assert "s.qr IS NOT NULL AND s.qr <> ''" in legacy._APP_TREES_SQL
+
+
+@pytest.mark.django_db
+def test_list_trees_drops_app_tree_colocated_with_api(legacy_db, monkeypatch):
+    colocated = legacy.LegacyTreeRow(
+        source=legacy.SOURCE_APP, external_id=555555, lat=-33.45001, lon=-70.55001
+    )
+    monkeypatch.setattr(legacy, "_load_app_trees", lambda: [*APP_TREES, colocated])
+    keys = {(t["source"], t["external_id"]) for t in legacy.list_trees()}
+    assert (legacy.SOURCE_APP, 555555) not in keys
+    assert (legacy.SOURCE_API, 776) in keys
+    assert (legacy.SOURCE_APP, 96905) in keys
+
+
+@pytest.mark.django_db
+def test_list_trees_keeps_app_tree_far_from_api(legacy_db):
+    keys = {(t["source"], t["external_id"]) for t in legacy.list_trees()}
+    assert (legacy.SOURCE_APP, 96905) in keys
+    assert (legacy.SOURCE_APP, 211488) in keys
+
+
 def test_load_selection_returns_rows_across_sources(legacy_db):
     rows = legacy.load_selection([(legacy.SOURCE_APP, 96905), (legacy.SOURCE_API, 776)])
     assert [(row.source, row.external_id) for row in rows] == [
