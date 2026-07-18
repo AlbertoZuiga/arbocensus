@@ -1,3 +1,4 @@
+import math
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime
@@ -13,6 +14,9 @@ from .models import Dataset, Tree
 SOURCE_API = "legacy_api"
 SOURCE_APP = "legacy_app"
 SOURCES = (SOURCE_API, SOURCE_APP)
+
+_DEDUP_RADIUS_M = 5.0
+_DEDUP_CELL_DEG = 0.0001
 
 
 class LegacyDatabaseNotConfiguredError(Exception):
@@ -37,8 +41,10 @@ _APP_TREES_SQL = """
            percentile_cont(0.5) WITHIN GROUP (ORDER BY s.latitude),
            percentile_cont(0.5) WITHIN GROUP (ORDER BY s.longitude)
     FROM arbocensus_app_sample s
-    JOIN (SELECT DISTINCT tree_id FROM arbocensus_app_mltree) m ON m.tree_id = s.qr
-    WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL AND s.latitude <> 0
+    WHERE s.qr IS NOT NULL AND s.qr <> '' AND s.qr !~ '^0+$'
+      AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
+      AND s.latitude BETWEEN -56 AND -17
+      AND s.longitude BETWEEN -76 AND -66
     GROUP BY s.qr
     ORDER BY 1
 """
@@ -263,12 +269,55 @@ def list_areas() -> list[dict]:
     return result
 
 
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    radius = 6371000
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    )
+    return 2 * radius * math.asin(math.sqrt(a))
+
+
+def _dedup_app_against_api(
+    api_rows: list[LegacyTreeRow], app_rows: list[LegacyTreeRow]
+) -> list[LegacyTreeRow]:
+    """Drop app trees co-located with an api tree; the api row is preferred because
+    it carries species and area. The api extent is contained in the app extent, so
+    the same physical tree can appear in both sources within GPS noise."""
+    if not api_rows or not app_rows:
+        return app_rows
+    grid: dict[tuple[int, int], list[LegacyTreeRow]] = {}
+    for row in api_rows:
+        key = (round(row.lat / _DEDUP_CELL_DEG), round(row.lon / _DEDUP_CELL_DEG))
+        grid.setdefault(key, []).append(row)
+    kept = []
+    for app_row in app_rows:
+        base_lat = round(app_row.lat / _DEDUP_CELL_DEG)
+        base_lon = round(app_row.lon / _DEDUP_CELL_DEG)
+        neighbors = (
+            api_row
+            for dlat in (-1, 0, 1)
+            for dlon in (-1, 0, 1)
+            for api_row in grid.get((base_lat + dlat, base_lon + dlon), [])
+        )
+        if not any(
+            _haversine_m(app_row.lat, app_row.lon, api_row.lat, api_row.lon)
+            <= _DEDUP_RADIUS_M
+            for api_row in neighbors
+        ):
+            kept.append(app_row)
+    return kept
+
+
 def list_trees() -> list[dict]:
-    rows: list[LegacyTreeRow] = []
+    loaded: dict[str, list[LegacyTreeRow]] = {}
     errors = []
-    for loader in (_api_tree_rows, _load_app_trees):
+    for source, loader in ((SOURCE_API, _api_tree_rows), (SOURCE_APP, _load_app_trees)):
         try:
-            rows.extend(loader())
+            loaded[source] = loader()
         except LegacyDatabaseNotConfiguredError as exc:
             errors.append(exc)
     if len(errors) == len(SOURCES):
@@ -276,6 +325,9 @@ def list_trees() -> list[dict]:
             "Neither ARBOCENSUS_API_DB_URL nor ARBOCENSUS_DB_URL is configured; "
             "legacy import is unavailable."
         )
+    api_rows = loaded.get(SOURCE_API, [])
+    app_rows = loaded.get(SOURCE_APP, [])
+    rows = api_rows + _dedup_app_against_api(api_rows, app_rows)
     imported = set(
         Tree.objects.filter(source__in=SOURCES, external_id__isnull=False).values_list(
             "source", "external_id"
@@ -360,7 +412,7 @@ def all_tree_rows() -> list[LegacyTreeRow]:
         )
         for tree_id, lat, lon, species in trees
     ]
-    return api_rows + _load_app_trees()
+    return api_rows + _dedup_app_against_api(api_rows, _load_app_trees())
 
 
 def import_all() -> list[LegacyAreaImport]:
