@@ -448,7 +448,104 @@ experimento se encuentran versionados en \texttt{docs/experiments/} (reporte
 \texttt{route-quality-20260712.md} y los archivos CSV asociados).
 
 % ---- 3.1.4 ------------------------------------------------------
-% Aquí va la subsección «Discusión de calidad de rutas», última de la Sección 3.1.
+\subsection{Discusión de calidad de rutas}
+\label{sec:discusion-calidad}
+
+% DRAFT — revisar
+La función objetivo que minimiza el \textit{solver} combina cuatro componentes
+de escala diferente. El término principal es el costo de arco, proporcional al tiempo
+de tránsito entre paradas consecutivas (aproximadamente 1\,s por segundo de caminata
+según la red peatonal de OSRM). Sobre él actúan dos penalizaciones blandas en la
+dimensión temporal de cada ruta: la penalización inferior, con coeficiente
+$10\,000\,\text{s}^{-1}$, desalienta que una ruta quede por debajo de $T_{\min}$;
+y la penalización superior, con coeficiente $500\,\text{s}^{-1}$, desalienta que la
+duración supere el punto medio del intervalo $[T_{\min},\,T_{\max}]$. Se añaden
+además un costo fijo de $100\,000$\,s por vehículo activo, que desincentiva el uso
+de rutas adicionales, y una penalización de $1\,000\,000$\,s por árbol no cubierto,
+que garantiza que la cobertura total sea siempre preferible a cualquier mejora marginal
+en los demás términos.
+
+La razón entre ambas penalizaciones blandas es de $20\mathord{:}1$ ($10\,000 / 500$),
+y el experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se
+conservan en \texttt{docs/experiments/penalty-sensitivity-20260713-reference.csv}---
+ofrece evidencia causal de la función que cumple cada término. Al suprimir la
+penalización inferior (coeficiente $= 0$), manteniendo fijo el resto de los
+coeficientes, el balance de carga cae de $0{,}838$ a $0{,}739$, la flota sube de
+25 a 32 rutas y el número de rutas que quedan por debajo de $T_{\min}$ pasa de 3
+a 26, lo que confirma que ese componente es el mecanismo que sostiene la
+distribución de carga y evita la fragmentación en rutas demasiado cortas. La penalización superior
+actúa sobre la geometría: al redirigir su objetivo desde el punto medio del intervalo
+hasta $T_{\max}$, el número de auto-cruces de las rutas cae de $76{,}3$ a $6{,}3$
+---una reducción del $91{,}7$\,\%--- sin variar el presupuesto de cómputo ni el
+número de rutas. Este resultado establece una relación causal directa entre la
+configuración de la función objetivo y la geometría de las rutas: los auto-cruces
+observados no son consecuencia del corte por tiempo del GLS, sino del objetivo que
+el \textit{solver} persigue.
+
+El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}.
+El conjunto de evaluación de $n = 1\,607$ árboles reúne el arbolado de múltiples
+áreas de censo de distinta ubicación y abarca aproximadamente $10{,}3$\,km de extensión
+longitudinal (Ilustración~\ref{fig:regimen-disperso-vs-real}). Esa extensión no tiene
+correlato operativo: en los datos legados, la extensión máxima de un área individual
+de censo es de $1{,}32$\,km, según las instancias versionadas en
+\texttt{docs/experiments/instances/}. En ese régimen de área real, la configuración de
+producción genera rutas sin cruces apreciables; los cruces emergen únicamente al
+procesar un conjunto que reúne arbolado disperso sobre varios kilómetros, situación
+que en operación solo surgiría si se procesaran múltiples áreas de censo como un único
+problema (Ilustración~\ref{fig:ruta-vueltas-r1}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
+  \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación
+    ($n = 1\,607$, estrategia \texttt{spatial\_term}, configuración de producción).
+    El cruzamiento refleja la extensión artificial del conjunto agregado, no una
+    limitación de la formulación.}
+  \label{fig:ruta-vueltas-r1}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
+  \caption{Régimen disperso (extensión $\approx 10{,}3$\,km, \textit{dataset} de
+    evaluación agregado) frente a régimen real (extensión $\leq 1{,}32$\,km, áreas
+    individuales del arbolado legado). En el régimen real la configuración de
+    producción genera rutas sin cruces.}
+  \label{fig:regimen-disperso-vs-real}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
+  \caption{Par de rutas con mayor solapamiento espacial
+    (\textit{IoU} del peor par $= 0{,}55$) en el \textit{dataset} de evaluación.
+    El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde
+    a la geometría local del par, y ningún coeficiente global lo elimina sin penalizar
+    las rutas circundantes.}
+  \label{fig:peor-par}
+\end{figure}
+
+De los resultados anteriores se derivan dos respuestas directas a las preguntas de
+evaluación más frecuentes. La pregunta «¿por qué las rutas no se ven compactas
+visualmente?» tiene respuesta en la geometría: la configuración de producción produce
+rutas sin cruces en áreas de extensión real ($\leq 1{,}32$\,km), y cuando los cruces
+aparecen responden a la función objetivo, no a una limitación del tiempo de cómputo.
+La pregunta «¿por qué el \textit{baseline} greedy se acerca en desplazamiento total?»
+tiene respuesta en la saturación: el heurístico llena cada ruta hasta el $98{,}5$\,\%
+de $T_{\max}$ ---sin dejar holgura operacional--- de modo que su reducción de caminata
+proviene de la cota, no de la calidad del ordenamiento. La diferencia de $4{,}3$\,\%
+de desplazamiento a favor del \textit{solver} y la ausencia de rutas degeneradas en la
+solución de \textit{OR-Tools} son las dos dimensiones que el tiempo total de
+desplazamiento no captura de forma aislada (Sección~\ref{sec:comparacion-estrategias}).
+
+La unidad operativa del motor es el área de censo individual, no el arbolado
+metropolitano en su conjunto. Procesar cada área como un problema independiente
+reduciría la extensión del \textit{dataset} a la escala en que el \textit{solver}
+produce rutas limpias con la configuración actual; esa extensión se documenta como
+trabajo futuro en la Sección~\ref{sec:posibles-mejoras}.
+
+% PENDIENTE: veredicto del barrido de configuración×algoritmo (adopción con guard
+% vs config única vs trabajo futuro)
 
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 \label{sec:perfil-rendimiento}
@@ -691,6 +788,7 @@ medible.
 \end{table}
 
 \section{POSIBLES MEJORAS}
+\label{sec:posibles-mejoras}
 
 Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
 
@@ -701,10 +799,40 @@ Entre las extensiones identificadas para versiones futuras del sistema se encuen
   \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos completos de administrador y censador mediante Playwright.
 \end{itemize}
 
-Asimismo, se documentan las siguientes limitaciones aceptadas en el alcance del
-producto actual: los tokens JWT se almacenan en \texttt{localStorage}, lo que
-simplifica la implementación a costa de una menor protección frente a ataques de tipo
-\textit{cross-site scripting}; y la construcción de la matriz de costos no aplica
-fragmentación, por lo que el tamaño de \textit{dataset} queda acotado por el límite de
-tabla de una única consulta OSRM.
+\subsection{Limitaciones del sistema}
+
+% DRAFT — revisar
+Se documentan a continuación las limitaciones aceptadas en el alcance de esta
+iteración de Arbocensus.
+
+\begin{itemize}
+  \item \textbf{Seguridad de sesión}: los tokens JWT se almacenan en
+  \texttt{localStorage}, lo que simplifica la implementación a costa de una
+  mayor exposición ante ataques de tipo \textit{cross-site scripting} en
+  comparación con el almacenamiento en \textit{cookies} con atributo
+  \texttt{HttpOnly}. El riesgo es aceptado para un sistema de intranet
+  operado por personal interno.
+
+  \item \textbf{Escala de la matriz de costos}: la construcción de la matriz
+  de distancias no aplica fragmentación (\textit{chunking}), de modo que el
+  tamaño del \textit{dataset} queda acotado por el límite de tabla de una
+  única solicitud al servicio OSRM (\texttt{--max-table-size}). Para
+  \textit{datasets} que superen ese umbral se requiere dividir las consultas
+  y ensamblar la matriz por bloques, extensión documentada en el apartado
+  anterior.
+
+  \item \textbf{Alcance del problema de ruteo}: el motor optimiza el
+  \textit{dataset} completo como un único problema, sin segmentación previa
+  por área geográfica. Cuando el \textit{dataset} reúne arbolado de múltiples
+  áreas de censo ---como el conjunto de evaluación de $n = 1\,607$ árboles,
+  que abarca $10{,}3$\,km de extensión longitudinal--- las rutas resultantes
+  reflejan esa extensión artificial, con los efectos de cruce discutidos en la
+  Sección~\ref{sec:discusion-calidad}. En la operación habitual, donde cada
+  optimización corresponde a un área individual de extensión
+  $\leq 1{,}32$\,km, esa limitación no se manifiesta; sin embargo, la
+  plataforma no automatiza la segmentación previa por área, de modo que
+  la correcta delimitación del \textit{dataset} de entrada recae en el
+  administrador. Particionar el arbolado por área antes de rutear es la mejora
+  de mayor impacto geométrico identificada para versiones futuras.
+\end{itemize}
 
