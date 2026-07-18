@@ -16,7 +16,7 @@ from django.db import transaction
 
 SEED = 42
 
-PROFILES = {"light": 15, "medium": 50, "heavy": 200}
+PROFILES = {"light": 15, "medium": 70, "heavy": 200}
 PROFILE_OPTIMIZES = {"light": False, "medium": True, "heavy": True}
 
 
