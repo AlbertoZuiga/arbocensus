@@ -1,5 +1,12 @@
 import { useMemo, useState } from "react";
-import { useMyRoute, useRouteDetail, useRoutePath } from "../../hooks/useMyRoute.js";
+import { ClipboardList, RefreshCw, TreePine } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  EMPTY_ROUTES_POLL_MS,
+  useMyRoute,
+  useRouteDetail,
+  useRoutePath,
+} from "../../hooks/useMyRoute.js";
 import { useWatchPosition } from "../../hooks/useWatchPosition.js";
 import { useVisitStop } from "../../hooks/useVisitStop.js";
 import { useSkipStop } from "../../hooks/useSkipStop.js";
@@ -8,13 +15,33 @@ import RouteMap from "../../components/surveyor/RouteMap.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
 import SurveyorHeader from "../../components/surveyor/SurveyorHeader.jsx";
+import UserMenu from "../../components/UserMenu.jsx";
 import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 import { isStopLocked, isStopResolved } from "../../utils/stops.js";
 
-function CenteredMessage({ children }) {
+function MinimalHeader() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 text-center">
-      <p className="text-muted-foreground">{children}</p>
+    <header className="pt-safe sticky top-0 z-[1000] border-b bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-2 px-4 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <TreePine className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+          <span className="truncate text-base font-extrabold tracking-tight text-slate-900">
+            Arbocensus
+          </span>
+        </div>
+        <UserMenu />
+      </div>
+    </header>
+  );
+}
+
+function StatusScreen({ children }) {
+  return (
+    <main className="flex min-h-screen flex-col bg-slate-50">
+      <MinimalHeader />
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+        {children}
+      </div>
     </main>
   );
 }
@@ -69,13 +96,50 @@ export default function SurveyorRoutePage() {
   const inRange = distance != null && distance <= PROXIMITY_THRESHOLD_M;
 
   if (myRoute.isLoading || (activeRouteId && routeDetail.isLoading)) {
-    return <CenteredMessage>Cargando ruta…</CenteredMessage>;
+    return (
+      <StatusScreen>
+        <p className="text-muted-foreground">Cargando ruta…</p>
+      </StatusScreen>
+    );
   }
   if (myRoute.isError) {
-    return <CenteredMessage>No se pudo cargar tu ruta.</CenteredMessage>;
+    return (
+      <StatusScreen>
+        <p className="text-muted-foreground">No se pudo cargar tu ruta.</p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => myRoute.refetch()}
+          disabled={myRoute.isFetching}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+          Reintentar
+        </Button>
+      </StatusScreen>
+    );
   }
   if (!activeRouteId) {
-    return <CenteredMessage>No tienes ninguna ruta asignada.</CenteredMessage>;
+    return (
+      <StatusScreen>
+        <ClipboardList className="h-12 w-12 text-slate-400" aria-hidden="true" />
+        <p className="text-lg font-bold text-slate-900">
+          Aún no tienes rutas asignadas
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Avisa a tu coordinador para que te asigne una ruta. Esta pantalla se
+          actualiza sola cada {EMPTY_ROUTES_POLL_MS / 1000} segundos.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => myRoute.refetch()}
+          disabled={myRoute.isFetching}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+          Actualizar
+        </Button>
+      </StatusScreen>
+    );
   }
 
   const resolvedCount = stops.filter((stop) => isStopResolved(stop)).length;
