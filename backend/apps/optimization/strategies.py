@@ -36,6 +36,7 @@ def solve_by_strategy(
     time_limit_sec,
     penalties=DEFAULT_PENALTIES,
     time_span_coef=0,
+    convex_arc_lambda=0.0,
     timer=None,
 ):
     if strategy == RoutingSolution.Strategy.SPATIAL_TERM.value:
@@ -49,6 +50,7 @@ def solve_by_strategy(
             time_limit_sec=time_limit_sec,
             penalties=penalties,
             time_span_coef=time_span_coef,
+            convex_arc_lambda=convex_arc_lambda,
             timer=timer,
         )
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
@@ -61,6 +63,7 @@ def solve_by_strategy(
             time_limit_sec=time_limit_sec,
             penalties=penalties,
             time_span_coef=time_span_coef,
+            convex_arc_lambda=convex_arc_lambda,
             timer=timer,
         )
     solver = ArbocensusVRPSolver(
@@ -72,6 +75,7 @@ def solve_by_strategy(
         time_limit_sec=time_limit_sec,
         time_span_coef=time_span_coef,
         penalties=penalties,
+        convex_arc_lambda=convex_arc_lambda,
     )
     return solver.solve(timer=timer)
 
@@ -88,6 +92,7 @@ def solve_spatial_term(
     span_coef=SPATIAL_SPAN_COEF,
     time_span_coef=0,
     penalties=DEFAULT_PENALTIES,
+    convex_arc_lambda=0.0,
     timer=None,
 ):
     solver = ArbocensusVRPSolver(
@@ -101,6 +106,7 @@ def solve_spatial_term(
         span_coef=span_coef,
         time_span_coef=time_span_coef,
         penalties=penalties,
+        convex_arc_lambda=convex_arc_lambda,
     )
     return solver.solve(timer=timer)
 
@@ -180,6 +186,7 @@ def solve_cluster_first(
     seed=0,
     penalties=DEFAULT_PENALTIES,
     time_span_coef=0,
+    convex_arc_lambda=0.0,
     timer=None,
 ):
     matrix = np.asarray(matrix, dtype=float)
@@ -209,6 +216,7 @@ def solve_cluster_first(
             time_limit_sec=cluster_time_limit(time_limit_sec, len(members), n),
             time_span_coef=time_span_coef,
             penalties=penalties,
+            convex_arc_lambda=convex_arc_lambda,
         ).solve(timer=timer)
         if result is None:
             return None

@@ -1,20 +1,24 @@
 import csv
 import json
+import math
 from datetime import UTC, datetime
 from statistics import mean
 
-from apps.datasets.models import Dataset
+from apps.datasets.models import Dataset, Tree
+from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.experiment_log import record_experiment
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.pipeline import SOLVER_TIME_LIMIT_SEC, OptimizationPipeline
 from apps.optimization.route_audit import (
     AUDIT_COLUMNS,
+    audit_route,
     audit_solution,
     routes_geojson,
     summarize_audit,
     tmin_gap_coverage,
     worst_overlap_pair,
 )
+from apps.optimization.route_resequencer import resequence_routes
 from apps.optimization.solver import (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARMS,
@@ -109,6 +113,16 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument("--seed", type=int, default=42)
+        parser.add_argument(
+            "--post-resequence",
+            action="store_true",
+            default=False,
+            help=(
+                "After solving, apply open-path 2-opt to each route independently "
+                "and recompute metrics. Tree-to-route assignment is unchanged; "
+                "route duration can only decrease."
+            ),
+        )
         parser.add_argument("--csv", type=str, default=None)
         parser.add_argument("--geojson", type=str, default=None)
         parser.add_argument(
@@ -144,11 +158,20 @@ class Command(BaseCommand):
             options["span_cost_coefficient"],
         )
 
-        audited = audit_solution(
-            solution,
-            min_route_time_sec=min_route_time_sec,
-            max_route_time_sec=max_route_time_sec,
-        )
+        if options["post_resequence"]:
+            audited = self._audit_with_resequence(
+                dataset,
+                solution,
+                service_time_sec,
+                min_route_time_sec,
+                max_route_time_sec,
+            )
+        else:
+            audited = audit_solution(
+                solution,
+                min_route_time_sec=min_route_time_sec,
+                max_route_time_sec=max_route_time_sec,
+            )
         summary = summarize_audit(audited)
         rows = [entry["row"] for entry in audited] + [summary]
 
@@ -221,6 +244,58 @@ class Command(BaseCommand):
             },
         )
         self.stdout.write(f"Experiment report: {report_path}")
+
+    def _audit_with_resequence(
+        self,
+        dataset,
+        solution,
+        service_time_sec,
+        min_route_time_sec,
+        max_route_time_sec,
+    ):
+        trees = sorted(
+            Tree.objects.filter(dataset=dataset, is_active=True),
+            key=lambda t: t.id,
+        )
+        matrix = OSRMCostMatrixBuilder().build(trees)
+        tree_id_to_idx = {tree.id: i for i, tree in enumerate(trees)}
+        raw_routes = []
+        for route in solution.routes.order_by("route_number"):
+            stops = list(route.stops.select_related("tree").order_by("sequence"))
+            raw_routes.append([tree_id_to_idx[stop.tree_id] for stop in stops])
+        reseq = resequence_routes(raw_routes, matrix)
+        audited = []
+        for route_number, route in enumerate(reseq, start=1):
+            points = [(trees[n].location.y, trees[n].location.x) for n in route]
+            travel = (
+                math.ceil(
+                    sum(
+                        matrix[a][b] for a, b in zip(route[:-1], route[1:], strict=True)
+                    )
+                )
+                if len(route) > 1
+                else 0
+            )
+            duration = travel + len(route) * service_time_sec
+            row = audit_route(
+                route_number,
+                points,
+                duration,
+                travel,
+                min_route_time_sec=min_route_time_sec,
+                max_route_time_sec=max_route_time_sec,
+            )
+            audited.append(
+                {
+                    "row": row,
+                    "points": points,
+                    "stops": [
+                        {"sequence": j, "tree_id": str(trees[route[j - 1]].id)}
+                        for j in range(1, len(route) + 1)
+                    ],
+                }
+            )
+        return audited
 
     def _get_dataset(self, dataset_id):
         try:
