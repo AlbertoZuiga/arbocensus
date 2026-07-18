@@ -43,6 +43,18 @@ _APP_TREES_SQL = """
     ORDER BY 1
 """
 
+_APP_BATTERY_SQL = """
+    SELECT s.qr::bigint,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY s.latitude),
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY s.longitude)
+    FROM arbocensus_app_sample s
+    WHERE s.qr IS NOT NULL AND s.qr <> ''
+      AND s.latitude BETWEEN -56 AND -17
+      AND s.longitude BETWEEN -76 AND -66
+    GROUP BY s.qr
+    ORDER BY 1
+"""
+
 _API_OBSERVATIONS_SQL = """
     SELECT s.real_tree_id, s.date, s.completed,
            COALESCE(
@@ -125,6 +137,16 @@ def _load_api():
 def _load_app_trees() -> list[LegacyTreeRow]:
     (rows,) = _fetch(
         "ARBOCENSUS_DB_URL", settings.LEGACY_APP_DB_URL, [(_APP_TREES_SQL, None)]
+    )
+    return [
+        LegacyTreeRow(source=SOURCE_APP, external_id=tree_id, lat=lat, lon=lon)
+        for tree_id, lat, lon in rows
+    ]
+
+
+def battery_tree_rows() -> list[LegacyTreeRow]:
+    (rows,) = _fetch(
+        "ARBOCENSUS_DB_URL", settings.LEGACY_APP_DB_URL, [(_APP_BATTERY_SQL, None)]
     )
     return [
         LegacyTreeRow(source=SOURCE_APP, external_id=tree_id, lat=lat, lon=lon)

@@ -11,7 +11,7 @@ docker compose up -d
 docker compose exec backend python manage.py load_instances
 ```
 
-Carga los 13 CSV como datasets (el nombre del dataset es el nombre del archivo sin
+Carga todos los CSV como datasets (el nombre del dataset es el nombre del archivo sin
 extensión). Para cargar solo algunos:
 
 ```bash
@@ -84,3 +84,57 @@ de menor `id` de cada polígono, que es el que da nombre al archivo.
 | `area-36-n13.csv`   |   13 | Area 9      | Campaña Semiponti     |
 | `area-38-n6.csv`    |    6 | Area 11     | Campaña Semiponti     |
 | `reference-n1607.csv` | 1607 | —         | `legacy_api` + `legacy_app` |
+
+## Batería de crecimiento
+
+Serie de instancias reales de tamaño creciente para medir cómo escalan los
+algoritmos. Reemplaza al disperso sintético por densidad real.
+
+El universo son los 12.946 árboles georreferenciados de la app (fuente `legacy_app`):
+un árbol por QR, ubicado en la mediana de `latitude`/`longitude` de sus muestras. Se
+filtra `qr` no vacío y coordenadas dentro del recuadro de Chile continental
+(`latitude BETWEEN -56 AND -17`, `longitude BETWEEN -76 AND -66`).
+
+Construcción:
+
+- **Semilla**: centroide (media de lat/lon) de esos 12.946 puntos,
+  `(-33.41947947204772, -70.56545962517218)`. Se guarda como constante en el código
+  (`instances.BATTERY_SEED`), no se recalcula, para que el orden no se mueva si la
+  base legacy cambia.
+- **Orden**: todos los árboles ordenados por distancia haversine a la semilla, con
+  desempate por `external_id`. Determinista y total.
+- **Anidamiento**: `battery-n{n}` es el prefijo de los primeros `n` de esa lista, para
+  `n ∈ {50, 100, 200, 400, 800, 1000}`. Cada instancia es prefijo exacto (byte a byte)
+  de la siguiente: `n50 ⊂ n100 ⊂ … ⊂ n1000`. Así el crecimiento es puramente espacial
+  —añadir árboles más lejanos— y no una muestra distinta.
+- **Variantes dispersas**: sobre los primeros 1000, se toma 1 de cada 2
+  (`battery-sparse-n500`) y 1 de cada 4 (`battery-sparse-n250`). Misma extensión
+  espacial que `n=1000`, densidad a la mitad y a un cuarto: aíslan el efecto de la
+  densidad del efecto del tamaño.
+
+Los tamaños son geométricos (≈×2), no aritméticos, a propósito: los cambios de régimen
+y el número de vehículos/clusters `k` escalan multiplicativamente con `n`, no en pasos
+fijos. Una grilla aritmética (50, 100, 150, …) gastaría corridas amontonando puntos en
+un mismo régimen y sin llegar a los tamaños grandes; la geométrica cubre dos órdenes de
+magnitud con seis corridas.
+
+Formato idéntico al resto: `source=legacy_app`, `external_id=qr`, `species` vacía. Las
+filas van en orden de distancia a la semilla (no re-ordenadas por `external_id`), que
+es lo que hace que los archivos sean prefijos literales entre sí.
+
+| Archivo                  |    n | Densidad | Contenido                       |
+| ------------------------ | ---: | -------- | ------------------------------- |
+| `battery-n50.csv`        |   50 | plena    | 50 más cercanos a la semilla    |
+| `battery-n100.csv`       |  100 | plena    | prefijo, primeros 100           |
+| `battery-n200.csv`       |  200 | plena    | prefijo, primeros 200           |
+| `battery-n400.csv`       |  400 | plena    | prefijo, primeros 400           |
+| `battery-n800.csv`       |  800 | plena    | prefijo, primeros 800           |
+| `battery-n1000.csv`      | 1000 | plena    | prefijo, primeros 1000          |
+| `battery-sparse-n500.csv`|  500 | 1/2      | 1 de cada 2 sobre los 1000      |
+| `battery-sparse-n250.csv`|  250 | 1/4      | 1 de cada 4 sobre los 1000      |
+
+Regeneración (único paso que toca la base legacy, requiere `ARBOCENSUS_DB_URL`):
+
+```bash
+docker compose exec backend python manage.py freeze_legacy --battery
+```
