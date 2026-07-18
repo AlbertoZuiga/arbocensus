@@ -16,6 +16,8 @@ from apps.optimization.route_audit import (
     worst_overlap_pair,
 )
 from apps.optimization.solver import (
+    BALANCE_ARM_ACTUAL,
+    BALANCE_ARMS,
     SOFT_LOWER_PENALTY,
     SOFT_UPPER_PENALTY,
     SOFT_UPPER_TARGET_MIDPOINT,
@@ -90,6 +92,22 @@ class Command(BaseCommand):
             default=SOFT_UPPER_PENALTY,
             help="Cost per second above the soft upper target",
         )
+        parser.add_argument(
+            "--balance-arm",
+            type=str,
+            default=BALANCE_ARM_ACTUAL,
+            choices=list(BALANCE_ARMS),
+            help="Duration soft-bound configuration arm applied to every route end",
+        )
+        parser.add_argument(
+            "--span-cost-coefficient",
+            type=int,
+            default=0,
+            help=(
+                "Cost per second of Time-dimension span (route duration). 0 leaves "
+                "the objective unchanged"
+            ),
+        )
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument("--csv", type=str, default=None)
         parser.add_argument("--geojson", type=str, default=None)
@@ -113,6 +131,7 @@ class Command(BaseCommand):
             soft_lower_penalty=options["soft_lower_penalty"],
             soft_upper_penalty=options["soft_upper_penalty"],
             soft_upper_target=options["soft_upper_target"],
+            balance_arm=options["balance_arm"],
         )
         solution, dropped = self._run_pipeline(
             dataset,
@@ -122,6 +141,7 @@ class Command(BaseCommand):
             max_route_time_sec,
             options["time_limit"],
             penalties,
+            options["span_cost_coefficient"],
         )
 
         audited = audit_solution(
@@ -177,6 +197,8 @@ class Command(BaseCommand):
                 "soft_lower_penalty": penalties.soft_lower_penalty,
                 "soft_upper_target": penalties.soft_upper_target,
                 "soft_upper_penalty": penalties.soft_upper_penalty,
+                "balance_arm": penalties.balance_arm,
+                "span_cost_coefficient": options["span_cost_coefficient"],
                 "seed": options["seed"],
                 "csv": str(csv_path),
                 "geojson": str(geojson_path),
@@ -215,6 +237,7 @@ class Command(BaseCommand):
         max_route_time_sec,
         time_limit_sec,
         penalties,
+        span_cost_coefficient,
     ):
         with transaction.atomic():
             config = RoutingConfig.objects.create(
@@ -227,7 +250,10 @@ class Command(BaseCommand):
 
         job.set_status("running")
         metrics = OptimizationPipeline(job).run(
-            strategy=strategy, time_limit_sec=time_limit_sec, penalties=penalties
+            strategy=strategy,
+            time_limit_sec=time_limit_sec,
+            penalties=penalties,
+            time_span_coef=span_cost_coefficient,
         )
         job.set_completed(metrics)
 
@@ -279,6 +305,7 @@ class Command(BaseCommand):
             f"soft_upper_target={penalties.soft_upper_target} "
             f"soft_upper_penalty={penalties.soft_upper_penalty}"
         )
+        w(f"balance_arm={penalties.balance_arm}")
         w("")
         w(",".join(AUDIT_COLUMNS))
         for row in rows:
@@ -289,10 +316,7 @@ class Command(BaseCommand):
         worst_shortfall = max(route_rows, key=lambda row: row["shortfall_sec"])
         w("")
         w(f"walk_ratio aggregate: {summary['walk_ratio']}")
-        w(
-            f"walk_ratio worst: {worst_walk['walk_ratio']} "
-            f"(route {worst_walk['route']})"
-        )
+        w(f"walk_ratio worst: {worst_walk['walk_ratio']} (route {worst_walk['route']})")
         w(
             f"shortfall total: {summary['shortfall_sec']}s "
             f"(worst route {worst_shortfall['route']}: "

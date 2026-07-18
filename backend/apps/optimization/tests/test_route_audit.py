@@ -248,6 +248,35 @@ def test_route_audit_writes_per_route_csv_and_geojson(
     assert "walk_ratio aggregate" in output
 
 
+def test_route_audit_accepts_balance_arm_and_span(
+    tmp_path, requests_mock, real_dataset, settings
+):
+    settings.EXPERIMENTS_DIR = tmp_path / "experiments"
+    mock_osrm(requests_mock, 6)
+
+    rows, _geojson, output = run_audit(
+        tmp_path,
+        real_dataset,
+        strategy="spatial_term",
+        balance_arm="tmin-scaled",
+        span_cost_coefficient=100,
+    )
+
+    assert rows[-1]["route"] == SUMMARY_LABEL
+    assert int(rows[-1]["n_trees"]) == 6
+    assert "balance_arm=tmin-scaled" in output
+
+
+def test_route_audit_rejects_unknown_balance_arm(tmp_path, real_dataset):
+    with pytest.raises(ValueError, match="balance_arm"):
+        call_command(
+            "route_audit",
+            dataset=str(real_dataset.id),
+            balance_arm="nonsense",
+            csv=str(tmp_path / "x.csv"),
+        )
+
+
 def test_route_audit_rejects_t_min_over_t_max(tmp_path, real_dataset):
     with pytest.raises(CommandError, match="--t-min must not exceed --t-max"):
         call_command(
