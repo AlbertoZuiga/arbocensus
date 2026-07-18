@@ -135,6 +135,77 @@ def test_load_scopes_uuids_per_instance(instance_csv, tmp_path):
     assert Tree.objects.filter(external_id=776).values("id").distinct().count() == 2
 
 
+def _synthetic_battery_rows(count: int) -> list[instances.InstanceTree]:
+    seed_lat, seed_lon = instances.BATTERY_SEED
+    return [
+        instances.InstanceTree(
+            source=legacy.SOURCE_APP,
+            external_id=1000 + i,
+            lat=seed_lat + 0.00001 * i,
+            lon=seed_lon + 0.00001 * i,
+        )
+        for i in range(count)
+    ]
+
+
+def _ids(rows: list[instances.InstanceTree]) -> list[int]:
+    return [row.external_id for row in rows]
+
+
+def test_battery_is_deterministic_under_shuffled_input():
+    rows = _synthetic_battery_rows(1200)
+    shuffled = list(reversed(rows))
+
+    assert instances.build_battery(rows) == instances.build_battery(shuffled)
+
+
+def test_battery_orders_rows_by_distance_to_seed():
+    rows = _synthetic_battery_rows(1200)
+    ordered = instances._sort_by_seed(rows)
+
+    seed_lat, seed_lon = instances.BATTERY_SEED
+    distances = [
+        instances._haversine(seed_lat, seed_lon, row.lat, row.lon) for row in ordered
+    ]
+    assert distances == sorted(distances)
+
+
+def test_battery_sizes_are_nested_prefixes():
+    battery = dict(instances.build_battery(_synthetic_battery_rows(1200)))
+
+    for smaller, larger in zip(
+        instances.BATTERY_SIZES, instances.BATTERY_SIZES[1:], strict=False
+    ):
+        assert len(battery[f"battery-n{smaller}"]) == smaller
+        assert (
+            _ids(battery[f"battery-n{smaller}"])
+            == _ids(battery[f"battery-n{larger}"])[:smaller]
+        )
+
+
+def test_battery_sparse_variants_subsample_the_largest_size():
+    rows = _synthetic_battery_rows(1200)
+    battery = dict(instances.build_battery(rows))
+    largest = _ids(battery[f"battery-n{max(instances.BATTERY_SIZES)}"])
+
+    assert _ids(battery["battery-sparse-n500"]) == largest[::2]
+    assert _ids(battery["battery-sparse-n250"]) == largest[::4]
+    assert len(battery["battery-sparse-n500"]) == 500
+    assert len(battery["battery-sparse-n250"]) == 250
+
+
+def test_battery_tiebreaks_equidistant_rows_by_external_id():
+    seed_lat, seed_lon = instances.BATTERY_SEED
+    rows = [
+        instances.InstanceTree(
+            source=legacy.SOURCE_APP, external_id=eid, lat=seed_lat + 0.01, lon=seed_lon
+        )
+        for eid in (900, 100, 500)
+    ]
+
+    assert _ids(instances._sort_by_seed(rows)) == [100, 500, 900]
+
+
 @pytest.mark.django_db
 def test_reloaded_instance_hits_the_matrix_cache(instance_csv, requests_mock):
     adapter = requests_mock.get(ANY, json={"durations": [[0, 30], [30, 0]]})
