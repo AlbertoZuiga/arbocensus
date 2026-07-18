@@ -1,0 +1,42 @@
+# Auditoría de Objetivo — area-26-n157  (n=157)
+
+## Configuración
+balance_arm=actual  T_min=7200s  T_max=10800s  service=120s  span_coef=3
+effective_tmin=7200s  upper_target=9000s  lower_target=7200s
+arc_tau_p95=48.1s
+
+## Solución
+k_active=3  k_vacant=5  max_vehicles=8  drops=0
+ruta más pequeña: 42 árboles  ruta más grande: 58 árboles
+
+## Descomposición del objetivo
+
+Término                              OR-Tools           Manual
+---------------------------- ---------------- ----------------
+arc_cost (Time cumul)                       —           23,871
+fixed_vehicle_cost                          —          300,000
+soft_lower_violations                       —      360,000,000
+soft_upper_violations                       —                0
+drop_cost                                   —                0
+span_cost (Distance)                        —           14,013
+---------------------------- ---------------- ----------------
+TOTAL                                 337,884      360,337,884
+delta (OR-Tools − manual)        -360,000,000                 
+coincidencia                    -106445.4416%                 
+
+## Vehículos vacíos — veredicto
+Hay 5 vehículo(s) con end_cumul=0 (vacíos). Si pagaran, cada uno aportaría 7200 × 10,000 = 72,000,000 en soft_lower_penalty.
+soft_lower manual: activos = 0  vacíos = 360,000,000
+**VEREDICTO: NO PAGAN — el objetivo de OR-Tools es exactamente la reconstrucción MENOS el cargo de los vacíos (delta = −soft_lower_vacant = -360,000,000). OR-Tools omite los costos de vehículos no usados.**
+
+## Detalle por vehículo
+
+  V    end_T      sl_viol      su_viol     dist_m estado
+  0     8212            0            0      1,247 activo
+  1        0   72,000,000            0          0 VACÍO
+  2        0   72,000,000            0          0 VACÍO
+  3        0   72,000,000            0          0 VACÍO
+  4        0   72,000,000            0          0 VACÍO
+  5        0   72,000,000            0          0 VACÍO
+  6     7313            0            0      1,990 activo
+  7     8346            0            0      1,434 activo

@@ -1,0 +1,70 @@
+# Auditoría de Objetivo — reference-n1607  (n=1607)
+
+## Configuración
+balance_arm=actual  T_min=7200s  T_max=10800s  service=120s  span_coef=3
+effective_tmin=7200s  upper_target=9000s  lower_target=7200s
+arc_tau_p95=44.1s
+
+## Solución
+k_active=25  k_vacant=11  max_vehicles=36  drops=0
+ruta más pequeña: 21 árboles  ruta más grande: 80 árboles
+
+## Descomposición del objetivo
+
+Término                              OR-Tools           Manual
+---------------------------- ---------------- ----------------
+arc_cost (Time cumul)                       —          254,050
+fixed_vehicle_cost                          —        2,500,000
+soft_lower_violations                       —      792,000,000
+soft_upper_violations                       —       14,526,000
+drop_cost                                   —                0
+span_cost (Distance)                        —          205,587
+---------------------------- ---------------- ----------------
+TOTAL                              17,485,637      809,485,637
+delta (OR-Tools − manual)        -792,000,000                 
+coincidencia                      -4429.4318%                 
+
+## Vehículos vacíos — veredicto
+Hay 11 vehículo(s) con end_cumul=0 (vacíos). Si pagaran, cada uno aportaría 7200 × 10,000 = 72,000,000 en soft_lower_penalty.
+soft_lower manual: activos = 0  vacíos = 792,000,000
+**VEREDICTO: NO PAGAN — el objetivo de OR-Tools es exactamente la reconstrucción MENOS el cargo de los vacíos (delta = −soft_lower_vacant = -792,000,000). OR-Tools omite los costos de vehículos no usados.**
+
+## Detalle por vehículo
+
+  V    end_T      sl_viol      su_viol     dist_m estado
+  0        0   72,000,000            0          0 VACÍO
+  1        0   72,000,000            0          0 VACÍO
+  2        0   72,000,000            0          0 VACÍO
+  3        0   72,000,000            0          0 VACÍO
+  4        0   72,000,000            0          0 VACÍO
+  5        0   72,000,000            0          0 VACÍO
+  6        0   72,000,000            0          0 VACÍO
+  7        0   72,000,000            0          0 VACÍO
+  8        0   72,000,000            0          0 VACÍO
+  9        0   72,000,000            0          0 VACÍO
+ 10        0   72,000,000            0          0 VACÍO
+ 11    10469            0      734,500      5,016 activo
+ 12     9597            0      298,500      4,394 activo
+ 13    10693            0      846,500      4,621 activo
+ 14    10697            0      848,500      3,584 activo
+ 15     9116            0       58,000      2,413 activo
+ 16    10775            0      887,500      3,024 activo
+ 17     9981            0      490,500      2,159 activo
+ 18     9199            0       99,500      1,779 activo
+ 19     9208            0      104,000      2,576 activo
+ 20    10694            0      847,000      3,032 activo
+ 21     9759            0      379,500      8,943 activo
+ 22    10741            0      870,500      1,669 activo
+ 23    10739            0      869,500      2,521 activo
+ 24    10691            0      845,500      2,374 activo
+ 25    10351            0      675,500      2,328 activo
+ 26    10417            0      708,500      2,673 activo
+ 27     9286            0      143,000      1,212 activo
+ 28    10675            0      837,500      1,966 activo
+ 29    10513            0      756,500      1,726 activo
+ 30     8998            0            0      1,798 activo
+ 31    10799            0      899,500      2,009 activo
+ 32    10465            0      732,500      2,192 activo
+ 33     9197            0       98,500      1,800 activo
+ 34    10365            0      682,500      1,436 activo
+ 35    10625            0      812,500      1,284 activo

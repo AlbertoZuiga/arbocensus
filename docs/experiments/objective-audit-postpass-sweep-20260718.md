@@ -53,7 +53,56 @@ Comparación `objective()` de OR-Tools vs suma manual. Resultado esperado: delta
 
 ### Resultados
 
-<!-- Llenar después de correr objective_audit en reference-n1607 y area-26-n157 -->
+Salidas completas versionadas: `objective-audit-20260718-reference-n1607.txt` y
+`objective-audit-20260718-area-26-n157.txt`. El comando se ajustó antes de correr para
+desglosar `soft_lower` entre vehículos activos y vacíos y basar el veredicto en el delta
+contra `ObjectiveValue()` (no en la mera existencia de vehículos vacíos).
+
+#### Descomposición por término
+
+| Término | reference-n1607 | area-26-n157 |
+| --- | ---: | ---: |
+| arc\_cost (Time cumul) | 254 050 | 23 871 |
+| fixed\_vehicle\_cost | 2 500 000 | 300 000 |
+| soft\_lower (activos) | 0 | 0 |
+| soft\_lower (vacíos, si pagaran) | 792 000 000 | 360 000 000 |
+| soft\_upper | 14 526 000 | 0 |
+| drop\_cost | 0 | 0 |
+| span\_cost (Distance) | 205 587 | 14 013 |
+| **Manual (con vacíos)** | **809 485 637** | **360 337 884** |
+| **`ObjectiveValue()` OR-Tools** | **17 485 637** | **337 884** |
+| delta (OR-Tools − manual) | −792 000 000 | −360 000 000 |
+| delta excluyendo vacíos | **0** | **0** |
+
+Solución n=1607: k\_activos = 25, k\_vacíos = 11, max\_vehicles = 36, drops = 0,
+rutas de 21 a 80 árboles. Área chica: k\_activos = 3, k\_vacíos = 5, max\_vehicles = 8.
+
+#### Verificación
+
+El delta crudo es exactamente −(k\_vacíos × T\_min × SOFT\_LOWER\_PENALTY):
+−11 × 72 000 000 = −792 000 000 en n=1607 y −5 × 72 000 000 = −360 000 000 en el
+área chica. Al excluir el cargo de los vacíos, la reconstrucción manual coincide con
+`ObjectiveValue()` con **delta = 0 exacto** en ambas instancias (ni siquiera hay residuo
+de redondeo: el callback ya entrega enteros con ceiling).
+
+#### Veredicto — vehículos vacíos
+
+**NO PAGAN.** OR-Tools omite del objetivo los costos de vehículos no usados: un vehículo
+con end\_cumul = 0 no aporta soft lower bound (ni fixed cost). El buffer +5 de
+`estimate_max_vehicles` es inocuo para el objetivo: no existe la "fuerza oculta" de
+72 000 000 por vehículo vacío, y por eso el solver puede dejar 11 de 36 vehículos vacíos
+(k = 25) sin castigo alguno. Esto explica el registro histórico k = 25 con buffer amplio.
+
+Consecuencias:
+
+- k **no** está distorsionado por el buffer; cualquier recalibración de penalizaciones
+  basada en descontar o neutralizar el cargo de vehículos vacíos queda **descartada como
+  trabajo futuro** — el cargo no existe.
+- La presión de relleno hasta T\_min proviene únicamente del soft lower de los vehículos
+  **activos** (aquí 0: todas las rutas activas superan T\_min), no de los vacíos.
+- En n=1607 el término dominante del objetivo real es soft\_upper (14,5 M de 17,5 M,
+  83 %): el solver está pagando por rutas sobre el target de 9 000 s, coherente con el
+  régimen saturado ya documentado.
 
 ---
 
