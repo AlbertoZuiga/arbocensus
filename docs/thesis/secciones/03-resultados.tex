@@ -4,7 +4,6 @@
 \section{RESULTADOS OBTENIDOS}
 \subsection{Métricas de Calidad de Rutas}
 
-% DRAFT — revisar
 La calidad de la solución producida por el motor de optimización se evalúa sobre el
 \textit{dataset} legado completo descrito en la Sección~\ref{sec:legacy} (ambas
 fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con mediana de posición por
@@ -116,7 +115,6 @@ se conservan en \texttt{docs/experiments/20260712-real-case-metrics.csv}.
 % ---- 3.1.2 ------------------------------------------------------
 \subsection{Comparación con Solución Greedy}
 
-% DRAFT — revisar
 Como referencia de comparación se implementó una solución \textit{greedy} basada
 en el heurístico del vecino más cercano, generada programáticamente sobre el
 mismo \textit{dataset} ($N = 1\,607$), con la misma matriz de costos de OSRM
@@ -451,7 +449,6 @@ experimento se encuentran versionados en \texttt{docs/experiments/} (reporte
 \subsection{Discusión de calidad de rutas}
 \label{sec:discusion-calidad}
 
-% DRAFT — revisar
 La función objetivo que minimiza el \textit{solver} combina cuatro componentes
 de escala diferente. El término principal es el costo de arco, proporcional al tiempo
 de tránsito entre paradas consecutivas (aproximadamente 1\,s por segundo de caminata
@@ -544,8 +541,51 @@ reduciría la extensión del \textit{dataset} a la escala en que el \textit{solv
 produce rutas limpias con la configuración actual; esa extensión se documenta como
 trabajo futuro en la Sección~\ref{sec:posibles-mejoras}.
 
-% PENDIENTE: veredicto del barrido de configuración×algoritmo (adopción con guard
-% vs config única vs trabajo futuro)
+Para confirmar el origen de los cruces en la función objetivo y explorar si existe
+una configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo
+$\times$ tamaño sobre la suite de instancias congeladas
+(\texttt{route-config-algorithm-sweep-20260718.csv}; 288 celdas, 3 semillas, 12
+instancias, $43 \leq n \leq 1\,607$).
+
+El brazo \texttt{upper-tmax-tmin9000} ---que ancla la penalización blanda superior en
+$T_{\max}$ en lugar del punto medio del intervalo $[T_{\min},\,T_{\max}]$ y eleva el
+piso blando a $9\,000$\,s--- es el único que satisface el criterio de decisión para
+$n=1\,607$: los cruces caen un $92{,}5$\,\% ($89{,}0 \to 6{,}7$) con una variación de
+viaje de $-0{,}3$\,\%, balance de $0{,}84$, $k=25$ y cero descartes. La razón es
+estructural: a esa densidad las rutas saturan el presupuesto temporal de forma natural
+($\overline{\text{sat}} = 0{,}94$), de modo que anclar la cota superior en $T_{\max}$ no
+impone \textit{detours} adicionales. En el eje de algoritmo, \texttt{global} prácticamente no
+modifica los cruces ($-2{,}6$\,\%) y \texttt{greedy} los empeora ($+14{,}6$\,\%), lo que
+ratifica \texttt{spatial\_term} como la estrategia correcta.
+
+Sin embargo, el mismo brazo produce el peor resultado en las áreas reales individuales,
+donde la instancia no satura $T_{\max}$ ($\overline{\text{sat}} \approx 0{,}67$--$0{,}73$):
+anclar la cota superior fuerza relleno de trayecto porque la carga de servicio disponible
+no llena el presupuesto, con incrementos de viaje de $+64{,}0$\,\%, $+62{,}6$\,\% y
+$+89{,}0$\,\% en las instancias de $n = 157$, $72$ y $43$, respectivamente. Bajo la
+configuración de producción, esas mismas áreas generan cero o casi cero cruces; el
+entrelazado es un fenómeno exclusivo del régimen denso agregado
+(Ilustración~\ref{fig:regimen-disperso-vs-real}). El brazo \texttt{span-c100} ---penalización
+del \textit{span} sobre la dimensión temporal mediante
+\texttt{SetSpanCostCoefficientForAllVehicles}--- confirma la predicción de nulidad: solo
+reduce los cruces en $26{,}6$\,\% para $n=1\,607$, por debajo del umbral del $30$\,\%
+exigido por el criterio a priori, porque penalizar la suma de duraciones de ruta no
+distingue el relleno del viaje productivo. Los brazos que reducen o suprimen el piso blando
+(\texttt{tmin-scaled}, \texttt{service-floor} y \texttt{tmin-scaled+exempt-last}) quedan
+descalificados como configuración universal al romper la compuerta de balance $\geq 0{,}80$
+en siete, siete y cuatro instancias, respectivamente.
+
+La conclusión del barrido es que no existe una configuración única ganadora para todos los
+regímenes sin una compuerta previa: la hipótesis queda refutada. El escenario donde
+\texttt{upper-tmax-tmin9000} produce una ganancia decisiva ---el conjunto de evaluación
+agregado de $n=1\,607$--- es artificial y no corresponde a la unidad operativa del sistema.
+La decisión adoptada es conservar la configuración de producción (\texttt{actual}) sin
+modificación y publicar \texttt{upper-tmax-tmin9000} como propuesta verificada para un
+\textit{guard} por saturación a priori ($\overline{\text{sat}} \gtrsim 0{,}9$, cuantificado
+a partir del CSV del barrido): el código de los \textit{overrides} queda en el árbol
+(opt-in, producción intacta) para habilitar ese \textit{guard} cuando se implemente el
+selector, extensión que se documenta como trabajo futuro en la
+Sección~\ref{sec:posibles-mejoras}.
 
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 \label{sec:perfil-rendimiento}
@@ -801,7 +841,6 @@ Entre las extensiones identificadas para versiones futuras del sistema se encuen
 
 \subsection{Limitaciones del sistema}
 
-% DRAFT — revisar
 Se documentan a continuación las limitaciones aceptadas en el alcance de esta
 iteración de Arbocensus.
 
@@ -834,5 +873,64 @@ iteración de Arbocensus.
   la correcta delimitación del \textit{dataset} de entrada recae en el
   administrador. Particionar el arbolado por área antes de rutear es la mejora
   de mayor impacto geométrico identificada para versiones futuras.
+
+  \item \textbf{Captura sin conectividad}: el portal de censo implementa una cola
+  \textit{offline} básica mediante \texttt{persistQueryClient}, suficiente para preservar
+  los datos ante pérdidas de conexión momentáneas; no se implementó un \textit{service
+  worker} para la gestión de teselas de mapa ni para la sincronización diferida robusta
+  bajo conectividad intermitente prolongada. Esa extensión se documenta en el apartado
+  de posibles mejoras.
+
+  \item \textbf{Accesibilidad de la base de datos legada}: la base de datos histórica del
+  proyecto Arbocensus se encuentra activa en Heroku y se accede en modo de solo lectura
+  para la importación de arbolado. Las fotografías de campo almacenadas en Firebase son
+  inaccesibles por cierre del plan de facturación asociado; únicamente los metadatos y
+  las coordenadas están disponibles para su uso en la plataforma.
+
+  \item \textbf{Estrategia \texttt{cluster\_first}}: la estrategia de particionamiento
+  previo mediante $k$-medias quedó descartada como opción de producción a partir de los
+  resultados de la Sección~\ref{sec:comparacion-estrategias}. Incluso en su versión
+  corregida, degrada el balance a $0{,}698$, incrementa el viaje en un $16{,}9$\,\% y
+  descarta 12 árboles frente a \texttt{spatial\_term}, sin ventaja en ninguna dimensión
+  que el criterio de decisión protege; se conserva en el código como opción de comparación
+  para investigación, no como alternativa de censo.
+
+  \item \textbf{Cobertura bajo presupuesto temporal estrecho}: la formulación admite
+  descartes mediante disyunciones penalizadas ($1\,000\,000$\,s por árbol no cubierto),
+  de modo que la cobertura total no está garantizada a priori cuando la carga de servicio
+  excede la capacidad de la flota bajo $T_{\max}$. En la grilla de variantes operacionales,
+  las configuraciones con $T_{\max}=2$\,h y tiempo de servicio alto descartan uno o dos
+  árboles de forma consistente (Tabla~\ref{tab:grilla-spatial}); para garantizar cobertura
+  total se requiere operar con $T_{\max}=3$\,h bajo esas condiciones.
+
+  \item \textbf{Solapamiento inter-ruta}: el par de rutas con mayor superposición espacial
+  presenta un \textit{IoU} de $0{,}55$ (Ilustración~\ref{fig:peor-par}). Este solapamiento
+  persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría local
+  del par, y ningún coeficiente global lo elimina sin degradar las rutas circundantes; la
+  solución estructural es la segmentación previa por área de censo.
+
+  \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el heurístico del
+  vecino más cercano genera un tiempo de desplazamiento total solo un $4{,}3$\,\% superior
+  al de \textit{OR-Tools} (Tabla~\ref{tab:comparativa}). Esta proximidad es un artefacto
+  de saturación: el \textit{greedy} llena cada ruta hasta el $98{,}5$\,\% de $T_{\max}$,
+  de modo que su reducción de caminata proviene de la cota temporal, no de la calidad del
+  ordenamiento. La diferencia entre ambos enfoques se manifiesta en el balance de carga y
+  en la ausencia de rutas degeneradas en la solución de \textit{OR-Tools}.
+
+  \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre el
+  coeficiente de la penalización inferior ($10\,000\,\text{s}^{-1}$) y el de la superior
+  ($500\,\text{s}^{-1}$) es un compromiso de diseño calibrado, no un defecto. El
+  experimento de sensibilidad demuestra que el término inferior sostiene el balance de
+  carga y evita la fragmentación en rutas cortas; reducirlo o suprimirlo degrada el
+  balance a $0{,}739$ y eleva la flota a $32$ rutas. La asimetría es intencional y su
+  efecto está medido.
+
+  \item \textbf{Exactitud del estimador de distancias}: el perfil peatonal (\texttt{foot})
+  de OSRM sobre datos de \textit{OpenStreetMap} introduce una desviación de
+  aproximadamente $4{,}5$\,\% respecto de la caminata real de terreno, derivada de la
+  representación de la red vial y de los factores de velocidad del perfil. Este error es
+  sistemático y afecta por igual a todas las rutas, de modo que no distorsiona las
+  comparaciones relativas entre ellas; la magnitud es aceptable para la escala de una
+  planificación censal.
 \end{itemize}
 
