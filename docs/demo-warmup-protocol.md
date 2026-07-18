@@ -13,56 +13,67 @@ importación de datos hasta el seguimiento del avance.
 
 ### 1.1 Importar árboles desde la base legacy
 
-1. Abrir **Importar datos** en el menú lateral.
-2. Seleccionar fuente **Legacy** y elegir el universo de árboles ya
-   geocodificados (≈ 12 946 registros QR disponibles).
-3. Confirmar importación. El sistema aplica coincidencia espacial
-   punto-en-polígono para asignar cada árbol a su área.
+1. En la barra superior, hacer clic en **Datasets**.
+2. Hacer clic en **Importar desde Arbocensus** (botón superior derecho de
+   la lista de datasets).
+3. En la página de importación: seleccionar el área geográfica en el mapa
+   o ajustar el bounding box para elegir el subconjunto de árboles a
+   censar (≈ 12 946 registros QR disponibles en la base legacy).
+4. Asignar un nombre al dataset y hacer clic en **Crear dataset**. El
+   sistema aplica coincidencia espacial punto-en-polígono y redirige al
+   detalle del nuevo dataset.
 
-### 1.2 Crear dataset de trabajo
+### 1.2 Explorar el dataset recién creado
 
-1. Ir a **Datasets → Nuevo dataset**.
-2. Nombrar el dataset y seleccionar el subconjunto de árboles a censar
-   (e.g., un área o grupo de IDs).
-3. Guardar. El dataset queda en estado *borrador* hasta que se optimiza.
+El detalle del dataset muestra el mapa con los árboles importados. Desde
+aquí se controla todo el ciclo de optimización, publicación y asignación.
+No existe un paso separado de "crear dataset" — el dataset queda creado al
+confirmar la importación en §1.1.
 
 ### 1.3 Optimizar rutas
 
-1. Abrir el dataset creado y hacer clic en **Optimizar**.
-2. El solver OR-Tools genera las rutas y las asocia al dataset.
-3. Esperar hasta que el estado cambie a **Completado** (el panel se
-   actualiza automáticamente; no recargar manualmente).
+1. En el detalle del dataset, hacer clic en **⚙ Optimización** (esquina
+   superior derecha sobre el mapa).
+2. Ajustar la config censal (ver §2) y hacer clic en **Optimizar**.
+3. El solver OR-Tools corre en segundo plano vía Celery. El panel muestra
+   el progreso y las pestañas de estrategia (Global / Término espacial /
+   Cluster first) aparecen al completarse.
+4. Esperar hasta que el estado cambie a **Completado**. No recargar la
+   página; el panel se actualiza automáticamente.
 
-### 1.4 Publicar el dataset
+### 1.4 Publicar la solución
 
-1. Con el dataset optimizado, hacer clic en **Publicar**.
-2. El estado pasa a *publicado*; a partir de aquí los censistas pueden
-   ver sus rutas asignadas en la app móvil.
+1. Con el job completado, seleccionar la estrategia deseada en las
+   pestañas sobre el mapa.
+2. Hacer clic en **Publicar** (aparece junto a las pestañas de estrategia).
+3. La solución queda publicada; a partir de aquí los censistas pueden ver
+   sus rutas en la app móvil.
 
 ### 1.5 Asignar rutas a censistas
 
-1. Ir a **Asignaciones** dentro del dataset.
-2. Seleccionar cada ruta y asignar un censista del listado.
+1. En el detalle del dataset, hacer clic en **👤 Asignación** (esquina
+   superior derecha sobre el mapa).
+2. En el panel de asignación, seleccionar cada ruta y elegir un censista
+   del listado.
 3. Confirmar. El censista recibe la ruta en su vista de mapa.
 
 ### 1.6 Censar con foto (flujo app / vista censista)
 
-1. El censista abre su ruta asignada en el mapa.
-2. Navega al próximo árbol siguiendo el orden de la ruta.
-3. Al llegar al árbol, completa el formulario de observación y adjunta foto.
-4. Marcar árbol como **Censado**. El registro queda en historial.
+1. El censista inicia sesión en la app (misma URL, rol censista).
+2. La página principal muestra su ruta asignada en el mapa.
+3. El censista navega a cada árbol siguiendo el orden de la ruta, completa
+   el formulario de observación y adjunta foto.
+4. Al confirmar, el árbol queda marcado como **Visitado** y el registro
+   queda en la base de datos.
 
-### 1.7 Historial de observaciones
+### 1.7 Dashboard de avance
 
-- Abrir **Historial** para ver todas las observaciones registradas con
-  foto, fecha, censista y árbol asociado.
-- Filtrar por dataset o por censista para verificar cobertura.
-
-### 1.8 Dashboard de avance
-
-- Ir a **Avance** (o abrir `/routes/progress/` directamente).
-- El dashboard muestra árboles completados vs. pendientes por ruta y por
-  censista, actualizado en tiempo real.
+1. Desde el detalle del dataset, hacer clic en **📊 Avance** (esquina
+   superior derecha).
+2. El dashboard en `/admin/datasets/<id>/progress` muestra árboles
+   visitados vs. pendientes por ruta y por censista, con mapa de puntos.
+3. Activar **Mostrar rutas** en el mapa para superponer las líneas de ruta
+   (esto dispara la llamada a OSRM — ver §3).
 
 ---
 
@@ -100,38 +111,77 @@ en el `.env` del perfil demo antes del ensayo.
 
 ### Por qué es necesario
 
-El endpoint `/api/routes/geojson/` llama a OSRM de forma **síncrona** en
-la primera solicitud. OSRM no mantiene un caché precalentado entre
-reinicios del contenedor, así que la primera llamada puede tardar varios
-segundos o decenas de segundos dependiendo del tamaño del dataset. En
-vivo, ese silencio mientras el mapa carga resulta incómodo.
+El endpoint `/api/routes/geojson/?solution_id=<id>` llama a OSRM de forma
+**síncrona** una vez por cada ruta en la solución (endpoint
+`/route/v1/foot/`). No hay caché de geometrías entre llamadas — cada
+request re-rutea desde OSRM. La latencia depende del estado del contenedor:
+
+- **OSRM recién levantado (frío):** el primer request puede tardar varios
+  segundos mientras carga el grafo de ruteo en memoria. Las llamadas
+  sucesivas son rápidas una vez el grafo está en RAM.
+- **OSRM con ≥ 1 h levantado (caliente):** el grafo ya está en memoria;
+  todas las llamadas son sub-segundo.
+
+### Tiempos medidos (ensayo 2026-07-18, OSRM ~20 h levantado)
+
+| Dataset | Rutas | Llamada 1 | Llamada 2-3 |
+|---------|-------|-----------|-------------|
+| area-29-n43 (43 árboles) | 1 | ~120 ms | ~110 ms |
+| reference-n1607 (1607 árboles) | 25 | ~410 ms | ~420 ms |
+
+Con OSRM caliente el endpoint responde en menos de 500 ms incluso para
+el dataset de referencia (1607 árboles, 25 rutas). El "warm-up" relevante
+es el del **contenedor OSRM**, no de una caché de geometrías.
 
 ### Qué abrir y cuándo
 
 **Al menos 5 minutos antes de comenzar la presentación:**
 
-1. Abrir el navegador y navegar a la **vista de mapa del dataset demo**
-   (la misma vista que se mostrará en vivo).
-2. Esperar a que el mapa cargue completamente con las rutas trazadas
-   (las líneas de ruta deben verse en pantalla).
-3. Una vez cargado, **no cerrar esa pestaña**. Dejarla abierta en
+1. Abrir el navegador y navegar al detalle del dataset demo.
+2. Hacer clic en **📊 Avance** para abrir el dashboard de progreso.
+3. Activar **Mostrar rutas** en el mapa del dashboard.
+4. Esperar a que las líneas de ruta aparezcan sobre el mapa.
+5. Una vez visibles, **no cerrar esa pestaña**. Dejarla abierta en
    segundo plano.
 
-Esa primera carga dispara la llamada a OSRM y llena el caché interno.
-Las llamadas posteriores durante la presentación responden en milisegundos.
+Esa primera carga confirma que OSRM está healthy y el grafo en memoria.
+Si la carga demora > 5 s, verificar el estado del contenedor (ver más abajo).
+
+### Cómo forzar estado frío (para medir o reproducir)
+
+Si se necesita verificar el comportamiento de arranque en frío **sin
+afectar la base de datos**:
+
+```bash
+# Solo reinicia OSRM; no toca el volumen de Postgres
+docker compose -p arbocensus restart osrm
+
+# Esperar a que vuelva healthy (suele tardar 10-30 s según caché de SO)
+docker compose -p arbocensus ps osrm
+
+# Primera llamada frío — medir con curl:
+curl -w "%{time_total}s\n" -o /dev/null -s \
+  -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/routes/geojson/?solution_id=<id>"
+```
 
 ### Señales de que el warm-up fue exitoso
 
 - Las líneas de ruta aparecen sobre el mapa de Leaflet sin spinner
-  prolongado.
+  prolongado (< 1 s con OSRM caliente).
 - La consola del navegador no muestra errores 504 ni timeouts.
 
 ### Si el warm-up falla
 
 Si el mapa no carga o muestra error en el paso de ensayo, **no continuar
-con la demo en ese estado**. Verificar que el contenedor OSRM esté
-corriendo (`docker ps`) y reintentar. Nunca dejar el warm-up para
-el momento de la presentación.
+con la demo en ese estado**. Verificar:
+
+```bash
+docker compose -p arbocensus ps        # todos deben estar healthy
+docker compose -p arbocensus logs osrm --tail=20  # buscar errores de PBF
+```
+
+Nunca dejar el warm-up para el momento de la presentación.
 
 ---
 
@@ -141,34 +191,76 @@ Completar en orden; marcar cada ítem antes de comenzar.
 
 ### Infraestructura
 
-- [ ] Un único stack Docker levantado (`docker compose up -d`). No tener
-      dos instancias del stack activas simultáneamente — comparten el
-      volumen de Postgres y pueden producir conflictos de WAL.
+- [ ] Un único stack Docker levantado (`docker compose -p arbocensus up -d`).
+      No tener dos stacks activos simultáneamente — comparten el volumen
+      de Postgres y pueden producir conflictos de WAL.
 - [ ] Verificar que todos los servicios estén healthy:
-      `docker compose ps` → todos en estado `running` o `healthy`.
-- [ ] Confirmar que OSRM respondió en la última prueba (ver sección 3).
+      `docker compose -p arbocensus ps` → todos en estado `running` o `healthy`.
+- [ ] Confirmar que OSRM respondió en la última prueba (ver §3).
 
 ### Datos
 
-- [ ] Perfil demo ya sembrado en la base de datos:
-      usuario censista de demo, dataset optimizado y publicado con
-      asignaciones listas.
-- [ ] Al menos una observación con foto pre-cargada para mostrar
-      historial sin tener que crear una en vivo.
+- [ ] Dataset demo creado desde la base legacy y visible en la lista de
+      Datasets (`/admin/datasets`). Recomendado: seleccionar un área real
+      de Santiago con 50–200 árboles para que la optimización tome < 2 min.
+- [ ] Dataset optimizado con job en estado `completed`.
+- [ ] Solución publicada. Verificar que el botón **Publicar** ya no
+      aparece (indica que hay solución publicada).
+- [ ] Rutas asignadas a al menos un censista de demo.
+- [ ] Al menos una observación registrada (en la vista censista) para
+      mostrar que el contador de visitados avanza en el dashboard de avance.
 - [ ] Config censal (`st = 2 min`, `T_max = 3 h`) activa en el dataset
-      que se va a mostrar.
+      que se va a mostrar (verificar en el historial de jobs del panel de
+      Optimización).
+
+> **Nota sobre `seed_demo`:** el comando
+> `python manage.py seed_demo --profile medium` crea un dataset sintético
+> de 70 árboles en Santiago y corre la optimización, pero **no** importa
+> datos legacy, **no** publica la solución ni **no** crea asignaciones.
+> Es útil para pruebas del solver, no para preparar el estado demo completo.
 
 ### Warm-up OSRM
 
-- [ ] Vista de mapa del dataset abierta en el navegador (ver sección 3).
-- [ ] Rutas visibles en pantalla antes de comenzar.
+- [ ] Dashboard de avance del dataset abierto en el navegador con rutas
+      visibles en el mapa (ver §3).
+- [ ] Líneas de ruta visibles en pantalla antes de comenzar.
 
 ### Presentación
 
-- [ ] Pestaña del navegador con el mapa ya cargado en primer plano.
+- [ ] Pestaña del navegador con el dashboard de avance ya cargado.
 - [ ] Otras pestañas o aplicaciones que puedan interrumpir (notificaciones,
       actualizaciones) silenciadas o cerradas.
 - [ ] Resolución de pantalla verificada (el mapa de Leaflet debe verse
       completo sin scroll horizontal).
 - [ ] Ensayo completo del flujo del punto 1 realizado al menos una vez
       antes de la defensa real.
+
+---
+
+## 5. Resultados del ensayo (2026-07-18)
+
+Ensayo ejecutado contra el stack vivo en `localhost:8000` / `localhost:5173`
+(~20 h de uptime, todos los servicios healthy).
+
+### Flujo verificado
+
+| Paso | Método de verificación | Resultado |
+|------|----------------------|-----------|
+| Importar legacy | API `GET /api/datasets/` — 23 datasets presentes, incluyendo `Arbocensus legacy test` (140 árboles) y `reference-n1607` (1607 árboles) | ✅ |
+| Crear dataset | UI `/admin/datasets/legacy-import` carga áreas y árboles legacy desde `LEGACY_DB_URL` | ✅ |
+| Optimizar | API `GET /api/optimization/jobs/` — múltiples jobs en estado `completed` | ✅ |
+| Rutas y asignación | API `GET /api/routes/` — 432 rutas en DB | ✅ |
+| Dashboard de avance | UI `/admin/datasets/<id>/progress` carga sin error; endpoint `GET /api/routes/progress/?dataset=<id>` responde | ✅ |
+| GeoJSON de rutas | `GET /api/routes/geojson/?solution_id=<id>` responde (ver tiempos en §3) | ✅ |
+
+### Divergencias corregidas en este documento
+
+| Sección | Antes (incorrecto) | Después (corregido) |
+|---------|-------------------|---------------------|
+| §1.1 | "Importar datos" en menú lateral | Botón **Importar desde Arbocensus** en Datasets |
+| §1.2 | "Datasets → Nuevo dataset" | Dataset se crea en el flujo LegacyImport (§1.1) |
+| §1.3 | Botón "Optimizar" standalone | Panel **⚙ Optimización** en DatasetDetail |
+| §1.5 | "Asignaciones" como sección | Panel **👤 Asignación** en DatasetDetail |
+| §1.7 | Página "Historial" | Eliminado — no existe frontend de historial; usar dashboard de avance |
+| §1.8 | URL `/routes/progress/` | URL `/admin/datasets/<id>/progress` |
+| §4 checklist | `seed_demo` produce demo completa | `seed_demo` solo crea dataset sintético; no publica ni asigna |
