@@ -5,8 +5,24 @@ from contextlib import contextmanager
 # the same key set on every run, regardless of which code path executed
 # (cache hit vs miss, chunked vs single OSRM request, first solution found or not).
 PHASE_SCHEMA = {
-    "cost_matrix": ["total", "cache_lookup", "osrm_fetch", "chunk_assembly"],
-    "model_build": ["total"],
+    "cost_matrix": [
+        "total",
+        "cache_lookup",
+        "hash",
+        "persist",
+        "osrm_fetch",
+        "chunk_assembly",
+        "single_request",
+        "chunked_diagonal",
+        "chunked_offdiagonal",
+    ],
+    "model_build": [
+        "total",
+        "geo_matrix",
+        "disjunctions",
+        "vehicle_bounds",
+        "search_params",
+    ],
     "solve": ["total", "first_solution", "metaheuristic"],
     "solution_extraction": ["total"],
     "metrics": ["total"],

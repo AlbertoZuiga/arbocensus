@@ -7,6 +7,14 @@ from apps.optimization.profiling import PhaseTimer
 from apps.optimization.route_metrics import haversine
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
+try:
+    from line_profiler import profile  # type: ignore[import-untyped]
+except ImportError:
+
+    def profile(f):  # type: ignore[misc]
+        return f
+
+
 FIXED_VEHICLE_COST = 100_000
 SOFT_LOWER_PENALTY = 10_000
 SOFT_UPPER_PENALTY = 500
@@ -96,6 +104,7 @@ class PenaltyConfig:
 DEFAULT_PENALTIES = PenaltyConfig()
 
 
+@profile
 def build_open_matrix(matrix):
     real = np.asarray(matrix, dtype=float)
     n = real.shape[0] + 1
@@ -104,6 +113,7 @@ def build_open_matrix(matrix):
     return open_matrix
 
 
+@profile
 def build_open_geo_matrix(points):
     n = len(points) + 1
     geo = np.zeros((n, n))
@@ -141,6 +151,7 @@ class ArbocensusVRPSolver:
         self.time_span_coef = time_span_coef
         self.penalties = penalties
 
+    @profile
     def solve(self, timer=None):
         timer = timer or PhaseTimer()
         n = self.node_count + 1
@@ -171,7 +182,8 @@ class ArbocensusVRPSolver:
             time_dimension = routing.GetDimensionOrDie("Time")
 
             if self.spatial_points is not None:
-                geo_matrix = build_open_geo_matrix(self.spatial_points)
+                with timer.phase("model_build", "geo_matrix"):
+                    geo_matrix = build_open_geo_matrix(self.spatial_points)
 
                 def distance_callback(from_index, to_index):
                     from_node = manager.IndexToNode(from_index)
@@ -188,36 +200,39 @@ class ArbocensusVRPSolver:
 
             routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
 
-            for node in range(1, n):
-                routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
+            with timer.phase("model_build", "disjunctions"):
+                for node in range(1, n):
+                    routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
 
             total_service_sec = self.node_count * self.service_time_sec
-            for vehicle_id in range(self.max_vehicles):
-                end_index = routing.End(vehicle_id)
-                lower, upper = self.penalties.vehicle_bounds(
-                    min_route_time_sec=self.min_route_time_sec,
-                    max_route_time_sec=self.max_route_time_sec,
-                    total_service_sec=total_service_sec,
-                    max_vehicles=self.max_vehicles,
-                    is_last=vehicle_id == self.max_vehicles - 1,
-                )
-                if lower is not None:
-                    time_dimension.SetCumulVarSoftLowerBound(
-                        end_index, lower[0], lower[1]
+            with timer.phase("model_build", "vehicle_bounds"):
+                for vehicle_id in range(self.max_vehicles):
+                    end_index = routing.End(vehicle_id)
+                    lower, upper = self.penalties.vehicle_bounds(
+                        min_route_time_sec=self.min_route_time_sec,
+                        max_route_time_sec=self.max_route_time_sec,
+                        total_service_sec=total_service_sec,
+                        max_vehicles=self.max_vehicles,
+                        is_last=vehicle_id == self.max_vehicles - 1,
                     )
-                if upper is not None:
-                    time_dimension.SetCumulVarSoftUpperBound(
-                        end_index, upper[0], upper[1]
-                    )
+                    if lower is not None:
+                        time_dimension.SetCumulVarSoftLowerBound(
+                            end_index, lower[0], lower[1]
+                        )
+                    if upper is not None:
+                        time_dimension.SetCumulVarSoftUpperBound(
+                            end_index, upper[0], upper[1]
+                        )
 
-            search_params = pywrapcp.DefaultRoutingSearchParameters()
-            search_params.first_solution_strategy = (
-                routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-            )
-            search_params.local_search_metaheuristic = (
-                routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-            )
-            search_params.time_limit.FromSeconds(self.time_limit_sec)
+            with timer.phase("model_build", "search_params"):
+                search_params = pywrapcp.DefaultRoutingSearchParameters()
+                search_params.first_solution_strategy = (
+                    routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+                )
+                search_params.local_search_metaheuristic = (
+                    routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+                )
+                search_params.time_limit.FromSeconds(self.time_limit_sec)
 
         solution = self._solve_with_timing(routing, search_params, timer)
         if solution is None:
@@ -252,6 +267,7 @@ class ArbocensusVRPSolver:
         return extract_or_tools_routes(manager, routing, solution, self.max_vehicles)
 
 
+@profile
 def extract_or_tools_routes(manager, routing, solution, max_vehicles):
     routes = []
     for vehicle_id in range(max_vehicles):
