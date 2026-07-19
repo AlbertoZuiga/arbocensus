@@ -70,7 +70,7 @@ Estrategia `spatial_term`, 3 semillas, suite completa de 12 instancias.
 | # | Brazo | Mecanismo |
 | --- | --- | --- |
 | 1 | `actual` (baseline) | Producción: soft lower T_min 10 000/s, soft upper midpoint 500/s. Recalculado en este barrido para poblar las métricas nuevas (degeneración, dur min/med/máx). |
-| 2 | `no-floor` | Soft lower **OFF**; soft upper en **T_max** (coef 500/s); `FIXED_VEHICLE_COST` intacto. |
+| 2 | `no-floor` | Soft lower **OFF**; soft upper fijado en **T_max**, que la dimensión Time ya impone como capacidad dura, así que el término es inerte (nunca se viola, nunca cuesta): el brazo es **sin cotas blandas de ningún tipo**. `FIXED_VEHICLE_COST` intacto. |
 | 3 | `no-floor-span-c{10,100,1000}` | Brazo 2 + `SetGlobalSpanCostCoefficient(c)` sobre la dimensión Time (penaliza el **máximo** span → balance suave sin piso). |
 | 4 | `feasible-floor-b{085,090,095}` | Re-lectura del CSV previo contra el criterio nuevo. Cero cómputo. |
 | 5 | `no-floor+reseq` | Condicional: solo si un brazo 2–3 gana en geometría, se repite esa celda con `--post-resequence` (2-opt intra-ruta) para ver si el post-pass aún aporta sobre base limpia. Se disparó con `no-floor`. |
@@ -137,6 +137,12 @@ mide de primera mano en los brazos 1–3.
 180 filas (5 celdas × 12 instancias × 3 semillas). Medias sobre semillas. Drops = 0 en las
 180 filas, en todas las celdas y todas las instancias.
 
+Nota metodológica: todos los criterios se evalúan sobre la **media** de las 3 semillas, no
+sobre el peor caso. En instancias con dispersión entre semillas (`battery-sparse-n500`,
+`battery-n800`) una media puede ocultar una violación de una sola semilla. Ningún veredicto
+de este reporte depende de un margen tan fino como para que eso lo invierta, pero queda
+consignado.
+
 ### k / cruces / balance
 
 | Instancia | `actual` (k/cx/bal) | `no-floor` | `+span-c10` | `+span-c100` | `+span-c1000` |
@@ -186,7 +192,8 @@ mide de primera mano en los brazos 1–3.
 | **Total suite** | **0** | **2** | **0** | **0** | **1** |
 
 La ruta degenerada de `no-floor` en n=1607 dura **120 s**: es una ruta de **un solo árbol**
-(120 s = 1 × servicio). Ese stub es el que hunde el balance a 0.011 (120/10 800).
+(120 s = 1 × servicio). Ese stub es el que hunde el balance a 0.011 (120/10 770, la ruta
+más larga de esa solución).
 
 ### Estado de cada criterio (a priori)
 

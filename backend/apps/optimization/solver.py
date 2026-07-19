@@ -106,10 +106,11 @@ class PenaltyConfig:
                 self.soft_upper_penalty,
             )
         elif arm == BALANCE_ARM_NO_FLOOR:
-            # No soft lower bound at all: without a floor the solver has no incentive
-            # to walk in circles to reach T_min. The soft upper rides at T_max so short
-            # routes are not pulled up. Route balance, if wanted, comes from a Time
-            # global span cost, not from the floor.
+            # No soft bounds on either side: without a floor the solver has no
+            # incentive to walk in circles to reach T_min. The upper is pinned at
+            # T_max, which the Time dimension already enforces as a hard capacity, so
+            # it can never be violated and costs nothing. Route balance, if wanted,
+            # comes from a Time global span cost instead of from the floor.
             lower = None
             upper = (max_route_time_sec, self.soft_upper_penalty)
         elif arm.startswith("feasible-floor"):

@@ -148,6 +148,8 @@ class Command(BaseCommand):
         max_route_time_sec = options["t_max"]
         if min_route_time_sec > max_route_time_sec:
             raise CommandError("--t-min must not exceed --t-max")
+        if options["time_global_span_coefficient"] < 0:
+            raise CommandError("--time-global-span-coefficient must not be negative")
 
         strategy = options["strategy"]
         penalties = PenaltyConfig(
