@@ -32,6 +32,7 @@ export function useSkipStop(routeId) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["my-route"] });
     },
   });
 }
