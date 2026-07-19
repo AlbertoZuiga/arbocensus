@@ -106,6 +106,7 @@ CONFIG_AXIS = [
     ("no-floor-span-c10", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, False, 0.0, 10),
     ("no-floor-span-c100", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, False, 0.0, 100),
     ("no-floor-span-c1000", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, False, 0.0, 1000),
+    ("no-floor+reseq", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, True, 0.0, 0),
 ]
 ALGO_AXIS = [
     ("global", GLOBAL, BALANCE_ARM_ACTUAL, 0, False, 0.0, 0),
