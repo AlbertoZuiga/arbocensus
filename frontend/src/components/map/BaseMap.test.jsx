@@ -49,4 +49,26 @@ describe("BaseMap", () => {
     );
     expect(map.fitBounds).toHaveBeenCalledTimes(2);
   });
+
+  it("refits when the fit key changes even if the bounds are identical", () => {
+    map.fitBounds.mockClear();
+    const bounds = [[-33.45, -70.65]];
+    const { rerender } = render(<BaseMap bounds={bounds} fitKey="route-1" />);
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+
+    rerender(<BaseMap bounds={bounds} fitKey="route-1" />);
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+
+    rerender(<BaseMap bounds={bounds} fitKey="surveyor-1" />);
+    expect(map.fitBounds).toHaveBeenCalledTimes(2);
+  });
+
+  it("caps the zoom so a tight cluster does not fit to street level", () => {
+    map.fitBounds.mockClear();
+    render(<BaseMap bounds={[[-33.45, -70.65]]} />);
+    expect(map.fitBounds).toHaveBeenCalledWith(
+      [[-33.45, -70.65]],
+      expect.objectContaining({ maxZoom: 17 }),
+    );
+  });
 });

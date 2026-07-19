@@ -8,20 +8,23 @@ import { geojsonToRoutes } from "@/components/map/routeGeojson.js";
 
 function toStops(featureCollection) {
   const features = featureCollection?.features ?? [];
-  return features.map((feature) => {
-    const [lon, lat] = feature.geometry.coordinates;
-    return {
-      id: feature.id,
-      position: [lat, lon],
-      ...feature.properties,
-    };
-  });
+  return features
+    .map((feature) => {
+      const [lon, lat] = feature.geometry?.coordinates ?? [];
+      return {
+        id: feature.id,
+        position: [lat, lon],
+        ...feature.properties,
+      };
+    })
+    .filter(({ position }) => position.every(Number.isFinite));
 }
 
 export default function ProgressMap({
   stops: featureCollection,
   routeLines,
   visibleRouteNumbers,
+  selectedKey,
   showRoutes,
   onToggleRoutes,
 }) {
@@ -59,7 +62,7 @@ export default function ProgressMap({
 
   return (
     <div className="relative h-full w-full">
-      <BaseMap bounds={bounds} preferCanvas>
+      <BaseMap bounds={bounds} fitKey={selectedKey ?? "all"} preferCanvas>
         {showRoutes &&
           visibleRoutes.map((route) => (
             <Polyline

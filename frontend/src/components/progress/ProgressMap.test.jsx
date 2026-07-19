@@ -6,7 +6,15 @@ import ProgressMap from "./ProgressMap.jsx";
 import { STATUS_COLORS } from "@/lib/progress.js";
 
 vi.mock("@/components/map/BaseMap.jsx", () => ({
-  default: ({ children }) => <div data-testid="map">{children}</div>,
+  default: ({ children, bounds, fitKey }) => (
+    <div
+      data-testid="map"
+      data-bounds={JSON.stringify(bounds)}
+      data-fit-key={fitKey}
+    >
+      {children}
+    </div>
+  ),
 }));
 
 vi.mock("react-leaflet", () => ({
@@ -152,5 +160,40 @@ describe("ProgressMap", () => {
         [-33.48, -70.68],
       ]),
     );
+  });
+
+  it("bounds the map to the visible routes and keys the fit on the selection", () => {
+    render(
+      <ProgressMap
+        stops={stops}
+        visibleRouteNumbers={new Set([2])}
+        selectedKey="r2"
+      />,
+    );
+
+    const map = screen.getByTestId("map");
+    expect(map.dataset.bounds).toBe(JSON.stringify([[-33.47, -70.67]]));
+    expect(map.dataset.fitKey).toBe("r2");
+  });
+
+  it("drops stops without usable coordinates so they cannot break the fit", () => {
+    render(
+      <ProgressMap
+        stops={{
+          type: "FeatureCollection",
+          features: [
+            ...stops.features,
+            {
+              type: "Feature",
+              id: "stop-broken",
+              geometry: null,
+              properties: { route_number: 1, sequence: 2, status: "pending" },
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getAllByTestId("stop-marker")).toHaveLength(3);
   });
 });

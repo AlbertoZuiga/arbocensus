@@ -9,6 +9,8 @@ export function useAssignRoute() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["routes"] });
       queryClient.invalidateQueries({ queryKey: ["surveyors"] });
+      queryClient.invalidateQueries({ queryKey: ["census-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["census-progress-stops"] });
     },
   });
 }

@@ -9,6 +9,8 @@ export function usePublishSolution() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["solution-metrics"] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
+      queryClient.invalidateQueries({ queryKey: ["census-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["census-progress-stops"] });
     },
   });
 }

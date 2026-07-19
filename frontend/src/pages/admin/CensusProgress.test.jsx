@@ -149,6 +149,34 @@ describe("CensusProgress", () => {
     expect(screen.getByTestId("map-filter")).toHaveTextContent("all");
   });
 
+  it("expands a surveyor to show its routes with per-route counters", async () => {
+    fetchCensusProgress.mockResolvedValue(progress);
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Censistas" }),
+    );
+    expect(screen.queryByText("Ruta 1")).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ver rutas de ana" }),
+    );
+
+    expect(screen.getByText("R1")).toBeInTheDocument();
+    expect(screen.queryByText("R2")).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText("4 censados · 1 omitidos · 0 pendientes"),
+    ).toHaveLength(2);
+    expect(screen.getByTestId("map-filter")).toHaveTextContent("all");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ocultar rutas de ana" }),
+    );
+
+    expect(screen.queryByText("R1")).not.toBeInTheDocument();
+  });
+
   it("filters the map to the routes of the selected surveyor", async () => {
     fetchCensusProgress.mockResolvedValue(progress);
 
@@ -164,6 +192,77 @@ describe("CensusProgress", () => {
     await userEvent.click(screen.getByRole("button", { name: "Ver todas" }));
 
     expect(screen.getByTestId("map-filter")).toHaveTextContent("all");
+  });
+
+  it("filters the map by a single route of an expanded surveyor", async () => {
+    fetchCensusProgress.mockResolvedValue({
+      ...progress,
+      routes: [
+        ...progress.routes,
+        {
+          id: "r3",
+          route_number: 3,
+          surveyor_id: "u1",
+          surveyor_name: "ana",
+          total: 5,
+          visited: 0,
+          skipped: 0,
+          pending: 5,
+        },
+      ],
+      surveyors: [
+        { ...progress.surveyors[0], route_count: 2 },
+        progress.surveyors[1],
+      ],
+    });
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Censistas" }),
+    );
+    await userEvent.click(screen.getByText("ana"));
+
+    expect(screen.getByTestId("map-filter")).toHaveTextContent("1,3");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ver rutas de ana" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^R3/ }));
+
+    expect(screen.getByTestId("map-filter")).toHaveTextContent("3");
+    expect(screen.getByRole("button", { name: /^R3/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("ana").closest("button")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ocultar rutas de ana" }),
+    );
+
+    expect(screen.getByText("R3 en el mapa")).toBeInTheDocument();
+  });
+
+  it("marks the selected surveyor as the one drawn on the map", async () => {
+    fetchCensusProgress.mockResolvedValue(progress);
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Censistas" }),
+    );
+
+    expect(screen.getAllByText("1 ruta")).toHaveLength(2);
+    expect(screen.queryByText("En el mapa")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("ana"));
+
+    expect(screen.getByText("En el mapa")).toBeInTheDocument();
+    expect(screen.getAllByText("1 ruta")).toHaveLength(1);
   });
 
   it("loads route lines only after the map toggle is turned on", async () => {

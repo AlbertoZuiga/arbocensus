@@ -50,26 +50,36 @@ export default function CensusProgress() {
 
   const surveyorRows = useMemo(
     () =>
-      (progress?.surveyors ?? []).map((surveyor) => ({
-        key: surveyor.surveyor_id ?? UNASSIGNED_KEY,
-        label: surveyor.surveyor_name,
-        sublabel: `${surveyor.route_count} ${
-          surveyor.route_count === 1 ? "ruta" : "rutas"
-        }`,
-        totals: surveyor,
-      })),
+      (progress?.surveyors ?? []).map((surveyor) => {
+        const key = surveyor.surveyor_id ?? UNASSIGNED_KEY;
+        return {
+          key,
+          label: surveyor.surveyor_name,
+          sublabel: `${surveyor.route_count} ${
+            surveyor.route_count === 1 ? "ruta" : "rutas"
+          }`,
+          totals: surveyor,
+          routes: (progress?.routes ?? [])
+            .filter((route) => (route.surveyor_id ?? UNASSIGNED_KEY) === key)
+            .map((route) => ({
+              key: route.id,
+              number: route.route_number,
+              totals: route,
+            })),
+        };
+      }),
     [progress],
   );
 
   const visibleRouteNumbers = useMemo(() => {
     if (!selectedKey) return null;
-    const matches = (progress?.routes ?? []).filter((route) =>
-      dimension === "routes"
-        ? route.id === selectedKey
-        : (route.surveyor_id ?? UNASSIGNED_KEY) === selectedKey,
+    const matches = (progress?.routes ?? []).filter(
+      (route) =>
+        route.id === selectedKey ||
+        (route.surveyor_id ?? UNASSIGNED_KEY) === selectedKey,
     );
     return new Set(matches.map((route) => route.route_number));
-  }, [progress, dimension, selectedKey]);
+  }, [progress, selectedKey]);
 
   const selectDimension = (next) => {
     setDimension(next);
@@ -122,6 +132,7 @@ export default function CensusProgress() {
                 stops={stops}
                 routeLines={routeLines}
                 visibleRouteNumbers={visibleRouteNumbers}
+                selectedKey={selectedKey}
                 showRoutes={showRoutes}
                 onToggleRoutes={() => setShowRoutes((current) => !current)}
               />
