@@ -1,4 +1,13 @@
-import { Check, ChevronRight, CloudCheck, Lock, SkipForward } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  Check,
+  ChevronRight,
+  CloudCheck,
+  ListFilter,
+  Lock,
+  LocateFixed,
+  SkipForward,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isStopLocked, isStopResolved } from "../../utils/stops.js";
 
@@ -41,10 +50,10 @@ function StatusBadge({ stop, locked }) {
   );
 }
 
-function StopCard({ stop, selected, locked, onSelect }) {
+function StopCard({ stop, selected, locked, onSelect, cardRef }) {
   const resolved = isStopResolved(stop);
   return (
-    <li>
+    <li ref={cardRef}>
       <button
         type="button"
         onClick={onSelect}
@@ -111,17 +120,70 @@ export default function StopList({
   nextPendingStopId,
   onSelectStop,
 }) {
+  const [showOnlyPending, setShowOnlyPending] = useState(false);
+  const nextPendingRef = useRef(null);
+
+  const pendingCount = stops.filter((stop) => !isStopResolved(stop)).length;
+  const visibleStops = showOnlyPending
+    ? stops.filter((stop) => !isStopResolved(stop))
+    : stops;
+
+  const goToNextPending = () => {
+    onSelectStop(nextPendingStopId);
+    nextPendingRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   return (
-    <ul className="flex flex-col gap-2 p-3">
-      {stops.map((stop) => (
-        <StopCard
-          key={stop.id}
-          stop={stop}
-          selected={stop.id === selectedStopId}
-          locked={isStopLocked(stop, nextPendingStopId)}
-          onSelect={() => onSelectStop(stop.id)}
-        />
-      ))}
-    </ul>
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
+        <button
+          type="button"
+          onClick={goToNextPending}
+          disabled={nextPendingStopId == null}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-white shadow-sm",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "disabled:opacity-50",
+          )}
+        >
+          <LocateFixed className="h-3.5 w-3.5" aria-hidden="true" />
+          Ir al siguiente pendiente
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowOnlyPending((value) => !value)}
+          aria-pressed={showOnlyPending}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            showOnlyPending
+              ? "border-amber-300 bg-amber-100 text-amber-800"
+              : "border-slate-200 bg-white text-slate-600",
+          )}
+        >
+          <ListFilter className="h-3.5 w-3.5" aria-hidden="true" />
+          Pendientes ({pendingCount})
+        </button>
+      </div>
+
+      {showOnlyPending && visibleStops.length === 0 ? (
+        <p className="px-3 py-6 text-center text-sm text-slate-500">
+          No quedan árboles pendientes.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-2 p-3">
+          {visibleStops.map((stop) => (
+            <StopCard
+              key={stop.id}
+              stop={stop}
+              selected={stop.id === selectedStopId}
+              locked={isStopLocked(stop, nextPendingStopId)}
+              onSelect={() => onSelectStop(stop.id)}
+              cardRef={stop.id === nextPendingStopId ? nextPendingRef : undefined}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
