@@ -6,6 +6,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { routeOptionLabel } from "../../utils/routes.js";
+
 export default function RouteSelector({ routes, activeRouteId, onSelect }) {
   return (
     <Select value={activeRouteId} onValueChange={onSelect}>
@@ -15,7 +17,7 @@ export default function RouteSelector({ routes, activeRouteId, onSelect }) {
       <SelectContent>
         {routes.map((route, index) => (
           <SelectItem key={route.id} value={route.id}>
-            Ruta {index + 1} · {route.total_trees} árboles
+            {routeOptionLabel(route, index)}
           </SelectItem>
         ))}
       </SelectContent>

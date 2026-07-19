@@ -37,6 +37,7 @@ export function useVisitStop(routeId, position) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["my-route"] });
     },
   });
 }
