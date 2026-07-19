@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { Polyline, Marker, useMap } from "react-leaflet";
+import { LocateFixed } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import { cn } from "@/lib/utils";
 import BaseMap from "../map/BaseMap.jsx";
 
 function stopIcon(sequence, visited, selected) {
@@ -28,19 +30,68 @@ function geometryToPositions(geometry) {
   return coordinates.map(([lon, lat]) => [lat, lon]);
 }
 
-function FollowUser({ position, enabled }) {
+function FollowUser({ position, following, onDragStart }) {
   const map = useMap();
   const hasCentered = useRef(false);
+
   useEffect(() => {
-    if (!enabled || !position) return;
+    map.on("dragstart", onDragStart);
+    return () => map.off("dragstart", onDragStart);
+  }, [map, onDragStart]);
+
+  useEffect(() => {
+    if (!following || !position) return;
     if (!hasCentered.current) {
       map.setView([position.lat, position.lon], 17);
       hasCentered.current = true;
     } else {
       map.panTo([position.lat, position.lon], { animate: true });
     }
-  }, [map, position, enabled]);
+  }, [map, position, following]);
   return null;
+}
+
+function FollowControl({ position, following, onToggle }) {
+  const map = useMap();
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      L.DomEvent.disableClickPropagation(containerRef.current);
+    }
+  }, []);
+
+  const handleClick = () => {
+    if (!following && position) {
+      map.setView([position.lat, position.lon], Math.max(map.getZoom(), 17));
+    }
+    onToggle(!following);
+  };
+
+  return (
+    <div ref={containerRef} className="leaflet-bottom leaflet-right">
+      <div className="leaflet-control">
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={!position}
+          aria-pressed={following}
+          aria-label={following ? "Dejar de seguir mi ubicación" : "Centrar en mi ubicación"}
+          title={following ? "Dejar de seguir mi ubicación" : "Centrar en mi ubicación"}
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-full border shadow-md",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "disabled:opacity-50",
+            following
+              ? "border-sky-500 bg-sky-500 text-white"
+              : "border-slate-200 bg-white text-slate-700",
+          )}
+        >
+          <LocateFixed className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function RouteMap({
@@ -54,10 +105,20 @@ export default function RouteMap({
   const walkedLine = useMemo(() => geometryToPositions(geometry), [geometry]);
   const line = walkedLine.length > 1 ? walkedLine : stopLine;
   const center = stopLine[0] ?? [-33.45, -70.65];
+  const [following, setFollowing] = useState(true);
 
   return (
     <BaseMap center={center} zoom={15} bounds={stopLine}>
-      <FollowUser position={userPosition} enabled={!!userPosition} />
+      <FollowUser
+        position={userPosition}
+        following={following && !!userPosition}
+        onDragStart={() => setFollowing(false)}
+      />
+      <FollowControl
+        position={userPosition}
+        following={following}
+        onToggle={setFollowing}
+      />
       {line.length > 1 && (
         <Polyline positions={line} color="#2563eb" weight={5} opacity={0.75} />
       )}
