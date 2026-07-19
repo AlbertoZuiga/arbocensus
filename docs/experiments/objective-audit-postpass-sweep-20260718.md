@@ -230,7 +230,80 @@ Celdas: `feasible-floor-b085`, `feasible-floor-b090`, `feasible-floor-b095`.
 
 ### Resultados
 
-<!-- Llenar con tabla de celdas × instancias -->
+Celdas corridas sobre las 12 instancias, 3 semillas por celda (media sobre semillas).
+Dispersión entre semillas casi nula salvo `feasible-floor-b095` en n=1607 (cruces 39/5/6
+por semilla, spread 34 — el piso más alto deja al solver en un régimen inestable) y
+`feasible-floor-b085` en battery-n1000 (spread 2).
+
+#### k / cruces / balance por celda
+
+| Instancia | control (k / cruces / bal) | β=0.85 | β=0.90 | β=0.95 |
+| --- | ---: | ---: | ---: | ---: |
+| battery-n50 | 2 / 5 / 0.998 | 1 / 0 / 1.000 | 1 / 0 / 1.000 | 1 / 0 / 1.000 |
+| battery-n100 | 2 / 3 / 0.946 | 2 / 0 / 0.660 | 2 / 0 / 0.652 | 2 / 0 / 0.652 |
+| battery-n200 | 4 / 2 / 0.832 | 4 / 4 / 0.597 | 4 / 5 / 0.712 | 4 / 4 / 0.679 |
+| battery-n400 | 7 / 2 / 0.987 | 6 / 2 / 0.820 | 6 / 6 / 0.826 | 6 / 6 / 0.866 |
+| battery-n800 | 12 / 29 / 0.851 | 12 / 5 / 0.749 | 12 / 6 / 0.595 | 12 / 6 / 0.749 |
+| battery-n1000 | 15 / 56 / 0.847 | 14.3 / 9.3 / 0.829 | 15 / 3 / 0.657 | 15 / 9 / 0.688 |
+| battery-sparse-n250 | 5 / 2 / 0.946 | 5 / 2 / 0.639 | 5 / 2 / 0.617 | 5 / 1 / 0.768 |
+| battery-sparse-n500 | 9 / 12.3 / 0.834 | 8 / 4 / 0.854 | 8 / 4 / 0.875 | 8 / 4 / 0.875 |
+| area-26-n157 | 3 / 0 / 0.877 | 3 / 0 / 0.754 | 3 / 0 / 0.821 | 3 / 0 / 0.838 |
+| area-27-n72 | 2 / 6 / 1.000 | 1 / 0 / 1.000 | 1 / 0 / 1.000 | 1 / 0 / 1.000 |
+| area-29-n43 | 1 / 0 / 1.000 | 1 / 0 / 1.000 | 1 / 0 / 1.000 | 1 / 0 / 1.000 |
+| reference-n1607 | 25 / 88.7 / 0.833 | 25 / 10 / 0.789 | 25 / 11.7 / 0.791 | 25 / 16.7 / 0.667 |
+
+#### Δ travel vs control / relleno (s)
+
+| Instancia | travel ctl (s) | relleno ctl (s) | β=0.85 | β=0.90 | β=0.95 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| battery-n50 | 8 399 | 6 375 | −59.3 % / 1 352 | −59.3 % / 1 352 | −59.3 % / 1 352 |
+| battery-n100 | 4 244 | 1 784 | −1.7 % / 1 713 | +0.3 % / 1 796 | +0.3 % / 1 796 |
+| battery-n200 | 8 254 | 4 776 | +0.7 % / 4 833 | −3.8 % / 4 463 | +0.2 % / 4 796 |
+| battery-n400 | 14 557 | 9 039 | −10.8 % / 7 452 | −10.4 % / 7 508 | −1.4 % / 8 826 |
+| battery-n800 | 19 702 | 10 739 | +8.5 % / 12 419 | +15.4 % / 13 773 | +10.0 % / 12 702 |
+| battery-n1000 | 26 598 | 15 646 | +4.2 % / 16 754 | +10.1 % / 18 324 | +2.1 % / 16 217 |
+| battery-sparse-n250 | 15 734 | 7 324 | −5.4 % / 6 479 | −2.6 % / 6 920 | −1.3 % / 7 115 |
+| battery-sparse-n500 | 23 016 | 13 574 | −6.9 % / 11 959 | −5.9 % / 12 202 | −5.9 % / 12 202 |
+| area-26-n157 | 4 962 | 2 579 | −12.2 % / 1 972 | −8.9 % / 2 137 | −10.8 % / 2 042 |
+| area-27-n72 | 5 738 | 5 207 | −73.8 % / 965 | −73.8 % / 963 | −73.8 % / 963 |
+| area-29-n43 | 2 022 | 1 634 | −50.6 % / 611 | −50.6 % / 611 | −50.6 % / 611 |
+| reference-n1607 | 60 566 | 33 510 | −0.3 % / 33 312 | −0.7 % / 33 092 | +0.2 % / 33 621 |
+
+Drops = 0 en las 108 filas del brazo. k cae donde el piso reducido permite consolidar
+(battery-n50 2→1, battery-n400 7→6, battery-sparse-n500 9→8, area-27 2→1); en n=1607
+k = 25 idéntico al control.
+
+#### Estado de cada criterio (a priori)
+
+| Criterio | β=0.85 | β=0.90 | β=0.95 | Detalle |
+| --- | --- | --- | --- | --- |
+| Cruces n=1607 ≤ control | ✅ | ✅ | ✅ | 88.7 → 10 / 11.7 / 16.7 (−81 a −89 %) |
+| Travel ≤ control +3 % | ❌ | ❌ | ❌ | Peor caso battery-n800: +8.5 / +15.4 / +10.0 %; en n=1607 sí cumple (−0.3 / −0.7 / +0.2 %) |
+| Balance ≥ 0.80 en todas | ❌ | ❌ | ❌ | Mínimos 0.597 (n200) / 0.595 (n800) / 0.652 (n100); n=1607 también falla: 0.789 / 0.791 / 0.667 |
+| k n=1607 ≤ 26 | ✅ | ✅ | ✅ | 25 en los tres β |
+| Drops 0 en todas | ✅ | ✅ | ✅ | 0 en las 108 filas |
+| Áreas chicas: cruces ≤ ctl y relleno ≤ ctl | ✅ | ✅ | ✅ | Cruces 0 en las tres áreas; relleno −24 % (area-26), −81 % (area-27), −63 % (area-29) |
+
+**Ningún β cumple el criterio completo.** Fallan travel (+3 %) y balance (≥0.80), ambos
+concentrados en la batería sintética densa media (n=100–1000).
+
+#### Lectura
+
+- El piso factible hace exactamente lo prometido en régimen de relleno: en las áreas
+  reales chicas elimina el relleno de raíz (area-27: travel −73.8 %, relleno 5 207 → 965 s,
+  y además consolida 2 rutas en 1 sin relleno) manteniendo cruces en 0. A diferencia del
+  2-opt de Fase 2, esto NO rompe el contrato del piso: T\_min\_eff baja por construcción,
+  así que las rutas cortas son legales, no violaciones.
+- La promesa "converge a `actual` en saturado" se cumple a medias en n=1607: k, travel y
+  relleno son indistinguibles del control, pero los cruces caen 88.7 → 10 (−89 %) y el
+  balance cae 0.833 → 0.789. El piso efectivo queda algo bajo T\_min incluso con
+  saturación medida ≈ 0.94 (`saturation_mean`; `sat_estimated`, la que fija el piso, es
+  0.714), y esa holgura la usa el solver para alargar unas rutas y acortar
+  otras: geometría mucho más limpia, balance bajo el umbral.
+- El mecanismo de fallo en la batería media es el mismo: piso bajo → el solver deja rutas
+  desiguales (balance 0.60–0.75) y en n=800/n=1000 además gasta más travel (+8 a +15 %)
+  reorganizando la partición. El β mayor no lo corrige (β=0.95 tiene el peor balance en
+  n=1607: 0.667, con dispersión alta entre semillas).
 
 ---
 
@@ -261,18 +334,107 @@ Celdas: `arc-convex-l1`, `arc-convex-l5`, `arc-convex-l20`.
 
 ### Resultados
 
-<!-- Llenar con tabla de λ × instancias -->
+Celdas corridas sobre las 12 instancias, 3 semillas por celda (media sobre semillas).
+τ (p95 de arcos nearest-neighbor) por instancia: 27.6 s (area-29) a 112.6 s (battery-n50);
+44.1 s en n=1607. Dispersión entre semillas notable en varias celdas (λ=1 battery-n800
+spread de cruces 20, λ=5 battery-n400 spread 73 con k 6/6/7): el término convexo hace el
+paisaje de búsqueda más ruidoso que el control.
+
+#### k / cruces / balance por celda
+
+| Instancia | control (k / cruces / bal) | λ=1 | λ=5 | λ=20 |
+| --- | ---: | ---: | ---: | ---: |
+| battery-n50 | 2 / 5 / 0.998 | 2 / 25 / 1.000 | 2 / 36.7 / 0.999 | 2 / 41 / 1.000 |
+| battery-n100 | 2 / 3 / 0.946 | 2 / 0 / 0.838 | 2 / 0 / 0.989 | 2 / 2 / 0.998 |
+| battery-n200 | 4 / 2 / 0.832 | 4 / 1 / 0.886 | 4 / 12.3 / 0.887 | 4 / 16 / 0.877 |
+| battery-n400 | 7 / 2 / 0.987 | 6 / 20 / 0.825 | 6.3 / 49.3 / 0.815 | 6 / 44 / 0.944 |
+| battery-n800 | 12 / 29 / 0.851 | 12 / 47.7 / 0.841 | 12 / 24 / 0.842 | 12 / 49.3 / 0.831 |
+| battery-n1000 | 15 / 56 / 0.847 | 15 / 53.3 / 0.832 | 14 / 55.3 / 0.866 | 14 / 57 / 0.893 |
+| battery-sparse-n250 | 5 / 2 / 0.946 | 5.7 / 2.7 / 0.926 | 6 / 5 / 0.810 | 6 / 7 / 0.878 |
+| battery-sparse-n500 | 9 / 12.3 / 0.834 | 8 / 15.7 / 0.879 | 9 / 34 / 0.862 | 8 / 22 / 0.842 |
+| area-26-n157 | 3 / 0 / 0.877 | 3 / 0 / 0.815 | 3 / 1 / 0.862 | 3 / 12 / 0.834 |
+| area-27-n72 | 2 / 6 / 1.000 | 2 / 45 / 1.000 | 2 / 113 / 1.000 | 1 / 2 / 1.000 |
+| area-29-n43 | 1 / 0 / 1.000 | 1 / 11 / 1.000 | 1 / 26 / 1.000 | 1 / 40 / 1.000 |
+| reference-n1607 | 25 / 88.7 / 0.833 | 25 / 113 / 0.845 | 25 / 72.3 / 0.839 | 25 / 90 / 0.844 |
+
+#### Δ travel vs control / relleno (s)
+
+| Instancia | travel ctl (s) | relleno ctl (s) | λ=1 | λ=5 | λ=20 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| battery-n50 | 8 399 | 6 375 | −0.2 % / 6 356 | −0.2 % / 6 357 | −0.2 % / 6 358 |
+| battery-n100 | 4 244 | 1 784 | −5.1 % / 1 568 | −4.7 % / 1 586 | −8.4 % / 1 426 |
+| battery-n200 | 8 254 | 4 776 | −9.5 % / 3 992 | −7.9 % / 4 127 | −9.6 % / 3 984 |
+| battery-n400 | 14 557 | 9 039 | −22.4 % / 5 767 | −9.5 % / 7 647 | −16.5 % / 6 622 |
+| battery-n800 | 19 702 | 10 739 | +16.7 % / 14 039 | +0.9 % / 10 910 | +2.1 % / 11 143 |
+| battery-n1000 | 26 598 | 15 646 | +9.4 % / 18 135 | −6.8 % / 13 835 | −6.9 % / 13 802 |
+| battery-sparse-n250 | 15 734 | 7 324 | +2.0 % / 7 658 | +9.0 % / 8 780 | −2.3 % / 7 001 |
+| battery-sparse-n500 | 23 016 | 13 574 | −12.1 % / 10 769 | +9.5 % / 15 760 | −16.5 % / 9 766 |
+| area-26-n157 | 4 962 | 2 579 | −7.6 % / 2 200 | −0.9 % / 2 535 | −4.5 % / 2 357 |
+| area-27-n72 | 5 738 | 5 207 | −0.1 % / 5 200 | −0.1 % / 5 203 | −75.2 % / 886 |
+| area-29-n43 | 2 022 | 1 634 | +0.0 % / 1 635 | +0.1 % / 1 636 | +0.2 % / 1 638 |
+| reference-n1607 | 60 566 | 33 510 | +6.0 % / 37 139 | −1.2 % / 32 787 | −1.8 % / 32 401 |
+
+Drops = 0 en las 108 filas del brazo.
+
+#### Estado de cada criterio (a priori)
+
+| Criterio | λ=1 | λ=5 | λ=20 | Detalle |
+| --- | --- | --- | --- | --- |
+| Cruces n=1607 −≥30 % | ❌ | ❌ | ❌ | 88.7 → 113 (+27 %) / 72.3 (−18 %) / 90 (+1.5 %) — nadie llega a −30 % |
+| Travel ≤ control +3 % | ❌ | ❌ | ✅ | λ=1: +16.7 % (n800), +6.0 % (n=1607); λ=5: +9.5 % (sparse-n500); λ=20: peor caso +2.1 % |
+| Balance ≥ 0.80 en todas | ✅ | ✅ | ✅ | Mínimos 0.815 / 0.810 / 0.831 |
+| k n=1607 ≤ 26 | ✅ | ✅ | ✅ | 25 en los tres λ |
+| Drops 0 en todas | ✅ | ✅ | ✅ | 0 en las 108 filas |
+| Áreas chicas: sin empeorar cruces ni relleno | ❌ | ❌ | ❌ | Cruces explotan: area-29 0 → 11/26/40, area-27 6 → 45/113 (λ=20 baja a 2 pero solo porque consolida k 2→1); relleno sin cambio material (Δ ≤ +0.2 % salvo λ=20 area-27 −75 % por la consolidación) |
+
+**Ningún λ cumple el criterio completo; el criterio central (cruces −30 % en n=1607) no lo
+cumple ninguno.** La hipótesis "penalizar arcos largos ataca los cruces" queda refutada.
+
+#### Lectura
+
+- El término convexo minimiza arcos **largos de red**, pero los cruces se miden sobre las
+  cuerdas geométricas. Al castigar arcos sobre τ, el solver prefiere encadenar muchos
+  saltos cortos aunque zigzagueen: en las instancias compactas (áreas chicas, battery-n50)
+  τ es tan bajo que el término domina y la geometría colapsa (area-29 0 → 40 cruces con
+  λ=20, con travel idéntico). Es el mismo divorcio red/geometría que hundió al 2-opt en
+  Fase 2, ahora dentro del objetivo.
+- En n=1607 el efecto neto es ruido direccional: λ=1 empeora (+27 % cruces, +6 % travel),
+  λ=5 mejora algo (−18 %), λ=20 vuelve al punto de partida (+1.5 %). No hay dosis-respuesta:
+  el término no captura el mecanismo que produce los cruces en el denso real (asignación
+  entrelazada entre rutas, no arcos individualmente largos).
+- Los interleave confirman: en n=1607 sube de 95.2 (control) a 119.2 / 134.4 / 108.0 —
+  el brazo **aumenta** el entrelazado que pretendía atacar.
 
 ---
 
 ## Veredicto final
 
-<!-- Si algún brazo cumple **todos** los criterios, declararlo aquí como propuesta verificada.
-     No cambiar defaults de producción en este PR. -->
+**Ninguna de las cuatro propuestas evaluadas en este ciclo queda verificada contra su
+criterio a priori completo.** No se cambia ningún default de producción.
 
----
+| Fase | Propuesta | Veredicto | Resumen |
+| --- | --- | --- | --- |
+| 1 | Neutralizar cargo de vehículos vacíos | **Descartada (el cargo no existe)** | OR-Tools omite del objetivo los vehículos sin uso; el buffer +5 es inocuo. En n=1607 el objetivo real lo domina soft\_upper (83 %). |
+| 2 | Post-pass 2-opt intra-ruta | **Condicional, no general** | Gratis sobre `actual` en denso saturado (n=1607: cruces −28 %, travel −2.9 %); reintroduce cruces sobre bases limpias y vacía rutas bajo T\_min en régimen de relleno. |
+| 3a | Piso factible (β·trabajo/k) | **No verificada — falla balance y travel** | Elimina el relleno de raíz en áreas chicas (relleno −24 a −81 %, cruces 0, sin violar contrato) y desploma cruces en n=1607 (88.7 → 10, −89 %), pero el balance cae bajo 0.80 en la batería media Y en n=1607 (0.789), con travel +8 a +15 % en n=800/1000. |
+| 3b | Costo de arco convexo | **Refutada** | Ningún λ alcanza −30 % de cruces en n=1607 (mejor: −18 % con λ=5); en áreas compactas multiplica los cruces (0 → 40) y aumenta el interleave. El mecanismo de los cruces no son arcos largos. |
 
-## Instrucciones de ejecución
+Síntesis transversal de las tres fases:
+
+- Los dos regímenes documentados exigen medicinas opuestas. En **saturado** (n=1607) el
+  problema son los cruces por asignación entrelazada, y lo mejor observado sigue siendo
+  la familia "subir el techo" (`upper-tmax-tmin9000`, barrido previo) o, sin tocar el
+  objetivo, el 2-opt sobre `actual`. En **relleno** (áreas chicas) el problema es el piso
+  inalcanzable, y el piso factible lo resuelve limpiamente — es el primer brazo que mata
+  el relleno sin violar el contrato de T\_min, porque redefine el contrato por factibilidad.
+- El costo del piso factible es balance: al soltar el piso, el solver ya no tiene incentivo
+  para igualar duraciones. Cualquier iteración futura de esta idea necesita un término de
+  balance explícito que no dependa del piso (p. ej. span cost sobre Time, ya medido como
+  nulo en el barrido previo, o un piso relativo al máximo de la solución), no otro ajuste
+  de β: β∈{0.85, 0.90, 0.95} no mostró dosis-respuesta en balance.
+- La vía "moldear la geometría vía costo de arco" queda cerrada con dos refutaciones
+  coherentes (2-opt en Fase 2, término convexo en Fase 3b): travel de red y limpieza
+  geométrica no son proxies mutuos en este dominio.
 
 ```bash
 # Fase 1 — auditoría del objetivo
