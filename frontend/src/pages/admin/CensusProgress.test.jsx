@@ -149,6 +149,34 @@ describe("CensusProgress", () => {
     expect(screen.getByTestId("map-filter")).toHaveTextContent("all");
   });
 
+  it("expands a surveyor to show its routes with per-route counters", async () => {
+    fetchCensusProgress.mockResolvedValue(progress);
+
+    renderPage();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Censistas" }),
+    );
+    expect(screen.queryByText("Ruta 1")).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ver rutas de ana" }),
+    );
+
+    expect(screen.getByText("Ruta 1")).toBeInTheDocument();
+    expect(screen.queryByText("Ruta 2")).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText("4 censados · 1 omitidos · 0 pendientes"),
+    ).toHaveLength(2);
+    expect(screen.getByTestId("map-filter")).toHaveTextContent("all");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ocultar rutas de ana" }),
+    );
+
+    expect(screen.queryByText("Ruta 1")).not.toBeInTheDocument();
+  });
+
   it("filters the map to the routes of the selected surveyor", async () => {
     fetchCensusProgress.mockResolvedValue(progress);
 

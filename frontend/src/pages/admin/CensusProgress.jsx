@@ -50,14 +50,24 @@ export default function CensusProgress() {
 
   const surveyorRows = useMemo(
     () =>
-      (progress?.surveyors ?? []).map((surveyor) => ({
-        key: surveyor.surveyor_id ?? UNASSIGNED_KEY,
-        label: surveyor.surveyor_name,
-        sublabel: `${surveyor.route_count} ${
-          surveyor.route_count === 1 ? "ruta" : "rutas"
-        }`,
-        totals: surveyor,
-      })),
+      (progress?.surveyors ?? []).map((surveyor) => {
+        const key = surveyor.surveyor_id ?? UNASSIGNED_KEY;
+        return {
+          key,
+          label: surveyor.surveyor_name,
+          sublabel: `${surveyor.route_count} ${
+            surveyor.route_count === 1 ? "ruta" : "rutas"
+          }`,
+          totals: surveyor,
+          routes: (progress?.routes ?? [])
+            .filter((route) => (route.surveyor_id ?? UNASSIGNED_KEY) === key)
+            .map((route) => ({
+              key: route.id,
+              label: `Ruta ${route.route_number}`,
+              totals: route,
+            })),
+        };
+      }),
     [progress],
   );
 
