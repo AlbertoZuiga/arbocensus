@@ -297,7 +297,8 @@ concentrados en la batería sintética densa media (n=100–1000).
 - La promesa "converge a `actual` en saturado" se cumple a medias en n=1607: k, travel y
   relleno son indistinguibles del control, pero los cruces caen 88.7 → 10 (−89 %) y el
   balance cae 0.833 → 0.789. El piso efectivo queda algo bajo T\_min incluso con
-  sat\_estimated ≈ 0.94, y esa holgura la usa el solver para alargar unas rutas y acortar
+  saturación medida ≈ 0.94 (`saturation_mean`; `sat_estimated`, la que fija el piso, es
+  0.714), y esa holgura la usa el solver para alargar unas rutas y acortar
   otras: geometría mucho más limpia, balance bajo el umbral.
 - El mecanismo de fallo en la batería media es el mismo: piso bajo → el solver deja rutas
   desiguales (balance 0.60–0.75) y en n=800/n=1000 además gasta más travel (+8 a +15 %)
