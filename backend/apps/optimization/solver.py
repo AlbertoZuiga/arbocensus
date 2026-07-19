@@ -36,6 +36,7 @@ BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST = "tmin-scaled+exempt-last"
 BALANCE_ARM_FEASIBLE_FLOOR_B085 = "feasible-floor-b085"
 BALANCE_ARM_FEASIBLE_FLOOR_B090 = "feasible-floor-b090"
 BALANCE_ARM_FEASIBLE_FLOOR_B095 = "feasible-floor-b095"
+BALANCE_ARM_NO_FLOOR = "no-floor"
 BALANCE_ARMS = (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
@@ -45,6 +46,7 @@ BALANCE_ARMS = (
     BALANCE_ARM_FEASIBLE_FLOOR_B085,
     BALANCE_ARM_FEASIBLE_FLOOR_B090,
     BALANCE_ARM_FEASIBLE_FLOOR_B095,
+    BALANCE_ARM_NO_FLOOR,
 )
 
 # The `upper-tmax-tmin9000` arm anchors the soft lower bound just under the census
@@ -103,6 +105,13 @@ class PenaltyConfig:
                 self.soft_upper_bound(min_route_time_sec, max_route_time_sec),
                 self.soft_upper_penalty,
             )
+        elif arm == BALANCE_ARM_NO_FLOOR:
+            # No soft lower bound at all: without a floor the solver has no incentive
+            # to walk in circles to reach T_min. The soft upper rides at T_max so short
+            # routes are not pulled up. Route balance, if wanted, comes from a Time
+            # global span cost, not from the floor.
+            lower = None
+            upper = (max_route_time_sec, self.soft_upper_penalty)
         elif arm.startswith("feasible-floor"):
             # min_route_time_sec is already T_min_eff (pre-computed by the solver).
             lower = (min_route_time_sec, self.soft_lower_penalty)
@@ -151,6 +160,7 @@ class ArbocensusVRPSolver:
         spatial_points=None,
         span_coef=0,
         time_span_coef=0,
+        time_global_span_coef=0,
         penalties=DEFAULT_PENALTIES,
         convex_arc_lambda=0.0,
     ):
@@ -164,6 +174,7 @@ class ArbocensusVRPSolver:
         self.spatial_points = spatial_points
         self.span_coef = span_coef
         self.time_span_coef = time_span_coef
+        self.time_global_span_coef = time_global_span_coef
         self.penalties = penalties
         self.convex_arc_lambda = convex_arc_lambda
 
@@ -242,6 +253,11 @@ class ArbocensusVRPSolver:
 
             if self.time_span_coef:
                 time_dimension.SetSpanCostCoefficientForAllVehicles(self.time_span_coef)
+
+            if self.time_global_span_coef:
+                # Penalizes the LARGEST route duration (max end cumul), not the sum of
+                # spans, so it nudges routes toward equal duration without a floor.
+                time_dimension.SetGlobalSpanCostCoefficient(self.time_global_span_coef)
 
             routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
 

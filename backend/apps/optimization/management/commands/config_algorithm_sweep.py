@@ -1,7 +1,7 @@
 import csv
 import math
 import time
-from statistics import mean, pstdev
+from statistics import mean, median, pstdev
 
 from apps.datasets.instances import dataset_uuid
 from apps.datasets.models import Dataset, Tree
@@ -25,6 +25,7 @@ from apps.optimization.solver import (
     BALANCE_ARM_FEASIBLE_FLOOR_B085,
     BALANCE_ARM_FEASIBLE_FLOOR_B090,
     BALANCE_ARM_FEASIBLE_FLOOR_B095,
+    BALANCE_ARM_NO_FLOOR,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
@@ -59,15 +60,17 @@ SPATIAL = RoutingSolution.Strategy.SPATIAL_TERM.value
 GLOBAL = RoutingSolution.Strategy.GLOBAL.value
 GREEDY = "greedy"
 
-# (label, strategy, balance_arm, span_coef, post_resequence, arc_lambda).
+# (label, strategy, balance_arm, span_coef, post_resequence, arc_lambda,
+#  time_global_span_coef).
 # Config axis fixes strategy at spatial_term and sweeps duration soft-bound arms,
-# post-pass resequencing (Phase 2), feasible-floor arms (Phase 3a), and convex arc
-# cost (Phase 3b). Algorithm axis fixes arm at `actual` and sweeps the strategy.
+# post-pass resequencing (Phase 2), feasible-floor arms (Phase 3a), convex arc
+# cost (Phase 3b) and the no-floor family (Phase 4). Algorithm axis fixes arm at
+# `actual` and sweeps the strategy.
 CONFIG_AXIS = [
-    ("actual", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 0.0),
-    ("upper-tmax-tmin9000", SPATIAL, BALANCE_ARM_UPPER_TMAX_TMIN9000, 0, False, 0.0),
-    ("tmin-scaled", SPATIAL, BALANCE_ARM_TMIN_SCALED, 0, False, 0.0),
-    ("service-floor", SPATIAL, BALANCE_ARM_SERVICE_FLOOR, 0, False, 0.0),
+    ("actual", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 0.0, 0),
+    ("upper-tmax-tmin9000", SPATIAL, BALANCE_ARM_UPPER_TMAX_TMIN9000, 0, False, 0.0, 0),
+    ("tmin-scaled", SPATIAL, BALANCE_ARM_TMIN_SCALED, 0, False, 0.0, 0),
+    ("service-floor", SPATIAL, BALANCE_ARM_SERVICE_FLOOR, 0, False, 0.0, 0),
     (
         "tmin-scaled+exempt-last",
         SPATIAL,
@@ -75,10 +78,11 @@ CONFIG_AXIS = [
         0,
         False,
         0.0,
+        0,
     ),
-    ("span-c100", SPATIAL, BALANCE_ARM_ACTUAL, 100, False, 0.0),
+    ("span-c100", SPATIAL, BALANCE_ARM_ACTUAL, 100, False, 0.0, 0),
     # Phase 2 — post-pass intra-route resequencing
-    ("actual+reseq", SPATIAL, BALANCE_ARM_ACTUAL, 0, True, 0.0),
+    ("actual+reseq", SPATIAL, BALANCE_ARM_ACTUAL, 0, True, 0.0, 0),
     (
         "upper-tmax-tmin9000+reseq",
         SPATIAL,
@@ -86,19 +90,26 @@ CONFIG_AXIS = [
         0,
         True,
         0.0,
+        0,
     ),
     # Phase 3a — feasible floor (T_min_eff = min(T_min, β·total_work/k_est))
-    ("feasible-floor-b085", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B085, 0, False, 0.0),
-    ("feasible-floor-b090", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B090, 0, False, 0.0),
-    ("feasible-floor-b095", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B095, 0, False, 0.0),
+    ("feasible-floor-b085", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B085, 0, False, 0.0, 0),
+    ("feasible-floor-b090", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B090, 0, False, 0.0, 0),
+    ("feasible-floor-b095", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B095, 0, False, 0.0, 0),
     # Phase 3b — convex arc cost (arc_cost = travel + λ·max(0,travel−τ)²/τ)
-    ("arc-convex-l1", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 1.0),
-    ("arc-convex-l5", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 5.0),
-    ("arc-convex-l20", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 20.0),
+    ("arc-convex-l1", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 1.0, 0),
+    ("arc-convex-l5", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 5.0, 0),
+    ("arc-convex-l20", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 20.0, 0),
+    # Phase 4 — no-floor family: soft lower OFF, soft upper at T_max, optional Time
+    # global span cost as a soft balance term instead of a floor.
+    ("no-floor", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, False, 0.0, 0),
+    ("no-floor-span-c10", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, False, 0.0, 10),
+    ("no-floor-span-c100", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, False, 0.0, 100),
+    ("no-floor-span-c1000", SPATIAL, BALANCE_ARM_NO_FLOOR, 0, False, 0.0, 1000),
 ]
 ALGO_AXIS = [
-    ("global", GLOBAL, BALANCE_ARM_ACTUAL, 0, False, 0.0),
-    ("greedy", GREEDY, BALANCE_ARM_ACTUAL, 0, False, 0.0),
+    ("global", GLOBAL, BALANCE_ARM_ACTUAL, 0, False, 0.0, 0),
+    ("greedy", GREEDY, BALANCE_ARM_ACTUAL, 0, False, 0.0, 0),
 ]
 
 SEEDS = [1, 2, 3]
@@ -111,15 +122,20 @@ COLUMNS = [
     "strategy",
     "balance_arm",
     "span_coef",
+    "time_global_span_coef",
     "post_resequence",
     "arc_lambda",
     "arc_tau",
     "seed",
     "k",
     "drops",
+    "degenerate_routes",
     "travel_sec",
     "balance",
     "sigma_t_sec",
+    "dur_min_sec",
+    "dur_median_sec",
+    "dur_max_sec",
     "crossings",
     "worst_iou",
     "interleave_per_route",
@@ -194,7 +210,7 @@ class Command(BaseCommand):
             open_m = build_open_matrix(matrix)
             nn_travel = mean_nearest_neighbor_travel(open_m)
             arc_tau = p95_nearest_neighbor_travel(open_m)
-            for axis, cell, strategy, arm, span, post_reseq, arc_lam in cells:
+            for axis, cell, strategy, arm, span, post_reseq, arc_lam, tgs in cells:
                 for seed in options["seeds"]:
                     key = (
                         slug,
@@ -202,6 +218,7 @@ class Command(BaseCommand):
                         strategy,
                         arm,
                         str(span),
+                        str(tgs),
                         str(post_reseq),
                         str(arc_lam),
                         str(seed),
@@ -222,6 +239,7 @@ class Command(BaseCommand):
                         span,
                         post_reseq,
                         arc_lam,
+                        tgs,
                         seed,
                     )
                     self._append(csv_path, row)
@@ -244,6 +262,7 @@ class Command(BaseCommand):
                     r["strategy"],
                     r["balance_arm"],
                     r["span_coef"],
+                    r.get("time_global_span_coef", "0"),
                     r.get("post_resequence", "False"),
                     r.get("arc_lambda", "0.0"),
                     r["seed"],
@@ -279,6 +298,7 @@ class Command(BaseCommand):
         span,
         post_reseq,
         arc_lam,
+        tgs,
         seed,
     ):
         wall_start = time.perf_counter()
@@ -286,7 +306,7 @@ class Command(BaseCommand):
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
         else:
             rows, worst_iou, interleave, timing = self._ortools_cell(
-                trees, matrix, strategy, arm, span, post_reseq, arc_lam
+                trees, matrix, strategy, arm, span, post_reseq, arc_lam, tgs
             )
         wall = round(time.perf_counter() - wall_start, 2)
         return self._metrics_row(
@@ -300,6 +320,7 @@ class Command(BaseCommand):
             post_reseq,
             arc_lam,
             arc_tau,
+            tgs,
             seed,
             rows,
             worst_iou,
@@ -309,7 +330,9 @@ class Command(BaseCommand):
             wall,
         )
 
-    def _ortools_cell(self, trees, matrix, strategy, arm, span, post_reseq, arc_lam):
+    def _ortools_cell(
+        self, trees, matrix, strategy, arm, span, post_reseq, arc_lam, tgs
+    ):
         penalties = PenaltyConfig(balance_arm=arm)
         dataset = trees[0].dataset
         raw_routes = None
@@ -328,6 +351,7 @@ class Command(BaseCommand):
                     strategy=strategy,
                     penalties=penalties,
                     time_span_coef=span,
+                    time_global_span_coef=tgs,
                     convex_arc_lambda=arc_lam,
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
@@ -434,6 +458,7 @@ class Command(BaseCommand):
         post_reseq,
         arc_lam,
         arc_tau,
+        tgs,
         seed,
         rows,
         worst_iou,
@@ -467,15 +492,20 @@ class Command(BaseCommand):
             "strategy": strategy,
             "balance_arm": arm,
             "span_coef": span,
+            "time_global_span_coef": tgs,
             "post_resequence": post_reseq,
             "arc_lambda": arc_lam,
             "arc_tau": round(arc_tau, 1),
             "seed": seed,
             "k": k,
             "drops": rows[0]["drops"] if rows else 0,
+            "degenerate_routes": self._degenerate_count(rows),
             "travel_sec": round(travel_total),
             "balance": balance,
             "sigma_t_sec": round(pstdev(durations)) if k > 1 else 0,
+            "dur_min_sec": min(durations) if durations else 0,
+            "dur_median_sec": round(median(durations)) if durations else 0,
+            "dur_max_sec": max(durations) if durations else 0,
             "crossings": sum(r["self_crossings"] for r in rows),
             "worst_iou": round(worst_iou, 3),
             "interleave_per_route": round(interleave, 3),
@@ -489,6 +519,17 @@ class Command(BaseCommand):
             "wall_clock_sec": wall,
             **phases,
         }
+
+    def _degenerate_count(self, rows):
+        # A route is degenerate if it carries fewer than 5 stops or runs under 25% of
+        # the solution's median route duration. Written before the sweep ran: the no-
+        # floor family's known risk is that dropping the floor breeds tiny stub routes.
+        if not rows:
+            return 0
+        med = median(r["duration_sec"] for r in rows)
+        return sum(
+            1 for r in rows if r["n_trees"] < 5 or r["duration_sec"] < 0.25 * med
+        )
 
     def _balance(self, durations, arm):
         if len(durations) <= 1:
