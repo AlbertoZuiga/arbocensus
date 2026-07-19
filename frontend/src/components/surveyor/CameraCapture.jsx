@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { captureJpegFrame } from "../../utils/image.js";
 
 export default function CameraCapture({ onCapture, onClose }) {
   const videoRef = useRef(null);
@@ -45,22 +46,12 @@ export default function CameraCapture({ onCapture, onClose }) {
     };
   }, []);
 
-  const takePhoto = () => {
-    const video = videoRef.current;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        onCapture(
-          new File([blob], `tree-${Date.now()}.jpg`, { type: "image/jpeg" })
-        );
-      },
-      "image/jpeg",
-      0.85
+  const takePhoto = async () => {
+    const file = await captureJpegFrame(
+      videoRef.current,
+      `tree-${Date.now()}.jpg`
     );
+    if (file) onCapture(file);
   };
 
   return (
