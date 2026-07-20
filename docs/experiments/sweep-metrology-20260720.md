@@ -185,6 +185,77 @@ van a medir.
 
 ---
 
+---
+
+## Resultados — Fase 2a (re-juicio retroactivo de la serie)
+
+Datos: `sweep-metrology-20260720-decomposition.csv` (tabla `MSF_k`, 12 instancias × k=1..40,
+aritmética pura) y `sweep-metrology-20260720-rejudge.csv` (**1 314 filas** re-juzgadas, de los
+seis CSV publicados de la serie). Ninguna llamada al solver ni a OSRM: `MSF_k` depende sólo de
+la instancia y de `k`, ambos ya presentes en las filas.
+
+### Cuánto del "relleno" publicado era geometría
+
+Control `actual`, medias sobre todas sus apariciones en la serie:
+
+| Instancia | k | travel | cero viejo `(n−k)·nn̄` | cero nuevo `MSF_k` | `relleno` | `relleno_msf` | geometría contada como relleno |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `area-26-n157` | 3 | 4 962 | 2 383 | **3 618** | 2 579 | **1 344** | **47.9 %** |
+| `area-29-n43` | 1 | 2 022 | 388 | 789 | 1 634 | 1 233 | 24.5 % |
+| `reference-n1607` | 25 | 60 593 | 27 056 | 30 823 | 33 537 | 29 770 | 11.2 % |
+| `area-27-n72` | 2 | 5 738 | 531 | 914 | 5 207 | 4 824 | 7.4 % |
+
+El sesgo **no es uniforme**, y ahí está el daño: la métrica vieja es casi inocua donde el
+relleno real domina (`area-27`: 7 %) y **desfigura** el caso donde la geometría domina
+(`area-26`: casi la mitad de lo que llamaba relleno era estructura inevitable). El único caso
+que la serie no lograba arreglar es exactamente el caso que la métrica medía peor.
+
+### Cuántos "fallos" eran artefactos
+
+Criterio de áreas aplicado a las 28 celdas de la serie que tienen las tres áreas medidas
+(`relleno` −≥50 % vs `actual` con la regla vieja; `relleno_msf` −≥30 % con la nueva):
+
+| | regla vieja | regla nueva |
+| --- | ---: | ---: |
+| Celdas que pasan el criterio de áreas | **0 de 28** | **14 de 28** |
+
+**Las 14 celdas que cambian de veredicto cambian por `area-26-n157`, y sólo por ella.** En
+`area-27` y `area-29` ninguna celda cambia de lado: las que pasaban siguen pasando, las que
+fallaban siguen fallando. Ninguna celda pasa a fallar. El artefacto estaba concentrado en una
+instancia, y era el artefacto que bloqueaba a la serie entera.
+
+| Celda | area-26 vieja | area-26 nueva | area-27 nueva | area-29 nueva |
+| --- | ---: | ---: | ---: | ---: |
+| `no-floor+reseq` | −30.1 % | **−57.7 %** | −96.8 % | −86.5 % |
+| `no-floor` / `no-floor-stops5` | −25.7 % | **−49.3 %** | −96.3 % | −83.0 % |
+| `feasible-floor-b085` | −23.5 % | **−45.2 %** | −95.8 % | −83.0 % |
+| `feasible-floor-b070-stops10` | −22.8 % | **−43.8 %** | −96.3 % | −83.0 % |
+| `service-floor` | −22.1 % | **−42.5 %** | −97.4 % | −83.0 % |
+| `no-floor-lowfloor5400` | −22.1 % | **−42.3 %** | −96.3 % | −83.0 % |
+| `no-floor-lowfloor3600` | −21.8 % | **−41.8 %** | −95.9 % | −83.0 % |
+| `no-floor-stops10` | −21.2 % | **−40.8 %** | −93.8 % | −83.0 % |
+| `feasible-floor-b060-stops10` | −21.1 % | **−40.6 %** | −96.3 % | −83.0 % |
+| **`feasible-floor-b095`** | **−20.8 %** | **−40.0 %** | **−95.9 %** | **−83.0 %** |
+| `no-floor-stops15` | −20.4 % | **−39.1 %** | −96.3 % | −83.0 % |
+| `feasible-floor-b090` | −17.1 % | **−32.9 %** | −95.9 % | −83.0 % |
+
+Celdas que siguen fallando bajo la regla nueva (14 de 28): las que no tocan `area-26`
+(`arc-convex-*`, `span-c100`, `global`), las que la empeoran (`upper-tmax-tmin9000` +236 %,
+`greedy` +70 %, `no-floor-span-c*`) y `tmin-scaled` (+11 %). **La regla nueva no es indulgente:
+sigue reprobando a la mitad de la serie, incluida la familia de span global que el ciclo M-3
+había considerado prometedora.**
+
+### Sensibilidad al umbral
+
+`feasible-floor-b095` alcanza **−40.0 %** en `area-26` (su instancia limitante; en las otras dos
+áreas está en −95.9 % y −83.0 %). Es decir: **pasa con cualquier umbral hasta −40 % inclusive, y
+falla desde −41 %.** El umbral pre-registrado (−30 %) le deja 10 puntos de margen. Un lector que
+prefiera −25 %, −35 % o −40 % obtiene el mismo veredicto; uno que exija −45 % o más obtiene el
+contrario, y con él reprueba también a todos los demás brazos de la serie salvo
+`no-floor+reseq`.
+
+---
+
 ## Veredicto que este ciclo se compromete a emitir
 
 - Si `feasible-floor-b095` pasa el criterio **completo** bajo la métrica corregida y con

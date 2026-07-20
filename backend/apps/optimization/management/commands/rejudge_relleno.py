@@ -59,7 +59,9 @@ class Command(BaseCommand):
                             "travel_sec": raw["travel_sec"],
                             "relleno_sec": raw["relleno_sec"],
                             "msf_k_sec": round(msf[key]),
-                            "relleno_msf_sec": max(0, round(travel - msf[key])),
+                            "relleno_msf_sec": self._relleno_msf(
+                                raw, travel, msf[key], sweep
+                            ),
                         }
                     )
 
@@ -76,6 +78,20 @@ class Command(BaseCommand):
             writer.writeheader()
             writer.writerows(rows)
         self.stdout.write(self.style.SUCCESS(f"Re-judged {len(rows)} rows: {out_path}"))
+
+    def _relleno_msf(self, raw, travel, msf_k, sweep):
+        # The forest bound spans every node, so it stops bounding a solution that
+        # abandons some of them: clamping those rows at zero would report the runs
+        # that dropped trees as the ones with no padding at all.
+        if int(raw["drops"] or 0):
+            return ""
+        if travel < msf_k - 1:
+            raise CommandError(
+                f"{sweep} {raw['instance']} {raw['cell']} seed={raw['seed']}: "
+                f"travel {travel:.0f} below the spanning-forest bound "
+                f"MSF_{raw['k']}={msf_k:.0f} — the bound or the stored travel is wrong"
+            )
+        return max(0, round(travel - msf_k))
 
     def _msf_table(self, path):
         with path.open(newline="", encoding="utf-8") as handle:
