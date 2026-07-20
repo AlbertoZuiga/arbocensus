@@ -3,12 +3,18 @@ import pytest
 from apps.optimization.solver import (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_NO_FLOOR,
+    BALANCE_ARM_NO_FLOOR_LOWFLOOR3600,
+    BALANCE_ARM_NO_FLOOR_LOWFLOOR5400,
+    BALANCE_ARM_NO_FLOOR_STOPS5,
+    BALANCE_ARM_NO_FLOOR_STOPS10,
+    BALANCE_ARM_NO_FLOOR_STOPS15,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
     SOFT_LOWER_PENALTY,
     SOFT_UPPER_PENALTY,
+    STOPS_FLOOR_PENALTY,
     TIGHT_TMIN_SEC,
     ArbocensusVRPSolver,
     PenaltyConfig,
@@ -78,6 +84,42 @@ def test_no_floor_arm_drops_lower_and_pins_upper_at_tmax():
     assert upper == (10800, SOFT_UPPER_PENALTY)
 
 
+@pytest.mark.parametrize(
+    ("arm", "expected_stops"),
+    [
+        (BALANCE_ARM_NO_FLOOR_STOPS5, 5),
+        (BALANCE_ARM_NO_FLOOR_STOPS10, 10),
+        (BALANCE_ARM_NO_FLOOR_STOPS15, 15),
+    ],
+)
+def test_stops_arms_declare_a_stop_floor_and_no_time_floor(arm, expected_stops):
+    config = PenaltyConfig(balance_arm=arm)
+    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    assert config.min_stops() == expected_stops
+    assert lower is None
+    assert upper == (10800, SOFT_UPPER_PENALTY)
+
+
+@pytest.mark.parametrize(
+    ("arm", "expected_floor"),
+    [
+        (BALANCE_ARM_NO_FLOOR_LOWFLOOR3600, 3600),
+        (BALANCE_ARM_NO_FLOOR_LOWFLOOR5400, 5400),
+    ],
+)
+def test_lowfloor_arms_use_an_absolute_time_floor(arm, expected_floor):
+    config = PenaltyConfig(balance_arm=arm)
+    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    assert config.min_stops() is None
+    assert lower == (expected_floor, SOFT_LOWER_PENALTY)
+    assert upper == (10800, SOFT_UPPER_PENALTY)
+
+
+def test_arms_without_stop_floor_declare_no_min_stops():
+    assert PenaltyConfig().min_stops() is None
+    assert PenaltyConfig(balance_arm=BALANCE_ARM_NO_FLOOR).min_stops() is None
+
+
 def test_exempt_last_arm_only_exempts_residual_vehicle():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST)
     non_last_lower, _ = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
@@ -141,6 +183,55 @@ def test_solver_runs_under_no_floor_arm_with_time_global_span():
     assert dropped == []
     visited = sorted(node for route in routes for node in route)
     assert visited == list(range(8))
+
+
+def solve_arm(arm, time_global_span_coef=0, node_count=12):
+    solver = ArbocensusVRPSolver(
+        uniform_matrix(node_count, travel=TRAVEL_SEC),
+        min_route_time_sec=600,
+        max_route_time_sec=100_000,
+        service_time_sec=SERVICE_SEC,
+        max_vehicles=5,
+        time_limit_sec=5,
+        time_global_span_coef=time_global_span_coef,
+        penalties=PenaltyConfig(balance_arm=arm),
+    )
+    result = solver.solve_and_debug()
+    assert result is not None
+    return result
+
+
+def test_stops_dimension_counts_visited_nodes_and_spares_empty_vehicles():
+    routes, dropped, debug = solve_arm(
+        BALANCE_ARM_NO_FLOOR_STOPS5, time_global_span_coef=500
+    )
+    assert dropped == []
+    assert sorted(node for route in routes for node in route) == list(range(12))
+    cumuls = debug["stops_end_cumuls"]
+    assert sorted(c for c in cumuls if c) == sorted(len(r) for r in routes)
+    assert cumuls.count(0) == len(cumuls) - len(routes)
+
+    # An unused vehicle sits at cumul 0 yet must not be charged for the shortfall:
+    # the objective gap is exactly the shortfall of the ACTIVE routes.
+    unfloored_routes, _, unfloored = solve_arm(
+        BALANCE_ARM_NO_FLOOR, time_global_span_coef=500
+    )
+    assert sorted(len(r) for r in unfloored_routes) == sorted(len(r) for r in routes)
+    shortfall = sum(max(0, 5 - len(route)) for route in routes)
+    gap = debug["objective_ortools"] - unfloored["objective_ortools"]
+    assert gap == shortfall * STOPS_FLOOR_PENALTY
+
+
+def test_stops_floor_lifts_the_smallest_route_under_span_pressure():
+    # The global span cost makes splitting into many tiny routes attractive; the
+    # stop floor is what pushes the smallest route back up.
+    stub_routes, _, _ = solve_arm(BALANCE_ARM_NO_FLOOR, time_global_span_coef=500)
+    floored_routes, _, _ = solve_arm(
+        BALANCE_ARM_NO_FLOOR_STOPS10, time_global_span_coef=500
+    )
+    assert min(len(route) for route in floored_routes) > min(
+        len(route) for route in stub_routes
+    )
 
 
 def test_time_global_span_shortens_the_longest_route():

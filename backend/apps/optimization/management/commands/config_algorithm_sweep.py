@@ -27,6 +27,11 @@ from apps.optimization.solver import (
     BALANCE_ARM_FEASIBLE_FLOOR_B090,
     BALANCE_ARM_FEASIBLE_FLOOR_B095,
     BALANCE_ARM_NO_FLOOR,
+    BALANCE_ARM_NO_FLOOR_LOWFLOOR3600,
+    BALANCE_ARM_NO_FLOOR_LOWFLOOR5400,
+    BALANCE_ARM_NO_FLOOR_STOPS5,
+    BALANCE_ARM_NO_FLOOR_STOPS10,
+    BALANCE_ARM_NO_FLOOR_STOPS15,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
@@ -34,6 +39,7 @@ from apps.optimization.solver import (
     PenaltyConfig,
     build_open_matrix,
 )
+from apps.optimization.strategies import SPATIAL_SPAN_COEF
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -73,9 +79,9 @@ class Cell(NamedTuple):
 
 
 # Config axis fixes strategy at spatial_term and sweeps duration soft-bound arms,
-# post-pass resequencing (Phase 2), feasible-floor arms (Phase 3a), convex arc
-# cost (Phase 3b) and the no-floor family (Phase 4). Algorithm axis fixes arm at
-# `actual` and sweeps the strategy.
+# post-pass resequencing, feasible-floor arms, convex arc cost, the no-floor family
+# and the anti-stub floors. Algorithm axis fixes arm at `actual` and sweeps the
+# strategy.
 CONFIG_AXIS = [
     Cell("actual", SPATIAL, BALANCE_ARM_ACTUAL),
     Cell("upper-tmax-tmin9000", SPATIAL, BALANCE_ARM_UPPER_TMAX_TMIN9000),
@@ -83,7 +89,7 @@ CONFIG_AXIS = [
     Cell("service-floor", SPATIAL, BALANCE_ARM_SERVICE_FLOOR),
     Cell("tmin-scaled+exempt-last", SPATIAL, BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST),
     Cell("span-c100", SPATIAL, BALANCE_ARM_ACTUAL, span_coef=100),
-    # Phase 2 — post-pass intra-route resequencing
+    # Post-pass intra-route resequencing
     Cell("actual+reseq", SPATIAL, BALANCE_ARM_ACTUAL, post_resequence=True),
     Cell(
         "upper-tmax-tmin9000+reseq",
@@ -91,15 +97,15 @@ CONFIG_AXIS = [
         BALANCE_ARM_UPPER_TMAX_TMIN9000,
         post_resequence=True,
     ),
-    # Phase 3a — feasible floor (T_min_eff = min(T_min, β·total_work/k_est))
+    # Feasible floor (T_min_eff = min(T_min, β·total_work/k_est))
     Cell("feasible-floor-b085", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B085),
     Cell("feasible-floor-b090", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B090),
     Cell("feasible-floor-b095", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B095),
-    # Phase 3b — convex arc cost (arc_cost = travel + λ·max(0,travel−τ)²/τ)
+    # Convex arc cost (arc_cost = travel + λ·max(0,travel−τ)²/τ)
     Cell("arc-convex-l1", SPATIAL, BALANCE_ARM_ACTUAL, arc_lambda=1.0),
     Cell("arc-convex-l5", SPATIAL, BALANCE_ARM_ACTUAL, arc_lambda=5.0),
     Cell("arc-convex-l20", SPATIAL, BALANCE_ARM_ACTUAL, arc_lambda=20.0),
-    # Phase 4 — no-floor family: no soft bounds at all, optional Time global span
+    # No-floor family: no soft bounds at all, optional Time global span
     # cost as a soft balance term instead of a floor.
     Cell("no-floor", SPATIAL, BALANCE_ARM_NO_FLOOR),
     Cell("no-floor-span-c10", SPATIAL, BALANCE_ARM_NO_FLOOR, time_global_span_coef=10),
@@ -110,6 +116,13 @@ CONFIG_AXIS = [
         "no-floor-span-c1000", SPATIAL, BALANCE_ARM_NO_FLOOR, time_global_span_coef=1000
     ),
     Cell("no-floor+reseq", SPATIAL, BALANCE_ARM_NO_FLOOR, post_resequence=True),
+    # Anti-stub floors: a floor on stop count cannot be padded by
+    # walking, unlike the low absolute time floors it is compared against.
+    Cell("no-floor-stops5", SPATIAL, BALANCE_ARM_NO_FLOOR_STOPS5),
+    Cell("no-floor-stops10", SPATIAL, BALANCE_ARM_NO_FLOOR_STOPS10),
+    Cell("no-floor-stops15", SPATIAL, BALANCE_ARM_NO_FLOOR_STOPS15),
+    Cell("no-floor-lowfloor3600", SPATIAL, BALANCE_ARM_NO_FLOOR_LOWFLOOR3600),
+    Cell("no-floor-lowfloor5400", SPATIAL, BALANCE_ARM_NO_FLOOR_LOWFLOOR5400),
 ]
 ALGO_AXIS = [
     Cell("global", GLOBAL, BALANCE_ARM_ACTUAL),
@@ -119,7 +132,7 @@ ALGO_AXIS = [
 SEEDS = [1, 2, 3]
 
 DEGENERATE_MIN_STOPS = 5
-DEGENERATE_DURATION_RATIO = 0.25
+DEGENERATE_MIN_DURATION_SEC = 1800
 
 COLUMNS = [
     "instance",
@@ -129,6 +142,7 @@ COLUMNS = [
     "strategy",
     "balance_arm",
     "span_coef",
+    "spatial_span_coef",
     "time_global_span_coef",
     "post_resequence",
     "arc_lambda",
@@ -188,6 +202,12 @@ class Command(BaseCommand):
             help="Restrict the sweep to a single config/algo cell label",
         )
         parser.add_argument(
+            "--spatial-span-coef",
+            type=int,
+            default=SPATIAL_SPAN_COEF,
+            help="Override the spatial_term geographic span coefficient",
+        )
+        parser.add_argument(
             "--seeds",
             type=int,
             nargs="+",
@@ -212,6 +232,7 @@ class Command(BaseCommand):
             if not cells:
                 raise CommandError(f"unknown cell '{options['only_cell']}'")
 
+        spatial_span_coef = options["spatial_span_coef"]
         for slug in instances:
             trees, matrix = self._prepare_instance(slug)
             open_m = build_open_matrix(matrix)
@@ -228,6 +249,7 @@ class Command(BaseCommand):
                         str(cell.time_global_span_coef),
                         str(cell.post_resequence),
                         str(cell.arc_lambda),
+                        str(spatial_span_coef),
                         str(seed),
                     )
                     if key in done:
@@ -242,6 +264,7 @@ class Command(BaseCommand):
                         axis,
                         cell,
                         seed,
+                        spatial_span_coef,
                     )
                     self._append(csv_path, row)
                     done.add(key)
@@ -266,6 +289,7 @@ class Command(BaseCommand):
                     r.get("time_global_span_coef", "0"),
                     r.get("post_resequence", "False"),
                     r.get("arc_lambda", "0.0"),
+                    r.get("spatial_span_coef", str(SPATIAL_SPAN_COEF)),
                     r["seed"],
                 )
                 for r in csv.DictReader(handle)
@@ -285,13 +309,15 @@ class Command(BaseCommand):
         matrix = OSRMCostMatrixBuilder().build(trees)
         return trees, matrix
 
-    def _run_cell(self, slug, trees, matrix, nn_travel, arc_tau, axis, cell, seed):
+    def _run_cell(
+        self, slug, trees, matrix, nn_travel, arc_tau, axis, cell, seed, span_coef
+    ):
         wall_start = time.perf_counter()
         if cell.strategy == GREEDY:
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
         else:
             rows, worst_iou, interleave, timing = self._ortools_cell(
-                trees, matrix, cell
+                trees, matrix, cell, span_coef
             )
         wall = round(time.perf_counter() - wall_start, 2)
         return self._metrics_row(
@@ -301,6 +327,7 @@ class Command(BaseCommand):
             cell,
             arc_tau,
             seed,
+            span_coef,
             rows,
             worst_iou,
             interleave,
@@ -309,7 +336,7 @@ class Command(BaseCommand):
             wall,
         )
 
-    def _ortools_cell(self, trees, matrix, cell):
+    def _ortools_cell(self, trees, matrix, cell, span_coef):
         strategy = cell.strategy
         penalties = PenaltyConfig(balance_arm=cell.balance_arm)
         dataset = trees[0].dataset
@@ -328,6 +355,7 @@ class Command(BaseCommand):
                 metrics = OptimizationPipeline(job).run(
                     strategy=strategy,
                     penalties=penalties,
+                    spatial_span_coef=span_coef,
                     time_span_coef=cell.span_coef,
                     time_global_span_coef=cell.time_global_span_coef,
                     convex_arc_lambda=cell.arc_lambda,
@@ -432,6 +460,7 @@ class Command(BaseCommand):
         cell,
         arc_tau,
         seed,
+        spatial_span_coef,
         rows,
         worst_iou,
         interleave,
@@ -464,6 +493,7 @@ class Command(BaseCommand):
             "strategy": cell.strategy,
             "balance_arm": cell.balance_arm,
             "span_coef": cell.span_coef,
+            "spatial_span_coef": spatial_span_coef,
             "time_global_span_coef": cell.time_global_span_coef,
             "post_resequence": cell.post_resequence,
             "arc_lambda": cell.arc_lambda,
@@ -493,17 +523,15 @@ class Command(BaseCommand):
         }
 
     def _degenerate_count(self, rows):
-        # Stub routes no surveyor can be handed: too few stops, or far shorter than
-        # the rest of their own solution. The ratio is relative to the solution's own
-        # median, so it does not flag a solution that is uniformly fragmented.
-        if not rows:
-            return 0
-        med = median(r["duration_sec"] for r in rows)
+        # Stub routes no surveyor can be handed: too few stops, or shorter than half
+        # a working morning. Both thresholds are absolute — a threshold relative to
+        # the solution's own median cannot see a uniformly fragmented solution, where
+        # every route is equally tiny.
         return sum(
             1
             for r in rows
             if r["n_trees"] < DEGENERATE_MIN_STOPS
-            or r["duration_sec"] < DEGENERATE_DURATION_RATIO * med
+            or r["duration_sec"] < DEGENERATE_MIN_DURATION_SEC
         )
 
     def _balance(self, durations, arm):

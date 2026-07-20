@@ -24,13 +24,13 @@ def test_degenerate_count_flags_short_stub_route():
 
 
 def test_degenerate_count_flags_route_under_stop_threshold():
-    # 8000s is well above a quarter of the median, so only the stop count catches it.
+    # 8000s is a full-length route, so only the stop count catches this one.
     rows = [route_row(40, 9000), route_row(38, 8600), route_row(4, 8000)]
     assert Command()._degenerate_count(rows) == 1
 
 
-def test_degenerate_count_ignores_uniformly_small_solution():
-    # The duration threshold is relative to the solution's own median, so a fully
-    # fragmented solution reads as non-degenerate. Documented limitation, not a bug.
+def test_degenerate_count_flags_uniformly_fragmented_solution():
+    # Both thresholds are absolute, so a solution whose routes are ALL tiny is
+    # flagged in full — a threshold relative to its own median would see nothing.
     rows = [route_row(7, 960) for _ in range(6)]
-    assert Command()._degenerate_count(rows) == 0
+    assert Command()._degenerate_count(rows) == 6
