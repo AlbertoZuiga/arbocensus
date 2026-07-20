@@ -112,6 +112,15 @@ class Command(BaseCommand):
                 "the objective unchanged"
             ),
         )
+        parser.add_argument(
+            "--time-global-span-coefficient",
+            type=int,
+            default=0,
+            help=(
+                "Cost per second of the LARGEST route duration (Time global span). "
+                "Soft balance term without a floor. 0 leaves the objective unchanged"
+            ),
+        )
         parser.add_argument("--seed", type=int, default=42)
         parser.add_argument(
             "--post-resequence",
@@ -139,6 +148,8 @@ class Command(BaseCommand):
         max_route_time_sec = options["t_max"]
         if min_route_time_sec > max_route_time_sec:
             raise CommandError("--t-min must not exceed --t-max")
+        if options["time_global_span_coefficient"] < 0:
+            raise CommandError("--time-global-span-coefficient must not be negative")
 
         strategy = options["strategy"]
         penalties = PenaltyConfig(
@@ -156,6 +167,7 @@ class Command(BaseCommand):
             options["time_limit"],
             penalties,
             options["span_cost_coefficient"],
+            options["time_global_span_coefficient"],
         )
 
         if options["post_resequence"]:
@@ -222,6 +234,7 @@ class Command(BaseCommand):
                 "soft_upper_penalty": penalties.soft_upper_penalty,
                 "balance_arm": penalties.balance_arm,
                 "span_cost_coefficient": options["span_cost_coefficient"],
+                "time_global_span_coefficient": options["time_global_span_coefficient"],
                 "seed": options["seed"],
                 "csv": str(csv_path),
                 "geojson": str(geojson_path),
@@ -313,6 +326,7 @@ class Command(BaseCommand):
         time_limit_sec,
         penalties,
         span_cost_coefficient,
+        time_global_span_coefficient,
     ):
         with transaction.atomic():
             config = RoutingConfig.objects.create(
@@ -329,6 +343,7 @@ class Command(BaseCommand):
             time_limit_sec=time_limit_sec,
             penalties=penalties,
             time_span_coef=span_cost_coefficient,
+            time_global_span_coef=time_global_span_coefficient,
         )
         job.set_completed(metrics)
 

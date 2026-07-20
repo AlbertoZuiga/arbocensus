@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from apps.optimization.solver import (
     BALANCE_ARM_ACTUAL,
+    BALANCE_ARM_NO_FLOOR,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
@@ -12,6 +13,9 @@ from apps.optimization.solver import (
     ArbocensusVRPSolver,
     PenaltyConfig,
 )
+
+TRAVEL_SEC = 60
+SERVICE_SEC = 300
 
 BOUNDS_KW = dict(
     min_route_time_sec=7200,
@@ -67,6 +71,13 @@ def test_service_floor_arm_drops_lower_bound():
     assert upper == (9000, SOFT_UPPER_PENALTY)
 
 
+def test_no_floor_arm_drops_lower_and_pins_upper_at_tmax():
+    config = PenaltyConfig(balance_arm=BALANCE_ARM_NO_FLOOR)
+    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    assert lower is None
+    assert upper == (10800, SOFT_UPPER_PENALTY)
+
+
 def test_exempt_last_arm_only_exempts_residual_vehicle():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST)
     non_last_lower, _ = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
@@ -101,3 +112,40 @@ def test_solver_runs_under_alternate_arm_and_time_span():
     assert dropped == []
     visited = sorted(node for route in routes for node in route)
     assert visited == list(range(8))
+
+
+def solve_no_floor(time_global_span_coef):
+    solver = ArbocensusVRPSolver(
+        uniform_matrix(8, travel=TRAVEL_SEC),
+        min_route_time_sec=600,
+        max_route_time_sec=100_000,
+        service_time_sec=SERVICE_SEC,
+        max_vehicles=5,
+        time_limit_sec=5,
+        time_global_span_coef=time_global_span_coef,
+        penalties=PenaltyConfig(balance_arm=BALANCE_ARM_NO_FLOOR),
+    )
+    result = solver.solve()
+    assert result is not None
+    return result
+
+
+def longest_route_duration(routes):
+    return max(
+        TRAVEL_SEC * (len(route) - 1) + SERVICE_SEC * len(route) for route in routes
+    )
+
+
+def test_solver_runs_under_no_floor_arm_with_time_global_span():
+    routes, dropped = solve_no_floor(10)
+    assert dropped == []
+    visited = sorted(node for route in routes for node in route)
+    assert visited == list(range(8))
+
+
+def test_time_global_span_shortens_the_longest_route():
+    # Without a floor and without the span term, one route carrying everything is
+    # cheapest. The global span cost is what makes the longest route expensive.
+    unpenalized, _ = solve_no_floor(0)
+    penalized, _ = solve_no_floor(1000)
+    assert longest_route_duration(penalized) < longest_route_duration(unpenalized)

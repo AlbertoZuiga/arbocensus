@@ -36,6 +36,7 @@ def solve_by_strategy(
     time_limit_sec,
     penalties=DEFAULT_PENALTIES,
     time_span_coef=0,
+    time_global_span_coef=0,
     convex_arc_lambda=0.0,
     timer=None,
 ):
@@ -50,6 +51,7 @@ def solve_by_strategy(
             time_limit_sec=time_limit_sec,
             penalties=penalties,
             time_span_coef=time_span_coef,
+            time_global_span_coef=time_global_span_coef,
             convex_arc_lambda=convex_arc_lambda,
             timer=timer,
         )
@@ -63,6 +65,7 @@ def solve_by_strategy(
             time_limit_sec=time_limit_sec,
             penalties=penalties,
             time_span_coef=time_span_coef,
+            time_global_span_coef=time_global_span_coef,
             convex_arc_lambda=convex_arc_lambda,
             timer=timer,
         )
@@ -74,6 +77,7 @@ def solve_by_strategy(
         max_vehicles=max_vehicles,
         time_limit_sec=time_limit_sec,
         time_span_coef=time_span_coef,
+        time_global_span_coef=time_global_span_coef,
         penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
     )
@@ -91,6 +95,7 @@ def solve_spatial_term(
     time_limit_sec,
     span_coef=SPATIAL_SPAN_COEF,
     time_span_coef=0,
+    time_global_span_coef=0,
     penalties=DEFAULT_PENALTIES,
     convex_arc_lambda=0.0,
     timer=None,
@@ -105,6 +110,7 @@ def solve_spatial_term(
         spatial_points=points,
         span_coef=span_coef,
         time_span_coef=time_span_coef,
+        time_global_span_coef=time_global_span_coef,
         penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
     )
@@ -186,6 +192,7 @@ def solve_cluster_first(
     seed=0,
     penalties=DEFAULT_PENALTIES,
     time_span_coef=0,
+    time_global_span_coef=0,
     convex_arc_lambda=0.0,
     timer=None,
 ):
@@ -215,6 +222,7 @@ def solve_cluster_first(
             max_vehicles=max_vehicles,
             time_limit_sec=cluster_time_limit(time_limit_sec, len(members), n),
             time_span_coef=time_span_coef,
+            time_global_span_coef=time_global_span_coef,
             penalties=penalties,
             convex_arc_lambda=convex_arc_lambda,
         ).solve(timer=timer)

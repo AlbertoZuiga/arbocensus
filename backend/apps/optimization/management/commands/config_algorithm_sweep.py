@@ -1,7 +1,8 @@
 import csv
 import math
 import time
-from statistics import mean, pstdev
+from statistics import mean, median, pstdev
+from typing import NamedTuple
 
 from apps.datasets.instances import dataset_uuid
 from apps.datasets.models import Dataset, Tree
@@ -25,6 +26,7 @@ from apps.optimization.solver import (
     BALANCE_ARM_FEASIBLE_FLOOR_B085,
     BALANCE_ARM_FEASIBLE_FLOOR_B090,
     BALANCE_ARM_FEASIBLE_FLOOR_B095,
+    BALANCE_ARM_NO_FLOOR,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
@@ -59,49 +61,65 @@ SPATIAL = RoutingSolution.Strategy.SPATIAL_TERM.value
 GLOBAL = RoutingSolution.Strategy.GLOBAL.value
 GREEDY = "greedy"
 
-# (label, strategy, balance_arm, span_coef, post_resequence, arc_lambda).
+
+class Cell(NamedTuple):
+    label: str
+    strategy: str
+    balance_arm: str
+    span_coef: int = 0
+    post_resequence: bool = False
+    arc_lambda: float = 0.0
+    time_global_span_coef: int = 0
+
+
 # Config axis fixes strategy at spatial_term and sweeps duration soft-bound arms,
-# post-pass resequencing (Phase 2), feasible-floor arms (Phase 3a), and convex arc
-# cost (Phase 3b). Algorithm axis fixes arm at `actual` and sweeps the strategy.
+# post-pass resequencing (Phase 2), feasible-floor arms (Phase 3a), convex arc
+# cost (Phase 3b) and the no-floor family (Phase 4). Algorithm axis fixes arm at
+# `actual` and sweeps the strategy.
 CONFIG_AXIS = [
-    ("actual", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 0.0),
-    ("upper-tmax-tmin9000", SPATIAL, BALANCE_ARM_UPPER_TMAX_TMIN9000, 0, False, 0.0),
-    ("tmin-scaled", SPATIAL, BALANCE_ARM_TMIN_SCALED, 0, False, 0.0),
-    ("service-floor", SPATIAL, BALANCE_ARM_SERVICE_FLOOR, 0, False, 0.0),
-    (
-        "tmin-scaled+exempt-last",
-        SPATIAL,
-        BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
-        0,
-        False,
-        0.0,
-    ),
-    ("span-c100", SPATIAL, BALANCE_ARM_ACTUAL, 100, False, 0.0),
+    Cell("actual", SPATIAL, BALANCE_ARM_ACTUAL),
+    Cell("upper-tmax-tmin9000", SPATIAL, BALANCE_ARM_UPPER_TMAX_TMIN9000),
+    Cell("tmin-scaled", SPATIAL, BALANCE_ARM_TMIN_SCALED),
+    Cell("service-floor", SPATIAL, BALANCE_ARM_SERVICE_FLOOR),
+    Cell("tmin-scaled+exempt-last", SPATIAL, BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST),
+    Cell("span-c100", SPATIAL, BALANCE_ARM_ACTUAL, span_coef=100),
     # Phase 2 — post-pass intra-route resequencing
-    ("actual+reseq", SPATIAL, BALANCE_ARM_ACTUAL, 0, True, 0.0),
-    (
+    Cell("actual+reseq", SPATIAL, BALANCE_ARM_ACTUAL, post_resequence=True),
+    Cell(
         "upper-tmax-tmin9000+reseq",
         SPATIAL,
         BALANCE_ARM_UPPER_TMAX_TMIN9000,
-        0,
-        True,
-        0.0,
+        post_resequence=True,
     ),
     # Phase 3a — feasible floor (T_min_eff = min(T_min, β·total_work/k_est))
-    ("feasible-floor-b085", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B085, 0, False, 0.0),
-    ("feasible-floor-b090", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B090, 0, False, 0.0),
-    ("feasible-floor-b095", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B095, 0, False, 0.0),
+    Cell("feasible-floor-b085", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B085),
+    Cell("feasible-floor-b090", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B090),
+    Cell("feasible-floor-b095", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B095),
     # Phase 3b — convex arc cost (arc_cost = travel + λ·max(0,travel−τ)²/τ)
-    ("arc-convex-l1", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 1.0),
-    ("arc-convex-l5", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 5.0),
-    ("arc-convex-l20", SPATIAL, BALANCE_ARM_ACTUAL, 0, False, 20.0),
+    Cell("arc-convex-l1", SPATIAL, BALANCE_ARM_ACTUAL, arc_lambda=1.0),
+    Cell("arc-convex-l5", SPATIAL, BALANCE_ARM_ACTUAL, arc_lambda=5.0),
+    Cell("arc-convex-l20", SPATIAL, BALANCE_ARM_ACTUAL, arc_lambda=20.0),
+    # Phase 4 — no-floor family: no soft bounds at all, optional Time global span
+    # cost as a soft balance term instead of a floor.
+    Cell("no-floor", SPATIAL, BALANCE_ARM_NO_FLOOR),
+    Cell("no-floor-span-c10", SPATIAL, BALANCE_ARM_NO_FLOOR, time_global_span_coef=10),
+    Cell(
+        "no-floor-span-c100", SPATIAL, BALANCE_ARM_NO_FLOOR, time_global_span_coef=100
+    ),
+    Cell(
+        "no-floor-span-c1000", SPATIAL, BALANCE_ARM_NO_FLOOR, time_global_span_coef=1000
+    ),
+    Cell("no-floor+reseq", SPATIAL, BALANCE_ARM_NO_FLOOR, post_resequence=True),
 ]
 ALGO_AXIS = [
-    ("global", GLOBAL, BALANCE_ARM_ACTUAL, 0, False, 0.0),
-    ("greedy", GREEDY, BALANCE_ARM_ACTUAL, 0, False, 0.0),
+    Cell("global", GLOBAL, BALANCE_ARM_ACTUAL),
+    Cell("greedy", GREEDY, BALANCE_ARM_ACTUAL),
 ]
 
 SEEDS = [1, 2, 3]
+
+DEGENERATE_MIN_STOPS = 5
+DEGENERATE_DURATION_RATIO = 0.25
 
 COLUMNS = [
     "instance",
@@ -111,15 +129,20 @@ COLUMNS = [
     "strategy",
     "balance_arm",
     "span_coef",
+    "time_global_span_coef",
     "post_resequence",
     "arc_lambda",
     "arc_tau",
     "seed",
     "k",
     "drops",
+    "degenerate_routes",
     "travel_sec",
     "balance",
     "sigma_t_sec",
+    "dur_min_sec",
+    "dur_median_sec",
+    "dur_max_sec",
     "crossings",
     "worst_iou",
     "interleave_per_route",
@@ -182,10 +205,10 @@ class Command(BaseCommand):
                 raise CommandError(f"unknown instance '{options['only_instance']}'")
             instances = [options["only_instance"]]
 
-        cells = [("config", *cell) for cell in CONFIG_AXIS]
-        cells += [("algo", *cell) for cell in ALGO_AXIS]
+        cells = [("config", cell) for cell in CONFIG_AXIS]
+        cells += [("algo", cell) for cell in ALGO_AXIS]
         if options["only_cell"]:
-            cells = [c for c in cells if c[1] == options["only_cell"]]
+            cells = [c for c in cells if c[1].label == options["only_cell"]]
             if not cells:
                 raise CommandError(f"unknown cell '{options['only_cell']}'")
 
@@ -194,20 +217,21 @@ class Command(BaseCommand):
             open_m = build_open_matrix(matrix)
             nn_travel = mean_nearest_neighbor_travel(open_m)
             arc_tau = p95_nearest_neighbor_travel(open_m)
-            for axis, cell, strategy, arm, span, post_reseq, arc_lam in cells:
+            for axis, cell in cells:
                 for seed in options["seeds"]:
                     key = (
                         slug,
-                        cell,
-                        strategy,
-                        arm,
-                        str(span),
-                        str(post_reseq),
-                        str(arc_lam),
+                        cell.label,
+                        cell.strategy,
+                        cell.balance_arm,
+                        str(cell.span_coef),
+                        str(cell.time_global_span_coef),
+                        str(cell.post_resequence),
+                        str(cell.arc_lambda),
                         str(seed),
                     )
                     if key in done:
-                        self.stdout.write(f"skip {slug} {cell} seed={seed}")
+                        self.stdout.write(f"skip {slug} {cell.label} seed={seed}")
                         continue
                     row = self._run_cell(
                         slug,
@@ -217,17 +241,12 @@ class Command(BaseCommand):
                         arc_tau,
                         axis,
                         cell,
-                        strategy,
-                        arm,
-                        span,
-                        post_reseq,
-                        arc_lam,
                         seed,
                     )
                     self._append(csv_path, row)
                     done.add(key)
                     self.stdout.write(
-                        f"done {slug} {cell} seed={seed} "
+                        f"done {slug} {cell.label} seed={seed} "
                         f"k={row['k']} bal={row['balance']} "
                         f"cross={row['crossings']} wall={row['wall_clock_sec']}s"
                     )
@@ -244,6 +263,7 @@ class Command(BaseCommand):
                     r["strategy"],
                     r["balance_arm"],
                     r["span_coef"],
+                    r.get("time_global_span_coef", "0"),
                     r.get("post_resequence", "False"),
                     r.get("arc_lambda", "0.0"),
                     r["seed"],
@@ -265,28 +285,13 @@ class Command(BaseCommand):
         matrix = OSRMCostMatrixBuilder().build(trees)
         return trees, matrix
 
-    def _run_cell(
-        self,
-        slug,
-        trees,
-        matrix,
-        nn_travel,
-        arc_tau,
-        axis,
-        cell,
-        strategy,
-        arm,
-        span,
-        post_reseq,
-        arc_lam,
-        seed,
-    ):
+    def _run_cell(self, slug, trees, matrix, nn_travel, arc_tau, axis, cell, seed):
         wall_start = time.perf_counter()
-        if strategy == GREEDY:
+        if cell.strategy == GREEDY:
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
         else:
             rows, worst_iou, interleave, timing = self._ortools_cell(
-                trees, matrix, strategy, arm, span, post_reseq, arc_lam
+                trees, matrix, cell
             )
         wall = round(time.perf_counter() - wall_start, 2)
         return self._metrics_row(
@@ -294,11 +299,6 @@ class Command(BaseCommand):
             len(trees),
             axis,
             cell,
-            strategy,
-            arm,
-            span,
-            post_reseq,
-            arc_lam,
             arc_tau,
             seed,
             rows,
@@ -309,8 +309,9 @@ class Command(BaseCommand):
             wall,
         )
 
-    def _ortools_cell(self, trees, matrix, strategy, arm, span, post_reseq, arc_lam):
-        penalties = PenaltyConfig(balance_arm=arm)
+    def _ortools_cell(self, trees, matrix, cell):
+        strategy = cell.strategy
+        penalties = PenaltyConfig(balance_arm=cell.balance_arm)
         dataset = trees[0].dataset
         raw_routes = None
         rows = worst = interleave = timing = drops_count = None
@@ -327,14 +328,15 @@ class Command(BaseCommand):
                 metrics = OptimizationPipeline(job).run(
                     strategy=strategy,
                     penalties=penalties,
-                    time_span_coef=span,
-                    convex_arc_lambda=arc_lam,
+                    time_span_coef=cell.span_coef,
+                    time_global_span_coef=cell.time_global_span_coef,
+                    convex_arc_lambda=cell.arc_lambda,
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
                 drops_count = len(metrics["dropped_trees"])
                 timing = solution.timing
 
-                if post_reseq:
+                if cell.post_resequence:
                     tree_id_to_idx = {tree.id: i for i, tree in enumerate(trees)}
                     raw_routes = []
                     for route in solution.routes.order_by("route_number"):
@@ -359,7 +361,7 @@ class Command(BaseCommand):
         except _RollbackError:
             pass
 
-        if post_reseq and raw_routes is not None:
+        if cell.post_resequence and raw_routes is not None:
             reseq = resequence_routes(raw_routes, matrix)
             rows, worst, interleave = self._compute_route_metrics(
                 reseq, trees, matrix, drops_count
@@ -428,11 +430,6 @@ class Command(BaseCommand):
         n,
         axis,
         cell,
-        strategy,
-        arm,
-        span,
-        post_reseq,
-        arc_lam,
         arc_tau,
         seed,
         rows,
@@ -447,7 +444,7 @@ class Command(BaseCommand):
         k = len(rows)
         travel_total = sum(travels)
         service_total = sum(r["service_total_sec"] for r in rows)
-        balance = self._balance(durations, arm)
+        balance = self._balance(durations, cell.balance_arm)
         deficit = sum(
             max(0, CENSUS_MIN_ROUTE_TIME_SEC - r["service_total_sec"]) for r in rows
         )
@@ -463,19 +460,24 @@ class Command(BaseCommand):
             "instance": slug,
             "n": n,
             "axis": axis,
-            "cell": cell,
-            "strategy": strategy,
-            "balance_arm": arm,
-            "span_coef": span,
-            "post_resequence": post_reseq,
-            "arc_lambda": arc_lam,
+            "cell": cell.label,
+            "strategy": cell.strategy,
+            "balance_arm": cell.balance_arm,
+            "span_coef": cell.span_coef,
+            "time_global_span_coef": cell.time_global_span_coef,
+            "post_resequence": cell.post_resequence,
+            "arc_lambda": cell.arc_lambda,
             "arc_tau": round(arc_tau, 1),
             "seed": seed,
             "k": k,
             "drops": rows[0]["drops"] if rows else 0,
+            "degenerate_routes": self._degenerate_count(rows),
             "travel_sec": round(travel_total),
             "balance": balance,
             "sigma_t_sec": round(pstdev(durations)) if k > 1 else 0,
+            "dur_min_sec": round(min(durations)) if durations else 0,
+            "dur_median_sec": round(median(durations)) if durations else 0,
+            "dur_max_sec": round(max(durations)) if durations else 0,
             "crossings": sum(r["self_crossings"] for r in rows),
             "worst_iou": round(worst_iou, 3),
             "interleave_per_route": round(interleave, 3),
@@ -489,6 +491,20 @@ class Command(BaseCommand):
             "wall_clock_sec": wall,
             **phases,
         }
+
+    def _degenerate_count(self, rows):
+        # Stub routes no surveyor can be handed: too few stops, or far shorter than
+        # the rest of their own solution. The ratio is relative to the solution's own
+        # median, so it does not flag a solution that is uniformly fragmented.
+        if not rows:
+            return 0
+        med = median(r["duration_sec"] for r in rows)
+        return sum(
+            1
+            for r in rows
+            if r["n_trees"] < DEGENERATE_MIN_STOPS
+            or r["duration_sec"] < DEGENERATE_DURATION_RATIO * med
+        )
 
     def _balance(self, durations, arm):
         if len(durations) <= 1:
