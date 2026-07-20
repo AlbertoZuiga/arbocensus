@@ -28,18 +28,19 @@ set_env_var() {
   printf '%s=%s\n' "$key" "$value" >>"$ENV_FILE"
 }
 
+# DB_HOST_PORT is deliberately not scanned: the db is shared across worktrees, so
+# a scan here would find the shared postgres already on 5433 and bump this
+# worktree to 5434 — which only takes effect if this worktree later becomes the
+# infra owner, silently moving the port every host tool is pinned to.
 backend_port="$(find_free_port "${BACKEND_PORT:-8000}")"
-db_host_port="$(find_free_port "${DB_HOST_PORT:-5433}")"
 frontend_port="$(find_free_port "${FRONTEND_PORT:-5173}")"
 
 cors_allowed_origins="http://localhost:${frontend_port},http://localhost:3000"
 
 set_env_var BACKEND_PORT "$backend_port"
-set_env_var DB_HOST_PORT "$db_host_port"
 set_env_var FRONTEND_PORT "$frontend_port"
 set_env_var CORS_ALLOWED_ORIGINS "$cors_allowed_origins"
 
 printf 'BACKEND_PORT=%s\n' "$backend_port"
-printf 'DB_HOST_PORT=%s\n' "$db_host_port"
 printf 'FRONTEND_PORT=%s\n' "$frontend_port"
 printf 'CORS_ALLOWED_ORIGINS=%s\n' "$cors_allowed_origins"

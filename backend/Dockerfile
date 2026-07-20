@@ -40,6 +40,10 @@ CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers
 
 FROM base AS dev
 
+# line-profiler ships no wheel for this platform and builds from source
+RUN apt-get update && apt-get install -y --no-install-recommends g++ \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install -r dev-requirements.txt
 
 USER app
