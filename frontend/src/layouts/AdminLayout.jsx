@@ -13,7 +13,8 @@ const navLinkClass = ({ isActive }) =>
 export default function AdminLayout() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="flex items-center gap-6 border-b bg-white px-6 py-3">
+      {/* z above the Leaflet overlays and side panels in DatasetDetail (z-[1001]). */}
+      <header className="sticky top-0 z-[1100] flex items-center gap-6 border-b bg-white px-6 py-3">
         <Link to="/admin" className="text-lg font-bold text-primary">
           Arbocensus
         </Link>
