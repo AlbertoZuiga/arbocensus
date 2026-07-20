@@ -37,6 +37,17 @@ la redacción de la tesis.
   corren dentro de una transacción revertida para no ensuciar la base compartida.
   Los overrides de configuración que barre existen como flags en `route_audit`
   (`--balance-arm`, `--span-cost-coefficient`); son opt-in y no alteran el default.
+  `--seeds` son réplicas reales desde `sweep-metrology-20260720`: la semilla permuta
+  el orden de los nodos antes de construir el modelo (OR-Tools no expone semilla de
+  RNG), así que mide la varianza del pipeline entero. La semilla 0 es la identidad.
+  Las celdas `greedy` son deterministas y corren una sola vez por instancia.
+- `manage.py instance_decomposition` → CSV con `--csv <ruta>`. Aritmética estructural
+  pura (sin solver) de una o varias instancias (`--instance <slug> ...`): para cada `k`
+  la cota inferior `MSF_k` (bosque generador mínimo de `k` componentes), la cota vieja
+  de vecino más cercano y el techo por `T_max`.
+- `manage.py rejudge_relleno` → CSV con `--out <ruta>`. Recomputa la métrica de relleno
+  de barridos ya publicados (`--sweep <csv> ...`) contra `MSF_k` (`--decomposition <csv>`),
+  sin solver ni OSRM. Las filas con `drops > 0` quedan vacías: la cota no las acota.
 
 Las instancias reales sobre las que corren estos comandos viven congeladas en
 [`instances/`](instances/README.md) (`manage.py freeze_legacy` las vuelca desde la

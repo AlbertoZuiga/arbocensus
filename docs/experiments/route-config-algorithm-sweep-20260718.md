@@ -3,6 +3,16 @@
 **Fecha:** 2026-07-18
 **Datos:** `route-config-algorithm-sweep-20260718.csv` (una fila por celda; toda cifra de este reporte sale de ese CSV).
 
+> **Corrección posterior — `sweep-metrology-20260720.md`.** Las cifras de este reporte se
+> midieron con un instrumento con dos defectos. (1) Las columnas `seed` **no eran réplicas**: el
+> driver escribía la semilla en el CSV pero nunca la pasaba al solver, así que toda "media sobre
+> 3 semillas" es la media de tres copias de una misma corrida y **ninguna cifra tiene barras de
+> error**. (2) `relleno_sec` mide sobre un cero inalcanzable y sesgado por instancia: en
+> `area-26-n157` contaba como relleno un 47.9 % de geometría irreducible. Las filas siguen siendo
+> mediciones válidas de una corrida; los **veredictos de relleno** y las comparaciones de pocos
+> puntos porcentuales entre brazos, no. El re-juicio de estas filas contra una cota alcanzable
+> está en `sweep-metrology-20260720-rejudge.csv` (columna `relleno_msf_sec`).
+
 Todo el barrido corre por *overrides* de CLI (`route_audit --balance-arm --span-cost-coefficient`
 y el driver `config_algorithm_sweep`). La configuración de producción del solver no se toca:
 los brazos y el coeficiente de span son opt-in y su valor por defecto reproduce el comportamiento
