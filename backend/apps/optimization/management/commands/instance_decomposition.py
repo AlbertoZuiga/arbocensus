@@ -1,8 +1,8 @@
 import csv
 
-import numpy as np
 from apps.datasets.instances import dataset_uuid
 from apps.datasets.models import Dataset, Tree
+from apps.optimization.bounds import minimum_spanning_forest, symmetric_mst_edges
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.n_estimator import mean_nearest_neighbor_travel
 from apps.optimization.solver import build_open_matrix
@@ -30,23 +30,6 @@ COLUMNS = [
 ]
 
 
-def minimum_spanning_tree_edges(matrix):
-    # Prim on the dense symmetrized matrix. Returns the MST edge weights, which is
-    # all the forest bound needs.
-    n = matrix.shape[0]
-    in_tree = np.zeros(n, dtype=bool)
-    in_tree[0] = True
-    best = matrix[0].copy()
-    best[0] = np.inf
-    edges = []
-    for _ in range(n - 1):
-        j = int(np.argmin(np.where(in_tree, np.inf, best)))
-        edges.append(float(best[j]))
-        in_tree[j] = True
-        best = np.minimum(best, matrix[j])
-    return sorted(edges, reverse=True)
-
-
 class Command(BaseCommand):
     help = (
         "Structural decomposition of a frozen instance: for each fleet size k, the "
@@ -58,7 +41,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--csv", type=str, required=True)
-        parser.add_argument("--instance", type=str, required=True)
+        parser.add_argument("--instance", type=str, nargs="+", required=True)
         parser.add_argument("--k-max", type=int, default=6)
         parser.add_argument(
             "--floor",
@@ -69,7 +52,19 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        slug = options["instance"]
+        rows = []
+        for slug in options["instance"]:
+            rows.extend(self._decompose(slug, options))
+
+        csv_path = settings.BASE_DIR.parent / options["csv"]
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with csv_path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=COLUMNS)
+            writer.writeheader()
+            writer.writerows(rows)
+        self.stdout.write(self.style.SUCCESS(f"Decomposition CSV: {csv_path}"))
+
+    def _decompose(self, slug, options):
         try:
             dataset = Dataset.objects.get(id=dataset_uuid(slug))
         except Dataset.DoesNotExist as exc:
@@ -86,18 +81,13 @@ class Command(BaseCommand):
         nn_mean = mean_nearest_neighbor_travel(open_matrix)
         service_total = n * CENSUS_SERVICE_TIME_SEC
 
-        # Symmetrize downward: a directed path can only cost more than the undirected
-        # forest built on min(d_ij, d_ji), so the bound stays valid.
-        real = np.asarray(matrix, dtype=float)
-        symmetric = np.minimum(real, real.T)
-        np.fill_diagonal(symmetric, np.inf)
-        mst_edges = minimum_spanning_tree_edges(symmetric)
+        mst_edges = symmetric_mst_edges(matrix)
 
         rows = []
         for k in range(1, options["k_max"] + 1):
             # k open paths spanning n nodes form a spanning forest of k components,
             # so dropping the k-1 heaviest MST edges lower-bounds their total travel.
-            msf_k = sum(mst_edges[k - 1 :])
+            msf_k = minimum_spanning_forest(mst_edges, k)
             nn_lb = max(0, n - k) * nn_mean
             ub_tmax = k * CENSUS_MAX_ROUTE_TIME_SEC - service_total
             for floor in options["floor"]:
@@ -128,11 +118,4 @@ class Command(BaseCommand):
                     f"relleno_lb={max(0, travel_lb - nn_lb):.0f} "
                     f"feasible={travel_lb <= ub_tmax}"
                 )
-
-        csv_path = settings.BASE_DIR.parent / options["csv"]
-        csv_path.parent.mkdir(parents=True, exist_ok=True)
-        with csv_path.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=COLUMNS)
-            writer.writeheader()
-            writer.writerows(rows)
-        self.stdout.write(self.style.SUCCESS(f"Decomposition CSV: {csv_path}"))
+        return rows

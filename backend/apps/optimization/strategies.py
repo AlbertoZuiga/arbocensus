@@ -39,6 +39,7 @@ def solve_by_strategy(
     time_span_coef=0,
     time_global_span_coef=0,
     convex_arc_lambda=0.0,
+    node_seed=0,
     timer=None,
 ):
     if strategy == RoutingSolution.Strategy.SPATIAL_TERM.value:
@@ -55,6 +56,7 @@ def solve_by_strategy(
             time_span_coef=time_span_coef,
             time_global_span_coef=time_global_span_coef,
             convex_arc_lambda=convex_arc_lambda,
+            node_seed=node_seed,
             timer=timer,
         )
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
@@ -69,6 +71,7 @@ def solve_by_strategy(
             time_span_coef=time_span_coef,
             time_global_span_coef=time_global_span_coef,
             convex_arc_lambda=convex_arc_lambda,
+            node_seed=node_seed,
             timer=timer,
         )
     solver = ArbocensusVRPSolver(
@@ -82,6 +85,7 @@ def solve_by_strategy(
         time_global_span_coef=time_global_span_coef,
         penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
+        node_seed=node_seed,
     )
     return solver.solve(timer=timer)
 
@@ -100,6 +104,7 @@ def solve_spatial_term(
     time_global_span_coef=0,
     penalties=DEFAULT_PENALTIES,
     convex_arc_lambda=0.0,
+    node_seed=0,
     timer=None,
 ):
     solver = ArbocensusVRPSolver(
@@ -115,6 +120,7 @@ def solve_spatial_term(
         time_global_span_coef=time_global_span_coef,
         penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
+        node_seed=node_seed,
     )
     return solver.solve(timer=timer)
 
@@ -191,7 +197,7 @@ def solve_cluster_first(
     max_route_time_sec,
     service_time_sec,
     time_limit_sec,
-    seed=0,
+    node_seed=0,
     penalties=DEFAULT_PENALTIES,
     time_span_coef=0,
     time_global_span_coef=0,
@@ -202,7 +208,7 @@ def solve_cluster_first(
     n = matrix.shape[0]
     k = choose_k(n, matrix, service_time_sec, min_route_time_sec, max_route_time_sec)
     coords = project_equirectangular(points)
-    labels = kmeans(coords, k, seed=seed)
+    labels = kmeans(coords, k, seed=node_seed)
 
     routes = []
     covered = []
@@ -227,6 +233,7 @@ def solve_cluster_first(
             time_global_span_coef=time_global_span_coef,
             penalties=penalties,
             convex_arc_lambda=convex_arc_lambda,
+            node_seed=node_seed,
         ).solve(timer=timer)
         if result is None:
             return None

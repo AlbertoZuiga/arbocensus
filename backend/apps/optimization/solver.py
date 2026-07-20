@@ -1,4 +1,5 @@
 import math
+import random
 import time
 from dataclasses import dataclass
 
@@ -186,6 +187,13 @@ class PenaltyConfig:
 DEFAULT_PENALTIES = PenaltyConfig()
 
 
+def node_permutation(node_count, seed):
+    order = list(range(node_count))
+    if seed:
+        random.Random(seed).shuffle(order)
+    return order
+
+
 @profile
 def build_open_matrix(matrix):
     real = np.asarray(matrix, dtype=float)
@@ -222,8 +230,19 @@ class ArbocensusVRPSolver:
         time_global_span_coef=0,
         penalties=DEFAULT_PENALTIES,
         convex_arc_lambda=0.0,
+        node_seed=0,
     ):
-        self.matrix = build_open_matrix(matrix)
+        real = np.asarray(matrix, dtype=float)
+        # OR-Tools exposes no RNG seed on either parameter proto, so replication is
+        # obtained by permuting the node order: it changes PATH_CHEAPEST_ARC tie
+        # breaking and the GLS trajectory. seed 0 is the identity permutation, so
+        # production behaviour is untouched.
+        self.node_permutation = node_permutation(real.shape[0], node_seed)
+        if node_seed:
+            real = real[np.ix_(self.node_permutation, self.node_permutation)]
+            if spatial_points is not None:
+                spatial_points = [spatial_points[i] for i in self.node_permutation]
+        self.matrix = build_open_matrix(real)
         self.node_count = self.matrix.shape[0] - 1
         self.min_route_time_sec = min_route_time_sec
         self.max_route_time_sec = max_route_time_sec
@@ -454,7 +473,14 @@ class ArbocensusVRPSolver:
         return solution
 
     def _extract_solution(self, manager, routing, solution):
-        return extract_or_tools_routes(manager, routing, solution, self.max_vehicles)
+        routes, dropped = extract_or_tools_routes(
+            manager, routing, solution, self.max_vehicles
+        )
+        perm = self.node_permutation
+        return (
+            [[perm[node] for node in route] for route in routes],
+            [perm[node] for node in dropped],
+        )
 
 
 @profile
