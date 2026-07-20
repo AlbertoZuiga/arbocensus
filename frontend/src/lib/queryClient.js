@@ -1,5 +1,10 @@
 import { QueryClient, defaultShouldDehydrateQuery } from "@tanstack/react-query";
-import { visitStop } from "../api/routes.js";
+import {
+  SKIP_STOP_MUTATION_KEY,
+  VISIT_STOP_MUTATION_KEY,
+  skipStopMutationFn,
+  visitStopMutationFn,
+} from "../hooks/observationMutations.js";
 
 export const DAY_MS = 1000 * 60 * 60 * 24;
 
@@ -15,8 +20,21 @@ export function createAppQueryClient() {
     },
   });
 
-  queryClient.setMutationDefaults(["visitStop"], {
-    mutationFn: (stopId) => visitStop(stopId),
+  // Resumed mutations lose the hook that created them: the defaults must
+  // rebuild exactly the same request from the persisted variables, and refetch
+  // the route so a rejected observation drops its persisted optimistic update.
+  const invalidateRoutes = () => {
+    queryClient.invalidateQueries({ queryKey: ["route"] });
+    queryClient.invalidateQueries({ queryKey: ["my-route"] });
+  };
+
+  queryClient.setMutationDefaults(VISIT_STOP_MUTATION_KEY, {
+    mutationFn: visitStopMutationFn,
+    onSettled: invalidateRoutes,
+  });
+  queryClient.setMutationDefaults(SKIP_STOP_MUTATION_KEY, {
+    mutationFn: skipStopMutationFn,
+    onSettled: invalidateRoutes,
   });
 
   return queryClient;

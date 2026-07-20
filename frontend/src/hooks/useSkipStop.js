@@ -1,14 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { skipStop } from "../api/routes.js";
+import {
+  SKIP_STOP_MUTATION_KEY,
+  skipStopMutationFn,
+} from "./observationMutations.js";
 
 export function useSkipStop(routeId) {
   const queryClient = useQueryClient();
   const queryKey = ["route", routeId];
 
   return useMutation({
-    mutationKey: ["skipStop"],
-    mutationFn: ({ stopId, reason, status, photo, notes }) =>
-      skipStop(stopId, { reason, status, photo, notes }),
+    mutationKey: SKIP_STOP_MUTATION_KEY,
+    mutationFn: skipStopMutationFn,
     onMutate: async ({ stopId, reason }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData(queryKey);

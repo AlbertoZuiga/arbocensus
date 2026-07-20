@@ -1,19 +1,18 @@
+import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { visitStop } from "../api/routes.js";
+import {
+  VISIT_STOP_MUTATION_KEY,
+  visitStopMutationFn,
+  withCapturePosition,
+} from "./observationMutations.js";
 
 export function useVisitStop(routeId, position) {
   const queryClient = useQueryClient();
   const queryKey = ["route", routeId];
 
-  return useMutation({
-    mutationKey: ["visitStop"],
-    mutationFn: ({ stopId, status, photo, notes }) =>
-      visitStop(stopId, {
-        ...(position ? { lat: position.lat, lon: position.lon } : {}),
-        status,
-        photo,
-        notes,
-      }),
+  const mutation = useMutation({
+    mutationKey: VISIT_STOP_MUTATION_KEY,
+    mutationFn: visitStopMutationFn,
     onMutate: async ({ stopId }) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData(queryKey);
@@ -40,4 +39,20 @@ export function useVisitStop(routeId, position) {
       queryClient.invalidateQueries({ queryKey: ["my-route"] });
     },
   });
+
+  const { mutate, mutateAsync } = mutation;
+
+  return {
+    ...mutation,
+    mutate: useCallback(
+      (variables, options) =>
+        mutate(withCapturePosition(variables, position), options),
+      [mutate, position]
+    ),
+    mutateAsync: useCallback(
+      (variables, options) =>
+        mutateAsync(withCapturePosition(variables, position), options),
+      [mutateAsync, position]
+    ),
+  };
 }
