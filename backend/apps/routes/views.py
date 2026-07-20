@@ -39,7 +39,9 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self) -> Any:
-        queryset = Route.objects.select_related("surveyor", "solution")
+        queryset = Route.objects.select_related(
+            "surveyor", "solution"
+        ).with_stop_counts()
         if self.request.user.role != CustomUser.Role.ADMIN:
             queryset = queryset.filter(surveyor=self.request.user)
         if self.action in ("retrieve", "geojson", "path"):
@@ -129,6 +131,7 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         routes = (
             Route.objects.select_related("surveyor")
             .prefetch_related("stops__tree")
+            .with_stop_counts()
             .filter(surveyor=request.user, solution__published_at__isnull=False)
         )
         return Response(RouteSerializer(routes, many=True).data)

@@ -8,6 +8,26 @@ from django.db import models
 from django.utils import timezone
 
 
+class RouteQuerySet(models.QuerySet):
+    def with_stop_counts(self):
+        # The GROUP BY introduced by the counts drops Meta.ordering, so the ordering
+        # has to be re-stated here. route_number is only unique per solution, so it
+        # needs a tie-breaker: the unfiltered list spans solutions and would paginate
+        # non-deterministically without one.
+        # visited_count reads the `visited` boolean while the other two read `status`,
+        # matching what the serializer did before. Both are written only by
+        # mark_visited, so they agree; unifying them needs a migration.
+        return self.order_by("route_number", "id").annotate(
+            visited_count=models.Count("stops", filter=models.Q(stops__visited=True)),
+            pending_count=models.Count(
+                "stops", filter=models.Q(stops__status=RouteStop.Status.PENDING)
+            ),
+            skipped_count=models.Count(
+                "stops", filter=models.Q(stops__status=RouteStop.Status.SKIPPED)
+            ),
+        )
+
+
 class Route(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     solution = models.ForeignKey(
@@ -24,6 +44,8 @@ class Route(models.Model):
         blank=True,
         related_name="routes",
     )
+
+    objects = RouteQuerySet.as_manager()
 
     class Meta:
         ordering = ["route_number"]
