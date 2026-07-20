@@ -4,6 +4,7 @@ from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
 from apps.datasets.models import Dataset
 from django.contrib.gis.geos import Point
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -137,32 +138,43 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
 ORDER_ERROR = "Debes visitar los árboles anteriores primero."
 
 
+def _locked_stop(stop_id, user):
+    return get_object_or_404(
+        RouteStop.objects.select_related("tree", "route").select_for_update(
+            of=("self",)
+        ),
+        id=stop_id,
+        route__surveyor=user,
+    )
+
+
 class RouteStopVisitView(APIView):
     permission_classes = [IsSurveyorRole]
 
     def post(self, request, stop_id):
-        stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
         observation = TreeObservationInputSerializer(data=request.data)
         observation.is_valid(raise_exception=True)
-        if stop.status != RouteStop.Status.PENDING:
-            return Response(RouteStopSerializer(stop).data)
-        if stop.has_pending_predecessor():
-            return Response({"detail": ORDER_ERROR}, status=400)
         data: Any = observation.validated_data
         location = None
         lat = data.get("lat")
         lon = data.get("lon")
         if lat is not None and lon is not None:
             location = Point(lon, lat, srid=4326)
-        stop.mark_visited(location=location, notes=data.get("notes"))
-        TreeObservation.objects.create(
-            tree=stop.tree,
-            route_stop=stop,
-            status=data.get("status", TreeObservation.Status.ALIVE),
-            photo=data.get("photo"),
-            notes=data.get("notes", ""),
-            created_by=request.user,
-        )
+        with transaction.atomic():
+            stop = _locked_stop(stop_id, request.user)
+            if stop.status != RouteStop.Status.PENDING:
+                return Response(RouteStopSerializer(stop).data)
+            if stop.has_pending_predecessor():
+                return Response({"detail": ORDER_ERROR}, status=400)
+            stop.mark_visited(location=location, notes=data.get("notes"))
+            TreeObservation.objects.create(
+                tree=stop.tree,
+                route_stop=stop,
+                status=data.get("status", TreeObservation.Status.ALIVE),
+                photo=data.get("photo"),
+                notes=data.get("notes", ""),
+                created_by=request.user,
+            )
         return Response(RouteStopSerializer(stop).data)
 
 
@@ -170,28 +182,29 @@ class RouteStopSkipView(APIView):
     permission_classes = [IsSurveyorRole]
 
     def post(self, request, stop_id):
-        stop = get_object_or_404(RouteStop, id=stop_id, route__surveyor=request.user)
         observation = TreeObservationInputSerializer(data=request.data)
         observation.is_valid(raise_exception=True)
         reason = (request.data.get("reason") or "").strip()
         if not reason:
             return Response({"detail": "Debes indicar un motivo."}, status=400)
-        if stop.status == RouteStop.Status.SKIPPED:
-            return Response(RouteStopSerializer(stop).data)
-        if stop.status == RouteStop.Status.VISITED:
-            return Response({"detail": "El árbol ya fue visitado."}, status=400)
-        if stop.has_pending_predecessor():
-            return Response({"detail": ORDER_ERROR}, status=400)
-        stop.mark_skipped(reason)
         data: Any = observation.validated_data
-        TreeObservation.objects.create(
-            tree=stop.tree,
-            route_stop=stop,
-            status=data.get("status", TreeObservation.status_for_skip(reason)),
-            photo=data.get("photo"),
-            notes=data.get("notes", ""),
-            created_by=request.user,
-        )
+        with transaction.atomic():
+            stop = _locked_stop(stop_id, request.user)
+            if stop.status == RouteStop.Status.SKIPPED:
+                return Response(RouteStopSerializer(stop).data)
+            if stop.status == RouteStop.Status.VISITED:
+                return Response({"detail": "El árbol ya fue visitado."}, status=400)
+            if stop.has_pending_predecessor():
+                return Response({"detail": ORDER_ERROR}, status=400)
+            stop.mark_skipped(reason)
+            TreeObservation.objects.create(
+                tree=stop.tree,
+                route_stop=stop,
+                status=data.get("status", TreeObservation.status_for_skip(reason)),
+                photo=data.get("photo"),
+                notes=data.get("notes", ""),
+                created_by=request.user,
+            )
         return Response(RouteStopSerializer(stop).data)
 
 
