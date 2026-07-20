@@ -1,8 +1,9 @@
 # Diagnóstico de `area-26-n157` y barrido del piso combinado (duración escalada + paradas)
 
 **Fecha:** 2026-07-20
-**Datos:** `combined-floor-sweep-20260720.csv` (barrido) y
-`combined-floor-diagnostic-20260720.csv` (diagnóstico).
+**Datos:** `combined-floor-sweep-20260720.csv` (barrido),
+`combined-floor-diagnostic-20260720.csv` (diagnóstico) y
+`combined-floor-decomposition-20260720.csv` (aritmética estructural).
 
 Todo corre por *overrides* de CLI del driver `config_algorithm_sweep`. La configuración de
 producción del solver no cambia: defaults (`spatial_term`, `PenaltyConfig` actual, coeficiente
@@ -175,6 +176,131 @@ controles releídos del CSV anterior se corrieron bajo el mismo esquema.
 
 ---
 
-## Resultados
+## Resultados — Parte A (diagnóstico de `area-26-n157`)
 
-_Pendiente: este reporte se commitea con hipótesis, grilla y criterio **antes** de correr._
+Datos: `combined-floor-decomposition-20260720.csv` (aritmética) y
+`combined-floor-diagnostic-20260720.csv` (30 filas: 10 celdas × 3 semillas).
+
+Los dos controles reproducen **exactamente** el ciclo anterior (`actual`: k=3, travel 4 962,
+relleno 2 579; `no-floor`: k=3, travel 4 300, relleno 1 917), así que el arnés es comparable
+fila a fila con `stops-floor-sweep-20260720.csv`.
+
+### A.0 — Hallazgo metodológico: las tres semillas no son réplicas
+
+El driver escribe `seed` al CSV y lo usa en la clave de reanudación, pero **nunca lo pasa al
+solver** ni a los parámetros de búsqueda. Medido: en las **10 celdas** del diagnóstico, las 3
+semillas dan **un único resultado distinto** (k, travel, relleno, balance, cruces y drops
+idénticos, 30 filas).
+
+Consecuencia, que alcanza también a los cuatro barridos previos de la serie: toda "media sobre
+3 semillas" publicada es la media de tres copias del mismo número. **No hay ninguna estimación
+de varianza en la serie**, y cada barrido costó 3× el cómputo necesario. Ninguna cifra previa
+queda invalidada —las medias son correctas, sólo que de un único punto—, pero las diferencias
+de pocos puntos porcentuales entre brazos nunca tuvieron barras de error que las respalden.
+
+### A.1 — Descomposición: k=3 es el mínimo factible, no un exceso
+
+`n = 157`, servicio total `18 840 s`, `nn̄ = 15.47 s`, `T_max = 10 800 s`.
+
+| k | MSF_k (LB-geom) | LB-piso (T_min) | techo UB-tmax | ¿factible? | saturación a priori | relleno_LB (piso nulo) |
+| ---: | ---: | ---: | ---: | :---: | ---: | ---: |
+| 1 | 4 256 | 0 | **−8 040** | **No** | 1.744 | — |
+| 2 | 3 881 | 0 | **2 760** | **No** | 0.872 | — |
+| **3** | **3 618** | **2 760** | 13 560 | **Sí** | 0.581 | **1 235** |
+| 4 | 3 406 | 9 960 | 24 360 | Sí | 0.436 | 1 039 (7 592 con T_min) |
+
+Dos lecturas, ambas aritméticas:
+
+- **La hipótesis del "k̂ de más" queda REFUTADA.** `k = 3` es el **mínimo factible**, no un
+  exceso. `k = 1` no alcanza ni para el servicio (el techo es negativo). `k = 2` es imposible
+  con cobertura completa: la cota geométrica (3 881 s) supera todo el presupuesto de travel que
+  `T_max` deja libre después del servicio (2 760 s). El solver no elige 3 por holgazanería:
+  no puede elegir menos.
+- **El piso de duración está FLOJO en el k que el solver elige.** Con `k = 3`, el T_min de
+  producción obliga `travel ≥ 3·7 200 − 18 840 = 2 760 s`, pero la geometría ya obliga
+  `≥ 3 618 s`. El piso **nunca es la restricción activa**. Por eso los tres ciclos anteriores
+  devolvieron siempre k=3 y un relleno en una banda estrecha: estaban ajustando una restricción
+  inactiva. (En `k = 4` el piso sí mordería, y con fuerza: `relleno_LB` salta a 7 592.)
+
+### A.2 — Frontera beta: plana y no monótona
+
+Grilla completa del piso factible sobre `area-26-n157` (relleno objetivo: **≤ 1 289 s**).
+
+| Celda | T_min_eff | k | travel | relleno | Δ vs `actual` | balance |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `no-floor` (límite de piso nulo) | — | 3 | 4 300 | **1 917** | **−25.7 %** | 0.795 |
+| `feasible-floor-b085` | escalado | 3 | 4 355 | 1 972 | −23.5 % | 0.754 |
+| `feasible-floor-b070` | escalado | 3 | 4 374 | 1 991 | −22.8 % | 0.832 |
+| `feasible-floor-b050` | escalado | 3 | 4 392 | 2 009 | −22.1 % | 0.834 |
+| `feasible-floor-b095` | escalado | 3 | 4 425 | 2 042 | −20.8 % | 0.838 |
+| `feasible-floor-b090` | escalado | 3 | 4 520 | 2 137 | −17.1 % | 0.821 |
+| `actual` (T_min 7 200 completo) | 7 200 | 3 | 4 962 | 2 579 | — | 0.877 |
+
+La respuesta a la pregunta pre-registrada —¿existe algún beta con relleno −≥50 % **y** balance
+≥0.60?— es **no**. Y el patrón importa más que el número:
+
+- Bajar el piso de β=0.95 a β=0.50 —recortarlo casi a la mitad— mueve el relleno de 2 042 a
+  2 009: **1.6 %**. La grilla es **no monótona** (b090 es la peor, b085 la mejor de las seis;
+  rango 1 972–2 137). Eso no es un mecanismo, es ruido de búsqueda.
+- El único escalón real es `actual` (2 579) contra **cualquier** piso escalado (~2 000), y ahí
+  satura. Es exactamente lo que predice A.1: una vez que el piso baja por debajo de lo que la
+  geometría ya obliga, seguir bajándolo no compra nada.
+- **El balance nunca fue la restricción activa acá**: ≥0.754 en toda la grilla, contra un
+  umbral de 0.60.
+
+### A.3 — La palanca k: alcanza el objetivo sólo abandonando árboles
+
+| Corrida | k | drops | travel | relleno | Δ vs `actual` | balance | dur_min | dur_max |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `actual`, k libre (estimador +5) | 3 | 0 | 4 962 | 2 579 | — | 0.877 | 7 294 | 8 321 |
+| `actual`, k forzado a 3 (sin buffer) | 3 | 0 | 4 837 | 2 454 | −4.8 % | 0.896 | 7 517 | 8 391 |
+| `actual`, **k forzado a 2** | 2 | **11** | 3 673 | **1 274** | **−50.6 %** | 0.978 | 10 478 | 10 715 |
+
+- **El buffer de +5 vehículos tampoco es la causa:** forzar exactamente k=3 mejora el relleno
+  un 4.8 %, lejos del 50 % pedido.
+- **`k = 2` sí alcanza el criterio de relleno (−50.6 %) — dejando 11 árboles sin visitar.** Las
+  dos rutas quedan clavadas contra `T_max` (10 478 y 10 715 s, techo 10 800). Es la
+  confirmación empírica de A.1: con cobertura completa `k = 2` es infactible, y el solver sólo
+  la vuelve factible descartando el 7 % del área. La aritmética cierra: con 146 árboles
+  servidos el techo sube a `21 600 − 17 520 = 4 080 s`, y el travel observado (3 673) cae
+  debajo.
+
+**El criterio de relleno se alcanza únicamente no haciendo el trabajo.**
+
+### A.4 — Veredicto del diagnóstico y decisión sobre el criterio
+
+Qué quedó demostrado sobre `area-26-n157`:
+
+1. `k = 3` es el **mínimo factible** con cobertura completa; la hipótesis del exceso de
+   vehículos está **refutada**.
+2. Con `k = 3`, el piso de duración **está flojo**: la geometría obliga más travel que
+   cualquier piso de la familia. Ningún brazo de piso puede mover el relleno de esta instancia,
+   y eso explica por qué tres ciclos fallaron el mismo criterio en la misma instancia.
+3. La familia de pisos está **agotada**: desde piso nulo hasta T_min completo, el relleno vive
+   en 1 917–2 579. El mejor valor posible (−25.7 %) es la mitad de lo que el criterio pide.
+4. El criterio de relleno (−≥50 %) y el criterio de cero drops son **mutuamente insatisfacibles
+   en esta instancia**: el único régimen que alcanza el primero (k=2) viola el segundo.
+
+**Decisión sobre el criterio: NO se reescribe.** La regla pre-registrada exigía
+`relleno_LB(k,F) > 0.5 · relleno_actual` para **todo** k factible. Con `k = 3` la cota medida es
+`relleno_LB = 1 235` contra un objetivo de `1 289`: la cota **no supera** el objetivo, por 4 %.
+La regla **no se dispara**, y el criterio heredado se mantiene intacto para la Parte B.
+
+Lo que sí se puede afirmar es más débil que una imposibilidad formal, y se afirma en esos
+términos: el objetivo exige `travel ≤ 3 673 s`, apenas **1.5 % por encima** de una relajación
+de bosque generador que ignora la restricción de grado 2 de un camino y por lo tanto se sabe
+**floja**, mientras que el mejor brazo medido está **18.9 %** por encima de ella. El criterio es
+**empíricamente inalcanzable con la familia de pisos agotada**, no *demostrablemente*
+imposible. `area-26-n157` seguirá contando como fallo en la Parte B; la diferencia es que ahora
+el fallo está **explicado** y no es un misterio abierto.
+
+Corolario para el diseño: el relleno residual de `area-26-n157` no es *padding* inducido por el
+objetivo, es **geometría de ruteo irreducible** más una métrica cuyo punto cero
+—`(n − k) · nn̄`— es una cota que ningún recorrido real puede tocar. La palanca, si alguna
+queda, no está en el objetivo del VRP.
+
+---
+
+## Resultados — Parte B (barrido del piso combinado)
+
+_Pendiente: la Parte A se commitea con su veredicto **antes** de leer estos resultados._
