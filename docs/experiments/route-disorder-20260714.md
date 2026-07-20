@@ -34,6 +34,12 @@ con UUID deterministas, así que la matriz de costos OSRM se reutiliza entre cor
 Levantar el stack (proyecto `arbocensus` → el volumen `postgres_data` resuelve al externo compartido
 `arbocensus_postgres_data`) y cargar las instancias:
 
+> **NO copiar este comando tal cual hoy.** `arbocensus` es ahora el proyecto de la infra compartida
+> (`docker-compose.shared.yml`): levantar `db` ahí con el compose de prod reemplaza el Postgres
+> compartido por uno sobre el volumen *interno*, dejando sin db a todos los worktrees vivos.
+> Se conserva tal como se ejecutó en su momento. Para reproducirlo, usar otro `-p` (p. ej.
+> `-p arbocensus_prod`). Ver `docs/SHARED_DB_WORKTREES.md`.
+
 ```bash
 docker compose -p arbocensus -f docker-compose.prod.yml up -d --build db redis osrm backend
 # El target prod no monta el repo, así que los CSV congelados no están en la imagen:

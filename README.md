@@ -32,8 +32,8 @@ mkdir -p data/osm
 curl -L https://download.geofabrik.de/south-america/chile-latest.osm.pbf \
      -o data/osm/chile-latest.osm.pbf
 
-# 4. Levantar servicios
-docker compose up
+# 4. Levantar servicios (infra compartida + app de este worktree)
+make up
 ```
 
 OSRM procesa el PBF en el primer inicio (~10–15 min). Posterior a eso levanta en segundos.
@@ -73,8 +73,9 @@ Cantidades y contraseña son configurables (`SEED_ADMIN_COUNT`,
 ./scripts/setup.sh
 source .venv/bin/activate
 
-# 2. Levantar solo la base de datos y Redis con Docker
-docker compose up db redis
+# 2. Levantar la infra compartida (Postgres + OSRM) y el Redis de este worktree
+make shared-up
+docker compose up -d redis
 
 # 3. Aplicar migraciones y levantar el servidor
 cd backend
@@ -177,7 +178,8 @@ variable no se usa).
 │   └── scripts/              # Scripts de lint, format, test
 ├── .github/                  # Workflows CI/CD
 ├── .husky/                   # Git hooks
-├── docker-compose.yml
+├── docker-compose.yml        # App por worktree (backend/frontend/celery/redis)
+├── docker-compose.shared.yml # Infra compartida (db + osrm)
 ├── pyproject.toml            # Ruff, pytest, pyright, coverage
 └── package.json              # Commitlint, Husky, scripts npm
 ```

@@ -6,7 +6,7 @@ Stack: [Vite](https://vitejs.dev/) + [React 18](https://react.dev/) · [Tailwind
 
 ## Desarrollo con Docker (recomendado)
 
-El servicio `frontend` está incluido en el `docker-compose.yml` de la raíz. Levanta toda la plataforma (backend, db, redis, osrm y frontend) con:
+El servicio `frontend` está incluido en el `docker-compose.yml` de la raíz. Levanta la plataforma completa (infra compartida db + osrm, y backend/redis/celery/frontend de este worktree) con:
 
 ```bash
 # desde la raíz del repo
@@ -31,7 +31,7 @@ npm install
 npm run dev                # http://localhost:5173
 ```
 
-El backend debe estar corriendo aparte (`docker compose up backend db`) para que las llamadas a la API funcionen.
+El backend debe estar corriendo aparte (`make up`) para que las llamadas a la API funcionen.
 
 ## Scripts
 

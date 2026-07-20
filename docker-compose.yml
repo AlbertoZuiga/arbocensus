@@ -1,50 +1,27 @@
+# Per-worktree app services (backend + frontend + celery + redis). The heavy
+# infra (db + osrm) is NOT here: it is shared across worktrees under the fixed
+# `arbocensus` project — see docker-compose.shared.yml and the Makefile.
+# One postgres process ever → no WAL PANIC on the external volume.
+#
+# Redis + celery are NOT shared: a shared broker would let one worktree's worker
+# steal tasks enqueued by another (and run the wrong code against the shared db).
+# Each worktree gets its own redis on a PRIVATE network; backend/celery also join
+# the shared network to reach db/osrm by service name. Because the shared infra
+# carries no redis, `redis` resolves unambiguously to this worktree's instance.
+#
+# RUN_MIGRATIONS/SEED_DEV are off: the shared db is migrated + seeded once, on
+# first bring-up. Use `make up`, which also brings the shared infra up.
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgis://arbocensus:${DB_PASSWORD}@db/arbocensus
+  REDIS_URL: redis://redis:6379/0
+  OSRM_URL: http://osrm:5000
+  SECRET_KEY: ${DJANGO_SECRET_KEY}
+  DEBUG: "True"
+  RUN_MIGRATIONS: "false"
+  SEED_DEV: "false"
+
 services:
-  db:
-    image: postgis/postgis:15-3.3
-    platform: linux/amd64
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: arbocensus
-      POSTGRES_USER: arbocensus
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - arbocensus_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U arbocensus"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - "${DB_HOST_PORT:-5433}:5432"
-
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-
-  osrm:
-    image: osrm/osrm-backend
-    platform: linux/amd64
-    volumes:
-      - ./data/osm:/data
-    command: >
-      sh -c "
-        if [ ! -f /data/chile-latest.osrm ]; then
-          echo 'Processing OSM data (first run, ~10-15 min)...' &&
-          osrm-extract -p /opt/foot.lua /data/chile-latest.osm.pbf &&
-          osrm-partition /data/chile-latest.osrm &&
-          osrm-customize /data/chile-latest.osrm;
-        fi &&
-        osrm-routed --algorithm mld /data/chile-latest.osrm --max-table-size 5000 --port 5000
-      "
-    healthcheck:
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5000; printf 'GET /nearest/v1/foot/-70.65,-33.45 HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '\"code\":\"Ok\"' <&3"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
-
   backend:
     build:
       context: ./backend
@@ -52,26 +29,42 @@ services:
       target: dev
     env_file:
       - .env
-    environment:
-      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD}@db/arbocensus
-      REDIS_URL: redis://redis:6379/0
-      OSRM_URL: http://osrm:5000
-      SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DEBUG: "True"
-      RUN_MIGRATIONS: "true"
-      SEED_DEV: "${SEED_DEV:-true}"
-      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
-      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@arbocensus.cl}
-      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-admin}
-    depends_on:
-      db:
-        condition: service_healthy
+    environment: *backend-env
     volumes:
       - ./backend:/app
+      # Sweep/audit write under BASE_DIR.parent (container root); paths like
+      # `docs/experiments/foo.csv` land in /docs → persisted to this worktree.
       - ./docs:/docs
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - default
+      - shared
     command: python manage.py runserver 0.0.0.0:8000
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - .env
+    environment: *backend-env
+    depends_on:
+      - backend
+      - redis
+    volumes:
+      - ./backend:/app
+      - ./docs:/docs
+    networks:
+      - default
+      - shared
+    command: celery -A config worker --loglevel=info --concurrency=2
 
   frontend:
     build:
@@ -89,27 +82,14 @@ services:
       - "${FRONTEND_PORT:-5173}:5173"
     command: npm run dev -- --host
 
-  celery:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgis://arbocensus:${DB_PASSWORD}@db/arbocensus
-      REDIS_URL: redis://redis:6379/0
-      OSRM_URL: http://osrm:5000
-      SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DEBUG: "True"
-      RUN_MIGRATIONS: "false"
-    depends_on:
-      - backend
-      - redis
-    volumes:
-      - ./backend:/app
-    command: celery -A config worker --loglevel=info --concurrency=2
+networks:
+  # Private per-worktree network — carries redis (and frontend). Auto-named
+  # <project>_default, so each worktree's redis is isolated.
+  default: {}
+  # Shared heavy infra (db + osrm), owned by the fixed `arbocensus` project.
+  shared:
+    external: true
+    name: arbocensus_default
 
 volumes:
-  arbocensus_postgres_data:
-    external: true
   redis_data:
