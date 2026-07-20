@@ -7,7 +7,7 @@ from apps.optimization.n_estimator import estimate_max_vehicles
 from apps.optimization.profiling import PhaseTimer, merge_timing
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
 from apps.optimization.solver import DEFAULT_PENALTIES, build_open_matrix
-from apps.optimization.strategies import solve_by_strategy
+from apps.optimization.strategies import SPATIAL_SPAN_COEF, solve_by_strategy
 from apps.routes.models import Route, RouteStop
 from django.db import transaction
 
@@ -49,6 +49,7 @@ class OptimizationPipeline:
         strategy=None,
         time_limit_sec=None,
         penalties=DEFAULT_PENALTIES,
+        spatial_span_coef=SPATIAL_SPAN_COEF,
         time_span_coef=0,
         time_global_span_coef=0,
         convex_arc_lambda=0.0,
@@ -100,6 +101,7 @@ class OptimizationPipeline:
                 max_vehicles=max_vehicles,
                 time_limit_sec=time_limit_sec,
                 penalties=penalties,
+                spatial_span_coef=spatial_span_coef,
                 time_span_coef=time_span_coef,
                 time_global_span_coef=time_global_span_coef,
                 convex_arc_lambda=convex_arc_lambda,
