@@ -303,4 +303,200 @@ queda, no está en el objetivo del VRP.
 
 ## Resultados — Parte B (barrido del piso combinado)
 
-_Pendiente: la Parte A se commitea con su veredicto **antes** de leer estos resultados._
+Datos: `combined-floor-sweep-20260720.csv`. Controles (`actual`, `no-floor-stops10`,
+`feasible-floor-b095`) releídos de `stops-floor-sweep-20260720.csv`, cero cómputo.
+**Drops = 0 y rutas degeneradas = 0 en las tres celdas nuevas, en las 12 instancias.**
+
+Sobre las semillas: la celda `feasible-floor-b060-stops10` se corrió con las 3 semillas
+pre-registradas para verificar en el código nuevo lo que A.0 midió en los brazos existentes.
+Resultado: **12 de 12 instancias con un único resultado distinto** entre las 3 semillas. Con la
+redundancia confirmada también en la ruta de código combinada, las otras dos celdas se
+corrieron con una semilla. La desviación respecto del pre-registro es una economía de cómputo
+demostrablemente sin efecto sobre las cifras: las semillas 2 y 3 son copias bit a bit de la 1.
+
+### n=1607 (denso saturado)
+
+Control `actual`: k=25, cruces 88.0, travel 60 632 s, relleno 33 576 s, balance 0.833.
+
+| Celda | k | cruces | Δ cruces | travel | Δ travel | Δ relleno | balance | degeneradas |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `no-floor-stops10` | 25 | 6.3 | −92.8 % | 58 344 | −3.8 % | −6.8 % | 0.727 | 0 |
+| `feasible-floor-b095` | 25 | **6.0** | **−93.2 %** | 59 338 | −2.1 % | −3.9 % | 0.694 | 0 |
+| `feasible-floor-b060-stops10` | 25 | 7.0 | −92.0 % | **58 159** | **−4.1 %** | **−7.4 %** | 0.727 | 0 |
+| `feasible-floor-b070-stops10` | 25 | 8.0 | −90.9 % | 59 174 | −2.4 % | −4.3 % | 0.716 | 0 |
+| `feasible-floor-b085-stops10` | 25 | 12.0 | −86.4 % | 60 209 | −0.7 % | −1.3 % | 0.791 | 0 |
+
+Las tres celdas nuevas cumplen los tres criterios de n=1607 (cruces −≥30 %, travel ≤+3 %,
+k ≤26).
+
+### Balance por instancia (criterio: ≥0.60 en toda instancia)
+
+| Instancia | `actual` | `stops10` | `b095` | `b060+s10` | `b070+s10` | `b085+s10` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| battery-n50 | 0.998 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| battery-n100 | 0.946 | 0.654 | **0.652** | 0.654 | 0.652 | 0.660 |
+| battery-n200 | 0.832 | 0.590 | 0.679 | 0.667 | 0.629 | **0.597** |
+| battery-n400 | 0.987 | 0.820 | 0.878 | 0.822 | 0.815 | 0.820 |
+| battery-n800 | 0.852 | **0.370** | 0.749 | **0.454** | **0.463** | 0.749 |
+| battery-n1000 | 0.837 | 0.479 | 0.688 | 0.727 | 0.743 | 0.948 |
+| battery-sparse-n250 | 0.946 | 0.681 | 0.768 | 0.681 | 0.681 | 0.639 |
+| battery-sparse-n500 | 0.847 | 0.875 | 0.812 | 0.875 | 0.812 | 0.812 |
+| area-26-n157 | 0.877 | 0.795 | 0.838 | 0.832 | 0.832 | 0.754 |
+| area-27-n72 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| area-29-n43 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| reference-n1607 | 0.833 | 0.727 | 0.694 | 0.727 | 0.716 | 0.791 |
+| **mínimo** | 0.832 | 0.370 | **0.652** | 0.454 | 0.463 | 0.597 |
+| **instancias <0.60** | 0 | 3 | **0** | 1 | 1 | 1 |
+
+`feasible-floor-b085-stops10` falla el criterio de balance **por 0.003** (0.597 contra 0.600,
+en battery-n200). Es un fallo, y como tal se registra: el criterio se fijó antes de correr.
+
+### Áreas reales — relleno
+
+| Celda | area-26-n157 | area-27-n72 | area-29-n43 |
+| --- | ---: | ---: | ---: |
+| `no-floor-stops10` | −25.7 % | −81.9 % | −62.6 % |
+| `feasible-floor-b095` | −20.8 % | −81.5 % | −62.6 % |
+| `feasible-floor-b060-stops10` | −21.1 % | −81.9 % | −62.6 % |
+| `feasible-floor-b070-stops10` | −22.8 % | −81.9 % | −62.6 % |
+| `feasible-floor-b085-stops10` | −23.5 % | −81.5 % | −62.6 % |
+
+`area-27` y `area-29` superan el −50 % con holgura en todas las celdas; los cruces no empeoran
+en ninguna área. **`area-26-n157` vuelve a fallar en las tres celdas nuevas** —y ahora, por la
+Parte A, se sabe **por qué**: con k=3 forzado por `T_max`, el piso está flojo y el relleno
+restante es geometría irreducible. Ningún brazo de piso podía moverlo.
+
+### Estado de cada criterio (a priori)
+
+| Criterio | `b060+s10` | `b070+s10` | `b085+s10` |
+| --- | --- | --- | --- |
+| n=1607 cruces −≥30 % | ✅ | ✅ | ✅ |
+| n=1607 travel ≤+3 % | ✅ | ✅ | ✅ |
+| n=1607 k ≤26 | ✅ | ✅ | ✅ |
+| Áreas: relleno −≥50 % | ❌ (area-26) | ❌ (area-26) | ❌ (area-26) |
+| Áreas: cruces sin empeorar | ✅ | ✅ | ✅ |
+| Drops = 0 | ✅ | ✅ | ✅ |
+| Balance ≥0.60 en toda instancia | ❌ (0.454) | ❌ (0.463) | ❌ (0.597) |
+| 0 rutas degeneradas | ✅ | ✅ | ✅ |
+
+**Ninguna celda cumple el criterio completo.**
+
+### Head-to-head
+
+| | `actual` | `no-floor-stops10` | `b095` | `b060+s10` | `b085+s10` |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| n=1607 cruces | 88.0 | 6.3 | **6.0** | 7.0 | 12.0 |
+| n=1607 travel | — | −3.8 % | −2.1 % | **−4.1 %** | −0.7 % |
+| n=1607 relleno | — | −6.8 % | −3.9 % | **−7.4 %** | −1.3 % |
+| Balance mínimo suite | **0.832** | 0.370 | **0.652** | 0.454 | 0.597 |
+| Instancias <0.60 | **0** | 3 | **0** | 1 | 1 |
+| Rutas degeneradas | **0** | **0** | **0** | **0** | **0** |
+
+### Lectura
+
+- **La composición funciona como mecanismo, y traza una frontera limpia.** Subir beta de 0.60 a
+  0.85 mueve el balance mínimo 0.454 → 0.463 → 0.597 y degrada la geometría de forma monótona
+  (cruces −92.0 % → −90.9 % → −86.4 %; travel −4.1 % → −2.4 % → −0.7 %). El piso de duración
+  compra balance y cuesta geometría, exactamente como predecía la hipótesis.
+- **Pero la premisa de la hipótesis era falsa.** El argumento para componer era: el piso de
+  paradas mata los stubs, lo que *libera* un beta bajo para no comprar relleno. Sólo que
+  `feasible-floor-b095` **ya tenía 0 rutas degeneradas** (medido en el ciclo anterior). No
+  quedaba ningún stub que el piso de paradas pudiera prevenir. El componente anti-stub es
+  **redundante** sobre un piso de duración ya escalado, y el beta bajo que supuestamente
+  habilitaba sólo cuesta balance.
+- **`feasible-floor-b085-stops10` está estrictamente dominado por `feasible-floor-b095`**, que
+  es mejor en las cuatro dimensiones a la vez: balance (0.652 vs 0.597), cruces (−93.2 % vs
+  −86.4 %), travel (−2.1 % vs −0.7 %) y relleno (−3.9 % vs −1.3 %). Añadir el piso de paradas
+  no mejora nada y empeora todo.
+- **`b060+s10` y `b070+s10` no están dominados, pero fallan el piso de cordura de balance.**
+  Ofrecen el mejor travel y el mejor relleno de toda la serie en n=1607 (−4.1 % y −7.4 %) a
+  cambio de un balance de 0.454–0.463 en battery-n800. Son puntos válidos de la frontera
+  geometría-vs-balance, no configuraciones aceptables bajo el criterio vigente.
+- **El cuello de botella de balance se movió de instancia.** En `no-floor-stops10` era
+  battery-n800 (0.370); con beta 0.85 esa instancia se recupera a 0.749 y el mínimo pasa a
+  battery-n200 (0.597). El piso escalado arregla la fragmentación del caso denso y deja
+  expuesto un caso mediano distinto.
+
+---
+
+## Veredicto final
+
+**Ninguna celda del piso combinado queda verificada contra su criterio a priori completo.** No
+se cambia ningún default de producción.
+
+| Celda | Veredicto | Resumen |
+| --- | --- | --- |
+| `feasible-floor-b060-stops10` | **No verificada — balance** | Mejor travel y relleno de la serie en n=1607 (−4.1 %, −7.4 %), 0 degeneradas, 0 drops. Balance mín. 0.454 (battery-n800). |
+| `feasible-floor-b070-stops10` | **No verificada — balance** | Punto intermedio sin virtud propia: balance mín. 0.463, geometría peor que b060. |
+| `feasible-floor-b085-stops10` | **No verificada — dominada** | Falla balance por 0.003 (0.597 vs 0.600, battery-n200) y además está **estrictamente dominada** por `feasible-floor-b095` en balance, cruces, travel y relleno. |
+
+Síntesis:
+
+- **La hipótesis del piso combinado queda refutada, y por una razón precisa: componía un
+  mecanismo con otro que ya no tenía trabajo que hacer.** El piso de paradas resuelve los stubs
+  que aparecen *sin* piso de duración; un piso de duración escalado no produce stubs (b095: 0
+  degeneradas). Componerlos no suma, resta: obliga a bajar beta para dejar espacio, y el beta
+  bajo cuesta balance sin comprar el relleno que se buscaba.
+- **`feasible-floor-b095` sigue siendo el mejor candidato de toda la serie**, ahora por quinto
+  ciclo consecutivo y por primera vez con un competidor directo que lo confirma por dominancia
+  estricta. Pasa balance en las 12 instancias (mín. 0.652), 0 degeneradas, 0 drops y los tres
+  criterios de n=1607.
+- **El único criterio que le falta —el relleno de `area-26-n157`— quedó explicado y cerrado en
+  la Parte A: no es alcanzable modificando el objetivo.** Con `k = 3` impuesto por `T_max`, el
+  piso está flojo y el residuo es geometría de ruteo, no *padding*. **La familia de pisos está
+  agotada como línea de investigación.**
+- **Dos hallazgos transversales que valen más que los brazos medidos:**
+  1. Las "3 semillas" de esta serie nunca fueron réplicas (A.0): el driver no las pasa al
+     solver. Ninguna cifra publicada es incorrecta, pero ninguna tiene barras de error, y cada
+     barrido costó 3× el cómputo necesario.
+  2. La métrica `relleno` tiene su cero en `(n − k) · nn̄`, la suma de las distancias al vecino
+     más cercano de cada nodo — una cota que **ningún recorrido real puede alcanzar**, porque
+     viola la restricción de grado 2 de un camino. En `area-26-n157` el objetivo del criterio
+     quedaba 1.5 % por encima de una relajación floja mientras el mejor brazo estaba 18.9 %
+     por encima. La métrica mide geometría irreducible como si fuera relleno, en toda la serie.
+
+Siguiente dirección, si la hay: no otro brazo de piso. O bien recalibrar la métrica de relleno
+contra una cota alcanzable (por ejemplo el propio MSF_k, ya calculado por
+`instance_decomposition`), o bien mover la palanca fuera del objetivo del VRP —`T_max`, el
+tiempo de servicio o la partición territorial previa—, que es lo único que puede cambiar el k
+que la aritmética impone.
+
+---
+
+## Reproducción
+
+```bash
+# Descomposición estructural (aritmética, sin solver)
+docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
+  python manage.py instance_decomposition \
+    --csv docs/experiments/combined-floor-decomposition-20260720.csv \
+    --instance area-26-n157 --k-max 6 --floor 0 7200
+
+# Diagnóstico de area-26: frontera beta + flota forzada
+for cell in actual no-floor feasible-floor-b050 feasible-floor-b060 \
+            feasible-floor-b070 feasible-floor-b085 feasible-floor-b090 \
+            feasible-floor-b095; do
+  docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
+    python manage.py config_algorithm_sweep \
+      --csv docs/experiments/combined-floor-diagnostic-20260720.csv \
+      --only-instance area-26-n157 --only-cell "$cell"
+done
+for kv in 2 3; do
+  docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
+    python manage.py config_algorithm_sweep \
+      --csv docs/experiments/combined-floor-diagnostic-20260720.csv \
+      --only-instance area-26-n157 --only-cell actual --max-vehicles "$kv"
+done
+
+# Barrido del piso combinado
+docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
+  python manage.py config_algorithm_sweep \
+    --csv docs/experiments/combined-floor-sweep-20260720.csv \
+    --only-cell feasible-floor-b060-stops10 --seeds 1 2 3
+for cell in feasible-floor-b070-stops10 feasible-floor-b085-stops10; do
+  docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
+    python manage.py config_algorithm_sweep \
+      --csv docs/experiments/combined-floor-sweep-20260720.csv \
+      --only-cell "$cell" --seeds 1
+done
+```
