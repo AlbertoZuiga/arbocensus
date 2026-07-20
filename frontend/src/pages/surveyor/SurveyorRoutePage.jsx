@@ -15,6 +15,7 @@ import RouteMap from "../../components/surveyor/RouteMap.jsx";
 import StopList from "../../components/surveyor/StopList.jsx";
 import ProximityPanel from "../../components/surveyor/ProximityPanel.jsx";
 import SurveyorHeader from "../../components/surveyor/SurveyorHeader.jsx";
+import PendingQueueIndicator from "../../components/surveyor/PendingQueueIndicator.jsx";
 import UserMenu from "../../components/UserMenu.jsx";
 import RouteCompletionScreen from "../../components/surveyor/RouteCompletionScreen.jsx";
 import { haversineMeters, PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
@@ -175,6 +176,8 @@ export default function SurveyorRoutePage() {
         resolvedCount={resolvedCount}
         position={position}
       />
+
+      <PendingQueueIndicator />
 
       {routeCompleted ? (
         <RouteCompletionScreen stops={stops} />
