@@ -23,6 +23,12 @@ from apps.optimization.route_metrics import aggregate_metrics, routes_from_point
 from apps.optimization.route_resequencer import resequence_routes
 from apps.optimization.solver import (
     BALANCE_ARM_ACTUAL,
+    BALANCE_ARM_COMBINED_B060_STOPS10,
+    BALANCE_ARM_COMBINED_B070_STOPS10,
+    BALANCE_ARM_COMBINED_B085_STOPS10,
+    BALANCE_ARM_FEASIBLE_FLOOR_B050,
+    BALANCE_ARM_FEASIBLE_FLOOR_B060,
+    BALANCE_ARM_FEASIBLE_FLOOR_B070,
     BALANCE_ARM_FEASIBLE_FLOOR_B085,
     BALANCE_ARM_FEASIBLE_FLOOR_B090,
     BALANCE_ARM_FEASIBLE_FLOOR_B095,
@@ -123,6 +129,15 @@ CONFIG_AXIS = [
     Cell("no-floor-stops15", SPATIAL, BALANCE_ARM_NO_FLOOR_STOPS15),
     Cell("no-floor-lowfloor3600", SPATIAL, BALANCE_ARM_NO_FLOOR_LOWFLOOR3600),
     Cell("no-floor-lowfloor5400", SPATIAL, BALANCE_ARM_NO_FLOOR_LOWFLOOR5400),
+    # Low-beta feasible floors, for the relleno-vs-balance frontier of a single
+    # instance: the pre-existing grid only reaches down to 0.85.
+    Cell("feasible-floor-b050", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B050),
+    Cell("feasible-floor-b060", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B060),
+    Cell("feasible-floor-b070", SPATIAL, BALANCE_ARM_FEASIBLE_FLOOR_B070),
+    # Combined floor: scaled duration floor (balance) + stop-count floor (anti-stub).
+    Cell("feasible-floor-b060-stops10", SPATIAL, BALANCE_ARM_COMBINED_B060_STOPS10),
+    Cell("feasible-floor-b070-stops10", SPATIAL, BALANCE_ARM_COMBINED_B070_STOPS10),
+    Cell("feasible-floor-b085-stops10", SPATIAL, BALANCE_ARM_COMBINED_B085_STOPS10),
 ]
 ALGO_AXIS = [
     Cell("global", GLOBAL, BALANCE_ARM_ACTUAL),
@@ -143,6 +158,7 @@ COLUMNS = [
     "balance_arm",
     "span_coef",
     "spatial_span_coef",
+    "max_vehicles_forced",
     "time_global_span_coef",
     "post_resequence",
     "arc_lambda",
@@ -208,6 +224,15 @@ class Command(BaseCommand):
             help="Override the spatial_term geographic span coefficient",
         )
         parser.add_argument(
+            "--max-vehicles",
+            type=int,
+            default=None,
+            help=(
+                "Force an exact fleet size instead of the estimator (which adds a "
+                "buffer), to test whether padding is an excess-vehicle artefact"
+            ),
+        )
+        parser.add_argument(
             "--seeds",
             type=int,
             nargs="+",
@@ -233,6 +258,7 @@ class Command(BaseCommand):
                 raise CommandError(f"unknown cell '{options['only_cell']}'")
 
         spatial_span_coef = options["spatial_span_coef"]
+        max_vehicles = options["max_vehicles"]
         for slug in instances:
             trees, matrix = self._prepare_instance(slug)
             open_m = build_open_matrix(matrix)
@@ -250,6 +276,7 @@ class Command(BaseCommand):
                         str(cell.post_resequence),
                         str(cell.arc_lambda),
                         str(spatial_span_coef),
+                        str(max_vehicles or ""),
                         str(seed),
                     )
                     if key in done:
@@ -265,6 +292,7 @@ class Command(BaseCommand):
                         cell,
                         seed,
                         spatial_span_coef,
+                        max_vehicles,
                     )
                     self._append(csv_path, row)
                     done.add(key)
@@ -290,6 +318,7 @@ class Command(BaseCommand):
                     r.get("post_resequence", "False"),
                     r.get("arc_lambda", "0.0"),
                     r.get("spatial_span_coef", str(SPATIAL_SPAN_COEF)),
+                    r.get("max_vehicles_forced", ""),
                     r["seed"],
                 )
                 for r in csv.DictReader(handle)
@@ -310,14 +339,24 @@ class Command(BaseCommand):
         return trees, matrix
 
     def _run_cell(
-        self, slug, trees, matrix, nn_travel, arc_tau, axis, cell, seed, span_coef
+        self,
+        slug,
+        trees,
+        matrix,
+        nn_travel,
+        arc_tau,
+        axis,
+        cell,
+        seed,
+        span_coef,
+        max_vehicles,
     ):
         wall_start = time.perf_counter()
         if cell.strategy == GREEDY:
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
         else:
             rows, worst_iou, interleave, timing = self._ortools_cell(
-                trees, matrix, cell, span_coef
+                trees, matrix, cell, span_coef, max_vehicles
             )
         wall = round(time.perf_counter() - wall_start, 2)
         return self._metrics_row(
@@ -328,6 +367,7 @@ class Command(BaseCommand):
             arc_tau,
             seed,
             span_coef,
+            max_vehicles,
             rows,
             worst_iou,
             interleave,
@@ -336,7 +376,7 @@ class Command(BaseCommand):
             wall,
         )
 
-    def _ortools_cell(self, trees, matrix, cell, span_coef):
+    def _ortools_cell(self, trees, matrix, cell, span_coef, max_vehicles):
         strategy = cell.strategy
         penalties = PenaltyConfig(balance_arm=cell.balance_arm)
         dataset = trees[0].dataset
@@ -359,6 +399,7 @@ class Command(BaseCommand):
                     time_span_coef=cell.span_coef,
                     time_global_span_coef=cell.time_global_span_coef,
                     convex_arc_lambda=cell.arc_lambda,
+                    max_vehicles=max_vehicles,
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
                 drops_count = len(metrics["dropped_trees"])
@@ -461,6 +502,7 @@ class Command(BaseCommand):
         arc_tau,
         seed,
         spatial_span_coef,
+        max_vehicles,
         rows,
         worst_iou,
         interleave,
@@ -494,6 +536,7 @@ class Command(BaseCommand):
             "balance_arm": cell.balance_arm,
             "span_coef": cell.span_coef,
             "spatial_span_coef": spatial_span_coef,
+            "max_vehicles_forced": max_vehicles or "",
             "time_global_span_coef": cell.time_global_span_coef,
             "post_resequence": cell.post_resequence,
             "arc_lambda": cell.arc_lambda,

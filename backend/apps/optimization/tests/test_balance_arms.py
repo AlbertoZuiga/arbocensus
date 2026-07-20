@@ -2,6 +2,13 @@ import numpy as np
 import pytest
 from apps.optimization.solver import (
     BALANCE_ARM_ACTUAL,
+    BALANCE_ARM_COMBINED_B060_STOPS10,
+    BALANCE_ARM_COMBINED_B070_STOPS10,
+    BALANCE_ARM_COMBINED_B085_STOPS10,
+    BALANCE_ARM_FEASIBLE_FLOOR_B060,
+    BALANCE_ARM_FEASIBLE_FLOOR_B070,
+    BALANCE_ARM_FEASIBLE_FLOOR_B085,
+    BALANCE_ARM_FEASIBLE_FLOOR_B095,
     BALANCE_ARM_NO_FLOOR,
     BALANCE_ARM_NO_FLOOR_LOWFLOOR3600,
     BALANCE_ARM_NO_FLOOR_LOWFLOOR5400,
@@ -118,6 +125,55 @@ def test_lowfloor_arms_use_an_absolute_time_floor(arm, expected_floor):
 def test_arms_without_stop_floor_declare_no_min_stops():
     assert PenaltyConfig().min_stops() is None
     assert PenaltyConfig(balance_arm=BALANCE_ARM_NO_FLOOR).min_stops() is None
+    assert (
+        PenaltyConfig(balance_arm=BALANCE_ARM_FEASIBLE_FLOOR_B095).min_stops() is None
+    )
+
+
+@pytest.mark.parametrize(
+    ("combined", "plain", "expected_stops"),
+    [
+        (BALANCE_ARM_COMBINED_B060_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B060, 10),
+        (BALANCE_ARM_COMBINED_B070_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B070, 10),
+        (BALANCE_ARM_COMBINED_B085_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B085, 10),
+    ],
+)
+def test_combined_arm_carries_both_floors(combined, plain, expected_stops):
+    config = PenaltyConfig(balance_arm=combined)
+    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    plain_lower, _ = PenaltyConfig(balance_arm=plain).vehicle_bounds(
+        is_last=False, **BOUNDS_KW
+    )
+    assert config.min_stops() == expected_stops
+    assert lower == plain_lower
+    assert upper == (10800, SOFT_UPPER_PENALTY)
+
+
+@pytest.mark.parametrize(
+    ("combined", "plain"),
+    [
+        (BALANCE_ARM_COMBINED_B060_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B060),
+        (BALANCE_ARM_COMBINED_B085_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B085),
+    ],
+)
+def test_combined_arm_scales_its_floor_like_the_plain_beta_arm(combined, plain):
+    matrix = np.full((30, 30), 40.0)
+    np.fill_diagonal(matrix, 0.0)
+    kwargs = {
+        "min_route_time_sec": 7200,
+        "max_route_time_sec": 10800,
+        "service_time_sec": 120,
+        "max_vehicles": 4,
+        "time_limit_sec": 1,
+    }
+    combined_tmin = ArbocensusVRPSolver(
+        matrix, penalties=PenaltyConfig(balance_arm=combined), **kwargs
+    )._compute_effective_tmin()
+    plain_tmin = ArbocensusVRPSolver(
+        matrix, penalties=PenaltyConfig(balance_arm=plain), **kwargs
+    )._compute_effective_tmin()
+    assert combined_tmin == plain_tmin
+    assert combined_tmin < 7200
 
 
 def test_exempt_last_arm_only_exempts_residual_vehicle():

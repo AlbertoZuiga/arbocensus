@@ -53,6 +53,7 @@ class OptimizationPipeline:
         time_span_coef=0,
         time_global_span_coef=0,
         convex_arc_lambda=0.0,
+        max_vehicles=None,
     ):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
@@ -73,11 +74,12 @@ class OptimizationPipeline:
         )
         cost_matrix_timing = cost_matrix_timer.as_dict()
         total_service = len(trees) * self.config.service_time_sec
-        max_vehicles = estimate_max_vehicles(
-            build_open_matrix(matrix),
-            total_service,
-            self.config.min_route_time_sec,
-        )
+        if max_vehicles is None:
+            max_vehicles = estimate_max_vehicles(
+                build_open_matrix(matrix),
+                total_service,
+                self.config.min_route_time_sec,
+            )
         points = [(tree.location.y, tree.location.x) for tree in trees]
 
         strategies_to_run = (
