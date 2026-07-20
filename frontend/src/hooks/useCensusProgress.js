@@ -12,6 +12,7 @@ export function useCensusProgress(datasetId) {
     queryKey: ["census-progress", datasetId],
     queryFn: () => fetchCensusProgress(datasetId),
     enabled: !!datasetId,
+    staleTime: 0,
     refetchInterval: progressPollInterval,
   });
 }
@@ -21,6 +22,7 @@ export function useCensusProgressStops(datasetId, { enabled = false, live = fals
     queryKey: ["census-progress-stops", datasetId],
     queryFn: () => fetchCensusProgressStops(datasetId),
     enabled: enabled && !!datasetId,
+    staleTime: 0,
     refetchInterval: (query) => stopsPollInterval(query, live),
   });
 }
