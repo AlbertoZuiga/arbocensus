@@ -1,6 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import RouteMap from "./RouteMap.jsx";
+
+const mapMock = {
+  fitBounds: vi.fn(),
+  setView: vi.fn(),
+  panTo: vi.fn(),
+  getZoom: vi.fn(() => 15),
+  on: vi.fn(),
+  off: vi.fn(),
+};
 
 vi.mock("leaflet/dist/leaflet.css", () => ({}));
 vi.mock("react-leaflet", () => ({
@@ -16,7 +25,7 @@ vi.mock("react-leaflet", () => ({
       onClick={props.eventHandlers?.click}
     />
   ),
-  useMap: () => ({ fitBounds: vi.fn(), setView: vi.fn(), panTo: vi.fn() }),
+  useMap: () => mapMock,
 }));
 
 const stops = [
@@ -62,5 +71,76 @@ describe("RouteMap", () => {
   it("renders a marker per stop", () => {
     render(<RouteMap stops={stops} selectedStopId={null} onSelectStop={vi.fn()} />);
     expect(screen.getAllByTestId("marker")).toHaveLength(2);
+  });
+
+  describe("follow control", () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it("is disabled and not marked as following without a GPS position", () => {
+      render(<RouteMap stops={stops} selectedStopId={null} onSelectStop={vi.fn()} />);
+      const button = screen.getByRole("button", { name: "Centrar en mi ubicación" });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("follows by default and centers on the user position", () => {
+      render(
+        <RouteMap
+          stops={stops}
+          selectedStopId={null}
+          onSelectStop={vi.fn()}
+          userPosition={{ lat: -33.44, lon: -70.64 }}
+        />
+      );
+      expect(mapMock.setView).toHaveBeenCalledWith([-33.44, -70.64], 17);
+      expect(
+        screen.getByRole("button", { name: "Dejar de seguir mi ubicación" })
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("stops following when tapped, then recenters and resumes on the next tap", () => {
+      render(
+        <RouteMap
+          stops={stops}
+          selectedStopId={null}
+          onSelectStop={vi.fn()}
+          userPosition={{ lat: -33.44, lon: -70.64 }}
+        />
+      );
+      const button = screen.getByRole("button", {
+        name: "Dejar de seguir mi ubicación",
+      });
+      fireEvent.click(button);
+      expect(
+        screen.getByRole("button", { name: "Centrar en mi ubicación" })
+      ).toHaveAttribute("aria-pressed", "false");
+
+      mapMock.setView.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "Centrar en mi ubicación" }));
+      expect(mapMock.setView).toHaveBeenCalledWith([-33.44, -70.64], 17);
+      expect(
+        screen.getByRole("button", { name: "Dejar de seguir mi ubicación" })
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("stops following when the user drags the map", () => {
+      render(
+        <RouteMap
+          stops={stops}
+          selectedStopId={null}
+          onSelectStop={vi.fn()}
+          userPosition={{ lat: -33.44, lon: -70.64 }}
+        />
+      );
+      const dragHandler = mapMock.on.mock.calls.find(
+        ([event]) => event === "dragstart"
+      )[1];
+      act(() => dragHandler());
+      expect(
+        screen.getByRole("button", { name: "Centrar en mi ubicación" })
+      ).toHaveAttribute("aria-pressed", "false");
+    });
   });
 });
