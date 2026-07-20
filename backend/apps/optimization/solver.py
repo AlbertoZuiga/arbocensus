@@ -33,23 +33,43 @@ BALANCE_ARM_UPPER_TMAX_TMIN9000 = "upper-tmax-tmin9000"
 BALANCE_ARM_TMIN_SCALED = "tmin-scaled"
 BALANCE_ARM_SERVICE_FLOOR = "service-floor"
 BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST = "tmin-scaled+exempt-last"
-BALANCE_ARM_FEASIBLE_FLOOR_B085 = "feasible-floor-b085"
-BALANCE_ARM_FEASIBLE_FLOOR_B090 = "feasible-floor-b090"
-BALANCE_ARM_FEASIBLE_FLOOR_B095 = "feasible-floor-b095"
+FEASIBLE_FLOOR_PREFIX = "feasible-floor-b"
+STOPS_FLOOR_SUFFIX = "-stops"
+BALANCE_ARM_FEASIBLE_FLOOR_B050 = f"{FEASIBLE_FLOOR_PREFIX}050"
+BALANCE_ARM_FEASIBLE_FLOOR_B060 = f"{FEASIBLE_FLOOR_PREFIX}060"
+BALANCE_ARM_FEASIBLE_FLOOR_B070 = f"{FEASIBLE_FLOOR_PREFIX}070"
+BALANCE_ARM_FEASIBLE_FLOOR_B085 = f"{FEASIBLE_FLOOR_PREFIX}085"
+BALANCE_ARM_FEASIBLE_FLOOR_B090 = f"{FEASIBLE_FLOOR_PREFIX}090"
+BALANCE_ARM_FEASIBLE_FLOOR_B095 = f"{FEASIBLE_FLOOR_PREFIX}095"
 BALANCE_ARM_NO_FLOOR = "no-floor"
-NO_FLOOR_STOPS_PREFIX = "no-floor-stops"
+NO_FLOOR_STOPS_PREFIX = f"no-floor{STOPS_FLOOR_SUFFIX}"
 NO_FLOOR_LOWFLOOR_PREFIX = "no-floor-lowfloor"
 BALANCE_ARM_NO_FLOOR_STOPS5 = f"{NO_FLOOR_STOPS_PREFIX}5"
 BALANCE_ARM_NO_FLOOR_STOPS10 = f"{NO_FLOOR_STOPS_PREFIX}10"
 BALANCE_ARM_NO_FLOOR_STOPS15 = f"{NO_FLOOR_STOPS_PREFIX}15"
 BALANCE_ARM_NO_FLOOR_LOWFLOOR3600 = f"{NO_FLOOR_LOWFLOOR_PREFIX}3600"
 BALANCE_ARM_NO_FLOOR_LOWFLOOR5400 = f"{NO_FLOOR_LOWFLOOR_PREFIX}5400"
+# Combined floor: the scaled duration floor is what buys balance, the stop-count
+# floor is what forbids stubs without buying padding. They were mutually exclusive
+# until now because each was keyed off the arm name prefix alone.
+BALANCE_ARM_COMBINED_B060_STOPS10 = (
+    f"{BALANCE_ARM_FEASIBLE_FLOOR_B060}{STOPS_FLOOR_SUFFIX}10"
+)
+BALANCE_ARM_COMBINED_B070_STOPS10 = (
+    f"{BALANCE_ARM_FEASIBLE_FLOOR_B070}{STOPS_FLOOR_SUFFIX}10"
+)
+BALANCE_ARM_COMBINED_B085_STOPS10 = (
+    f"{BALANCE_ARM_FEASIBLE_FLOOR_B085}{STOPS_FLOOR_SUFFIX}10"
+)
 BALANCE_ARMS = (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_SERVICE_FLOOR,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
+    BALANCE_ARM_FEASIBLE_FLOOR_B050,
+    BALANCE_ARM_FEASIBLE_FLOOR_B060,
+    BALANCE_ARM_FEASIBLE_FLOOR_B070,
     BALANCE_ARM_FEASIBLE_FLOOR_B085,
     BALANCE_ARM_FEASIBLE_FLOOR_B090,
     BALANCE_ARM_FEASIBLE_FLOOR_B095,
@@ -59,6 +79,9 @@ BALANCE_ARMS = (
     BALANCE_ARM_NO_FLOOR_STOPS15,
     BALANCE_ARM_NO_FLOOR_LOWFLOOR3600,
     BALANCE_ARM_NO_FLOOR_LOWFLOOR5400,
+    BALANCE_ARM_COMBINED_B060_STOPS10,
+    BALANCE_ARM_COMBINED_B070_STOPS10,
+    BALANCE_ARM_COMBINED_B085_STOPS10,
 )
 
 # Charged per MISSING STOP, unlike SOFT_LOWER_PENALTY which is charged per second of
@@ -99,9 +122,10 @@ class PenaltyConfig:
         # Minimum stops per route, or None when the arm sets no stop floor. Walking
         # in circles cannot inflate a stop count, so this floor forbids stub routes
         # without creating any incentive to pad duration.
-        if not self.balance_arm.startswith(NO_FLOOR_STOPS_PREFIX):
+        base, _, stops = self.balance_arm.rpartition(STOPS_FLOOR_SUFFIX)
+        if not base:
             return None
-        return int(self.balance_arm[len(NO_FLOOR_STOPS_PREFIX) :])
+        return int(stops)
 
     def vehicle_bounds(
         self,
@@ -147,7 +171,7 @@ class PenaltyConfig:
             floor = int(arm[len(NO_FLOOR_LOWFLOOR_PREFIX) :])
             lower = (floor, self.soft_lower_penalty)
             upper = (max_route_time_sec, self.soft_upper_penalty)
-        elif arm.startswith("feasible-floor"):
+        elif arm.startswith(FEASIBLE_FLOOR_PREFIX):
             # min_route_time_sec is already T_min_eff (pre-computed by the solver).
             lower = (min_route_time_sec, self.soft_lower_penalty)
             upper = (max_route_time_sec, self.soft_upper_penalty)
@@ -393,9 +417,9 @@ class ArbocensusVRPSolver:
 
     def _compute_effective_tmin(self):
         arm = self.penalties.balance_arm
-        if not arm.startswith("feasible-floor"):
+        if not arm.startswith(FEASIBLE_FLOOR_PREFIX):
             return self.min_route_time_sec
-        beta = float(arm.split("-b")[1]) / 100
+        beta = int(arm[len(FEASIBLE_FLOOR_PREFIX) :].split("-")[0]) / 100
         total_service = self.node_count * self.service_time_sec
         nn = mean_nearest_neighbor_travel(self.matrix)
         total_work = total_service + self.node_count * nn
