@@ -37,6 +37,13 @@ BALANCE_ARM_FEASIBLE_FLOOR_B085 = "feasible-floor-b085"
 BALANCE_ARM_FEASIBLE_FLOOR_B090 = "feasible-floor-b090"
 BALANCE_ARM_FEASIBLE_FLOOR_B095 = "feasible-floor-b095"
 BALANCE_ARM_NO_FLOOR = "no-floor"
+NO_FLOOR_STOPS_PREFIX = "no-floor-stops"
+NO_FLOOR_LOWFLOOR_PREFIX = "no-floor-lowfloor"
+BALANCE_ARM_NO_FLOOR_STOPS5 = f"{NO_FLOOR_STOPS_PREFIX}5"
+BALANCE_ARM_NO_FLOOR_STOPS10 = f"{NO_FLOOR_STOPS_PREFIX}10"
+BALANCE_ARM_NO_FLOOR_STOPS15 = f"{NO_FLOOR_STOPS_PREFIX}15"
+BALANCE_ARM_NO_FLOOR_LOWFLOOR3600 = f"{NO_FLOOR_LOWFLOOR_PREFIX}3600"
+BALANCE_ARM_NO_FLOOR_LOWFLOOR5400 = f"{NO_FLOOR_LOWFLOOR_PREFIX}5400"
 BALANCE_ARMS = (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
@@ -47,7 +54,17 @@ BALANCE_ARMS = (
     BALANCE_ARM_FEASIBLE_FLOOR_B090,
     BALANCE_ARM_FEASIBLE_FLOOR_B095,
     BALANCE_ARM_NO_FLOOR,
+    BALANCE_ARM_NO_FLOOR_STOPS5,
+    BALANCE_ARM_NO_FLOOR_STOPS10,
+    BALANCE_ARM_NO_FLOOR_STOPS15,
+    BALANCE_ARM_NO_FLOOR_LOWFLOOR3600,
+    BALANCE_ARM_NO_FLOOR_LOWFLOOR5400,
 )
+
+# Charged per MISSING STOP, unlike SOFT_LOWER_PENALTY which is charged per second of
+# duration deficit — the same magnitude means a far larger cost here. It is still a
+# price, not a hard bound: a costly enough spatial span term can outbid it.
+STOPS_FLOOR_PENALTY = 10_000
 
 # The `upper-tmax-tmin9000` arm anchors the soft lower bound just under the census
 # floor (T_min≈9000s) so routes are still discouraged from staying tiny, while the
@@ -78,6 +95,14 @@ class PenaltyConfig:
             return max_route_time_sec
         return (min_route_time_sec + max_route_time_sec) // 2
 
+    def min_stops(self):
+        # Minimum stops per route, or None when the arm sets no stop floor. Walking
+        # in circles cannot inflate a stop count, so this floor forbids stub routes
+        # without creating any incentive to pad duration.
+        if not self.balance_arm.startswith(NO_FLOOR_STOPS_PREFIX):
+            return None
+        return int(self.balance_arm[len(NO_FLOOR_STOPS_PREFIX) :])
+
     def vehicle_bounds(
         self,
         *,
@@ -105,13 +130,22 @@ class PenaltyConfig:
                 self.soft_upper_bound(min_route_time_sec, max_route_time_sec),
                 self.soft_upper_penalty,
             )
-        elif arm == BALANCE_ARM_NO_FLOOR:
+        elif arm == BALANCE_ARM_NO_FLOOR or arm.startswith(NO_FLOOR_STOPS_PREFIX):
             # No soft bounds on either side: without a floor the solver has no
             # incentive to walk in circles to reach T_min. The upper is pinned at
             # T_max, which the Time dimension already enforces as a hard capacity, so
             # it can never be violated and costs nothing. Route balance, if wanted,
             # comes from a Time global span cost instead of from the floor.
+            # The stops arms share these bounds: their floor is a minimum number of
+            # visited nodes on the Stops dimension, not a duration, so the Time
+            # dimension stays free of any floor.
             lower = None
+            upper = (max_route_time_sec, self.soft_upper_penalty)
+        elif arm.startswith(NO_FLOOR_LOWFLOOR_PREFIX):
+            # Absolute low time floor instead of T_min: still paddable, but shallow
+            # enough that padding to reach it should be cheap.
+            floor = int(arm[len(NO_FLOOR_LOWFLOOR_PREFIX) :])
+            lower = (floor, self.soft_lower_penalty)
             upper = (max_route_time_sec, self.soft_upper_penalty)
         elif arm.startswith("feasible-floor"):
             # min_route_time_sec is already T_min_eff (pre-computed by the solver).
@@ -260,6 +294,24 @@ class ArbocensusVRPSolver:
                 # spans, so it nudges routes toward equal duration without a floor.
                 time_dimension.SetGlobalSpanCostCoefficient(self.time_global_span_coef)
 
+            min_stops = self.penalties.min_stops()
+            stops_dimension = None
+            if min_stops is not None:
+
+                def stops_callback(from_index, _to_index):
+                    from_node = manager.IndexToNode(from_index)
+                    return 1 if from_node != 0 else 0
+
+                stops_cb_index = routing.RegisterTransitCallback(stops_callback)
+                routing.AddDimension(
+                    stops_cb_index,
+                    0,
+                    self.node_count,
+                    True,
+                    "Stops",
+                )
+                stops_dimension = routing.GetDimensionOrDie("Stops")
+
             routing.SetFixedCostOfAllVehicles(FIXED_VEHICLE_COST)
 
             with timer.phase("model_build", "disjunctions"):
@@ -284,6 +336,10 @@ class ArbocensusVRPSolver:
                     if upper is not None:
                         time_dimension.SetCumulVarSoftUpperBound(
                             end_index, upper[0], upper[1]
+                        )
+                    if stops_dimension is not None:
+                        stops_dimension.SetCumulVarSoftLowerBound(
+                            end_index, min_stops, STOPS_FLOOR_PENALTY
                         )
 
             with timer.phase("model_build", "search_params"):
@@ -315,8 +371,15 @@ class ArbocensusVRPSolver:
                 solution.Value(dist_dim.CumulVar(routing.End(v)))
                 for v in range(self.max_vehicles)
             ]
+        stops_end_cumuls = None
+        if stops_dimension is not None:
+            stops_end_cumuls = [
+                solution.Value(stops_dimension.CumulVar(routing.End(v)))
+                for v in range(self.max_vehicles)
+            ]
         debug = {
             "objective_ortools": solution.ObjectiveValue(),
+            "stops_end_cumuls": stops_end_cumuls,
             "time_end_cumuls": time_end_cumuls,
             "dist_end_cumuls": dist_end_cumuls,
             "max_vehicles": self.max_vehicles,
