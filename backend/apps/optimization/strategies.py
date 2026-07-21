@@ -42,23 +42,6 @@ def solve_by_strategy(
     node_seed=0,
     timer=None,
 ):
-    if strategy == RoutingSolution.Strategy.SPATIAL_TERM.value:
-        return solve_spatial_term(
-            matrix,
-            points=points,
-            min_route_time_sec=min_route_time_sec,
-            max_route_time_sec=max_route_time_sec,
-            service_time_sec=service_time_sec,
-            max_vehicles=max_vehicles,
-            time_limit_sec=time_limit_sec,
-            span_coef=spatial_span_coef,
-            penalties=penalties,
-            time_span_coef=time_span_coef,
-            time_global_span_coef=time_global_span_coef,
-            convex_arc_lambda=convex_arc_lambda,
-            node_seed=node_seed,
-            timer=timer,
-        )
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
         return solve_cluster_first(
             matrix,
@@ -74,23 +57,27 @@ def solve_by_strategy(
             node_seed=node_seed,
             timer=timer,
         )
-    solver = ArbocensusVRPSolver(
+    solver = build_strategy_solver(
+        strategy,
         matrix,
+        points=points,
         min_route_time_sec=min_route_time_sec,
         max_route_time_sec=max_route_time_sec,
         service_time_sec=service_time_sec,
         max_vehicles=max_vehicles,
         time_limit_sec=time_limit_sec,
+        penalties=penalties,
+        spatial_span_coef=spatial_span_coef,
         time_span_coef=time_span_coef,
         time_global_span_coef=time_global_span_coef,
-        penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
         node_seed=node_seed,
     )
     return solver.solve(timer=timer)
 
 
-def solve_spatial_term(
+def build_strategy_solver(
+    strategy,
     matrix,
     *,
     points,
@@ -99,30 +86,29 @@ def solve_spatial_term(
     service_time_sec,
     max_vehicles,
     time_limit_sec,
-    span_coef=SPATIAL_SPAN_COEF,
+    penalties=DEFAULT_PENALTIES,
+    spatial_span_coef=SPATIAL_SPAN_COEF,
     time_span_coef=0,
     time_global_span_coef=0,
-    penalties=DEFAULT_PENALTIES,
     convex_arc_lambda=0.0,
     node_seed=0,
-    timer=None,
 ):
-    solver = ArbocensusVRPSolver(
+    spatial = strategy == RoutingSolution.Strategy.SPATIAL_TERM.value
+    return ArbocensusVRPSolver(
         matrix,
         min_route_time_sec=min_route_time_sec,
         max_route_time_sec=max_route_time_sec,
         service_time_sec=service_time_sec,
         max_vehicles=max_vehicles,
         time_limit_sec=time_limit_sec,
-        spatial_points=points,
-        span_coef=span_coef,
+        spatial_points=points if spatial else None,
+        span_coef=spatial_span_coef if spatial else 0,
         time_span_coef=time_span_coef,
         time_global_span_coef=time_global_span_coef,
         penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
         node_seed=node_seed,
     )
-    return solver.solve(timer=timer)
 
 
 @profile

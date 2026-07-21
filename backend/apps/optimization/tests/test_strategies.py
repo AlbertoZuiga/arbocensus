@@ -8,9 +8,11 @@ from apps.optimization.strategies import (
     cluster_time_limit,
     kmeans,
     project_equirectangular,
+    solve_by_strategy,
     solve_cluster_first,
-    solve_spatial_term,
 )
+
+SPATIAL = RoutingSolution.Strategy.SPATIAL_TERM.value
 
 SANTIAGO_LAT = -33.45
 SANTIAGO_LON = -70.65
@@ -59,7 +61,8 @@ def route_time(open_matrix, route, service_time_sec):
 def test_spatial_term_visits_every_node_once():
     n = 8
     routes, dropped = unwrap(
-        solve_spatial_term(
+        solve_by_strategy(
+            SPATIAL,
             uniform_matrix(n),
             points=line_points(n),
             min_route_time_sec=600,
@@ -78,7 +81,8 @@ def test_spatial_term_visits_every_node_once():
 def test_spatial_term_excludes_dummy_depot():
     n = 6
     routes, dropped = unwrap(
-        solve_spatial_term(
+        solve_by_strategy(
+            SPATIAL,
             uniform_matrix(n),
             points=line_points(n),
             min_route_time_sec=600,
@@ -99,7 +103,8 @@ def test_spatial_term_respects_max_route_time():
     matrix = uniform_matrix(n, travel=120.0)
     max_route_time = 2_000
     routes, dropped = unwrap(
-        solve_spatial_term(
+        solve_by_strategy(
+            SPATIAL,
             matrix,
             points=line_points(n),
             min_route_time_sec=500,
