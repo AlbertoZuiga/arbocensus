@@ -3,6 +3,7 @@
 
 \section{RESULTADOS OBTENIDOS}
 \subsection{Métricas de Calidad de Rutas}
+\label{sec:metricas-calidad}
 
 La calidad de la solución producida por el motor de optimización se evalúa sobre el
 \textit{dataset} legado completo descrito en la Sección~\ref{sec:legacy} (ambas
@@ -62,7 +63,8 @@ la mejor y la peor repetición (59\,911\,s, 59\,892\,s y 59\,892\,s; media
 repetición: ni \texttt{global} ni \texttt{spatial\_term} consumen aleatoriedad
 ---a diferencia de \texttt{cluster\_first}, que la usa para inicializar
 $k$-means--- y el \textit{solver} de \textit{OR-Tools} es determinista dados sus parámetros de
-entrada. La única fuente de varianza es el corte por reloj de pared del GLS:
+entrada. A orden de entrada fijo, la única fuente de varianza es el corte por
+reloj de pared del GLS:
 agotar el mismo presupuesto de 120\,s no equivale a alcanzar el mismo número de
 iteraciones, que depende de la carga de la máquina. Esa varianza residual es la
 que produce los 19\,s de diferencia entre repeticiones ---las tres entregan la
@@ -72,6 +74,26 @@ total, la vuelve irrelevante para las conclusiones. La desviación estándar
 reportada en la
 Tabla~\ref{tab:metricas} es el promedio de las desviaciones estándar calculadas
 dentro de cada repetición, no la desviación del conjunto agregado de rutas.
+
+Corresponde acotar el alcance de esa afirmación. El determinismo descrito rige a
+orden de entrada fijo: \textit{OR-Tools} no expone ninguna semilla de
+aleatorización, pero la construcción de la solución inicial
+(\texttt{PATH\_CHEAPEST\_ARC}) recorre los arcos en orden de índice, de modo que
+permutar el orden de los nodos ---información irrelevante para el problema---
+altera el desempate, la solución inicial y con ella toda la trayectoria del GLS.
+Mediciones posteriores sobre la suite de instancias congeladas, con réplicas
+construidas por permutación del orden de entrada, arrojan dispersiones de otro
+orden de magnitud sobre las métricas de calidad: el índice de balance de carga
+de una configuración experimental, medido en 0.727 sobre una corrida única,
+resulta ser 0.181 $\pm$ 0.215 sobre cinco réplicas
+(\texttt{docs/experiments/sweep-metrology-20260720.md}). La cifra no es
+comparable con el 0.03\,\% anterior ---aquella es dispersión del tiempo de
+desplazamiento y esta un índice adimensional---, pero fija el orden de la
+sensibilidad al orden de entrada. Las cifras de esta sección acotan, por
+tanto, la varianza atribuible al corte por reloj, no la del \textit{pipeline}
+frente a una perturbación del orden de entrada ---coherente con la diferencia
+de 1.2\,\% entre corridas que se describe más abajo y que tiene ese mismo
+origen---.
 
 El criterio de $< 5$ minutos se aplica al tiempo de cómputo del \textit{solver}. El
 tiempo total del \textit{pipeline} depende de si la matriz de costos está en
@@ -544,8 +566,16 @@ trabajo futuro en la Sección~\ref{sec:posibles-mejoras}.
 Para confirmar el origen de los cruces en la función objetivo y explorar si existe
 una configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo
 $\times$ tamaño sobre la suite de instancias congeladas
-(\texttt{route-config-algorithm-sweep-20260718.csv}; 288 celdas, 3 semillas, 12
-instancias, $43 \leq n \leq 1\,607$).
+(\texttt{route-config-algorithm-sweep-20260718.csv}; 96 celdas ---ocho
+configuraciones sobre 12 instancias, $43 \leq n \leq 1\,607$--- registradas en
+288 filas). Cada celda se registró con tres repeticiones nominales, pero el
+comando de gestión que ejecutó el barrido escribía la semilla en el CSV sin
+propagarla al \textit{solver}, de modo que las tres filas de una misma celda no
+son réplicas independientes: difieren solo por el corte por reloj de pared
+descrito en la Sección~\ref{sec:metricas-calidad}. En 78 de las 96 celdas las
+tres filas coinciden exactamente; en las 18 restantes el desplazamiento total
+varía hasta un $3{,}4$\,\%. Las cifras que siguen provienen, por tanto, de una
+medición por celda sin réplica de semilla y no llevan barras de error.
 
 El brazo \texttt{upper-tmax-tmin9000} ---que ancla la penalización blanda superior en
 $T_{\max}$ en lugar del punto medio del intervalo $[T_{\min},\,T_{\max}]$ y eleva el
@@ -908,6 +938,22 @@ iteración de Arbocensus.
   persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría local
   del par, y ningún coeficiente global lo elimina sin degradar las rutas circundantes; la
   solución estructural es la segmentación previa por área de censo.
+
+  \item \textbf{Ausencia de una cota inferior de referencia para el relleno de
+  trayecto}: la discusión de la Sección~\ref{sec:discusion-calidad} caracteriza el
+  relleno de trayecto por la variación relativa del desplazamiento entre
+  configuraciones, sin una cota inferior absoluta que permita separar qué fracción de
+  ese desplazamiento es geometría irreducible. Una cota válida y de cálculo directo es
+  el bosque generador mínimo de $k$ componentes ($\text{MSF}_k$) sobre la matriz
+  simetrizada $\min(d_{ij},\,d_{ji})$: $k$ recorridos abiertos no vacíos que cubren
+  $n$ nodos constituyen un bosque generador de $k$ componentes, y simetrizar hacia
+  abajo solo puede subestimar el costo dirigido de cada arco, de modo que toda
+  solución factible satisface $\text{viaje} \geq \text{MSF}_k$. Evaluar el exceso sobre esa
+  cota, en lugar del desplazamiento absoluto, distingue el relleno evitable de la
+  estructura que ningún recorrido puede eliminar. La cota está implementada en la
+  instrumentación de experimentos y se registra como columna del barrido; lo que queda
+  pendiente es rehacer contra ella las cifras de relleno reportadas en esta memoria,
+  que siguen expresadas como desplazamiento relativo.
 
   \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el heurístico del
   vecino más cercano genera un tiempo de desplazamiento total solo un $4{,}3$\,\% superior
