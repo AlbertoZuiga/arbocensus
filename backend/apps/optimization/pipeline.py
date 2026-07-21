@@ -54,6 +54,7 @@ class OptimizationPipeline:
         time_global_span_coef=0,
         convex_arc_lambda=0.0,
         max_vehicles=None,
+        node_seed=0,
     ):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
@@ -107,6 +108,7 @@ class OptimizationPipeline:
                 time_span_coef=time_span_coef,
                 time_global_span_coef=time_global_span_coef,
                 convex_arc_lambda=convex_arc_lambda,
+                node_seed=node_seed,
                 timer=timer,
             )
             if result is None:

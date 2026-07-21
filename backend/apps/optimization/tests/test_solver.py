@@ -7,6 +7,7 @@ from apps.optimization.solver import (
     ArbocensusVRPSolver,
     PenaltyConfig,
     build_open_matrix,
+    node_permutation,
 )
 
 
@@ -256,3 +257,49 @@ def test_soft_upper_at_the_midpoint_splits_what_tmax_keeps_in_one_route():
 
     assert len(split) > 1
     assert len(kept) == 1
+
+
+def solve_seeded(node_seed, matrix):
+    solver = ArbocensusVRPSolver(
+        matrix,
+        min_route_time_sec=600,
+        max_route_time_sec=6_000,
+        service_time_sec=60,
+        max_vehicles=6,
+        time_limit_sec=3,
+        node_seed=node_seed,
+    )
+    routes, dropped = unwrap(solver.solve())
+    assert dropped == []
+    return routes
+
+
+def scattered_matrix(n, seed=11, scale=400.0):
+    rng = np.random.default_rng(seed)
+    points = rng.random((n, 2)) * scale
+    diffs = points[:, None, :] - points[None, :, :]
+    return np.sqrt((diffs**2).sum(axis=2))
+
+
+def test_node_seed_covers_every_node_under_the_permutation():
+    matrix = scattered_matrix(24)
+    routes = solve_seeded(3, matrix)
+    assert sorted(node for route in routes for node in route) == list(range(24))
+
+
+def test_node_seeds_are_real_replicates():
+    # Without this the sweep's "seeds" are three copies of one run: OR-Tools exposes
+    # no RNG seed, so the permutation is the only source of replicate variance.
+    matrix = scattered_matrix(24)
+    baseline = solve_seeded(1, matrix)
+    assert any(solve_seeded(seed, matrix) != baseline for seed in (2, 3, 4, 5))
+
+
+def test_seed_zero_is_the_identity_permutation():
+    # Production never passes a seed, so seed 0 must leave the node order untouched.
+    assert node_permutation(24, 0) == list(range(24))
+
+
+def test_seed_zero_is_deterministic():
+    matrix = scattered_matrix(24)
+    assert solve_seeded(0, matrix) == solve_seeded(0, matrix)

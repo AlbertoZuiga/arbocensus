@@ -6,6 +6,7 @@ from typing import NamedTuple
 
 from apps.datasets.instances import dataset_uuid
 from apps.datasets.models import Dataset, Tree
+from apps.optimization.bounds import minimum_spanning_forest, symmetric_mst_edges
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.greedy import solve_greedy
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
@@ -180,6 +181,8 @@ COLUMNS = [
     "saturation_mean",
     "sat_estimated",
     "relleno_sec",
+    "msf_k_sec",
+    "relleno_msf_sec",
     "deficit_sec",
     "wall_clock_sec",
     "t_osrm_sec",
@@ -264,8 +267,14 @@ class Command(BaseCommand):
             open_m = build_open_matrix(matrix)
             nn_travel = mean_nearest_neighbor_travel(open_m)
             arc_tau = p95_nearest_neighbor_travel(open_m)
+            mst_edges = symmetric_mst_edges(matrix)
             for axis, cell in cells:
-                for seed in options["seeds"]:
+                seeds = options["seeds"]
+                if cell.strategy == GREEDY:
+                    # Greedy has no seeded decision, so extra seeds would be copies of
+                    # one run dressed up as replicates — the defect this sweep fixes.
+                    seeds = seeds[:1]
+                for seed in seeds:
                     key = (
                         slug,
                         cell.label,
@@ -287,6 +296,7 @@ class Command(BaseCommand):
                         trees,
                         matrix,
                         nn_travel,
+                        mst_edges,
                         arc_tau,
                         axis,
                         cell,
@@ -344,6 +354,7 @@ class Command(BaseCommand):
         trees,
         matrix,
         nn_travel,
+        mst_edges,
         arc_tau,
         axis,
         cell,
@@ -356,7 +367,7 @@ class Command(BaseCommand):
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
         else:
             rows, worst_iou, interleave, timing = self._ortools_cell(
-                trees, matrix, cell, span_coef, max_vehicles
+                trees, matrix, cell, span_coef, max_vehicles, seed
             )
         wall = round(time.perf_counter() - wall_start, 2)
         return self._metrics_row(
@@ -373,10 +384,11 @@ class Command(BaseCommand):
             interleave,
             timing,
             nn_travel,
+            mst_edges,
             wall,
         )
 
-    def _ortools_cell(self, trees, matrix, cell, span_coef, max_vehicles):
+    def _ortools_cell(self, trees, matrix, cell, span_coef, max_vehicles, seed):
         strategy = cell.strategy
         penalties = PenaltyConfig(balance_arm=cell.balance_arm)
         dataset = trees[0].dataset
@@ -400,6 +412,7 @@ class Command(BaseCommand):
                     time_global_span_coef=cell.time_global_span_coef,
                     convex_arc_lambda=cell.arc_lambda,
                     max_vehicles=max_vehicles,
+                    node_seed=seed,
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
                 drops_count = len(metrics["dropped_trees"])
@@ -508,6 +521,7 @@ class Command(BaseCommand):
         interleave,
         timing,
         nn_travel,
+        mst_edges,
         wall,
     ):
         durations = [r["duration_sec"] for r in rows]
@@ -523,6 +537,24 @@ class Command(BaseCommand):
         # excess over that nearest-neighbour lower bound is padding (relleno).
         travel_min_est = max(0, n - k) * nn_travel
         relleno = max(0, round(travel_total - travel_min_est))
+        # Reachable zero point: k open paths spanning n nodes are a spanning forest
+        # of k components, so MSF_k is travel a real solution can actually attain —
+        # unlike the nearest-neighbour sum above, which violates the degree-2
+        # constraint of a path and can never be reached.
+        msf_k = minimum_spanning_forest(mst_edges, k)
+        drops = rows[0]["drops"] if rows else 0
+        if drops:
+            # The forest bound spans every node, so it stops bounding a solution that
+            # abandons some of them.
+            relleno_msf = ""
+        else:
+            if travel_total < msf_k - 1:
+                raise CommandError(
+                    f"{slug} {cell.label}: travel {travel_total:.0f} below the "
+                    f"spanning-forest bound MSF_{k}={msf_k:.0f} — the bound or the "
+                    f"travel accounting is wrong"
+                )
+            relleno_msf = max(0, round(travel_total - msf_k))
         sat_estimated = (
             round(service_total / (k * CENSUS_MAX_ROUTE_TIME_SEC), 3) if k else 0.0
         )
@@ -543,7 +575,7 @@ class Command(BaseCommand):
             "arc_tau": round(arc_tau, 1),
             "seed": seed,
             "k": k,
-            "drops": rows[0]["drops"] if rows else 0,
+            "drops": drops,
             "degenerate_routes": self._degenerate_count(rows),
             "travel_sec": round(travel_total),
             "balance": balance,
@@ -560,6 +592,8 @@ class Command(BaseCommand):
             "saturation_mean": round(mean(r["saturation"] for r in rows), 3),
             "sat_estimated": sat_estimated,
             "relleno_sec": relleno,
+            "msf_k_sec": round(msf_k),
+            "relleno_msf_sec": relleno_msf,
             "deficit_sec": deficit,
             "wall_clock_sec": wall,
             **phases,
