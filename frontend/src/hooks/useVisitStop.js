@@ -22,7 +22,11 @@ export function useVisitStop(routeId, position) {
           ...old,
           stops: old.stops.map((stop) =>
             stop.id === stopId
-              ? { ...stop, visited: true, visited_at: new Date().toISOString() }
+              ? {
+                  ...stop,
+                  status: "visited",
+                  visited_at: new Date().toISOString(),
+                }
               : stop
           ),
         };

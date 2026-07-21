@@ -49,10 +49,8 @@ function SyncConfirmation() {
 }
 
 export default function RouteCompletionScreen({ stops }) {
-  const visitedCount = stops.filter((stop) => stop.visited).length;
-  const skippedCount = stops.filter(
-    (stop) => !stop.visited && stop.status === "skipped",
-  ).length;
+  const visitedCount = stops.filter((stop) => stop.status === "visited").length;
+  const skippedCount = stops.filter((stop) => stop.status === "skipped").length;
 
   return (
     <section

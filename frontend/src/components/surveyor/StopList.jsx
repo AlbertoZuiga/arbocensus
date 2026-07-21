@@ -19,7 +19,7 @@ const dateFormatter = new Intl.DateTimeFormat("es-CL", {
 });
 
 function StatusBadge({ stop, locked }) {
-  if (stop.visited) {
+  if (stop.status === "visited") {
     return (
       <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
         <Check className="h-3.5 w-3.5" aria-hidden="true" />
@@ -71,7 +71,7 @@ function StopCard({ stop, selected, locked, onSelect, cardRef }) {
         <span
           className={cn(
             "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold text-white",
-            stop.visited
+            stop.status === "visited"
               ? "bg-primary"
               : stop.status === "skipped"
                 ? "bg-slate-400"
@@ -97,7 +97,7 @@ function StopCard({ stop, selected, locked, onSelect, cardRef }) {
             )}
           </span>
           <span className="truncate text-xs text-slate-500">
-            {stop.visited && stop.visited_at
+            {stop.status === "visited" && stop.visited_at
               ? dateFormatter.format(new Date(stop.visited_at))
               : stop.status === "skipped"
                 ? (stop.skip_reason ?? "Sin motivo registrado")

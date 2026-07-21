@@ -14,9 +14,9 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 });
 
 const stops = [
-  { id: "s1", visited: true, status: "visited" },
-  { id: "s2", visited: true, status: "visited" },
-  { id: "s3", visited: false, status: "skipped" },
+  { id: "s1", status: "visited" },
+  { id: "s2", status: "visited" },
+  { id: "s3", status: "skipped" },
 ];
 
 function renderScreen() {

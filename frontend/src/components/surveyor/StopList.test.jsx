@@ -3,10 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import StopList from "./StopList.jsx";
 
 const stops = [
-  { id: "s1", sequence: 1, visited: true, visited_at: "2026-07-01T10:00:00Z" },
-  { id: "s2", sequence: 2, visited: false, status: "skipped", skip_reason: "Sin acceso" },
-  { id: "s3", sequence: 3, visited: false, status: "pending", tree_id: "abcdef12" },
-  { id: "s4", sequence: 4, visited: false, status: "pending", tree_id: "12abcdef" },
+  { id: "s1", sequence: 1, status: "visited", visited_at: "2026-07-01T10:00:00Z" },
+  { id: "s2", sequence: 2, status: "skipped", skip_reason: "Sin acceso" },
+  { id: "s3", sequence: 3, status: "pending", tree_id: "abcdef12" },
+  { id: "s4", sequence: 4, status: "pending", tree_id: "12abcdef" },
 ];
 
 describe("StopList", () => {
@@ -63,7 +63,7 @@ describe("StopList", () => {
   });
 
   it("disables the next-pending button and shows an empty state when everything is resolved", () => {
-    const resolved = stops.map((stop) => ({ ...stop, visited: true }));
+    const resolved = stops.map((stop) => ({ ...stop, status: "visited" }));
     render(
       <StopList
         stops={resolved}

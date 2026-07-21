@@ -201,7 +201,8 @@ export default function ProximityPanel({
   if (!stop) return null;
 
   const skipped = stop.status === "skipped";
-  const resolved = stop.visited || skipped;
+  const visited = stop.status === "visited";
+  const resolved = visited || skipped;
   const isSaving = isVisiting || isSkipping;
 
   const handleConfirmVisit = (payload) => {
@@ -252,7 +253,7 @@ export default function ProximityPanel({
             <Badge variant="secondary" className="bg-slate-200 text-slate-600">
               Omitido
             </Badge>
-          ) : stop.visited ? (
+          ) : visited ? (
             <Badge variant="secondary" className="bg-primary/10 text-primary">
               Visitado
             </Badge>
