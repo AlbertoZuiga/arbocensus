@@ -1,3 +1,4 @@
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -94,7 +95,7 @@ def test_geojson_returns_street_following_path_per_route(
     solution, _, _ = solution_with_route
     street_path = [[-70.65, -33.45], [-70.655, -33.455], [-70.66, -33.46]]
     fetch = MagicMock(return_value=street_path)
-    monkeypatch.setattr("apps.routes.views.fetch_route_path", fetch)
+    monkeypatch.setattr("apps.routes.osrm.fetch_route_path", fetch)
 
     admin = CustomUserFactory(role="admin")
     response = _client(admin).get(f"/api/routes/geojson/?solution_id={solution.id}")
@@ -110,6 +111,47 @@ def test_geojson_returns_street_following_path_per_route(
         - feature["properties"]["travel_time_sec"]
     )
     fetch.assert_called_once_with([[-70.65, -33.45], [-70.66, -33.46]])
+
+
+def test_geojson_keeps_route_order_when_fetches_finish_out_of_order(
+    solution_with_route, make_dataset_with_trees, monkeypatch
+):
+    solution, _, _ = solution_with_route
+    for route_number in (2, 3):
+        _, trees = make_dataset_with_trees(
+            [(-70.70 - route_number, -33.50), (-70.71 - route_number, -33.51)]
+        )
+        route = Route.objects.create(
+            solution=solution, route_number=route_number, total_trees=len(trees)
+        )
+        for i, tree in enumerate(trees):
+            RouteStop.objects.create(route=route, tree=tree, sequence=i)
+
+    def fetch(coordinates):
+        # Later routes return first, so a wrong join would reorder the features.
+        time.sleep(0.05 if coordinates[0][0] > -70.70 else 0.0)
+        return [coordinates[0], coordinates[-1]]
+
+    monkeypatch.setattr("apps.routes.osrm.fetch_route_path", fetch)
+
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/routes/geojson/?solution_id={solution.id}")
+
+    assert response.status_code == 200
+    features = response.data["features"]
+    assert [f["properties"]["route_number"] for f in features] == [1, 2, 3]
+    for feature in features:
+        stops = feature["properties"]["stops"]
+        assert feature["geometry"]["coordinates"] == [stops[0], stops[-1]]
+    assert features[0]["properties"]["stops"][0][0] == pytest.approx(-70.65)
+    assert set(features[0]["properties"].keys()) == {
+        "route_number",
+        "total_trees",
+        "travel_time_sec",
+        "total_service_time_sec",
+        "total_estimated_time_sec",
+        "stops",
+    }
 
 
 def test_path_returns_street_following_geometry_for_single_route(

@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Route, RouteStop, TreeObservation
-from .osrm import fetch_route_path
+from .osrm import fetch_route_path, fetch_route_paths
 from .progress import census_progress, census_progress_geojson
 from .serializers import (
     DatasetQuerySerializer,
@@ -56,10 +56,14 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
         return RouteSerializer
 
     @staticmethod
-    def _route_geometry(route):
-        stop_coordinates = [
+    def _stop_coordinates(route):
+        return [
             [stop.tree.location.x, stop.tree.location.y] for stop in route.stops.all()
         ]
+
+    @classmethod
+    def _route_geometry(cls, route):
+        stop_coordinates = cls._stop_coordinates(route)
         coordinates = fetch_route_path(stop_coordinates)
         return stop_coordinates, coordinates
 
@@ -70,9 +74,13 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                 {"detail": "El parámetro solution_id es obligatorio."},
                 status=400,
             )
+        routes = list(self.get_queryset())
+        stop_coordinates_by_route = [self._stop_coordinates(route) for route in routes]
+        paths = fetch_route_paths(stop_coordinates_by_route)
         features = []
-        for route in self.get_queryset():
-            stop_coordinates, coordinates = self._route_geometry(route)
+        for route, stop_coordinates, coordinates in zip(
+            routes, stop_coordinates_by_route, paths, strict=True
+        ):
             features.append(
                 {
                     "type": "Feature",
