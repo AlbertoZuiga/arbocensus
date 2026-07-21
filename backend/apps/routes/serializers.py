@@ -85,9 +85,9 @@ class RouteStopSerializer(serializers.ModelSerializer):
 class RouteSerializer(serializers.ModelSerializer):
     surveyor_name = serializers.SerializerMethodField()
     total_service_time_sec = serializers.SerializerMethodField()
-    visited_count = serializers.SerializerMethodField()
-    pending_count = serializers.SerializerMethodField()
-    skipped_count = serializers.SerializerMethodField()
+    visited_count = serializers.IntegerField(read_only=True)
+    pending_count = serializers.IntegerField(read_only=True)
+    skipped_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Route
@@ -111,19 +111,6 @@ class RouteSerializer(serializers.ModelSerializer):
 
     def get_total_service_time_sec(self, obj):
         return obj.total_estimated_time_sec - obj.travel_time_sec
-
-    def get_visited_count(self, obj):
-        return sum(1 for stop in obj.stops.all() if stop.visited)
-
-    def get_pending_count(self, obj):
-        return sum(
-            1 for stop in obj.stops.all() if stop.status == RouteStop.Status.PENDING
-        )
-
-    def get_skipped_count(self, obj):
-        return sum(
-            1 for stop in obj.stops.all() if stop.status == RouteStop.Status.SKIPPED
-        )
 
 
 class RouteDetailSerializer(RouteSerializer):
