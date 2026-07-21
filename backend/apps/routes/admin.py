@@ -31,8 +31,8 @@ class TreeObservationAdmin(admin.ModelAdmin):
 
 @admin.register(RouteStop)
 class RouteStopAdmin(admin.ModelAdmin):
-    list_display = ["sequence", "route", "tree", "visited", "visited_at"]
-    list_filter = ["route", "visited"]
+    list_display = ["sequence", "route", "tree", "status", "visited_at"]
+    list_filter = ["route", "status"]
     search_fields = ["tree__id", "route__route_number"]
     readonly_fields = [
         "id",

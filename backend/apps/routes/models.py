@@ -14,11 +14,10 @@ class RouteQuerySet(models.QuerySet):
         # has to be re-stated here. route_number is only unique per solution, so it
         # needs a tie-breaker: the unfiltered list spans solutions and would paginate
         # non-deterministically without one.
-        # visited_count reads the `visited` boolean while the other two read `status`,
-        # matching what the serializer did before. Both are written only by
-        # mark_visited, so they agree; unifying them needs a migration.
         return self.order_by("route_number", "id").annotate(
-            visited_count=models.Count("stops", filter=models.Q(stops__visited=True)),
+            visited_count=models.Count(
+                "stops", filter=models.Q(stops__status=RouteStop.Status.VISITED)
+            ),
             pending_count=models.Count(
                 "stops", filter=models.Q(stops__status=RouteStop.Status.PENDING)
             ),
@@ -68,7 +67,6 @@ class RouteStop(models.Model):
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
-    visited = models.BooleanField(default=False)
     visited_at = models.DateTimeField(null=True, blank=True)
     visit_location = gis_models.PointField(srid=4326, null=True, blank=True)
     skip_reason = models.CharField(max_length=200, blank=True)
@@ -88,7 +86,6 @@ class RouteStop(models.Model):
 
     def mark_visited(self, location=None, notes=None):
         self.status = self.Status.VISITED
-        self.visited = True
         self.visited_at = timezone.now()
         if location is not None:
             self.visit_location = location
@@ -97,7 +94,6 @@ class RouteStop(models.Model):
         self.save(
             update_fields=[
                 "status",
-                "visited",
                 "visited_at",
                 "visit_location",
                 "notes",
