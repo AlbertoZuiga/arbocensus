@@ -3,6 +3,7 @@
 
 \section{RESULTADOS OBTENIDOS}
 \subsection{Métricas de Calidad de Rutas}
+\label{sec:metricas-calidad}
 
 La calidad de la solución producida por el motor de optimización se evalúa sobre el
 \textit{dataset} legado completo descrito en la Sección~\ref{sec:legacy} (ambas
@@ -544,8 +545,16 @@ trabajo futuro en la Sección~\ref{sec:posibles-mejoras}.
 Para confirmar el origen de los cruces en la función objetivo y explorar si existe
 una configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo
 $\times$ tamaño sobre la suite de instancias congeladas
-(\texttt{route-config-algorithm-sweep-20260718.csv}; 288 celdas, 3 semillas, 12
-instancias, $43 \leq n \leq 1\,607$).
+(\texttt{route-config-algorithm-sweep-20260718.csv}; 96 celdas ---ocho
+configuraciones sobre 12 instancias, $43 \leq n \leq 1\,607$--- registradas en
+288 filas). Cada celda se registró con tres repeticiones nominales, pero el
+comando de gestión que ejecutó el barrido escribía la semilla en el CSV sin
+propagarla al \textit{solver}, de modo que las tres filas de una misma celda no
+son réplicas independientes: difieren solo por el corte por reloj de pared
+descrito en la Sección~\ref{sec:metricas-calidad}. En 78 de las 96 celdas las
+tres filas coinciden exactamente; en las 18 restantes el desplazamiento total
+varía hasta un $3{,}4$\,\%. Las cifras que siguen provienen, por tanto, de una
+medición por celda sin réplica de semilla y no llevan barras de error.
 
 El brazo \texttt{upper-tmax-tmin9000} ---que ancla la penalización blanda superior en
 $T_{\max}$ en lugar del punto medio del intervalo $[T_{\min},\,T_{\max}]$ y eleva el
