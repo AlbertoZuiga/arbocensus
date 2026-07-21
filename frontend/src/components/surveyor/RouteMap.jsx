@@ -130,7 +130,11 @@ export default function RouteMap({
         <Marker
           key={stop.id}
           position={[stop.lat, stop.lon]}
-          icon={stopIcon(stop.sequence, stop.visited, stop.id === selectedStopId)}
+          icon={stopIcon(
+            stop.sequence,
+            stop.status === "visited",
+            stop.id === selectedStopId,
+          )}
           eventHandlers={{ click: () => onSelectStop(stop.id) }}
         />
       ))}

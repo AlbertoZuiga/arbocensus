@@ -139,9 +139,9 @@ def test_visit_marks_stop_visited(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
     assert response.status_code == 200
-    assert response.data["visited"] is True
+    assert response.data["status"] == RouteStop.Status.VISITED
     stops[0].refresh_from_db()
-    assert stops[0].visited is True
+    assert stops[0].status == RouteStop.Status.VISITED
     assert stops[0].visited_at is not None
 
 
@@ -152,7 +152,7 @@ def test_visit_next_pending_stop_in_order_succeeds(solution_with_route, surveyor
     second = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
     assert second.status_code == 200
     stops[1].refresh_from_db()
-    assert stops[1].visited is True
+    assert stops[1].status == RouteStop.Status.VISITED
 
 
 def test_visit_out_of_order_returns_400(solution_with_route, surveyor):
@@ -161,7 +161,7 @@ def test_visit_out_of_order_returns_400(solution_with_route, surveyor):
     assert response.status_code == 400
     assert response.data["detail"] == "Debes visitar los árboles anteriores primero."
     stops[1].refresh_from_db()
-    assert stops[1].visited is False
+    assert stops[1].status == RouteStop.Status.PENDING
 
 
 def test_revisiting_visited_stop_is_idempotent(solution_with_route, surveyor):
@@ -171,7 +171,7 @@ def test_revisiting_visited_stop_is_idempotent(solution_with_route, surveyor):
     first_visited_at = stops[0].visited_at
     response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
     assert response.status_code == 200
-    assert response.data["visited"] is True
+    assert response.data["status"] == RouteStop.Status.VISITED
     stops[0].refresh_from_db()
     assert stops[0].visited_at == first_visited_at
 
@@ -224,7 +224,7 @@ def test_skip_unblocks_next_stop(solution_with_route, surveyor):
     visit = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
     assert visit.status_code == 200
     stops[1].refresh_from_db()
-    assert stops[1].visited is True
+    assert stops[1].status == RouteStop.Status.VISITED
 
 
 def test_skip_out_of_order_returns_400(solution_with_route, surveyor):
@@ -301,7 +301,7 @@ def test_visit_foreign_stop_returns_404(solution_with_route):
     response = _client(other).post(f"/api/routes/stops/{stops[0].id}/visit/")
     assert response.status_code == 404
     stops[0].refresh_from_db()
-    assert stops[0].visited is False
+    assert stops[0].status == RouteStop.Status.PENDING
 
 
 def test_visit_rejected_for_non_surveyor(solution_with_route):

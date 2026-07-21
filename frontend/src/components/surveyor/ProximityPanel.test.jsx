@@ -15,7 +15,7 @@ vi.mock("./CameraCapture.jsx", () => ({
   ),
 }));
 
-const stop = { id: "s1", sequence: 2, lat: -33.45, lon: -70.65, visited: false };
+const stop = { id: "s1", sequence: 2, lat: -33.45, lon: -70.65, status: "pending" };
 
 function renderPanel(props = {}) {
   return render(
@@ -200,7 +200,7 @@ describe("ProximityPanel", () => {
   });
 
   it("keeps showing Visitado for an already visited stop", () => {
-    renderPanel({ stop: { ...stop, visited: true } });
+    renderPanel({ stop: { ...stop, status: "visited" } });
     expect(screen.getByText("Visitado")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /registrar/i })

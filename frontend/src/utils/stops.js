@@ -1,5 +1,5 @@
 export function isStopResolved(stop) {
-  return stop.visited || stop.status === "skipped";
+  return stop.status === "visited" || stop.status === "skipped";
 }
 
 export function isStopLocked(stop, nextPendingStopId) {

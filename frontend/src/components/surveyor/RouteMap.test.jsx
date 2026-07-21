@@ -29,8 +29,8 @@ vi.mock("react-leaflet", () => ({
 }));
 
 const stops = [
-  { id: "s1", sequence: 1, lat: -33.45, lon: -70.65, visited: true },
-  { id: "s2", sequence: 2, lat: -33.46, lon: -70.66, visited: false },
+  { id: "s1", sequence: 1, lat: -33.45, lon: -70.65, status: "visited" },
+  { id: "s2", sequence: 2, lat: -33.46, lon: -70.66, status: "pending" },
 ];
 
 describe("RouteMap", () => {

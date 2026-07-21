@@ -47,7 +47,6 @@ function stop(id, overrides = {}) {
     lat: -33.45,
     lon: -70.65,
     status: "pending",
-    visited: false,
     ...overrides,
   };
 }
@@ -116,7 +115,7 @@ describe("SurveyorRoutePage core flow", () => {
     useRouteDetail.mockReturnValue({
       data: {
         ...route,
-        stops: [stop("s1", { visited: true, status: "visited" }), stop("s2")],
+        stops: [stop("s1", { status: "visited" }), stop("s2")],
       },
       isLoading: false,
     });
@@ -131,7 +130,7 @@ describe("SurveyorRoutePage core flow", () => {
       data: {
         ...route,
         stops: [
-          stop("s1", { visited: true, status: "visited" }),
+          stop("s1", { status: "visited" }),
           stop("s2", { status: "skipped" }),
         ],
       },

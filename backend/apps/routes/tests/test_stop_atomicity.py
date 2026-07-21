@@ -51,7 +51,6 @@ def test_visit_rolls_back_stop_when_observation_fails(stops, surveyor):
         client.post(url, {"notes": "primer intento"}, format="json")
     stops[0].refresh_from_db()
     assert stops[0].status == RouteStop.Status.PENDING
-    assert not stops[0].visited
     assert TreeObservation.objects.count() == 0
 
     response = client.post(url, {"notes": "reintento"}, format="json")

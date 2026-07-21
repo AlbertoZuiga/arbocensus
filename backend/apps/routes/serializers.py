@@ -74,7 +74,6 @@ class RouteStopSerializer(serializers.ModelSerializer):
             "lon",
             "lat",
             "status",
-            "visited",
             "visited_at",
             "skip_reason",
             "notes",
