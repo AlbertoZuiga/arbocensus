@@ -3,6 +3,7 @@ import math
 from apps.datasets.models import Tree
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingConfig, RoutingSolution
+from apps.optimization.multistart import solve_multistart
 from apps.optimization.n_estimator import estimate_max_vehicles
 from apps.optimization.profiling import PhaseTimer, merge_timing
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
@@ -12,6 +13,10 @@ from apps.routes.models import Route, RouteStop
 from django.db import transaction
 
 SOLVER_TIME_LIMIT_SEC = 120
+
+
+def default_time_limit_sec(tree_count):
+    return min(int(30 + 1.5 * tree_count), SOLVER_TIME_LIMIT_SEC)
 
 
 def estimate_fleet_from_cache(
@@ -55,6 +60,7 @@ class OptimizationPipeline:
         convex_arc_lambda=0.0,
         max_vehicles=None,
         node_seed=0,
+        node_seeds=None,
     ):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
@@ -64,7 +70,8 @@ class OptimizationPipeline:
             raise ValueError("Dataset needs at least 2 active trees to optimize")
 
         if time_limit_sec is None:
-            time_limit_sec = min(int(30 + 1.5 * len(trees)), SOLVER_TIME_LIMIT_SEC)
+            time_limit_sec = default_time_limit_sec(len(trees))
+        seeds = node_seeds or [node_seed]
 
         cost_matrix_timer = PhaseTimer()
         matrix = OSRMCostMatrixBuilder().build(trees, timer=cost_matrix_timer)
@@ -94,23 +101,27 @@ class OptimizationPipeline:
         dropped_nodes = set()
         for s in strategies_to_run:
             timer = PhaseTimer()
-            result = solve_by_strategy(
-                s.value,
-                matrix,
-                points=points,
-                min_route_time_sec=self.config.min_route_time_sec,
-                max_route_time_sec=self.config.max_route_time_sec,
-                service_time_sec=self.config.service_time_sec,
-                max_vehicles=max_vehicles,
-                time_limit_sec=time_limit_sec,
-                penalties=penalties,
-                spatial_span_coef=spatial_span_coef,
-                time_span_coef=time_span_coef,
-                time_global_span_coef=time_global_span_coef,
-                convex_arc_lambda=convex_arc_lambda,
-                node_seed=node_seed,
-                timer=timer,
-            )
+            solve_kwargs = {
+                "points": points,
+                "min_route_time_sec": self.config.min_route_time_sec,
+                "max_route_time_sec": self.config.max_route_time_sec,
+                "service_time_sec": self.config.service_time_sec,
+                "max_vehicles": max_vehicles,
+                "time_limit_sec": time_limit_sec,
+                "penalties": penalties,
+                "spatial_span_coef": spatial_span_coef,
+                "time_span_coef": time_span_coef,
+                "time_global_span_coef": time_global_span_coef,
+                "convex_arc_lambda": convex_arc_lambda,
+            }
+            if len(seeds) > 1:
+                result = solve_multistart(
+                    s.value, matrix, node_seeds=seeds, timer=timer, **solve_kwargs
+                )
+            else:
+                result = solve_by_strategy(
+                    s.value, matrix, node_seed=seeds[0], timer=timer, **solve_kwargs
+                )
             if result is None:
                 raise ValueError(
                     f"No feasible solution for strategy '{s.value}': the solver could "
