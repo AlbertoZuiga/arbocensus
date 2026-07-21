@@ -63,7 +63,8 @@ la mejor y la peor repetición (59\,911\,s, 59\,892\,s y 59\,892\,s; media
 repetición: ni \texttt{global} ni \texttt{spatial\_term} consumen aleatoriedad
 ---a diferencia de \texttt{cluster\_first}, que la usa para inicializar
 $k$-means--- y el \textit{solver} de \textit{OR-Tools} es determinista dados sus parámetros de
-entrada. La única fuente de varianza es el corte por reloj de pared del GLS:
+entrada. A orden de entrada fijo, la única fuente de varianza es el corte por
+reloj de pared del GLS:
 agotar el mismo presupuesto de 120\,s no equivale a alcanzar el mismo número de
 iteraciones, que depende de la carga de la máquina. Esa varianza residual es la
 que produce los 19\,s de diferencia entre repeticiones ---las tres entregan la
@@ -73,6 +74,26 @@ total, la vuelve irrelevante para las conclusiones. La desviación estándar
 reportada en la
 Tabla~\ref{tab:metricas} es el promedio de las desviaciones estándar calculadas
 dentro de cada repetición, no la desviación del conjunto agregado de rutas.
+
+Corresponde acotar el alcance de esa afirmación. El determinismo descrito rige a
+orden de entrada fijo: \textit{OR-Tools} no expone ninguna semilla de
+aleatorización, pero la construcción de la solución inicial
+(\texttt{PATH\_CHEAPEST\_ARC}) recorre los arcos en orden de índice, de modo que
+permutar el orden de los nodos ---información irrelevante para el problema---
+altera el desempate, la solución inicial y con ella toda la trayectoria del GLS.
+Mediciones posteriores sobre la suite de instancias congeladas, con réplicas
+construidas por permutación del orden de entrada, arrojan dispersiones de otro
+orden de magnitud sobre las métricas de calidad: el índice de balance de carga
+de una configuración experimental, medido en 0.727 sobre una corrida única,
+resulta ser 0.181 $\pm$ 0.215 sobre cinco réplicas
+(\texttt{docs/experiments/sweep-metrology-20260720.md}). La cifra no es
+comparable con el 0.03\,\% anterior ---aquella es dispersión del tiempo de
+desplazamiento y esta un índice adimensional---, pero fija el orden de la
+sensibilidad al orden de entrada. Las cifras de esta sección acotan, por
+tanto, la varianza atribuible al corte por reloj, no la del \textit{pipeline}
+frente a una perturbación del orden de entrada ---coherente con la diferencia
+de 1.2\,\% entre corridas que se describe más abajo y que tiene ese mismo
+origen---.
 
 El criterio de $< 5$ minutos se aplica al tiempo de cómputo del \textit{solver}. El
 tiempo total del \textit{pipeline} depende de si la matriz de costos está en
