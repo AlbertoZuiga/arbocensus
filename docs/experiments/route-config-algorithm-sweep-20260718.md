@@ -9,8 +9,12 @@ sale de ese CSV). Ojo con la columna `cell` del CSV: guarda solo el nombre de la
 > **Corrección posterior — `sweep-metrology-20260720.md`.** Las cifras de este reporte se
 > midieron con un instrumento con dos defectos. (1) Las columnas `seed` **no eran réplicas**: el
 > driver escribía la semilla en el CSV pero nunca la pasaba al solver, así que toda "media sobre
-> 3 semillas" es la media de tres copias de una misma corrida y **ninguna cifra tiene barras de
-> error**. (2) `relleno_sec` mide sobre un cero inalcanzable y sesgado por instancia: en
+> 3 semillas" promedia tres repeticiones de una misma configuración, no réplicas independientes, y
+> **ninguna cifra tiene barras de error**. Las tres filas coinciden exactamente en 78 de las 96
+> celdas; en las 18 restantes `travel_sec` varía hasta 3.5 % (peor caso
+> `battery-sparse-n500`/`tmin-scaled`, en orden de semilla: 22 669 / 22 927 / 22 157 s),
+> dispersión que viene del corte por *wall-clock* del GLS, no de la semilla. (2) `relleno_sec`
+> mide sobre un cero inalcanzable y sesgado por instancia: en
 > `area-26-n157` contaba como relleno un 47.9 % de geometría irreducible. Las filas siguen siendo
 > mediciones válidas de una corrida; los **veredictos de relleno** y las comparaciones de pocos
 > puntos porcentuales entre brazos, no. El re-juicio de estas filas contra una cota alcanzable
