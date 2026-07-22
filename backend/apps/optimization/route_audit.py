@@ -1,6 +1,7 @@
 from itertools import combinations
 from statistics import mean
 
+import numpy as np
 from apps.optimization.route_metrics import bbox, bbox_iou
 from apps.optimization.strategies import project_equirectangular
 
@@ -20,34 +21,47 @@ SUMMARY_LABEL = "summary"
 
 
 def _orientation(a, b, c):
-    return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-
-
-def _segments_cross(first, second):
-    p1, p2 = first
-    p3, p4 = second
-    d1 = _orientation(p3, p4, p1)
-    d2 = _orientation(p3, p4, p2)
-    d3 = _orientation(p1, p2, p3)
-    d4 = _orientation(p1, p2, p4)
-    # A zero orientation means an endpoint lies on the other segment's line: the
-    # legacy dataset has trees at identical coordinates, so non-adjacent segments
-    # can share an endpoint. Touching is not a backtrack; only strict straddling is.
-    if 0.0 in (d1, d2, d3, d4):
-        return False
-    return (d1 > 0) != (d2 > 0) and (d3 > 0) != (d4 > 0)
+    return (b[..., 0] - a[..., 0]) * (c[..., 1] - a[..., 1]) - (
+        b[..., 1] - a[..., 1]
+    ) * (c[..., 0] - a[..., 0])
 
 
 def self_crossings(points):
     if len(points) < 4:
         return 0
-    projected = [tuple(p) for p in project_equirectangular(points)]
-    segments = list(zip(projected[:-1], projected[1:], strict=True))
-    return sum(
-        1
-        for i, j in combinations(range(len(segments)), 2)
-        if j > i + 1 and _segments_cross(segments[i], segments[j])
-    )
+    projected = project_equirectangular(points)
+    starts = projected[:-1]
+    ends = projected[1:]
+    lo = np.minimum(starts, ends)
+    hi = np.maximum(starts, ends)
+    total = 0
+    for i in range(len(starts) - 2):
+        rest = i + 2
+        # Disjoint bounding boxes cannot straddle, so the orientation test only
+        # runs on the survivors. Without this a street polyline (~3000 segments
+        # per route) costs millions of pair evaluations.
+        candidates = np.flatnonzero(
+            (lo[rest:, 0] <= hi[i, 0])
+            & (hi[rest:, 0] >= lo[i, 0])
+            & (lo[rest:, 1] <= hi[i, 1])
+            & (hi[rest:, 1] >= lo[i, 1])
+        )
+        if candidates.size == 0:
+            continue
+        p3 = starts[rest:][candidates]
+        p4 = ends[rest:][candidates]
+        d1 = _orientation(p3, p4, starts[i])
+        d2 = _orientation(p3, p4, ends[i])
+        d3 = _orientation(starts[i], ends[i], p3)
+        d4 = _orientation(starts[i], ends[i], p4)
+        # A zero orientation means an endpoint lies on the other segment's line:
+        # the legacy dataset has trees at identical coordinates, so non-adjacent
+        # segments can share an endpoint. Touching is not a backtrack; only
+        # strict straddling is.
+        touching = (d1 == 0) | (d2 == 0) | (d3 == 0) | (d4 == 0)
+        straddles = ((d1 > 0) != (d2 > 0)) & ((d3 > 0) != (d4 > 0))
+        total += int(np.count_nonzero(straddles & ~touching))
+    return total
 
 
 def audit_route(
