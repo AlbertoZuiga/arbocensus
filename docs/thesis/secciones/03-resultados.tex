@@ -95,6 +95,17 @@ frente a una perturbación del orden de entrada ---coherente con la diferencia
 de 1.2\,\% entre corridas que se describe más abajo y que tiene ese mismo
 origen---.
 
+Una medición posterior acota, a su vez, el alcance de esas réplicas. Sobre el
+conjunto de evaluación agregado, las cinco semillas de una misma corrida arrojan
+barras de error de entre $\pm 745$ y $\pm 1\,062$\,s sobre el tiempo de
+desplazamiento, pero la media de una misma configuración experimental se desplazó
+de $59\,971$ a $62\,751$\,s entre dos corridas distintas
+(\texttt{docs/experiments/stops-penalty-sweep-20260722.md}), un salto mayor que
+esa dispersión entre semillas. Las barras de error publicadas acotan, por tanto,
+la varianza entre semillas dentro de una corrida, no la varianza entre corridas;
+comparar medias de corridas distintas queda fuera de lo que la instrumentación
+actual justifica.
+
 El criterio de $< 5$ minutos se aplica al tiempo de cómputo del \textit{solver}. El
 tiempo total del \textit{pipeline} depende de si la matriz de costos está en
 caché: con caché fría, la primera repetición tardó 299.3\,s en total, de los
@@ -963,7 +974,12 @@ iteración de Arbocensus.
   abajo solo puede subestimar el costo dirigido de cada arco, de modo que toda
   solución factible satisface $\text{viaje} \geq \text{MSF}_k$. Evaluar el exceso sobre esa
   cota, en lugar del desplazamiento absoluto, distingue el relleno evitable de la
-  estructura que ningún recorrido puede eliminar. La cota está implementada en la
+  estructura que ningún recorrido puede eliminar. La cota es, sin embargo, una
+  relajación: un bosque generador no está sujeto a la restricción de grado máximo $2$
+  que todo recorrido sí satisface, de modo que el óptimo real se sitúa en general por
+  encima de $\text{MSF}_k$ y el exceso medido sobre ella sobreestima el relleno
+  evitable. Sirve como cota de referencia, no como objetivo alcanzable. La cota está
+  implementada en la
   instrumentación de experimentos y se registra como columna del barrido; lo que queda
   pendiente es rehacer contra ella las cifras de relleno reportadas en esta memoria,
   que siguen expresadas como desplazamiento relativo.
