@@ -53,9 +53,19 @@ la redacción de la tesis.
   pura (sin solver) de una o varias instancias (`--instance <slug> ...`): para cada `k`
   la cota inferior `MSF_k` (bosque generador mínimo de `k` componentes), la cota vieja
   de vecino más cercano y el techo por `T_max`.
+- `manage.py instance_tsp_anchor` → CSV con `--csv <ruta>`. Acota el óptimo por arriba con
+  la construcción simétrica a `MSF_k`: resuelve un camino TSP abierto sobre la matriz
+  simetrizada (`--tsp-time-limit <s>`) y lo parte por sus `k−1` aristas más caras, lo que
+  deja `k` caminos abiertos que cubren todos los nodos — una solución factible, no una
+  relajación. Publica `msf_k_sec`, `ub_k_sec`, la brecha entre ambas y la duración del
+  tramo más largo contra `T_max`, de modo que se vea si el ancla es alcanzable bajo la
+  configuración censal.
 - `manage.py rejudge_relleno` → CSV con `--out <ruta>`. Recomputa la métrica de relleno
   de barridos ya publicados (`--sweep <csv> ...`) contra `MSF_k` (`--decomposition <csv>`),
-  sin solver ni OSRM. Las filas con `drops > 0` quedan vacías: la cota no las acota.
+  sin solver ni OSRM. Las filas con `drops > 0` quedan vacías: la cota no las acota. Con
+  `--anchor <csv>` (salida de `instance_tsp_anchor`) agrega además `relleno_ub_sec`, la
+  misma métrica contra el ancla construida; esa columna **no** se recorta en cero, porque
+  `UB_k` es un recorrido construido y no una cota: un brazo puede batirlo.
 
 Las instancias reales sobre las que corren estos comandos viven congeladas en
 [`instances/`](instances/README.md) (`manage.py freeze_legacy` las vuelca desde la

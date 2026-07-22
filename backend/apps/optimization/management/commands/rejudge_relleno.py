@@ -15,6 +15,8 @@ COLUMNS = [
     "relleno_sec",
     "msf_k_sec",
     "relleno_msf_sec",
+    "ub_k_sec",
+    "relleno_ub_sec",
 ]
 
 
@@ -32,10 +34,20 @@ class Command(BaseCommand):
         parser.add_argument("--decomposition", type=str, required=True)
         parser.add_argument("--sweep", type=str, nargs="+", required=True)
         parser.add_argument("--out", type=str, required=True)
+        parser.add_argument(
+            "--anchor",
+            type=str,
+            help="instance_tsp_anchor CSV; adds the constructed upper-bound anchor",
+        )
 
     def handle(self, *args, **options):
         root = settings.BASE_DIR.parent
-        msf = self._msf_table(root / options["decomposition"])
+        msf = self._bound_table(root / options["decomposition"], "msf_k_sec")
+        anchor = (
+            self._bound_table(root / options["anchor"], "ub_k_sec")
+            if options["anchor"]
+            else {}
+        )
 
         rows = []
         missing = set()
@@ -61,6 +73,10 @@ class Command(BaseCommand):
                             "msf_k_sec": round(msf[key]),
                             "relleno_msf_sec": self._relleno_msf(
                                 raw, travel, msf[key], sweep
+                            ),
+                            "ub_k_sec": round(anchor[key]) if key in anchor else "",
+                            "relleno_ub_sec": self._relleno_ub(
+                                raw, travel, anchor.get(key)
                             ),
                         }
                     )
@@ -93,9 +109,17 @@ class Command(BaseCommand):
             )
         return max(0, round(travel - msf_k))
 
-    def _msf_table(self, path):
+    def _relleno_ub(self, raw, travel, ub_k):
+        # No clamping and no abort, unlike the forest bound: UB_k is a constructed
+        # solution, not a bound, so a solver run beating it is a real and reportable
+        # outcome rather than an accounting error.
+        if ub_k is None or int(raw["drops"] or 0):
+            return ""
+        return round(travel - ub_k)
+
+    def _bound_table(self, path, column):
         with path.open(newline="", encoding="utf-8") as handle:
             return {
-                (r["instance"], int(r["k"])): float(r["msf_k_sec"])
+                (r["instance"], int(r["k"])): float(r[column])
                 for r in csv.DictReader(handle)
             }

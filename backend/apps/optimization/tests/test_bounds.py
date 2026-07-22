@@ -1,5 +1,13 @@
 import numpy as np
-from apps.optimization.bounds import minimum_spanning_forest, symmetric_mst_edges
+from apps.optimization.bounds import (
+    directed_path_travel,
+    minimum_spanning_forest,
+    path_travel,
+    split_path,
+    symmetric_mst_edges,
+    symmetrized,
+    tsp_path_order,
+)
 from apps.optimization.solver import ArbocensusVRPSolver
 
 
@@ -55,3 +63,54 @@ def test_forest_bound_holds_for_a_solved_instance():
     )
     bound = minimum_spanning_forest(symmetric_mst_edges(matrix), len(routes))
     assert bound <= travel + 1e-6
+
+
+def upper_bound(order, matrix, k):
+    symmetric = symmetrized(matrix)
+    return sum(path_travel(seg, symmetric) for seg in split_path(order, matrix, k))
+
+
+def test_tsp_path_of_a_line_is_the_line_itself():
+    matrix = line_matrix(6)
+    order = tsp_path_order(matrix, time_limit_sec=2)
+    assert order in (list(range(6)), list(reversed(range(6))))
+
+
+def test_on_a_line_the_two_bounds_coincide():
+    # The chain IS the optimal open path, so there is no relaxation gap to measure:
+    # any gap the command reports on a real instance is geometry, not arithmetic.
+    matrix = line_matrix(6)
+    order = tsp_path_order(matrix, time_limit_sec=2)
+    edges = symmetric_mst_edges(matrix)
+    for k in (1, 2, 3):
+        assert upper_bound(order, matrix, k) == minimum_spanning_forest(edges, k)
+
+
+def test_split_covers_every_node_exactly_once_in_k_paths():
+    matrix = random_euclidean_matrix(25)
+    order = tsp_path_order(matrix, time_limit_sec=3)
+    for k in (1, 3, 5):
+        segments = split_path(order, matrix, k)
+        assert len(segments) == k
+        assert sorted(node for seg in segments for node in seg) == list(range(25))
+
+
+def test_constructed_bound_never_dips_below_the_forest_bound():
+    matrix = random_euclidean_matrix(25)
+    order = tsp_path_order(matrix, time_limit_sec=3)
+    edges = symmetric_mst_edges(matrix)
+    for k in (1, 2, 3, 4, 5):
+        assert upper_bound(order, matrix, k) >= minimum_spanning_forest(edges, k) - 1e-6
+
+
+def test_directed_travel_walks_the_route_the_cheaper_way():
+    asymmetric = np.array(
+        [
+            [0.0, 1.0, 50.0],
+            [50.0, 0.0, 1.0],
+            [1.0, 50.0, 0.0],
+        ]
+    )
+    assert path_travel([0, 1, 2], asymmetric) == 2.0
+    assert path_travel([2, 1, 0], asymmetric) == 100.0
+    assert directed_path_travel([2, 1, 0], asymmetric) == 2.0
