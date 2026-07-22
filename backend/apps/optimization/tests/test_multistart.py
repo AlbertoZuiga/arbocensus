@@ -57,8 +57,10 @@ def test_best_start_is_chosen_by_solver_objective(monkeypatch):
     stub = SolverStub({7: 500, 8: 200, 9: 900})
     monkeypatch.setattr(multistart, "build_strategy_solver", stub)
 
-    routes, dropped = solve_multistart(SPATIAL, [[0]], node_seeds=[7, 8, 9])
+    solved = solve_multistart(SPATIAL, [[0]], node_seeds=[7, 8, 9])
 
+    assert solved is not None
+    routes, dropped = solved
     assert stub.seeds == [7, 8, 9]
     assert routes == [[200]]
     assert dropped == []
@@ -68,8 +70,10 @@ def test_infeasible_starts_are_skipped(monkeypatch):
     stub = SolverStub({7: None, 8: 300})
     monkeypatch.setattr(multistart, "build_strategy_solver", stub)
 
-    routes, _ = solve_multistart(SPATIAL, [[0]], node_seeds=[7, 8])
+    solved = solve_multistart(SPATIAL, [[0]], node_seeds=[7, 8])
 
+    assert solved is not None
+    routes, _ = solved
     assert routes == [[300]]
 
 
