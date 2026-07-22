@@ -979,10 +979,29 @@ iteración de Arbocensus.
   que todo recorrido sí satisface, de modo que el óptimo real se sitúa en general por
   encima de $\text{MSF}_k$ y el exceso medido sobre ella sobreestima el relleno
   evitable. Sirve como cota de referencia, no como objetivo alcanzable. La cota está
-  implementada en la
-  instrumentación de experimentos y se registra como columna del barrido; lo que queda
-  pendiente es rehacer contra ella las cifras de relleno reportadas en esta memoria,
-  que siguen expresadas como desplazamiento relativo.
+  implementada en la instrumentación de experimentos y se registra como columna del
+  barrido.
+
+  La distancia entre esa cota y lo que un recorrido concreto alcanza está medida. Un
+  experimento posterior construyó, para cada instancia, un ancla alcanzable
+  $\text{UB}_k$ ---los $k$ recorridos abiertos que resultan de partir un recorrido
+  \textit{TSP} sobre los mismos $n$ nodos por sus $k-1$ tramos más caros--- y la
+  contrastó contra $\text{MSF}_k$: ese recorrido queda entre un $13$\,\% y un
+  $29$\,\% por encima de la cota en las instancias reales, con $13{,}3$\,\% en \texttt{area-27-n72},
+  $18{,}6$\,\% en \texttt{area-26-n157}, $21{,}1$\,\% en \texttt{area-29-n43} y a lo
+  sumo $28{,}8$\,\% en \texttt{reference-n1607}
+  (\texttt{docs/experiments/tsp-achievable-anchor-20260722.md}). Dado que
+  $\text{UB}_k$ es un recorrido construido y no óptimo, un ancla más ajustada solo
+  podría estrechar esa distancia, nunca ampliarla; las cifras son, por tanto, cotas
+  superiores de la incertidumbre del criterio y no su valor exacto, lo que las sitúa
+  del lado conservador. El mismo experimento advierte que el ancla no respeta
+  $T_{\max}$ donde $k$ es restrictivo, de modo que no constituye una solución factible
+  del VRP y su papel es acotar la flojedad de la cota, no sustituirla como referencia
+  operacional. Re-juzgadas contra el ancla, ninguna de las doce celdas de área de
+  los dos ciclos más recientes cambia de veredicto. Lo que queda pendiente es reexpresar contra
+  $\text{MSF}_k$ las cifras de relleno reportadas en esta memoria, que siguen
+  formuladas como desplazamiento relativo; la magnitud del ajuste que ello supondría
+  está acotada por el rango anterior.
 
   \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el heurístico del
   vecino más cercano genera un tiempo de desplazamiento total solo un $4{,}3$\,\% superior
