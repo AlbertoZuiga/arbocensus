@@ -1005,6 +1005,21 @@ iteración de Arbocensus.
   formuladas como desplazamiento relativo; la magnitud del ajuste que ello supondría
   está acotada por el rango anterior.
 
+  \item \textbf{Geometría de referencia de la métrica de auto-cruces}: el número de
+  auto-cruces se calcula sobre las cuerdas rectas que unen paradas consecutivas, es
+  decir sobre la proyección equirectangular de las coordenadas de las paradas, sin
+  intervención de la red vial. Esa geometría no coincide con ninguna de las otras dos
+  que participan en el problema: el \textit{solver} optimiza tiempo de red sobre la
+  matriz de duraciones de OSRM, y la aplicación dibuja al censista la polilínea real de
+  calles que OSRM devuelve para la secuencia de paradas. Las tres geometrías ---cuerda
+  recta, tiempo de red y trazado de calles--- son distintas, y la correspondencia entre
+  ellas no se ha comprobado: no está medido en qué grado un auto-cruce de cuerdas
+  implica un auto-cruce del trazado real, ni en qué grado la métrica refleja el costo
+  que el \textit{solver} minimiza. La métrica conserva, no obstante, su valor
+  comparativo: todas las configuraciones contrastadas en esta memoria se midieron con
+  la misma vara, de modo que las diferencias relativas entre ellas son homogéneas
+  aunque el nivel absoluto quede sujeto a esta reserva.
+
   \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el heurístico del
   vecino más cercano genera un tiempo de desplazamiento total solo un $4{,}3$\,\% superior
   al de \textit{OR-Tools} (Tabla~\ref{tab:comparativa}). Esta proximidad es un artefacto
