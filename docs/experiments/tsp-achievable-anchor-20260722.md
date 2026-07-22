@@ -293,3 +293,317 @@ docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
             docs/experiments/stops-penalty-sweep-20260722-actual.csv \
             docs/experiments/stops-penalty-sweep-20260722-feasible-floor-b095.csv
 ```
+
+---
+
+---
+
+## Resultados
+
+**El pre-registro de arriba quedó en el commit `403bc0b`** («docs(experiments): pre-register the
+achievable-anchor measurement»), y el código que lo implementa en `3a4c166`. Todo lo que sigue se
+escribió después de medir; nada de lo de arriba se tocó.
+
+Datos: `tsp-achievable-anchor-20260722-anchor.csv` (11 instancias × k=1..6),
+`-anchor-n1607.csv` (k=1..30), `-anchor-all.csv` (unión), `-converge30.csv` (prueba de
+convergencia) y `-rejudge.csv` (**360 filas** re-juzgadas de los dos ciclos más recientes).
+
+Precisión sobre `-anchor-all.csv`, que el bloque de Reproducción consume sin decir de dónde sale:
+**ningún comando lo produce.** Los dos grupos corren con límites de TSP distintos (120 s y 600 s),
+así que no salen de una sola invocación; el archivo es la concatenación literal de los dos:
+
+```bash
+cp docs/experiments/tsp-achievable-anchor-20260722-anchor.csv \
+   docs/experiments/tsp-achievable-anchor-20260722-anchor-all.csv
+tail -n +2 docs/experiments/tsp-achievable-anchor-20260722-anchor-n1607.csv \
+   >> docs/experiments/tsp-achievable-anchor-20260722-anchor-all.csv
+```
+
+### Validación de la instrumentación
+
+Las cuatro cifras de `MSF_k` que la serie ya había publicado se reproducen **exactamente**:
+`area-26-n157` k=3 → 3 618 s, `area-27-n72` k=2 → 914 s, `area-29-n43` k=1 → 789 s,
+`reference-n1607` k=25 → 30 823 s. El ancla nueva se construye sobre el mismo código de cota que
+la serie viene usando.
+
+Segundo hecho, no previsto pero cómodo: **`ub_k_sec` y `ub_k_directed_sec` coinciden hasta el
+segundo en las 96 filas.** La matriz de caminata de OSRM es simétrica en estas instancias, así que
+la afirmación «es alcanzable» no depende en absoluto de la simetrización. La columna dirigida se
+mantiene porque esa simetría es un hecho medido de este conjunto de datos, no una garantía.
+
+### Prueba de convergencia
+
+`UB_1` a 30 s contra el límite largo (120 s, y 600 s en la referencia):
+
+| Instancia | n | `UB_1` @30 s | `UB_1` @largo | Cambio | Estado |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `area-29-n43` | 43 | 955 | 955 | 0.00 % | convergido |
+| `battery-n50` | 50 | 3 266 | 3 266 | 0.00 % | convergido |
+| `area-27-n72` | 72 | 1 425 | 1 425 | 0.00 % | convergido |
+| `battery-n100` | 100 | 4 065 | 4 065 | 0.00 % | convergido |
+| `area-26-n157` | 157 | 5 131 | 5 131 | 0.00 % | convergido |
+| `battery-n200` | 200 | 7 653 | 7 620 | 0.43 % | convergido |
+| `battery-sparse-n250` | 250 | 15 298 | 15 298 | 0.00 % | convergido |
+| `battery-n400` | 400 | 12 634 | 12 634 | 0.00 % | convergido |
+| `battery-sparse-n500` | 500 | 19 787 | 19 785 | 0.01 % | convergido |
+| `battery-n800` | 800 | 19 913 | 19 716 | 1.00 % | **NO convergido** |
+| `battery-n1000` | 1 000 | 24 830 | 24 716 | 0.46 % | convergido |
+| `reference-n1607` | 1 607 | 58 150 | 55 644 | **4.50 %** | **NO convergido** |
+
+**Las tres áreas reales —el alcance mínimo del ciclo— convergen exactamente**: cuadruplicar el
+presupuesto no mueve ni un segundo. Ahí el ancla se usa sin reservas.
+
+`battery-n800` y `reference-n1607` **no** convergen. Conforme a la regla pre-registrada, sus
+brechas se leen como **máximos, no como valores**: un TSP mejor sólo puede bajar `UB_k` y estrechar
+la brecha. Ninguna cifra de la referencia se presenta como óptima en este reporte.
+
+### (a) Cuán floja es `MSF_k` — la respuesta principal
+
+Brecha `UB_k − MSF_k` en la `k` de operación de cada instancia:
+
+| Instancia | n | k | `MSF_k` | `UB_k` | Brecha | **Brecha %** | Lectura (Regla A) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `area-27-n72` | 72 | 2 | 914 | 1 036 | 122 | **13.3 %** | material |
+| `area-26-n157` | 157 | 3 | 3 618 | 4 290 | 672 | **18.6 %** | material |
+| `area-29-n43` | 43 | 1 | 789 | 955 | 166 | **21.1 %** | material |
+| `reference-n1607` | 1 607 | 25 | 30 823 | 39 695 | 8 872 | **≤28.8 %** | material (máximo) |
+
+**Las cuatro caen dentro de la banda 10–30 % que el reporte de metrología asumió sin medirla.**
+Ninguna es «irrelevante» (≤10 %) y ninguna es «dominante» (>30 %). La estimación que la serie tomó
+prestada de la literatura euclídea resultó **correcta para estas instancias**, y ahora está medida
+en vez de supuesta.
+
+En términos concretos: de los 1 524 s que `actual` mostraba como relleno en `area-26-n157`, **672 s
+—el 44 %— son la propia flojedad de la cota**, no relleno ni geometría del brazo. En
+`reference-n1607`, de 29 508 s de relleno medido, hasta 8 872 s son flojedad de la cota.
+
+Brecha % completa, por instancia y `k`:
+
+| Instancia | k=1 | k=2 | k=3 | k=4 | k=5 | k=6 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `area-29-n43` | 21.1 | 24.3 | 23.6 | 23.4 | 23.4 | 24.9 |
+| `battery-n50` | 19.0 | 22.2 | 22.8 | 24.7 | 27.5 | 28.8 |
+| `area-27-n72` | 9.4 | 13.3 | 15.5 | 7.8 | 8.2 | 8.6 |
+| `battery-n100` | 20.6 | 24.5 | 25.5 | 27.5 | 29.4 | 31.2 |
+| `area-26-n157` | 20.6 | 19.4 | 18.6 | 19.7 | 20.5 | 20.8 |
+| `battery-n200` | 29.2 | 32.9 | 35.7 | 36.6 | 36.3 | 36.6 |
+| `battery-sparse-n250` | 23.0 | 24.0 | 24.8 | 24.8 | 24.9 | 25.0 |
+| `battery-n400` | 32.6 | 34.7 | 36.2 | 36.6 | 38.4 | 37.8 |
+| `battery-sparse-n500` | 30.0 | 31.1 | 31.9 | 32.0 | 32.0 | 32.1 |
+| `battery-n800` | 31.5 | 31.4 | 31.7 | 31.8 | 32.6 | 32.3 |
+| `battery-n1000` | 37.4 | 37.7 | 38.1 | 38.6 | 37.7 | 37.7 |
+| `reference-n1607` | 29.9 | 35.5 | 35.2 | 34.7 | 33.8 | 33.5 |
+
+### Límite del ancla: dónde no respeta `T_max`
+
+Compromiso pre-registrado, cumplido sin adornos. En la `k` de operación:
+
+| Instancia | k | Tramo más largo | ¿≤ `T_max` (10 800 s)? | Tramos que exceden |
+| --- | ---: | ---: | :---: | ---: |
+| `area-27-n72` | 2 | 5 357 s | ✅ | 0 |
+| `area-29-n43` | 1 | 6 115 s | ✅ | 0 |
+| `area-26-n157` | 3 | 13 943 s | ❌ | 1 de 3 |
+| `reference-n1607` | 25 | 40 408 s | ❌ | 8 de 25 |
+
+Cortar por las aristas más caras reparte los **nodos** donde el mapa lo pide, no el **tiempo** de
+forma pareja, así que los tramos quedan desbalanceados. En `area-26-n157` el ancla se vuelve
+factible bajo `T_max` recién en **k=5** (tramo máximo 8 516 s).
+
+**Qué significa exactamente, y qué no.** `UB_k` acota el óptimo de *k caminos que cubren todos los
+nodos* **sin** la restricción de duración. Donde `T_max` no binda (`area-27`, `area-29`) es
+directamente una solución desplegable. Donde sí binda (`area-26` a k=3, la referencia a k=25) el
+óptimo **con** `T_max` está en algún punto **por encima** de `UB_k`.
+
+Eso empuja en la dirección conservadora del argumento de este ciclo: el relleno realmente evitable
+es **aún menor** que `relleno_ub`, y `MSF_k` es **aún más flojo** de lo que dicen las cifras de la
+tabla (a). Ninguna conclusión de abajo depende de suponer lo contrario.
+
+### (b) ¿Cambia algún veredicto ya emitido?
+
+Re-juicio de las 12 celdas de área de los dos ciclos más recientes, con el **mismo umbral de
+−30 %** sobre cada ancla. Cada Δ% se computa **dentro de su propio ciclo**, contra el `actual`
+re-corrido en ese ciclo — nunca contra medias publicadas en otro reporte, conforme al hallazgo de
+`stops-penalty-sweep-20260722.md`.
+
+| Ciclo | Brazo | Instancia | Δ% vs `MSF_k` | Δ% vs `UB_k` | Veredicto MSF | Veredicto UB |
+| --- | --- | --- | ---: | ---: | :---: | :---: |
+| metrología | `feasible-floor-b095` | `area-26-n157` | −50.1 | **−89.6** | ✅ | ✅ |
+| metrología | `feasible-floor-b095` | `area-27-n72` | −96.0 | −98.5 | ✅ | ✅ |
+| metrología | `feasible-floor-b095` | `area-29-n43` | −83.0 | −95.9 | ✅ | ✅ |
+| metrología | `no-floor-stops10` | `area-26-n157` | −49.1 | **−87.8** | ✅ | ✅ |
+| metrología | `no-floor-stops10` | `area-27-n72` | −95.9 | −98.4 | ✅ | ✅ |
+| metrología | `no-floor-stops10` | `area-29-n43` | −83.0 | −95.9 | ✅ | ✅ |
+| metrología | `feasible-floor-b060-stops10` | `area-26-n157` | −51.9 | **−92.8** | ✅ | ✅ |
+| metrología | `feasible-floor-b060-stops10` | `area-27-n72` | −95.9 | −98.4 | ✅ | ✅ |
+| metrología | `feasible-floor-b060-stops10` | `area-29-n43` | −83.0 | −95.9 | ✅ | ✅ |
+| piso de paradas | `feasible-floor-b095` | `area-26-n157` | −51.8 | **−90.2** | ✅ | ✅ |
+| piso de paradas | `feasible-floor-b095` | `area-27-n72` | −96.0 | −98.5 | ✅ | ✅ |
+| piso de paradas | `feasible-floor-b095` | `area-29-n43` | −83.1 | −95.9 | ✅ | ✅ |
+
+**Cero cambios de veredicto en 12 de 12 celdas.** Todas pasaban y todas siguen pasando; lo único
+que cambia es el **margen**, y siempre a favor del brazo.
+
+Contraste con el ciclo de metrología, que es lo que esta pregunta pedía comparar: allí **14 de 28
+celdas cambiaban de lado** al corregir el cero. Aquí, **0 de 12**. El primer arreglo del
+instrumento (de `nn̄` a `MSF_k`) fue un cambio **cualitativo** que reescribió veredictos; este
+segundo (de `MSF_k` a `UB_k`) es **cuantitativo**: mueve los márgenes, no las conclusiones.
+
+#### La `k` no coincide en `area-27-n72`, y el pre-registro obliga a decirlo
+
+La aritmética previa de arriba está escrita **«con el mismo `k` en ambos brazos»**, y el
+pre-registro se comprometió a investigar y reportar cualquier `k` distinta entre brazos. En dos de
+las tres áreas la condición se cumple (`area-26-n157`: actual y brazos a k=3; `area-29-n43`: todos
+a k=1). En **`area-27-n72` no**: `actual` corre a **k=2** y los tres brazos a **k=1**, así que cada
+lado se juzga contra su propia ancla (`MSF_2`=914 / `UB_2`=1 036 para `actual`; `MSF_1`=1 303 /
+`UB_1`=1 425 para los brazos).
+
+Por eso el Δ% de la tabla es la variación relativa del **relleno**, con cada lado contra el ancla
+de su propia `k`:
+
+```
+Δ%  =  (relleno_arm − relleno_actual) / relleno_actual,    relleno_X = travel_X − ancla(k_X)
+```
+
+que es algebraicamente idéntica a la forma `(travel_arm − travel_actual) / (travel_actual − ancla)`
+del pre-registro **cuando `k` coincide** —de ahí que las cifras de `area-26` y `area-29` salgan
+iguales por cualquiera de las dos— y sólo difiere en `area-27`, donde la del pre-registro no está
+definida por tener dos anclas.
+
+Consecuencias, sin maquillar:
+
+- La **demostración** de la Predicción 1 (denominador más chico porque `UB_k > MSF_k` a `k` fija)
+  **no aplica** a las tres celdas de `area-27`. Ahí la predicción se cumple igual —96.0 → −98.5—
+  pero como hecho medido, no como corolario aritmético.
+- El extremo **−29.2 %** de la banda de la Regla C sale precisamente de una celda con `k` distinta
+  entre brazos. Es el extremo más cercano a −30 %, así que si se descarta, la banda se **aleja**
+  más de −30 % en vez de acercarse: la conclusión (c) no depende de esa celda.
+- No hay ningún cambio de veredicto que atribuir a la `k`: las tres celdas de `area-27` pasan
+  holgadamente contra ambas anclas.
+
+**El hallazgo más fuerte de la sección está en `area-26-n157`.** Su relleno, la instancia que
+bloqueó tres ciclos de la serie, pasa de −50 % a **−90 %** contra el ancla alcanzable. Y en **6 de
+las 360 filas** el relleno contra el ancla es **negativo**:
+
+| Instancia | Brazo | Semilla | k | travel | `UB_3` | `relleno_ub` |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `area-26-n157` | `no-floor-stops10` | 2 | 3 | 4 246 | 4 290 | **−44** |
+| `area-26-n157` | `feasible-floor-b095` | 5 | 3 | 4 272 | 4 290 | **−18** |
+| `area-26-n157` | `feasible-floor-b060-stops10` | 2 | 3 | 4 275 | 4 290 | **−15** |
+| `area-26-n157` | `feasible-floor-b095` | 3 | 3 | 4 277 | 4 290 | **−13** |
+
+La tabla tiene **4 filas y el conteo dice 6** porque dos de esas celdas —`feasible-floor-b095`
+semillas 3 y 5— aparecen en los **dos** ciclos re-juzgados: en `area-26-n157` el solver reprodujo
+esas corridas segundo a segundo entre el ciclo de metrología y el de piso de paradas (4 277 y
+4 272 s en ambos), así que cada una cuenta dos veces en las 360 filas. Celdas distintas que baten
+al ancla: **4**. Es también un dato sobre la varianza entre corridas: en esta instancia chica es
+nula, a diferencia de lo medido en `reference-n1607`.
+
+Conforme al compromiso pre-registrado, **no se recortan en cero y el driver no aborta**: `UB_k` es
+un recorrido construido, no una cota, y batirlo es un resultado legítimo. Y es el resultado más
+informativo del ciclo:
+
+> **En `area-26-n157` los brazos de la serie ya alcanzan —y a veces superan— el mejor recorrido que
+> sabemos construir. Lo que la serie pasó tres ciclos intentando eliminar ahí no era relleno: era
+> el costo de recorrer esa área.**
+
+El ciclo de metrología lo había argumentado con una cota inalcanzable; aquí queda medido contra un
+recorrido concreto que el solver iguala.
+
+### (c) ¿Sigue siendo defendible el umbral de −30 %?
+
+Regla C: para cada celda, el umbral anclado en `MSF_k` que produciría el **mismo** veredicto que
+−30 % anclado en `UB_k`.
+
+| Instancia | Umbral `MSF_k` equivalente a −30 % sobre `UB_k` |
+| --- | ---: |
+| `area-26-n157` (metrología) | −16.8 % |
+| `area-26-n157` (piso de paradas) | −17.2 % |
+| `area-29-n43` | −26.0 % |
+| `area-27-n72` | −29.2 % |
+
+**Banda equivalente: [−29.2 %, −16.8 %]. No contiene −30 %.**
+
+Aplicando la regla pre-registrada al pie de la letra: la banda queda **por completo del lado menos
+exigente**, así que **el umbral de −30 % anclado en `MSF_k` era estrecho — exigía de más**. Para
+obtener el mismo veredicto que un −30 % sobre el ancla alcanzable habría bastado con pedir entre
+−17 % y −29 % sobre `MSF_k`.
+
+Esto responde de frente al riesgo que el reporte de metrología dejó declarado:
+
+> **El umbral no se movió hacia donde convenía. Se movió, sin que nadie lo supiera, hacia el lado
+> conservador.** El −30 % sobre `MSF_k` es **más duro** que su equivalente sobre un ancla
+> alcanzable, no más blando. Ningún veredicto positivo de la serie se regaló por haber elegido ese
+> número: todos los brazos que pasaron habrían pasado también con el criterio anclado en un
+> recorrido construido, y con márgenes mayores.
+
+La acusación de «mover la portería» queda **refutada por medición** en la dirección que importa: la
+portería quedó donde estaba o más lejos, nunca más cerca.
+
+Corolario aritmético, ya visible en el pre-registro y ahora cuantificado: como `UB_k > MSF_k`, el
+criterio anclado en `MSF_k` es **estructuralmente** el conservador de los dos. Cualquier ciclo
+futuro que use `relleno_msf` está usando la regla estricta.
+
+### Las tres predicciones pre-registradas, una por una
+
+**Predicción 1 — `|Δ%|` mayor contra `UB_k` que contra `MSF_k`. CONFIRMADA**, en las 12 celdas sin
+excepción (p. ej. −50.1 % → −89.6 %; −96.0 % → −98.5 %). En 9 de las 12 lo es por el corolario
+aritmético pre-registrado; en las 3 de `area-27-n72` lo es como hecho medido, porque ahí la `k`
+difiere entre `actual` y los brazos y la demostración no aplica (ver la nota de la sección (b)).
+
+**Predicción 2 — ninguna celda pasa de aprobación a fallo. CONFIRMADA**: 0 cambios en 12 celdas, y
+los únicos movimientos posibles (fallo → aprobación) tampoco se dieron porque las 12 ya pasaban.
+
+**Predicción 3 — brecha mayor en instancias chicas y dispersas que en densas. REFUTADA**, y con
+claridad. La brecha **crece con `n`** (k=3: `battery-n50` 22.8 % → `battery-n1000` 38.1 %), y las
+dispersas quedan **por debajo** de las densas de tamaño comparable: `battery-sparse-n250` 24.8 %
+contra `battery-n200` 35.7 %; `battery-sparse-n500` 31.9 % contra `battery-n400` 36.2 %.
+
+Se reporta la refutación con la misma fuerza que las confirmaciones, y con su matiz: parte del
+crecimiento con `n` es **calidad del TSP**, no geometría — a mayor `n` el camino está más lejos del
+óptimo, lo que infla `UB_k`. La prueba de convergencia acota ese efecto y muestra que no lo explica
+todo: `battery-n1000` converge (0.46 %) y aun así marca 37–38 %, mientras que
+`battery-sparse-n250`, también convergido, marca 24.8 %. **La diferencia densa/dispersa es real y
+va en el sentido contrario al predicho.** La conjetura de que dispersar aleja el MST de un camino
+factible era, sencillamente, incorrecta.
+
+---
+
+## Veredicto
+
+**`MSF_k` está entre 13 % y 29 % por debajo del mejor recorrido construible en las instancias
+reales, y corregir esa flojedad no cambia ningún veredicto de la serie: los mueve a todos en la
+misma dirección, hacia márgenes más amplios.**
+
+### Lo que queda establecido
+
+1. **La incertidumbre del criterio de relleno de la serie está medida, no supuesta.** 13.3 % en
+   `area-27-n72`, 18.6 % en `area-26-n157`, 21.1 % en `area-29-n43` y a lo sumo 28.8 % en
+   `reference-n1607`. Las cuatro dentro de la banda 10–30 % que la serie había asumido de la
+   literatura. La suposición era correcta.
+2. **El umbral de −30 % era conservador, no indulgente.** Su equivalente sobre el ancla alcanzable
+   está en [−29.2 %, −16.8 %]. La sospecha de «mover la portería» que el reporte de metrología dejó
+   declarada queda refutada en la dirección relevante.
+3. **En `area-26-n157` el relleno está agotado.** Los brazos igualan y en 6 filas superan el mejor
+   recorrido que sabemos construir. No queda relleno que quitar ahí; lo que queda es el costo de
+   recorrer el área. La conclusión que el ciclo de metrología dedujo de una cota inalcanzable se
+   sostiene ahora contra un recorrido concreto.
+4. **El ancla no respeta `T_max` donde `k` binda**, y eso está reportado, no escondido: 1 tramo de
+   3 en `area-26-n157` a k=3, 8 de 25 en la referencia. Empuja hacia el lado conservador —el óptimo
+   con restricción está por encima de `UB_k`—, así que ninguna conclusión de arriba se apoya en
+   ignorarlo.
+5. **El segundo arreglo del instrumento es cuantitativo, no cualitativo.** Corregir de `nn̄` a
+   `MSF_k` cambió 14 de 28 veredictos; corregir de `MSF_k` a `UB_k` cambia 0 de 12. **El
+   instrumento de la serie convergió.** No hay razón para esperar que un tercer refinamiento del
+   cero mueva conclusiones, y ese es el argumento para dejar de refinarlo.
+
+### Adopción
+
+**Ninguna.** Este ciclo no corrió el solver de VRP, no juzgó brazos y no propone cambios. Los
+defaults de producción (`spatial_term`, `PenaltyConfig` actual, coeficiente de span espacial 3)
+quedan intactos.
+
+`relleno_msf` **sigue siendo la métrica de juicio de la serie**: es la conservadora de las dos, su
+cero es una cota demostrada y no depende del presupuesto de cómputo de un TSP. `relleno_ub` queda
+disponible como **columna de contexto**, para reportar cuánto de un relleno medido es flojedad de
+la cota. Recomendación para ciclos futuros: publicar ambas, juzgar con `relleno_msf`.
+
