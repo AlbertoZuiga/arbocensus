@@ -1,6 +1,7 @@
 import math
 
 from apps.datasets.models import Tree
+from apps.optimization.cluster_constraints import build_cluster_plan
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingConfig, RoutingSolution
 from apps.optimization.multistart import solve_multistart
@@ -9,6 +10,7 @@ from apps.optimization.profiling import PhaseTimer, merge_timing
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
 from apps.optimization.solver import DEFAULT_PENALTIES, build_open_matrix
 from apps.optimization.strategies import SPATIAL_SPAN_COEF, solve_by_strategy
+from apps.optimization.warm_start import build_warm_start_routes
 from apps.routes.models import Route, RouteStop
 from django.db import transaction
 
@@ -61,6 +63,8 @@ class OptimizationPipeline:
         max_vehicles=None,
         node_seed=0,
         node_seeds=None,
+        cluster_neighbors=None,
+        warm_start=None,
     ):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
@@ -90,6 +94,36 @@ class OptimizationPipeline:
             )
         points = [(tree.location.y, tree.location.x) for tree in trees]
 
+        allowed_vehicles = None
+        plan = None
+        if cluster_neighbors is not None:
+            plan = build_cluster_plan(
+                points,
+                matrix,
+                service_time_sec=self.config.service_time_sec,
+                min_route_time_sec=self.config.min_route_time_sec,
+                max_route_time_sec=self.config.max_route_time_sec,
+                max_vehicles=max_vehicles,
+                neighbors=cluster_neighbors,
+                seed=seeds[0],
+            )
+            allowed_vehicles = plan.allowed_vehicles
+            max_vehicles = plan.vehicle_count
+
+        warm_start_routes = None
+        if warm_start is not None:
+            warm_start_routes = build_warm_start_routes(
+                warm_start,
+                matrix,
+                points=points,
+                min_route_time_sec=self.config.min_route_time_sec,
+                max_route_time_sec=self.config.max_route_time_sec,
+                service_time_sec=self.config.service_time_sec,
+                time_limit_sec=time_limit_sec,
+                penalties=penalties,
+                node_seed=seeds[0],
+            )
+
         strategies_to_run = (
             [RoutingSolution.Strategy(strategy)]
             if strategy
@@ -113,6 +147,8 @@ class OptimizationPipeline:
                 "time_span_coef": time_span_coef,
                 "time_global_span_coef": time_global_span_coef,
                 "convex_arc_lambda": convex_arc_lambda,
+                "allowed_vehicles": allowed_vehicles,
+                "warm_start_routes": warm_start_routes,
             }
             if len(seeds) > 1:
                 result = solve_multistart(
@@ -150,6 +186,9 @@ class OptimizationPipeline:
         return {
             "solutions": results,
             "dropped_trees": sorted(str(trees[n].id) for n in dropped_nodes),
+            "cluster_count": plan.cluster_count if plan else "",
+            "vehicles_per_cluster": plan.vehicles_per_cluster if plan else "",
+            "max_vehicles": max_vehicles,
         }
 
     def _persist_solution(
