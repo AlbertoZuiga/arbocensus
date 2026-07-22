@@ -110,7 +110,7 @@ completo (96 celdas = 8 configuraciones × 12 instancias, 288 filas).
 Cifras promediadas sobre las 3 filas de cada celda. Fuente: CSV versionado. `Δviaje` / `Δcruces`
 son relativos a `actual` de la misma instancia.
 
-### `reference-n1607` — el objetivo real (censo completo, denso)
+### `reference-n1607` — el caso donde vive la queja de calidad (agregado, denso)
 
 | configuración | k | viaje | balance | cruces | IoU | walk | sat | relleno | Δviaje | Δcruces |
 | --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |

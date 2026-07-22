@@ -504,8 +504,18 @@ el \textit{solver} persigue.
 El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}.
 El conjunto de evaluación de $n = 1\,607$ árboles reúne el arbolado de múltiples
 áreas de censo de distinta ubicación y abarca aproximadamente $10{,}3$\,km de extensión
-longitudinal (Ilustración~\ref{fig:regimen-disperso-vs-real}). Esa extensión no tiene
-correlato operativo: en los datos legados, la extensión máxima de un área individual
+en longitud ---el ancho este--oeste del recuadro que lo contiene, métrica que se usa de
+forma homogénea en toda esta sección--- (Ilustración~\ref{fig:regimen-disperso-vs-real}).
+Medida como diagonal del recuadro, la extensión es de $12{,}5$\,km frente a $1{,}61$\,km
+del área individual mayor, de modo que la razón entre ambos regímenes ---cercana a
+$8\times$--- no depende de cuál de las dos métricas se adopte. Los árboles que lo
+componen son reales y provienen de las dos bases legadas; lo que carece de correlato
+operativo es la agrupación, esto es, tratar esa unión como un único trabajo de ruteo.
+El censo histórico se organizó por área: las 429 filas de \texttt{legacy\_api}
+tienen área asignada por punto en polígono ---la base legada guarda 48 registros de
+área, porque cada campaña recrea los suyos, de los cuales 21 contienen arbolado y se
+reparten en 10 campañas---, mientras que las 1\,178 filas de \texttt{legacy\_app} no
+tienen área ni campaña asignada. En los datos legados, la extensión máxima de un área individual
 de censo es de $1{,}32$\,km, según las instancias versionadas en
 \texttt{docs/experiments/instances/}. En ese régimen de área real, la configuración de
 producción genera rutas sin cruces apreciables; los cruces emergen únicamente al
@@ -518,8 +528,8 @@ problema (Ilustración~\ref{fig:ruta-vueltas-r1}).
   \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
   \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación
     ($n = 1\,607$, estrategia \texttt{spatial\_term}, configuración de producción).
-    El cruzamiento refleja la extensión artificial del conjunto agregado, no una
-    limitación de la formulación.}
+    El cruzamiento refleja la extensión del conjunto agregado, sin correlato
+    operativo en el censo histórico, no una limitación de la formulación.}
   \label{fig:ruta-vueltas-r1}
 \end{figure}
 
@@ -608,7 +618,10 @@ en siete, siete y cuatro instancias, respectivamente.
 La conclusión del barrido es que no existe una configuración única ganadora para todos los
 regímenes sin una compuerta previa: la hipótesis queda refutada. El escenario donde
 \texttt{upper-tmax-tmin9000} produce una ganancia decisiva ---el conjunto de evaluación
-agregado de $n=1\,607$--- es artificial y no corresponde a la unidad operativa del sistema.
+agregado de $n=1\,607$--- es una instancia agregada sin correlato operativo en el censo
+histórico, que se organizó por área. Esa instancia no queda descartada: representa el
+régimen de escalamiento ---un censo de cobertura mayor, o el ruteo de una comuna
+completa como un solo problema---, pero no la unidad operativa histórica.
 La decisión adoptada es conservar la configuración de producción (\texttt{actual}) sin
 modificación y publicar \texttt{upper-tmax-tmin9000} como propuesta verificada para un
 \textit{guard} por saturación a priori ($\overline{\text{sat}} \gtrsim 0{,}9$, cuantificado
@@ -894,8 +907,8 @@ iteración de Arbocensus.
   \textit{dataset} completo como un único problema, sin segmentación previa
   por área geográfica. Cuando el \textit{dataset} reúne arbolado de múltiples
   áreas de censo ---como el conjunto de evaluación de $n = 1\,607$ árboles,
-  que abarca $10{,}3$\,km de extensión longitudinal--- las rutas resultantes
-  reflejan esa extensión artificial, con los efectos de cruce discutidos en la
+  que abarca $10{,}3$\,km de extensión en longitud--- las rutas resultantes
+  reflejan esa extensión agregada, con los efectos de cruce discutidos en la
   Sección~\ref{sec:discusion-calidad}. En la operación habitual, donde cada
   optimización corresponde a un área individual de extensión
   $\leq 1{,}32$\,km, esa limitación no se manifiesta; sin embargo, la
