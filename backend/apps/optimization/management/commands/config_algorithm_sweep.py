@@ -10,11 +10,17 @@ from apps.optimization.bounds import minimum_spanning_forest, symmetric_mst_edge
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.greedy import solve_greedy
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
+from apps.optimization.multistart import (
+    BUDGET_MODES,
+    BUDGET_PER_START,
+    start_seeds,
+    start_time_limit_sec,
+)
 from apps.optimization.n_estimator import (
     mean_nearest_neighbor_travel,
     p95_nearest_neighbor_travel,
 )
-from apps.optimization.pipeline import OptimizationPipeline
+from apps.optimization.pipeline import OptimizationPipeline, default_time_limit_sec
 from apps.optimization.route_audit import (
     audit_route,
     audit_solution,
@@ -165,6 +171,9 @@ COLUMNS = [
     "arc_lambda",
     "arc_tau",
     "seed",
+    "starts",
+    "budget_mode",
+    "start_time_limit_sec",
     "k",
     "drops",
     "degenerate_routes",
@@ -241,6 +250,25 @@ class Command(BaseCommand):
             nargs="+",
             default=SEEDS,
         )
+        parser.add_argument(
+            "--starts",
+            type=int,
+            default=1,
+            help=(
+                "Number of node-order restarts per run; the best one by solver "
+                "objective is kept"
+            ),
+        )
+        parser.add_argument(
+            "--budget",
+            type=str,
+            choices=BUDGET_MODES,
+            default=BUDGET_PER_START,
+            help=(
+                "'per-start' gives every restart the full time limit; 'total' "
+                "splits one time limit across the restarts"
+            ),
+        )
 
     def handle(self, *args, **options):
         csv_path = settings.BASE_DIR.parent / options["csv"]
@@ -262,6 +290,8 @@ class Command(BaseCommand):
 
         spatial_span_coef = options["spatial_span_coef"]
         max_vehicles = options["max_vehicles"]
+        starts = options["starts"]
+        budget = options["budget"]
         for slug in instances:
             trees, matrix = self._prepare_instance(slug)
             open_m = build_open_matrix(matrix)
@@ -287,6 +317,8 @@ class Command(BaseCommand):
                         str(spatial_span_coef),
                         str(max_vehicles or ""),
                         str(seed),
+                        str(starts),
+                        budget,
                     )
                     if key in done:
                         self.stdout.write(f"skip {slug} {cell.label} seed={seed}")
@@ -303,6 +335,8 @@ class Command(BaseCommand):
                         seed,
                         spatial_span_coef,
                         max_vehicles,
+                        starts,
+                        budget,
                     )
                     self._append(csv_path, row)
                     done.add(key)
@@ -330,6 +364,8 @@ class Command(BaseCommand):
                     r.get("spatial_span_coef", str(SPATIAL_SPAN_COEF)),
                     r.get("max_vehicles_forced", ""),
                     r["seed"],
+                    r.get("starts", "1"),
+                    r.get("budget_mode", BUDGET_PER_START),
                 )
                 for r in csv.DictReader(handle)
             }
@@ -361,13 +397,25 @@ class Command(BaseCommand):
         seed,
         span_coef,
         max_vehicles,
+        starts,
+        budget,
     ):
+        per_start_limit = start_time_limit_sec(
+            default_time_limit_sec(len(trees)), starts, budget
+        )
         wall_start = time.perf_counter()
         if cell.strategy == GREEDY:
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
         else:
             rows, worst_iou, interleave, timing = self._ortools_cell(
-                trees, matrix, cell, span_coef, max_vehicles, seed
+                trees,
+                matrix,
+                cell,
+                span_coef,
+                max_vehicles,
+                seed,
+                starts,
+                per_start_limit,
             )
         wall = round(time.perf_counter() - wall_start, 2)
         return self._metrics_row(
@@ -379,6 +427,9 @@ class Command(BaseCommand):
             seed,
             span_coef,
             max_vehicles,
+            starts,
+            budget,
+            per_start_limit,
             rows,
             worst_iou,
             interleave,
@@ -388,7 +439,17 @@ class Command(BaseCommand):
             wall,
         )
 
-    def _ortools_cell(self, trees, matrix, cell, span_coef, max_vehicles, seed):
+    def _ortools_cell(
+        self,
+        trees,
+        matrix,
+        cell,
+        span_coef,
+        max_vehicles,
+        seed,
+        starts,
+        per_start_limit,
+    ):
         strategy = cell.strategy
         penalties = PenaltyConfig(balance_arm=cell.balance_arm)
         dataset = trees[0].dataset
@@ -412,7 +473,8 @@ class Command(BaseCommand):
                     time_global_span_coef=cell.time_global_span_coef,
                     convex_arc_lambda=cell.arc_lambda,
                     max_vehicles=max_vehicles,
-                    node_seed=seed,
+                    time_limit_sec=per_start_limit,
+                    node_seeds=start_seeds(seed, starts),
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
                 drops_count = len(metrics["dropped_trees"])
@@ -516,6 +578,9 @@ class Command(BaseCommand):
         seed,
         spatial_span_coef,
         max_vehicles,
+        starts,
+        budget,
+        per_start_limit,
         rows,
         worst_iou,
         interleave,
@@ -574,6 +639,9 @@ class Command(BaseCommand):
             "arc_lambda": cell.arc_lambda,
             "arc_tau": round(arc_tau, 1),
             "seed": seed,
+            "starts": starts,
+            "budget_mode": budget,
+            "start_time_limit_sec": per_start_limit,
             "k": k,
             "drops": drops,
             "degenerate_routes": self._degenerate_count(rows),

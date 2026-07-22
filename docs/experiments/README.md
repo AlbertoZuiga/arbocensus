@@ -41,6 +41,10 @@ la redacción de la tesis.
   el orden de los nodos antes de construir el modelo (OR-Tools no expone semilla de
   RNG), así que mide la varianza del pipeline entero. La semilla 0 es la identidad.
   Las celdas `greedy` son deterministas y corren una sola vez por instancia.
+  `--starts <N>` resuelve cada celda con N órdenes de nodos distintos y conserva el
+  mejor por objetivo del solver; `--budget per-start|total` elige si cada arranque
+  recibe el límite de tiempo completo o si uno solo se reparte entre los N. Con
+  `--starts 1` (default) el camino de código es el de siempre.
 - `manage.py instance_decomposition` → CSV con `--csv <ruta>`. Aritmética estructural
   pura (sin solver) de una o varias instancias (`--instance <slug> ...`): para cada `k`
   la cota inferior `MSF_k` (bosque generador mínimo de `k` componentes), la cota vieja
