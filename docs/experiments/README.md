@@ -45,6 +45,10 @@ la redacción de la tesis.
   mejor por objetivo del solver; `--budget per-start|total` elige si cada arranque
   recibe el límite de tiempo completo o si uno solo se reparte entre los N. Con
   `--starts 1` (default) el camino de código es el de siempre.
+  `--stops-penalty <N>` sobreescribe el precio por parada faltante de los brazos con
+  piso de paradas (default 10 000), de modo que la **fuerza** del piso sea un eje
+  barrible además del umbral. Queda registrado en la columna `stops_floor_penalty`,
+  que además entra en la clave de reanudación.
 - `manage.py instance_decomposition` → CSV con `--csv <ruta>`. Aritmética estructural
   pura (sin solver) de una o varias instancias (`--instance <slug> ...`): para cada `k`
   la cota inferior `MSF_k` (bosque generador mínimo de `k` componentes), la cota vieja

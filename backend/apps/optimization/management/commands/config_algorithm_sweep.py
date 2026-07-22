@@ -33,6 +33,9 @@ from apps.optimization.solver import (
     BALANCE_ARM_COMBINED_B060_STOPS10,
     BALANCE_ARM_COMBINED_B070_STOPS10,
     BALANCE_ARM_COMBINED_B085_STOPS10,
+    BALANCE_ARM_COMBINED_B095_STOPS5,
+    BALANCE_ARM_COMBINED_B095_STOPS10,
+    BALANCE_ARM_COMBINED_B095_STOPS15,
     BALANCE_ARM_FEASIBLE_FLOOR_B050,
     BALANCE_ARM_FEASIBLE_FLOOR_B060,
     BALANCE_ARM_FEASIBLE_FLOOR_B070,
@@ -49,6 +52,7 @@ from apps.optimization.solver import (
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
+    STOPS_FLOOR_PENALTY,
     PenaltyConfig,
     build_open_matrix,
 )
@@ -145,6 +149,11 @@ CONFIG_AXIS = [
     Cell("feasible-floor-b060-stops10", SPATIAL, BALANCE_ARM_COMBINED_B060_STOPS10),
     Cell("feasible-floor-b070-stops10", SPATIAL, BALANCE_ARM_COMBINED_B070_STOPS10),
     Cell("feasible-floor-b085-stops10", SPATIAL, BALANCE_ARM_COMBINED_B085_STOPS10),
+    # Stop-count floor on top of the closest candidate of the series, whose only
+    # remaining failure is a degenerate route marked by stop count, not duration.
+    Cell("feasible-floor-b095-stops5", SPATIAL, BALANCE_ARM_COMBINED_B095_STOPS5),
+    Cell("feasible-floor-b095-stops10", SPATIAL, BALANCE_ARM_COMBINED_B095_STOPS10),
+    Cell("feasible-floor-b095-stops15", SPATIAL, BALANCE_ARM_COMBINED_B095_STOPS15),
 ]
 ALGO_AXIS = [
     Cell("global", GLOBAL, BALANCE_ARM_ACTUAL),
@@ -165,6 +174,7 @@ COLUMNS = [
     "balance_arm",
     "span_coef",
     "spatial_span_coef",
+    "stops_floor_penalty",
     "max_vehicles_forced",
     "time_global_span_coef",
     "post_resequence",
@@ -236,6 +246,12 @@ class Command(BaseCommand):
             help="Override the spatial_term geographic span coefficient",
         )
         parser.add_argument(
+            "--stops-penalty",
+            type=int,
+            default=STOPS_FLOOR_PENALTY,
+            help="Override the per-missing-stop penalty of the stop-floor arms",
+        )
+        parser.add_argument(
             "--max-vehicles",
             type=int,
             default=None,
@@ -289,6 +305,7 @@ class Command(BaseCommand):
                 raise CommandError(f"unknown cell '{options['only_cell']}'")
 
         spatial_span_coef = options["spatial_span_coef"]
+        stops_penalty = options["stops_penalty"]
         max_vehicles = options["max_vehicles"]
         starts = options["starts"]
         budget = options["budget"]
@@ -315,6 +332,7 @@ class Command(BaseCommand):
                         str(cell.post_resequence),
                         str(cell.arc_lambda),
                         str(spatial_span_coef),
+                        str(stops_penalty),
                         str(max_vehicles or ""),
                         str(seed),
                         str(starts),
@@ -334,6 +352,7 @@ class Command(BaseCommand):
                         cell,
                         seed,
                         spatial_span_coef,
+                        stops_penalty,
                         max_vehicles,
                         starts,
                         budget,
@@ -362,6 +381,7 @@ class Command(BaseCommand):
                     r.get("post_resequence", "False"),
                     r.get("arc_lambda", "0.0"),
                     r.get("spatial_span_coef", str(SPATIAL_SPAN_COEF)),
+                    r.get("stops_floor_penalty", str(STOPS_FLOOR_PENALTY)),
                     r.get("max_vehicles_forced", ""),
                     r["seed"],
                     r.get("starts", "1"),
@@ -396,6 +416,7 @@ class Command(BaseCommand):
         cell,
         seed,
         span_coef,
+        stops_penalty,
         max_vehicles,
         starts,
         budget,
@@ -412,6 +433,7 @@ class Command(BaseCommand):
                 matrix,
                 cell,
                 span_coef,
+                stops_penalty,
                 max_vehicles,
                 seed,
                 starts,
@@ -426,6 +448,7 @@ class Command(BaseCommand):
             arc_tau,
             seed,
             span_coef,
+            stops_penalty,
             max_vehicles,
             starts,
             budget,
@@ -445,13 +468,16 @@ class Command(BaseCommand):
         matrix,
         cell,
         span_coef,
+        stops_penalty,
         max_vehicles,
         seed,
         starts,
         per_start_limit,
     ):
         strategy = cell.strategy
-        penalties = PenaltyConfig(balance_arm=cell.balance_arm)
+        penalties = PenaltyConfig(
+            balance_arm=cell.balance_arm, stops_floor_penalty=stops_penalty
+        )
         dataset = trees[0].dataset
         raw_routes = None
         rows = worst = interleave = timing = drops_count = None
@@ -577,6 +603,7 @@ class Command(BaseCommand):
         arc_tau,
         seed,
         spatial_span_coef,
+        stops_penalty,
         max_vehicles,
         starts,
         budget,
@@ -633,6 +660,7 @@ class Command(BaseCommand):
             "balance_arm": cell.balance_arm,
             "span_coef": cell.span_coef,
             "spatial_span_coef": spatial_span_coef,
+            "stops_floor_penalty": stops_penalty,
             "max_vehicles_forced": max_vehicles or "",
             "time_global_span_coef": cell.time_global_span_coef,
             "post_resequence": cell.post_resequence,

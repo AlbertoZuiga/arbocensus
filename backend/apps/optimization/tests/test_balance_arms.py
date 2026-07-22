@@ -5,6 +5,9 @@ from apps.optimization.solver import (
     BALANCE_ARM_COMBINED_B060_STOPS10,
     BALANCE_ARM_COMBINED_B070_STOPS10,
     BALANCE_ARM_COMBINED_B085_STOPS10,
+    BALANCE_ARM_COMBINED_B095_STOPS5,
+    BALANCE_ARM_COMBINED_B095_STOPS10,
+    BALANCE_ARM_COMBINED_B095_STOPS15,
     BALANCE_ARM_FEASIBLE_FLOOR_B060,
     BALANCE_ARM_FEASIBLE_FLOOR_B070,
     BALANCE_ARM_FEASIBLE_FLOOR_B085,
@@ -136,6 +139,9 @@ def test_arms_without_stop_floor_declare_no_min_stops():
         (BALANCE_ARM_COMBINED_B060_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B060, 10),
         (BALANCE_ARM_COMBINED_B070_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B070, 10),
         (BALANCE_ARM_COMBINED_B085_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B085, 10),
+        (BALANCE_ARM_COMBINED_B095_STOPS5, BALANCE_ARM_FEASIBLE_FLOOR_B095, 5),
+        (BALANCE_ARM_COMBINED_B095_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B095, 10),
+        (BALANCE_ARM_COMBINED_B095_STOPS15, BALANCE_ARM_FEASIBLE_FLOOR_B095, 15),
     ],
 )
 def test_combined_arm_carries_both_floors(combined, plain, expected_stops):
@@ -154,6 +160,7 @@ def test_combined_arm_carries_both_floors(combined, plain, expected_stops):
     [
         (BALANCE_ARM_COMBINED_B060_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B060),
         (BALANCE_ARM_COMBINED_B085_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B085),
+        (BALANCE_ARM_COMBINED_B095_STOPS10, BALANCE_ARM_FEASIBLE_FLOOR_B095),
     ],
 )
 def test_combined_arm_scales_its_floor_like_the_plain_beta_arm(combined, plain):
@@ -241,7 +248,9 @@ def test_solver_runs_under_no_floor_arm_with_time_global_span():
     assert visited == list(range(8))
 
 
-def solve_arm(arm, time_global_span_coef=0, node_count=12):
+def solve_arm(
+    arm, time_global_span_coef=0, node_count=12, stops_penalty=STOPS_FLOOR_PENALTY
+):
     solver = ArbocensusVRPSolver(
         uniform_matrix(node_count, travel=TRAVEL_SEC),
         min_route_time_sec=600,
@@ -250,7 +259,7 @@ def solve_arm(arm, time_global_span_coef=0, node_count=12):
         max_vehicles=5,
         time_limit_sec=5,
         time_global_span_coef=time_global_span_coef,
-        penalties=PenaltyConfig(balance_arm=arm),
+        penalties=PenaltyConfig(balance_arm=arm, stops_floor_penalty=stops_penalty),
     )
     result = solver.solve_and_debug()
     assert result is not None
@@ -276,6 +285,32 @@ def test_stops_dimension_counts_visited_nodes_and_spares_empty_vehicles():
     shortfall = sum(max(0, 5 - len(route)) for route in routes)
     gap = debug["objective_ortools"] - unfloored["objective_ortools"]
     assert gap == shortfall * STOPS_FLOOR_PENALTY
+
+
+@pytest.mark.parametrize("penalty", [1_000, 10_000])
+def test_stops_floor_penalty_scales_the_charge_per_missing_stop(penalty):
+    routes, _, debug = solve_arm(
+        BALANCE_ARM_NO_FLOOR_STOPS5, time_global_span_coef=500, stops_penalty=penalty
+    )
+    _, _, unfloored = solve_arm(BALANCE_ARM_NO_FLOOR, time_global_span_coef=500)
+    shortfall = sum(max(0, 5 - len(route)) for route in routes)
+    assert shortfall > 0
+    gap = debug["objective_ortools"] - unfloored["objective_ortools"]
+    assert gap == shortfall * penalty
+
+
+def test_stops_floor_is_a_price_the_solver_pays_until_it_is_dear_enough():
+    # The two regimes the strength axis exists to separate: under span pressure the
+    # solver keeps the short routes and pays, until the price outbids the span cost
+    # of merging them.
+    cheap, _, _ = solve_arm(
+        BALANCE_ARM_NO_FLOOR_STOPS5, time_global_span_coef=500, stops_penalty=10_000
+    )
+    dear, _, _ = solve_arm(
+        BALANCE_ARM_NO_FLOOR_STOPS5, time_global_span_coef=500, stops_penalty=100_000
+    )
+    assert min(len(route) for route in cheap) < 5
+    assert min(len(route) for route in dear) >= 5
 
 
 def test_stops_floor_lifts_the_smallest_route_under_span_pressure():
