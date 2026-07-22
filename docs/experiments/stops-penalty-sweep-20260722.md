@@ -269,3 +269,297 @@ for pen in 1000 100000; do
 done
 wait
 ```
+
+---
+
+---
+
+## Resultados
+
+Datos: `stops-penalty-sweep-20260722-{actual,feasible-floor-b095,feasible-floor-b095-stops5,
+feasible-floor-b095-stops10,feasible-floor-b095-stops15,stops10-pen1000,stops10-pen100000}.csv`.
+**420 filas**: 7 brazos × 12 instancias × 5 semillas. **Drops = 0 en las 420 filas.**
+Un CSV y un flujo por brazo, mismo grado de paralelismo para los siete.
+
+### El resultado en una línea
+
+**El piso de paradas no cierra el fallo de degeneración a ningún umbral ni a ninguna
+fuerza, y cuesta travel.** La hipótesis del ciclo queda **falsada**.
+
+### Rutas degeneradas — el criterio que este ciclo atacaba
+
+| Brazo | degeneradas/réplica | réplicas con ≥1 | vs `b095` (regla de varianza) |
+| --- | ---: | ---: | --- |
+| `actual` | 0.0±0.0 | 0/5 | empate |
+| `feasible-floor-b095` | 0.2±0.4 | 1/5 | — (base) |
+| `b095+stops5` | 0.2±0.4 | 1/5 | **empate** |
+| `b095+stops10` | 0.2±0.4 | 1/5 | **empate** |
+| `b095+stops15` | 0.2±0.4 | 1/5 | **empate** |
+| `b095+stops10` @ 1 000 | 0.0±0.0 | 0/5 | **empate** |
+| `b095+stops10` @ 100 000 | 0.2±0.4 | 1/5 | **empate** |
+
+**Los seis brazos empatan con `b095`.** Ni el umbral (5→10→15) ni la fuerza
+(1 000→10 000→100 000) mueven la degeneración. El barrido de fuerza es una **meseta
+plana**, que es exactamente la predicción pre-registrada en la Fase 0.
+
+**El `0.0±0.0` de `b095+stops10 @ 1 000` no es una victoria y no se reporta como tal.**
+Contra `0.2±0.4` de `b095`, la diferencia (0.2) no supera la dispersión (0.4): es un
+**empate**. Además es el brazo con la penalización **más débil** —la que menos debería
+poder arreglar nada—, lo que confirma que la lectura correcta es ruido y no efecto.
+Leerlo como ganador sería exactamente el error de un solo punto que
+`sweep-metrology-20260720` corrigió en toda la serie.
+
+### Por qué el piso no puede tocar esa ruta
+
+Las filas degeneradas siguen concentradas en `reference-n1607`, y siguen marcadas por
+**conteo de paradas** (`dur_min` entre 8 475 y 9 269 s, muy por encima de 1 800 s).
+
+Primer indicio: en la semilla 5, `b095+stops5`, `b095+stops10` y `b095+stops10 @ 100 000`
+producen **métricas idénticas** —travel 64 728, cruces 18, `dur_min` 9 269, balance 0.862,
+1 degenerada—. Un piso de 5 y uno de 10 paradas, cobrados a 10 000 y a 100 000, aterrizan
+en la **misma solución**.
+
+Volcado directo de esa solución (`reference-n1607`, semilla 5, `b095+stops10`), a las dos
+fuerzas:
+
+```
+k=25  drops=0
+sizes: [3, 53, 56, 57, 57, 59, 61, 64, 65, 65, 65, 65, 67, 67, 68, 68, 69, 71, 73, 74, 74, 75, 76, 77, 78]
+RUTA CORTA: 3 paradas, travel=10 125 s, duración=10 485 s
+```
+
+Idéntico a 10 000 y a 100 000 por parada faltante.
+
+**La ruta degenerada tiene 3 paradas y 10 485 s de duración, contra un `T_max` de 10 800 s:
+está al 97 % de su capacidad dura.** Son tres árboles aislados a ~2,8 h de camino de todo
+lo demás. El piso de paradas cobra 7 × penalización y el solver **la paga**, porque el
+arreglo que la penalización incentiva —meterle una cuarta parada— es **infactible bajo
+`T_max`**, y sacar esos tres árboles a otra ruta choca con que las otras 24 llevan entre 53
+y 78 paradas y también están cerca del techo.
+
+**El piso es inerte sobre esa ruta por construcción, no por precio.** Añade una constante
+al objetivo que ningún movimiento disponible puede reducir, así que no cambia el argmin y
+subir la constante ×10 no cambia nada. Eso es lo que se ve en la meseta y en las
+soluciones idénticas.
+
+Esto **confirma por medición** lo que `sweep-metrology-20260720` cerró por aritmética: la
+palanca queda **fuera del objetivo del VRP**. Lo único que mueve esta ruta es `T_max`, el
+tiempo de servicio o la partición territorial previa — parámetros del problema, no términos
+de penalización.
+
+### El intercambio: qué cuesta el piso (la trampa pre-registrada, materializada)
+
+`reference-n1607`, media ± desviación sobre 5 réplicas. Control `actual`:
+cruces 77.6±11.7, travel 60 909±745, k 25.0±0.0.
+
+| Brazo | k | cruces | Δ cruces | travel | Δ travel |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `feasible-floor-b095` | 25.0±0.0 | 22.4±5.0 | −71.1 % (real) | 62 751±1 062 | **+3.02 % (real)** |
+| `b095+stops5` | 25.0±0.0 | 23.0±5.1 | −70.4 % (real) | 63 555±1 177 | **+4.34 % (real)** |
+| `b095+stops10` | 25.0±0.0 | 24.4±4.9 | −68.6 % (real) | 64 782±976 | **+6.36 % (real)** |
+| `b095+stops15` | 25.0±0.0 | 26.4±3.9 | −66.0 % (real) | 64 988±1 150 | **+6.70 % (real)** |
+| `b095+stops10` @ 1 000 | 25.0±0.0 | 22.2±3.7 | −71.4 % (real) | 62 727±1 146 | +2.98 % (empate) |
+| `b095+stops10` @ 100 000 | 25.0±0.0 | 24.6±5.1 | −68.3 % (real) | 64 481±999 | **+5.86 % (real)** |
+
+**El travel crece de forma monótona con el piso**, y todos los brazos con piso efectivo
+**fallan el criterio de travel ≤+3 %**: +4.3 %, +6.4 %, +6.7 %, +5.9 %. El único que no lo
+falla es el de penalización 1 000, que es el que casi no aplica piso — y que por eso mismo
+tampoco cambia nada.
+
+Los cruces se mueven en la dirección mala (22.4 → 23.0 → 24.4 → 26.4 al apretar el umbral)
+pero **ninguna de esas diferencias supera la regla de varianza contra `b095`: son empates**.
+Se reportan igual, porque la tendencia es consistente en los tres umbrales y va en el
+sentido que la trampa pre-registrada anticipaba.
+
+**Así que el intercambio es el peor posible: el piso paga travel real y no compra nada.**
+No es que compre menos degeneración de la esperada; es que compra **cero** degeneración
+menos, medida con la regla de varianza, y cobra hasta +6.7 % de travel por ello.
+
+El costo está concentrado en `reference-n1607`. En las otras once instancias los brazos con
+piso son indistinguibles de `b095` en travel vs `actual` (`area-27` −73.9 %, `area-29`
+−50.7 %, `battery-n400` −10.9 %, idénticos hasta la décima en todos los brazos). El piso
+sólo binda donde `k` es
+grande, y ahí paga sin arreglar.
+
+### Relleno y cruces de áreas — sin cambios
+
+`relleno_msf_sec`, media ± desviación, Δ vs `actual` (umbral pre-registrado −≥30 %):
+
+| Brazo | `area-26-n157` | `area-27-n72` | `area-29-n43` |
+| --- | ---: | ---: | ---: |
+| `actual` (base) | 1 579±214 | 4 829±9 | 1 239±4 |
+| `feasible-floor-b095` | 761±94 → −51.8 % | 195±8 → −96.0 % | 210±0 → −83.1 % |
+| `b095+stops5` | 747±82 → −52.7 % | 195±8 → −96.0 % | 210±0 → −83.1 % |
+| `b095+stops10` | 739±78 → −53.2 % | 195±8 → −96.0 % | 210±0 → −83.1 % |
+| `b095+stops15` | 780±73 → −50.6 % | 195±8 → −96.0 % | 210±0 → −83.1 % |
+| `b095+stops10` @ 1 000 | 756±89 → −52.1 % | 195±8 → −96.0 % | 210±0 → −83.1 % |
+| `b095+stops10` @ 100 000 | 739±78 → −53.2 % | 195±8 → −96.0 % | 210±0 → −83.1 % |
+
+Las diferencias contra `actual` son **reales** en las tres áreas y en los seis brazos; las
+diferencias **entre** brazos con piso y `b095` son **empates**. Los cruces de áreas no
+empeoran en ninguna: `area-27` pasa de 9.8±4.9 a 0.0±0.0 (real), `area-29` de 4.6±0.5 a
+0.0±0.0 (real), `area-26` de 0.4±0.5 a 0.0–0.2 (empate).
+
+El piso de paradas es, en las áreas chicas, **inocuo**: ni ayuda ni estorba. Ahí `k` es 1–3
+y ninguna ruta se acerca al umbral de paradas.
+
+### Balance
+
+| Brazo | balance mín. (media por instancia) | instancias <0.60 en media | peor réplica | instancias <0.60 en peor réplica |
+| --- | ---: | ---: | ---: | ---: |
+| `actual` | 0.838 | **0** | 0.831 | **0** |
+| `feasible-floor-b095` | 0.629 | **0** | 0.526 (`battery-n100`) | 2 |
+| `b095+stops5` | 0.628 | **0** | 0.526 (`battery-n100`) | 2 |
+| `b095+stops10` | 0.628 | **0** | 0.526 (`battery-n100`) | 2 |
+| `b095+stops15` | 0.628 | **0** | 0.526 (`battery-n100`) | 2 |
+| `b095+stops10` @ 1 000 | 0.629 | **0** | 0.526 (`battery-n100`) | 2 |
+| `b095+stops10` @ 100 000 | 0.628 | **0** | 0.526 (`battery-n100`) | 2 |
+
+Idéntico en los seis brazos, y idéntico a lo que midió `sweep-metrology-20260720`. El piso
+de paradas **no toca el balance en ninguna dirección**: la peor réplica sigue en 0.526
+sobre `battery-n100`, donde el problema no es el conteo de paradas.
+
+---
+
+## Estado de cada criterio
+
+### `feasible-floor-b095-stops10` — la celda que faltaba
+
+| Criterio | Resultado | ¿Pasa? |
+| --- | --- | :---: |
+| n=1607 cruces −≥30 % | −68.6 % (real) | ✅ |
+| n=1607 travel ≤+3 % | **+6.36 % (real)** | ❌ |
+| n=1607 k ≤26 | 25.0±0.0 | ✅ |
+| Áreas: `relleno_msf` −≥30 % | −53.2 % / −96.0 % / −83.1 % | ✅ |
+| Áreas: cruces sin empeorar | mejoran o empatan las tres | ✅ |
+| Drops = 0 | 0 en 60 filas | ✅ |
+| Balance ≥0.60 en toda instancia | 0 <0.60 en media; 2 en peor réplica (0.526) | ⚠️ |
+| **0 rutas degeneradas** | **1 ruta en 1 de 5 réplicas** (empate con `b095`) | ❌ |
+
+**Seis de ocho.** El piso de paradas **no quita** el fallo que atacaba y **agrega** uno
+nuevo: travel. Es estrictamente peor que `b095`.
+
+### `feasible-floor-b095` re-corrido en este ciclo — una corrección que hay que declarar
+
+| Criterio | Este ciclo | `sweep-metrology-20260720` |
+| --- | --- | --- |
+| n=1607 cruces −≥30 % | −71.1 % (real) ✅ | −87.5 % (real) ✅ |
+| n=1607 travel ≤+3 % | **+3.02 % (real)** ❌ | −0.6 % (empate) ✅ |
+| n=1607 k ≤26 | 25.0±0.0 ✅ | 25.0±0.0 ✅ |
+| Áreas: `relleno_msf` −≥30 % | −51.8 / −96.0 / −83.1 ✅ | −50.1 / −96.0 / −83.0 ✅ |
+| Áreas: cruces sin empeorar | ✅ | ✅ |
+| Drops = 0 | ✅ | ✅ |
+| Balance ≥0.60 | 0 en media, 2 en peor réplica ⚠️ | 0 en media, 2 en peor réplica ⚠️ |
+| 0 rutas degeneradas | 1 en 1/5 ❌ | 1 en 1/5 ❌ |
+
+**`b095` mide aquí +3.02 % de travel, apenas por encima del umbral de +3 %, contra −0.6 %
+en el ciclo anterior.** No se ajusta el criterio para acomodarlo: con estos números `b095`
+**falla** travel por 0.02 puntos, y pasa de 7/8 a **6/8**.
+
+Esto es un hallazgo por sí mismo, y va en contra del candidato: **las réplicas de semilla no
+capturan toda la varianza.** Las cinco semillas de cada corrida dan barras de error de
+±745 a ±1 062 s, pero la media de `b095` se movió de 59 971 a 62 751 s **entre corridas**,
+un salto mayor que su propia desviación entre semillas. La regla de varianza pre-registrada
+compara brazos **dentro** de una corrida, donde sigue siendo válida; **no** autoriza a
+comparar cifras entre ciclos, y la serie debería dejar de hacerlo.
+
+La lectura honesta: el margen de travel de `b095` es de **cola, no de media**, igual que su
+degeneración. En un ciclo cae del lado bueno del umbral y en otro del lado malo.
+
+---
+
+## Veredicto
+
+**La hipótesis del ciclo queda falsada.** Un piso de paradas sobre `b095` —a umbral 5, 10 o
+15, y a fuerza 1 000, 10 000 o 100 000— **no elimina las rutas degeneradas en ninguna
+réplica más que `b095` sin piso**: los seis brazos empatan con la línea base bajo la regla
+de varianza. Y no sale gratis: el travel de `n=1607` sube de forma monótona con el piso
+hasta **+6.7 %**, muy por encima del **+3 %** que permite el criterio.
+
+**No hay ganadora verificada en este ciclo, y no se dice esa frase.** No se cambia ningún
+default de producción.
+
+### Lo que sí queda establecido
+
+1. **La degeneración de `b095` es estructural, no tarifaria.** La ruta que la produce tiene
+   **3 paradas y 10 485 s de duración contra un `T_max` de 10 800 s**: está al 97 % de su
+   capacidad dura. Ninguna penalización por parada faltante puede arreglarla, porque el
+   movimiento que incentiva —añadir paradas— es infactible. La prueba directa es que
+   umbrales 5 y 10 y fuerzas 10 000 y 100 000 devuelven la **misma solución**, con las
+   mismas métricas hasta el segundo.
+2. **La aritmética de la Fase 0 acertó, y acertó antes de medir.** Se pre-registró que
+   `STOPS_FLOOR_PENALTY = 10 000` **no** es blanda (≈130× el costo de absorber una parada
+   vecina), que por tanto la hipótesis "los stops-floor previos fallaron porque el precio
+   era barato" estaba muerta, y que si `b095+stops10` no cerraba el fallo entonces subir la
+   fuerza tampoco lo haría, produciendo una **meseta**. Es exactamente lo que se midió.
+   El barrido de fuerza no descubrió un umbral: confirmó que no hay ninguno.
+3. **La familia de pisos queda cerrada también por este flanco.** `sweep-metrology-20260720`
+   la cerró por relleno (piso inactivo en `area-26`) y por varianza; este ciclo cierra el
+   último hueco de la grilla —`b095+stops10`, la celda que faltaba— y lo cierra en negativo.
+   Con `multistart-sweep-20260721` descartando la búsqueda como causa, quedan descartadas
+   las tres explicaciones que la serie tenía sobre la mesa: **no es ruido de búsqueda, no es
+   un precio mal calibrado, y no es un umbral mal elegido.**
+4. **La palanca está fuera del objetivo del VRP**, y ahora con evidencia directa y no sólo
+   aritmética. Lo que crea la ruta de 3 paradas es la combinación de `T_max`, el tiempo de
+   servicio y tres árboles a 2,8 h de camino del resto. Ninguno de los tres es un término
+   de penalización.
+5. **Las réplicas de semilla no capturan la varianza entre corridas.** El travel de `b095`
+   se movió más entre ciclos que entre semillas dentro de un ciclo. La regla de varianza
+   sigue valiendo **dentro** de una corrida; comparar medias entre reportes de ciclos
+   distintos no está justificado, y este reporte es el primero de la serie en decirlo con
+   un contraejemplo medido.
+
+### Sobre la trampa declarada
+
+Se declaró por adelantado que un piso de paradas podía matar la degeneración empujando
+árboles donde no corresponden, y que eso aparecería como más cruces o peor travel. **Ocurrió
+la mitad mala de la trampa y nada de la buena:** el travel empeoró de forma real y monótona
+(+4.3 %, +6.4 %, +6.7 %), los cruces derivaron en la dirección mala (22.4 → 26.4, empates), y
+la degeneración **no** se movió. No hubo victoria que declarar mirando sólo el conteo, y no
+se declara ninguna.
+
+### Adopción
+
+Sin cambios. `b095+stops10` es **estrictamente peor** que `b095` y queda descartado.
+`b095` sigue sin pasar el criterio completo —y en esta corrida falla dos criterios en vez
+de uno—, así que **no se adopta**. Los defaults de producción (`spatial_term`,
+`PenaltyConfig` actual, coeficiente de span espacial 3) quedan intactos.
+
+---
+
+## Reproducción de las cifras del veredicto
+
+Además del barrido de la sección anterior, el volcado de la ruta degenerada:
+
+```bash
+docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend python manage.py shell -c "
+from apps.datasets.instances import dataset_uuid
+from apps.datasets.models import Dataset, Tree
+from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
+from apps.optimization.n_estimator import estimate_max_vehicles
+from apps.optimization.solver import PenaltyConfig, build_open_matrix
+from apps.optimization.strategies import solve_by_strategy
+
+ds = Dataset.objects.get(id=dataset_uuid('reference-n1607'))
+trees = sorted(Tree.objects.filter(dataset=ds, is_active=True), key=lambda t: t.id)
+matrix = OSRMCostMatrixBuilder().build(trees)
+pts = [(t.location.y, t.location.x) for t in trees]
+mv = estimate_max_vehicles(build_open_matrix(matrix), len(trees) * 120, 7200)
+for pen in (10_000, 100_000):
+    routes, dropped = solve_by_strategy(
+        'spatial_term', matrix, points=pts, min_route_time_sec=7200,
+        max_route_time_sec=10800, service_time_sec=120, max_vehicles=mv,
+        time_limit_sec=120, node_seed=5,
+        penalties=PenaltyConfig(balance_arm='feasible-floor-b095-stops10',
+                                stops_floor_penalty=pen))
+    print(pen, 'k=%d drops=%d' % (len(routes), len(dropped)),
+          sorted(len(r) for r in routes))
+    short = min(routes, key=len)
+    travel = sum(matrix[a][b] for a, b in zip(short[:-1], short[1:], strict=True))
+    print('  RUTA CORTA: %d paradas, travel=%d s, duracion=%d s'
+          % (len(short), round(travel), round(travel) + len(short) * 120))
+"
+```
+
+`duracion = travel + 120 s × paradas` es la misma aritmética que usa el driver del barrido
+para la columna `dur_min_sec`.
