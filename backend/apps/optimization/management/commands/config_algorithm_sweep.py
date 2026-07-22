@@ -60,6 +60,7 @@ from apps.optimization.solver import (
     build_open_matrix,
 )
 from apps.optimization.strategies import SPATIAL_SPAN_COEF
+from apps.optimization.sweep_sequences import append_sequences
 from apps.optimization.warm_start import WARM_START_CLUSTER_FIRST, WARM_START_GREEDY
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -256,7 +257,8 @@ class Command(BaseCommand):
         "Reference census config: service 2 min, T_max 3 h. Appends one row per "
         "cell to a master CSV and is resumable: cells already present are skipped. "
         "OR-Tools cells run inside a rolled-back transaction so the shared database "
-        "is not polluted with hundreds of throwaway solutions."
+        "is not polluted with hundreds of throwaway solutions. The stop sequence of "
+        "every route is written to a .sequences.jsonl file next to the CSV."
     )
 
     def add_arguments(self, parser):
@@ -377,7 +379,7 @@ class Command(BaseCommand):
                     if key in done:
                         self.stdout.write(f"skip {slug} {cell.label} seed={seed}")
                         continue
-                    row = self._run_cell(
+                    row, sequences = self._run_cell(
                         slug,
                         trees,
                         matrix,
@@ -394,6 +396,7 @@ class Command(BaseCommand):
                         budget,
                     )
                     self._append(csv_path, row)
+                    append_sequences(csv_path, row, sequences)
                     done.add(key)
                     self.stdout.write(
                         f"done {slug} {cell.label} seed={seed} "
@@ -482,7 +485,8 @@ class Command(BaseCommand):
             )
         wall = round(time.perf_counter() - wall_start, 2)
         gap = solution_two_opt_gap(routes, matrix)
-        return self._metrics_row(
+        sequences = [[trees[node].id for node in route] for route in routes]
+        row = self._metrics_row(
             slug,
             len(trees),
             axis,
@@ -505,6 +509,7 @@ class Command(BaseCommand):
             wall,
             gap,
         )
+        return row, sequences
 
     def _ortools_cell(
         self,
