@@ -62,6 +62,15 @@ BALANCE_ARM_COMBINED_B070_STOPS10 = (
 BALANCE_ARM_COMBINED_B085_STOPS10 = (
     f"{BALANCE_ARM_FEASIBLE_FLOOR_B085}{STOPS_FLOOR_SUFFIX}10"
 )
+BALANCE_ARM_COMBINED_B095_STOPS5 = (
+    f"{BALANCE_ARM_FEASIBLE_FLOOR_B095}{STOPS_FLOOR_SUFFIX}5"
+)
+BALANCE_ARM_COMBINED_B095_STOPS10 = (
+    f"{BALANCE_ARM_FEASIBLE_FLOOR_B095}{STOPS_FLOOR_SUFFIX}10"
+)
+BALANCE_ARM_COMBINED_B095_STOPS15 = (
+    f"{BALANCE_ARM_FEASIBLE_FLOOR_B095}{STOPS_FLOOR_SUFFIX}15"
+)
 BALANCE_ARMS = (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
@@ -83,6 +92,9 @@ BALANCE_ARMS = (
     BALANCE_ARM_COMBINED_B060_STOPS10,
     BALANCE_ARM_COMBINED_B070_STOPS10,
     BALANCE_ARM_COMBINED_B085_STOPS10,
+    BALANCE_ARM_COMBINED_B095_STOPS5,
+    BALANCE_ARM_COMBINED_B095_STOPS10,
+    BALANCE_ARM_COMBINED_B095_STOPS15,
 )
 
 # Charged per MISSING STOP, unlike SOFT_LOWER_PENALTY which is charged per second of
@@ -102,6 +114,7 @@ class PenaltyConfig:
     soft_upper_penalty: int = SOFT_UPPER_PENALTY
     soft_upper_target: str = SOFT_UPPER_TARGET_MIDPOINT
     balance_arm: str = BALANCE_ARM_ACTUAL
+    stops_floor_penalty: int = STOPS_FLOOR_PENALTY
 
     def __post_init__(self):
         if self.soft_upper_target not in SOFT_UPPER_TARGETS:
@@ -382,7 +395,7 @@ class ArbocensusVRPSolver:
                         )
                     if stops_dimension is not None:
                         stops_dimension.SetCumulVarSoftLowerBound(
-                            end_index, min_stops, STOPS_FLOOR_PENALTY
+                            end_index, min_stops, self.penalties.stops_floor_penalty
                         )
 
             with timer.phase("model_build", "search_params"):
