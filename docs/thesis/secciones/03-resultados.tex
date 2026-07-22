@@ -529,7 +529,7 @@ reparten en 10 campañas---, mientras que las 1\,178 filas de \texttt{legacy\_ap
 tienen área ni campaña asignada. En los datos legados, la extensión máxima de un área individual
 de censo es de $1{,}32$\,km, según las instancias versionadas en
 \texttt{docs/experiments/instances/}. En ese régimen de área real, la configuración de
-producción genera rutas sin cruces apreciables; los cruces emergen únicamente al
+producción genera rutas sin auto-cruces apreciables; los auto-cruces emergen únicamente al
 procesar un conjunto que reúne arbolado disperso sobre varios kilómetros, situación
 que en operación solo surgiría si se procesaran múltiples áreas de censo como un único
 problema (Ilustración~\ref{fig:ruta-vueltas-r1}).
@@ -550,7 +550,7 @@ problema (Ilustración~\ref{fig:ruta-vueltas-r1}).
   \caption{Régimen disperso (extensión $\approx 10{,}3$\,km, \textit{dataset} de
     evaluación agregado) frente a régimen real (extensión $\leq 1{,}32$\,km, áreas
     individuales del arbolado legado). En el régimen real la configuración de
-    producción genera rutas sin cruces.}
+    producción genera rutas sin auto-cruces.}
   \label{fig:regimen-disperso-vs-real}
 \end{figure}
 
@@ -568,7 +568,7 @@ problema (Ilustración~\ref{fig:ruta-vueltas-r1}).
 De los resultados anteriores se derivan dos respuestas directas a las preguntas de
 evaluación más frecuentes. La pregunta «¿por qué las rutas no se ven compactas
 visualmente?» tiene respuesta en la geometría: la configuración de producción produce
-rutas sin cruces en áreas de extensión real ($\leq 1{,}32$\,km), y cuando los cruces
+rutas sin auto-cruces en áreas de extensión real ($\leq 1{,}32$\,km), y cuando los auto-cruces
 aparecen responden a la función objetivo, no a una limitación del tiempo de cómputo.
 La pregunta «¿por qué el \textit{baseline} greedy se acerca en desplazamiento total?»
 tiene respuesta en la saturación: el heurístico llena cada ruta hasta el $98{,}5$\,\%
@@ -584,7 +584,7 @@ reduciría la extensión del \textit{dataset} a la escala en que el \textit{solv
 produce rutas limpias con la configuración actual; esa extensión se documenta como
 trabajo futuro en la Sección~\ref{sec:posibles-mejoras}.
 
-Para confirmar el origen de los cruces en la función objetivo y explorar si existe
+Para confirmar el origen de los auto-cruces en la función objetivo y explorar si existe
 una configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo
 $\times$ tamaño sobre la suite de instancias congeladas
 (\texttt{route-config-algorithm-sweep-20260718.csv}; 96 celdas ---ocho
@@ -601,12 +601,12 @@ medición por celda sin réplica de semilla y no llevan barras de error.
 El brazo \texttt{upper-tmax-tmin9000} ---que ancla la penalización blanda superior en
 $T_{\max}$ en lugar del punto medio del intervalo $[T_{\min},\,T_{\max}]$ y eleva el
 piso blando a $9\,000$\,s--- es el único que satisface el criterio de decisión para
-$n=1\,607$: los cruces caen un $92{,}5$\,\% ($89{,}0 \to 6{,}7$) con una variación de
+$n=1\,607$: los auto-cruces caen un $92{,}5$\,\% ($89{,}0 \to 6{,}7$) con una variación de
 viaje de $-0{,}3$\,\%, balance de $0{,}84$, $k=25$ y cero descartes. La razón es
 estructural: a esa densidad las rutas saturan el presupuesto temporal de forma natural
 ($\overline{\text{sat}} = 0{,}94$), de modo que anclar la cota superior en $T_{\max}$ no
 impone \textit{detours} adicionales. En el eje de algoritmo, \texttt{global} prácticamente no
-modifica los cruces ($-2{,}6$\,\%) y \texttt{greedy} los empeora ($+14{,}6$\,\%), lo que
+modifica los auto-cruces ($-2{,}6$\,\%) y \texttt{greedy} los empeora ($+14{,}6$\,\%), lo que
 ratifica \texttt{spatial\_term} como la estrategia correcta.
 
 Sin embargo, el mismo brazo produce el peor resultado en las áreas reales individuales,
@@ -614,8 +614,8 @@ donde la instancia no satura $T_{\max}$ ($\overline{\text{sat}} \approx 0{,}67$-
 anclar la cota superior fuerza relleno de trayecto porque la carga de servicio disponible
 no llena el presupuesto, con incrementos de viaje de $+64{,}0$\,\%, $+62{,}6$\,\% y
 $+89{,}0$\,\% en las instancias de $n = 157$, $72$ y $43$, respectivamente. Bajo la
-configuración de producción, esas mismas áreas generan cero o casi cero cruces; el
-entrelazado es un fenómeno exclusivo del régimen denso agregado
+configuración de producción, esas mismas áreas generan cero o casi cero auto-cruces; el
+auto-cruce es un fenómeno exclusivo del régimen denso agregado
 (Ilustración~\ref{fig:regimen-disperso-vs-real}). El brazo \texttt{span-c100} ---penalización
 del \textit{span} sobre la dimensión temporal mediante
 \texttt{SetSpanCostCoefficientForAllVehicles}, que eleva el coeficiente de $0$ en
@@ -921,7 +921,7 @@ iteración de Arbocensus.
   por área geográfica. Cuando el \textit{dataset} reúne arbolado de múltiples
   áreas de censo ---como el conjunto de evaluación de $n = 1\,607$ árboles,
   que abarca $10{,}3$\,km de extensión en longitud--- las rutas resultantes
-  reflejan esa extensión agregada, con los efectos de cruce discutidos en la
+  reflejan esa extensión agregada, con los efectos de auto-cruce discutidos en la
   Sección~\ref{sec:discusion-calidad}. En la operación habitual, donde cada
   optimización corresponde a un área individual de extensión
   $\leq 1{,}32$\,km, esa limitación no se manifiesta; sin embargo, la
