@@ -618,10 +618,12 @@ configuración de producción, esas mismas áreas generan cero o casi cero cruce
 entrelazado es un fenómeno exclusivo del régimen denso agregado
 (Ilustración~\ref{fig:regimen-disperso-vs-real}). El brazo \texttt{span-c100} ---penalización
 del \textit{span} sobre la dimensión temporal mediante
-\texttt{SetSpanCostCoefficientForAllVehicles}--- confirma la predicción de nulidad: solo
-reduce los cruces en $26{,}6$\,\% para $n=1\,607$, por debajo del umbral del $30$\,\%
-exigido por el criterio a priori, porque penalizar la suma de duraciones de ruta no
-distingue el relleno del viaje productivo. Los brazos que reducen o suprimen el piso blando
+\texttt{SetSpanCostCoefficientForAllVehicles}, que eleva el coeficiente de $0$ en
+producción a $100$ y deja intacta la penalización de $3$ sobre la dimensión espacial---
+confirma la predicción de nulidad: solo reduce los auto-cruces en $26{,}6$\,\% para
+$n=1\,607$, por debajo del umbral del $30$\,\% exigido por el criterio a priori, porque
+penalizar la suma de duraciones de ruta no distingue el relleno del viaje productivo.
+Los brazos que reducen o suprimen el piso blando
 (\texttt{tmin-scaled}, \texttt{service-floor} y \texttt{tmin-scaled+exempt-last}) quedan
 descalificados como configuración universal al romper la compuerta de balance $\geq 0{,}80$
 en siete, siete y cuatro instancias, respectivamente.
