@@ -198,7 +198,7 @@ La clave de caché es un hash SHA-256 calculado sobre los identificadores de los
 y la matriz se recalcula automáticamente.
 
 Los nodos inalcanzables (devueltos como \texttt{null} por OSRM) se reemplazan por
-una penalización de $9\,999\,999$ segundos, garantizando la viabilidad numérica del
+una penalización de $9\,999\,999$ segundos, lo que garantiza la viabilidad numérica del
 \textit{solver} sin alterar la topología de la solución.
 
 El factor que limita el tamaño de una consulta no es el parámetro
@@ -290,9 +290,10 @@ Problem}) con las siguientes características:
   \item \textbf{Cota inferior de tiempo ($T_{\min}$, restricción blanda)}:
         implementada mediante \texttt{SetCumulVarSoftLowerBound} en el nodo terminal
         de cada vehículo, con coeficiente de penalización $10\,000$.
-        Las restricciones duras de cota inferior tienden a generar infactibilidad;
-        la formulación blanda permite al \textit{solver} explorar el espacio de búsqueda con
-        mayor robustez.
+        Una cota inferior dura volvería el modelo infactible cuando el número de rutas
+        necesarias multiplicado por $T_{\min}$ supera el trabajo disponible; la
+        formulación blanda evita esa infactibilidad al penalizar el déficit en lugar de
+        prohibirlo.
   \item \textbf{Balance de rutas}:
         \texttt{SetCumulVarSoftUpperBound} dirige las rutas hacia el punto medio
         $(T_{\min} + T_{\max})/2$, lo que reduce la varianza entre rutas.
@@ -694,9 +695,17 @@ censador.
 
 \capturaui{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de \textit{datasets} e importación de archivos (\texttt{/admin/datasets}).}{fig:ui_datasets}
 
-\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa de árboles ---con el historial de observaciones de un árbol--- y formulario de parámetros temporales y de estrategia, con el trabajo en curso.}{fig:ui_optimization}
+\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa con las rutas de la última optimización, el comparador de estrategias y el formulario de parámetros temporales y de estrategia.}{fig:ui_optimization}
 
 \capturaui{ui-routes.png}{Detalle de un \textit{dataset}: pestaña de asignación}{El mismo detalle en su pestaña de asignación: pestañas de estrategia con sus métricas, polilíneas coloreadas sobre la red peatonal y asignación de cada ruta a un censador. El trabajo se lanzó en modo \texttt{compare}, de ahí las tres soluciones comparables.}{fig:ui_routes}
+
+Publicado el plan, el administrador supervisa el avance del censo en terreno desde
+la pestaña de progreso del \textit{dataset}. El tablero resume el porcentaje de
+árboles censados, omitidos y pendientes, los sitúa sobre el mapa coloreados según su
+estado y desglosa el avance por ruta y por censador, de modo que el administrador
+puede identificar qué rutas van retrasadas y redistribuir la carga.
+
+\capturaui{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}): porcentaje de árboles censados, omitidos y pendientes; mapa coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.}{fig:ui_progress}
 
 El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first}
 orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente
@@ -705,7 +714,7 @@ solo puede marcarse como visitada cuando las anteriores ya lo han sido. La ubica
 del censador se sigue mediante la API de geolocalización del navegador y se calcula la
 distancia \textit{haversine} a la parada activa; el registro de visita se habilita al
 entrar en un radio de proximidad de 30\,m, con la opción de forzar el registro
-(\textit{«Marcar de todos modos»}) cuando la señal GPS es imprecisa. Tanto la visita
+(\textit{«Registrar de todos modos»}) cuando la señal GPS es imprecisa. Tanto la visita
 como la omisión de una parada generan una observación del árbol, con captura
 fotográfica y estado, según el diseño descrito en la
 Sección~\ref{sec:recenso}. Cada parada ofrece

@@ -50,9 +50,11 @@ a equipos de trabajo mediante una planificación eficiente de rutas de desplazam
 La escala real del problema se evidencia en las dos bases de datos que dejaron las
 iteraciones anteriores del proyecto \citep{binder-cortes2023,pizarro-zumaeta2024}. La
 más antigua, la base \texttt{legacy\_app} de la aplicación de censado previa desplegada
-en Heroku, contiene 1.205 registros de árboles (\texttt{mltree}), de los cuales
-aproximadamente 1.178 resultan importables al determinar una posición geográfica única
-a través de la mediana de las 17.208 muestras asociadas por código QR. La posterior, la
+en Heroku, registra 17.208 muestras de censo asociadas por código QR, que corresponden a
+13.081 árboles distintos. De ellos, los validados por el canal de medición automática
+(\texttt{mltree}) y con una posición geográfica única ---determinada mediante la mediana
+de las muestras de cada QR--- suman aproximadamente 1.178 árboles importables.
+La posterior, la
 base de datos \texttt{legacy\_api}, contiene 429 árboles georreferenciados, 3.961
 muestras (\textit{samples}), 10.008 fotografías y 48 áreas de censo distribuidas en 10
 campañas.
@@ -71,14 +73,14 @@ La planificación inadecuada de rutas genera consecuencias operacionales inmedia
 viajes innecesarios entre puntos lejanos, sobrecarga de ciertos equipos mientras otros
 subutilizan su tiempo, imposibilidad de cubrir todos los árboles en una jornada y
 aumento de costos logísticos. Sin herramientas especializadas de optimización, esta
-planificación se realiza manualmente o mediante heurísticos \textit{greedy}, lo que
-resulta en soluciones subóptimas.
+planificación queda restringida a métodos manuales o a heurísticos \textit{greedy}, lo
+que tiende a producir soluciones subóptimas.
 
 \section{ESTADO ACTUAL DEL PROBLEMA}
 
-En la práctica, la planificación de rutas para censos urbanos se realiza de forma
-manual mediante hojas de cálculo o herramientas GIS de propósito general, sin capacidad
-de optimización combinatoria. Los administradores de bases de datos arbóreas deben
+Ante la ausencia de herramientas especializadas de optimización, la planificación de
+rutas para censos urbanos queda limitada a métodos manuales ---hojas de cálculo o
+herramientas GIS de propósito general--- sin capacidad de optimización combinatoria. Los administradores de bases de datos arbóreas deben
 asignar manualmente árboles a censadores con apenas factores espaciales rudimentarios
 (proximidad euclidiana), sin considerar costos reales de desplazamiento ni
 restricciones de jornada.
@@ -112,7 +114,7 @@ de ruteo de censo como un \textit{Open mTSP} con restricciones de tiempo global 
 y lo resuelve mediante el \textit{solver} de ruteo vehicular de \textit{OR-Tools},
 basado en programación con restricciones \citep{ortools}.
 
-Arbocensus es una plataforma especializada que resuelve los aspectos
+La plataforma propuesta resuelve los aspectos
 críticos que las herramientas genéricas no abordan: (1) determina automáticamente el
 número mínimo de rutas necesarias $k$ dado el conjunto de árboles $P = \{p_1, \ldots, p_n\}$
 y los parámetros $T_{\min}$, $T_{\max}$, $s$ (tiempo de servicio por árbol), sin intervención
