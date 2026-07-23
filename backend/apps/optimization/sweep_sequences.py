@@ -9,6 +9,8 @@ SEQUENCE_KEY_COLUMNS = [
     "cell",
     "strategy",
     "balance_arm",
+    "soft_lower_penalty",
+    "soft_upper_target",
     "span_coef",
     "time_global_span_coef",
     "post_resequence",
