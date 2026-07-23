@@ -332,3 +332,236 @@ wait
 La aritmética de la Fase 0 se reproduce sin solver con `build_cluster_plan` sobre las
 instancias congeladas; `choose_k`, `estimate_max_vehicles` y `kmeans` son deterministas
 dada la semilla.
+
+---
+
+---
+
+## Resultados
+
+Datos: `cluster-constrained-search-20260722-{actual,cluster-r0,cluster-r1,cluster-r2,
+cluster-r1-no-floor,warm-greedy,warm-cluster}.csv`. **420 filas**: 7 brazos × 12 instancias
+× 5 semillas. Un CSV y un flujo por brazo, mismo grado de paralelismo para los siete.
+
+### Nota de ejecución añadida por un fallo de integración (declarada)
+
+El brazo `warm-greedy` abortó en la primera corrida sobre `battery-n400` con
+`warm start routes are not a feasible assignment`. Diagnóstico antes de tocar nada: **defecto
+de integración propio, no propiedad del problema.** `solve_greedy` empaqueta contra `T_max`
+usando `ceil(Σ arcos)`, mientras que la dimensión `Time` del modelo suma `ceil(arco +
+servicio)` **por arco**; sumar redondeos hacia arriba sobrepasa `T_max` hasta en ~1 s por
+arco, y en rutas de 72–77 paradas eso son +17 a +24 s. La semilla se construía inválida
+bajo el modelo que siembra. Se corrigió construyendo la semilla con la misma aritmética de
+la dimensión `Time` (`split_to_solver_capacity`), **sin tocar `T_max` ni relajar ninguna
+restricción**, y se **re-corrió el brazo completo** (no se reanudó desde las filas ya
+escritas: la clave de reanudación no codifica la versión del constructor). El aborto ruidoso
+pre-registrado es lo que expuso el defecto y se mantiene. Los otros seis brazos no usan
+`warm-greedy` y no se tocaron.
+
+### El resultado en una línea
+
+**Restringir el espacio factible no produce una ganadora: los clusters blandos rompen la
+factibilidad —kmeans ignora la capacidad y el modelo abandona árboles— y disparan los
+cruces; el arranque en caliente no se lava sino que ancla a una geometría peor.** Los siete
+brazos fallan el criterio. **No hay ganadora verificada, y no se dice esa frase.**
+
+### Las cuatro predicciones de la Fase 0, contra lo medido
+
+| # | Predicción pre-registrada | Resultado | Veredicto |
+| --- | --- | --- | --- |
+| 1 | `cluster-r0` produce drops en `reference-n1607` | drops por semilla `[39,17,0,72,15]`; y además en `battery-n{200,400,800,1000}` | **acertada** (y el alcance fue mayor) |
+| 2 | `cluster-r0` degenera en `n=1607` en 5/5 réplicas | `[2,2,1,1,2]` rutas degeneradas: 5/5 con ≥1 | **acertada** |
+| 3 | los brazos cluster sobre `actual` NO alcanzan −30 % de cruces | cruces **+589 %/+162 %/+89 %** (dirección contraria) | **acertada** (con dirección más extrema) |
+| 4 | el arranque en caliente **se lava** (empate) en las 12 instancias | `warm-greedy` y `warm-cluster` difieren de `actual` de forma **real** en `n=1607` | **REFUTADA** |
+
+Tres de cuatro predicciones acertaron; la cuarta se refutó, y su refutación es el hallazgo
+más informativo del ciclo (§ Brazo B).
+
+### Brazo A — clusters blandos
+
+`reference-n1607`, media ± desviación sobre 5 réplicas. Control `actual` re-corrido:
+cruces 68.2±6.0, travel 60 941±957, k 25.0±0.0, `worst_iou` 0.447±0.046,
+`interleave_per_route` 125.2±30.1.
+
+| Brazo | drops (filas/5, total) | k | cruces | Δ cruces | travel | Δ travel | `worst_iou` | `interleave` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `cluster-r0` | 5/5, 143 | 35.4±1.4 | 470±86 | +590 % (real) | 77 737±2 361 | +27.6 % (real) | 0.552 (+23 %, real) | 20.0 (−84 %, real) |
+| `cluster-r1` | 3/5, 100 | 30.6±1.0 | 179±60 | +162 % (real) | 69 512±2 949 | +14.1 % (real) | 0.604 (+35 %, real) | 48.8 (−61 %, real) |
+| `cluster-r2` | 3/5, 41 | 28.6±1.2 | 129±34 | +89 % (real) | 68 413±6 196 | +12.3 % (real) | 0.621 (+39 %, real) | 60.4 (−52 %, real) |
+
+**Los drops invalidan la comparación en sí misma.** Con la disyunción viva, la restricción mal
+dimensionada —predicha en la Fase 0— se cobra en árboles abandonados: cuando un cluster no
+cabe en sus `m` vehículos, el solver prefiere pagar el `DROP_PENALTY` antes que violar
+`T_max`. El travel y los cruces de arriba son de soluciones que **no visitan todos los
+árboles**, así que ni siquiera son comparables con `actual` en el mismo problema. Aflojar
+`r` reduce los drops (302 → 131 → 41 nodos totales) pero no los elimina, porque el cluster
+de 142 árboles de `n=1607` (Fase 0) sigue sin caber en 2 vehículos aunque le sumemos los
+vecinos.
+
+**Y donde no hay drops, el efecto sobre los cruces es el contrario al buscado.** Confinar
+cada nodo a un subconjunto de vehículos le quita al solver la libertad de asignar el
+vehículo geográficamente natural, así que las rutas zigzaguean **más**: los auto-cruces
+suben +89 % a +590 %. El único movimiento en la dirección esperada es `interleave_per_route`
+(−52 % a −84 %, real): las rutas se entrelazan menos entre sí, exactamente el mecanismo
+inter-ruta que la Predicción 3 anticipó. Pero `worst_iou` **empeora** (+23 % a +39 %): las
+cajas contenedoras se solapan más, no menos. El brazo compra un tipo de coherencia
+(menos entrelazado) pagándolo con dos incoherencias peores (más auto-cruce, más solape de
+bbox) y con árboles abandonados.
+
+En las **áreas chicas** los brazos cluster son **inertes** (`K` = 1–2, `m` = 4–7, ninguna
+ruta cerca del techo de vehículos): `relleno_msf` y cruces idénticos a `actual` hasta el
+segundo. La restricción sólo binda donde `k` es grande, y ahí rompe la factibilidad.
+
+#### `cluster-r1-no-floor` — el espejismo del ciclo
+
+Sobre el papel es el mejor brazo: en `n=1607` cruces **−53.7 %**, travel **−17.6 %**, y en
+las áreas relleno **−42 % / −96 % / −83 %**, todos superando el umbral. **Es un artefacto de
+los drops.** El brazo abandona 100 árboles (semillas `[20,0,1,0,79]` en `n=1607`): rutear
+menos árboles baja el travel y los cruces por construcción. Su balance mínimo es **0.011**
+—28 filas bajo 0.60— y degenera en **2.6±0.8** rutas por réplica, el peor de los siete.
+Falla `0 drops`, falla balance y falla rutas degeneradas. Los números bonitos son el precio
+de no hacer el trabajo. **Es el ejemplo exacto de por qué el criterio incluye `0 drops`
+antes que cualquier métrica de calidad.**
+
+### Rutas degeneradas y balance — la cola, que era la pregunta original
+
+| Brazo | degeneradas/réplica | peor balance (réplica) | filas balance <0.60 |
+| --- | ---: | ---: | ---: |
+| `actual` | 0.2±0.4 | 0.803 | 0 |
+| `cluster-r0` | 1.6±0.5 | 0.011 | 7 |
+| `cluster-r1` | 0.8±0.4 | 0.012 | 4 |
+| `cluster-r2` | 0.6±0.5 | 0.668 | 0 |
+| `cluster-r1-no-floor` | 2.6±0.8 | 0.011 | 28 |
+| `warm-greedy` | 0.0±0.0 | 0.815 | 0 |
+| `warm-cluster` | 0.0±0.0 | 0.791 | 0 |
+
+Ningún brazo cluster mejora la cola que la serie intenta cerrar; todos la **empeoran** o la
+dejan igual mientras rompen la factibilidad. `cluster-r2` es el mejor comportado (0 filas
+<0.60, degeneradas en empate con `actual`), pero sigue con drops y con cruces +89 %.
+
+### Brazo B — arranque en caliente, y la Predicción 4 refutada
+
+`reference-n1607`, media ± desviación:
+
+| Brazo | drops | k | cruces | Δ cruces | travel | Δ travel |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `actual` | 0 | 25.0±0.0 | 68.2±6.0 | — | 60 941±957 | — |
+| `warm-greedy` | 0 | 27.0±0.0 | 81.8±0.4 | **+19.9 % (real)** | 72 651±2 | **+19.2 % (real)** |
+| `warm-cluster` | 7 filas | 34.8±0.7 | 341.8±92.4 | +401 % (real) | 73 159±4 336 | +20.0 % (real) |
+
+**`warm-greedy` no se lava: ancla, y ancla duro.** En `n=1607` las cinco réplicas devuelven
+**la misma solución** (travel 72 650±2, cruces 82±0.4, k 27): la GLS, con el límite topado en
+120 s, **no escapa de la cuenca del greedy en absoluto**. La Predicción 4 —"se lava, empate en
+las 12 instancias"— queda **refutada**: la diferencia contra `actual` es real y grande. El
+falsador pre-registrado se activó: *"si `warm-cluster` difiere de `actual` de forma real bajo
+la regla de varianza en `reference-n1607`, la lectura de meseta del ciclo anterior era
+demasiado general y hay que matizarla."*
+
+El matiz correcto: `multistart-sweep-20260721` midió que **permutar el orden de nodos de la
+misma heurística** se lava, y eso sigue siendo cierto. Pero sembrar una **construcción
+estructuralmente distinta** *no* se lava a `n=1607` —**se conserva**—, porque con el límite
+topado en 120 s la corrida está lejos de converger en términos relativos. La meseta de aquel
+ciclo era una meseta *alrededor del punto de construcción de `PATH_CHEAPEST_ARC`*; un punto
+de partida lejano cae fuera de ella y la GLS no tiene tiempo de volver.
+
+**Y aun así no sirve**, porque el punto de partida que se conserva es **peor**: la geometría
+del greedy (vecino más cercano miope) tiene más travel y más cruces que la de
+`PATH_CHEAPEST_ARC`, y anclar a ella arrastra el resultado hacia abajo. `warm-cluster` es
+todavía peor porque su semilla de `cluster_first` ya viene con drops. El arranque en caliente
+sólo ayudaría con una semilla **mejor** que la construcción por defecto, y no la hay: ése es
+justamente el motivo por el que la serie usa `PATH_CHEAPEST_ARC`.
+
+Fuera de `n=1607`, donde el límite de tiempo **no** está topado (`30 + 1.5·n < 120`), la GLS
+sí tiene holgura para converger y `warm-greedy` se acerca a `actual` —consistente con la
+lectura de meseta—, pero nunca lo supera. En `area-27` y `area-29` incluso baja cruces
+(−57 %, −37 %) por debajo de `actual`, pero son empates bajo la regla de varianza y el travel
+no mejora.
+
+---
+
+## Estado de cada criterio
+
+Ningún brazo llega a evaluarse limpio en `n=1607` salvo `actual` (control) y `warm-greedy`:
+todos los demás tienen drops. Para los dos sin drops:
+
+| Criterio | `warm-greedy` | ¿Pasa? |
+| --- | --- | :---: |
+| n=1607 cruces −≥30 % | +19.9 % (real) | ❌ |
+| n=1607 travel ≤+3 % | +19.2 % (real) | ❌ |
+| n=1607 k ≤26 | 27.0±0.0 | ❌ |
+| Áreas: `relleno_msf` −≥30 % | +2.6 % / +0.2 % / −0.5 % | ❌ |
+| Áreas: cruces sin empeorar | mejoran o empatan | ✅ |
+| Drops = 0 | 0 en 60 filas | ✅ |
+| Balance ≥0.60 en toda instancia | 0 <0.60 | ✅ |
+| 0 rutas degeneradas | 0.0±0.0 | ✅ |
+
+**Cuatro de ocho.** Los brazos con drops (`cluster-r{0,1,2}`, `cluster-r1-no-floor`,
+`warm-cluster`) fallan `0 drops` de entrada y no se evalúan más allá.
+
+---
+
+## Veredicto
+
+**Las dos hipótesis del ciclo quedan falsadas.**
+
+**Brazo A (clusters blandos):** restringir el espacio factible con
+`SetAllowedVehiclesForIndex` (vía dominio de `VehicleVar`) **no** produce coherencia
+espacial útil. kmeans no respeta la capacidad, así que en las instancias grandes crea
+clusters que no caben en sus vehículos y el modelo **abandona árboles** (302 nodos a `r=0`,
+41 aún a `r=2`); y donde sí cabe, quitarle al solver la elección de vehículo **dispara los
+auto-cruces** (+89 % a +590 %) en vez de reducirlos. El brazo falla `0 drops`, falla cruces y
+falla travel. La partición territorial previa, aunque sea "blanda", reintroduce exactamente
+la patología de aislamiento que produjo la ruta degenerada de `b095`.
+
+**Brazo B (arranque en caliente):** no se lava a `n=1607` —la meseta del ciclo de
+multi-arranque era local al punto de construcción por defecto— pero **ancla a una geometría
+peor**, porque no existe una semilla de construcción mejor que `PATH_CHEAPEST_ARC`. Falla
+cruces y travel.
+
+**No hay ganadora verificada en este ciclo, y no se dice esa frase.** No se cambia ningún
+default de producción. Los mecanismos quedan implementados pero **opt-in**
+(`--only-cell cluster-r{0,1,2}`, `warm-greedy`, `warm-cluster`); sin las banderas el pipeline
+recorre el mismo camino de código de siempre.
+
+### Lo que queda establecido
+
+1. **La palanca tampoco está en el espacio factible tal como lo restringe un cluster
+   geométrico.** La serie ya había cerrado el *precio* (penalizaciones) y la *búsqueda*
+   (multi-arranque); este ciclo cierra la tercera vía que quedaba —*qué soluciones están
+   disponibles*— **por partición espacial previa**. El resultado es que una partición que
+   ignora la capacidad no acota el espacio a las buenas soluciones: lo acota a soluciones
+   **infactibles**, y el solver responde abandonando árboles.
+2. **El aislamiento de los tres árboles a 2,8 h es del territorio, no del solver.** kmeans
+   los separa en un cluster de tamaño 1 en las cinco semillas (Fase 0, Predicción 2). La ruta
+   degenerada de `b095` no era un accidente del objetivo del VRP: es la geometría del dataset
+   la que fuerza una ruta *stub* para esos árboles, y cualquier método que respete la geografía
+   —incluido un cluster blando— la reproduce. Esto **refuerza por un flanco nuevo** el cierre
+   de `stops-penalty-sweep-20260722`: la palanca es `T_max`, el tiempo de servicio o la
+   partición territorial *operativa* (no geométrica), no un término del modelo.
+3. **La meseta del multi-arranque es local.** `multistart-sweep-20260721` concluyó que el
+   punto de partida se lava; este ciclo lo acota: se lava para **perturbaciones del orden de
+   nodos de la misma heurística**, pero una **semilla estructuralmente distinta se conserva**
+   a `n=1607`, donde el límite de 120 s está topado. La lectura general "el arranque no
+   importa" era demasiado amplia. No cambia la conclusión de adopción —la semilla que se
+   conserva es peor— pero corrige el mecanismo, y es la primera vez que la serie mide el
+   arranque en caliente en vez de deducirlo del multi-arranque.
+4. **`0 drops` antes que cualquier métrica de calidad.** `cluster-r1-no-floor` habría pasado
+   cruces, travel y relleno de áreas si se juzgara sólo por esas columnas; los pasa
+   **abandonando 100 árboles**. El criterio de la serie ya ponía `0 drops` primero, y este
+   ciclo es el caso que lo justifica con datos.
+
+### Sobre la trampa declarada
+
+Se declaró que un cluster mal dimensionado podía volverse infactible y que **eso era el
+resultado, no algo a esconder ablandando la restricción**. Ocurrió: `r=0` abandona 302
+árboles. **No se re-dimensionaron los clusters ni se subió `m` hasta que funcionara**; se
+barrió `r` como estaba pre-registrado (0→1→2), se midió que aflojar reduce pero no elimina
+los drops, y se reporta el brazo con sus drops. La disyunción viva (`-1` en el dominio del
+`VehicleVar`) es lo que convirtió la infactibilidad en una señal medible en vez de un `None`.
+
+### Adopción
+
+Sin cambios. Los defaults de producción (`spatial_term`, `PenaltyConfig` actual, coeficiente
+de span espacial 3) quedan intactos. Los clusters blandos y el arranque en caliente quedan
+como mecanismos opt-in del driver de experimentación, disponibles para ciclos futuros pero
+**no adoptados**.
