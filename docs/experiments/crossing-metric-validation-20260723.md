@@ -132,3 +132,164 @@ barato, sin re-resolver.
   contenedoras), y se verifica su equivalencia sobre casos chicos ANTES de medir.
 - **Llamadas OSRM.** `fetch_route_path` por ruta, ya paralelizado, acotado a 8 en vuelo para no
   inundar el contenedor OSRM.
+
+---
+
+## Resultados
+
+Datos: `crossing-metric-validation-20260723-{actual,no-floor,upper-tmax-tmin9000,actual_reseq,
+no-floor_reseq,upper-tmax-tmin9000_reseq}.csv` y sus `.sequences.jsonl`. **216 filas**: 6 celdas
+× 12 instancias × 3 semillas. Un CSV y un flujo por celda, mismo grado de paralelismo para los
+seis. `wall_clock` no se usa para juzgar nada.
+
+### Comprobaciones del instrumento (antes de leer nada más)
+
+- **P4 (cordura) — pasa.** `two_opt_gap` = 0,0000 exacto en **las 36 filas** de cada uno de los
+  tres brazos `+reseq`. El 2-opt convergió; el instrumento mide lo que dice medir.
+- **Semillas reales — pasa.** Solo 6 de 72 grupos `(celda, instancia)` tienen σ = 0 entre sus
+  tres semillas, y son casos `k = 1` deterministas por construcción (p. ej. `no-floor` en
+  `battery-n50`). La σ de travel entre semillas tiene mediana 181 s y llega a 3 703 s: las
+  permutaciones de nodos llegaron al solver.
+
+### Pregunta 1 — ¿ordena igual la métrica de cuerdas que la de red?
+
+Correlación de rangos de Spearman entre `crossings_chord` y `crossings_road`:
+
+| conjunto | filas | ρ |
+| --- | ---: | ---: |
+| **todas** | 216 | **0,527** |
+| solo bases (sin `+reseq`) | 108 | 0,558 |
+| solo `+reseq` (2-óptimas) | 108 | 0,871 |
+| **solo `reference-n1607`** | 18 | **−0,575** |
+
+El ρ global de **0,527** cae en la banda **0,50 ≤ ρ < 0,80: proxy parcial**. Pero ese número
+pooled esconde una heterogeneidad fuerte: entre soluciones ya 2-óptimas las dos métricas
+concuerdan casi perfectamente (0,871), mientras que **sobre la instancia insignia `n=1607` la
+correlación es negativa (−0,575): la métrica de cuerdas invierte el orden real.**
+
+### Pregunta 2 — ¿sobrevive al cambio de geometría el efecto del post-pass? (prueba decisiva)
+
+Efecto del post-pass 2-opt, pares base → `+reseq`, sobre 36 filas emparejadas por celda:
+
+| par | `crossings_chord` total | `crossings_road` total | dirección road (up/down/eq de 36) |
+| --- | --- | --- | --- |
+| `actual` → `+reseq` | 608 → 621 (**+2 %**) | 610 → 463 (**−24 %**) | 1 / 30 / 5 |
+| `no-floor` → `+reseq` | 114 → 608 (**×5,3**) | 844 → 464 (**−45 %**) | 2 / 29 / 5 |
+| `upper-tmax-tmin9000` → `+reseq` | 227 → 651 (**×2,9**) | 948 → 543 (**−43 %**) | 1 / 31 / 4 |
+
+Sobre las **mismas soluciones**, la métrica de cuerdas dice que el post-pass **multiplica** los
+auto-cruces (hasta ×5,3) y la métrica de red dice que los **reduce** entre un 24 % y un 45 %. El
+signo del efecto sobre `crossings_road` es **negativo o nulo en las 36 instancias de cada par;
+nunca sube.** Por instancia, el 2-opt sube `crossings_road` en 4 de las 108 filas emparejadas y
+lo baja o empata en las otras 104.
+
+Esto activa la lectura pre-registrada del §5: *"Si baja o empata → el veredicto descansaba en un
+artefacto de dibujo."* El 2-opt minimiza travel de red, y al hacerlo **limpia** la geometría de
+calles; la métrica de cuerdas lo reporta como un empeoramiento porque las cuerdas rectas entre
+las paradas re-secuenciadas fabrican cruces que las calles realmente caminadas no tienen.
+
+### Pregunta 3 — ¿cuánto pierde producción por secuencias no 2-óptimas?
+
+`two_opt_gap` de `actual`, la fracción de travel de red que un 2-opt de camino abierto elimina:
+
+| instancia | `two_opt_gap` (actual) |
+| --- | ---: |
+| `reference-n1607` | **0,019** (1,9 %) |
+| áreas chicas (27 / 29) | 0,60 / 0,49 |
+| batería densa (800 / 1000) | 0,01 / 0,03 |
+
+En `n=1607`, producción pierde **1,9 %** de travel por secuencias no 2-óptimas — positivo, como
+predijo P3, pero **por debajo del ~5 % estimado**. La pérdida es grande solo en áreas chicas y
+holgadas, donde el piso `T_min` fuerza relleno que el 2-opt puede recortar.
+
+### Cuadro de predicciones
+
+| # | predicción | resultado | veredicto |
+| --- | --- | --- | --- |
+| P1 | `crossings_chord` ≥ `crossings_road` en la mayoría de celdas | se cumple en `actual` pero **se invierte en la familia `no-floor`/`upper`**: en `n=1607` chord 16/22 vs road 73/71 | **parcial / refutada donde importa** |
+| P2 | el post-pass sube mucho menos `crossings_road` que `crossings_chord` | más fuerte que lo predicho: **road baja**, no sube | **acertada (dirección más extrema)** |
+| P3 | `two_opt_gap` de `actual` ≈ 5 % | 1,9 % en `n=1607` (positivo, menor) | **dirección acertada, magnitud sobre-estimada** |
+| P4 | `two_opt_gap` ≈ 0 en `+reseq` (cordura) | 0,0000 exacto en 108/108 filas | **acertada** |
+
+### El hallazgo colateral: la métrica invierte el orden geométrico de la familia sin piso
+
+En `n=1607`, la métrica de cuerdas rankea a `no-floor` como la geometría **más limpia**
+(chord 16,0 ± 11,8) y a `actual` como una de las más sucias (chord 65,3 ± 7,0). La métrica de red
+dice **exactamente lo contrario**: `actual` road **43,0 ± 4,0** contra `no-floor` road
+**73,0 ± 12,0**. Sobre las calles reales `actual` es casi el doble de limpia que `no-floor`. La
+supuesta ventaja geométrica de la familia sin piso —una de las cifras destacadas de
+`no-floor-balance-sweep-20260719.md`— es en `n=1607` un artefacto de las cuerdas: quitar el piso
+produce rutas cuyas paradas contiguas en línea recta casi no se cruzan, pero cuyos caminos de
+calle se enroscan más que los de producción.
+
+---
+
+## Veredicto
+
+**La métrica de auto-cruces sobre cuerdas rectas es un proxy PARCIAL de la geometría real
+(ρ = 0,527, banda 0,50–0,80), y en el régimen que más se ha usado para juzgar —la instancia densa
+`n=1607`— no solo es débil sino que INVIERTE el orden (ρ = −0,575).**
+
+Se aplica el criterio a priori **sin renegociarlo**:
+
+- ρ global 0,527 → **proxy parcial**. Consecuencia pre-registrada: *"se reportan ambas columnas
+  en adelante; ningún veredicto se revierte sin re-medir."*
+- **Prueba decisiva (independiente de ρ):** el signo del efecto del post-pass sobre
+  `crossings_road` es **negativo o nulo en 104 de 108 filas, nunca positivo de forma real.** El
+  veredicto publicado "el post-pass 2-opt empeora los auto-cruces ×8" **descansaba en un artefacto
+  de dibujo**: el 2-opt reduce los cruces sobre las calles que el censista camina. Este ciclo
+  re-midió el post-pass explícitamente, así que la regla "no revertir sin re-medir" se satisface.
+
+**No se cambia ningún default de producción.** El post-pass es opt-in y sigue siéndolo; no había
+default que cambiar. La re-lectura del criterio de calidad de la serie —si se adopta
+`crossings_road` como métrica de referencia— se hace en un **ciclo posterior con su propio
+pre-registro**, como fija el §6; este ciclo no la ejecuta.
+
+### Lo que queda establecido
+
+1. **El instrumento es válido** (P4: gap 0 exacto en todas las `+reseq`). El desacuerdo
+   chord/road no es ruido de medición: es sistemático y con signo.
+2. **La métrica de cuerdas concuerda con la de red solo cuando la solución ya es 2-óptima**
+   (ρ = 0,871 en `+reseq`) **y falla sobre soluciones crudas** (ρ = 0,558 en bases, −0,575 en
+   `n=1607`). Es un proxy del resultado de un 2-opt, no de la geometría caminada.
+3. **El post-pass 2-opt NO ensucia la geometría real; la limpia** (road −24 % a −45 %). El "×8"
+   publicado es la firma de que las cuerdas entre paradas re-secuenciadas fabrican cruces
+   inexistentes en la calle. Queda **descartado** usar el aumento de `crossings_chord` como
+   evidencia contra el post-pass.
+4. **La ventaja geométrica de la familia sin piso en `n=1607` es un artefacto de cuerdas**
+   (`actual` road 43 < `no-floor` road 73). No reabre `no-floor` —que ya estaba descartado por
+   degeneración y balance, no por geometría— pero retira uno de sus argumentos a favor.
+
+### Lo que este ciclo deja abierto, con dato nuevo para el siguiente
+
+Adoptar `crossings_road` como criterio de calidad geométrica de la serie es ahora una **propuesta
+verificada**: la columna existe, es reproducible y ordena las soluciones de forma consistente con
+lo que el solver optimiza y el censista camina. Su adopción —y la re-lectura de los veredictos que
+se juzgaron con cuerdas— corresponde a un ciclo con su propio pre-registro. Las secuencias de
+parada quedan persistidas (`.sequences.jsonl`), así que ese re-juicio no exige re-resolver.
+
+---
+
+## Reproducción
+
+```bash
+# Infra compartida (db + osrm) y suite congelada
+make shared-up
+docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
+  python manage.py load_instances
+
+# Un flujo por celda, en paralelo, un CSV por celda (+ .sequences.jsonl al lado)
+BASE=docs/experiments/crossing-metric-validation-20260723
+for cell in actual no-floor upper-tmax-tmin9000 \
+            actual+reseq no-floor+reseq upper-tmax-tmin9000+reseq; do
+  safe=$(echo "$cell" | tr '+' '_')
+  docker compose run --rm --no-deps -e RUN_MIGRATIONS=false backend \
+    python manage.py config_algorithm_sweep \
+      --csv "${BASE}-${safe}.csv" --only-cell "$cell" --seeds 1 2 3 &
+done
+wait
+```
+
+El ρ de Spearman es el rango-Pearson de `crossings_chord` contra `crossings_road` sobre las 216
+filas; la prueba decisiva es el signo de `crossings_road[+reseq] − crossings_road[base]` emparejado
+por `(instancia, semilla)`. Ambos son aritmética sobre los CSV, sin solver.
