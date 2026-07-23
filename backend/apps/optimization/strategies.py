@@ -40,6 +40,8 @@ def solve_by_strategy(
     time_global_span_coef=0,
     convex_arc_lambda=0.0,
     node_seed=0,
+    allowed_vehicles=None,
+    warm_start_routes=None,
     timer=None,
 ):
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
@@ -72,6 +74,8 @@ def solve_by_strategy(
         time_global_span_coef=time_global_span_coef,
         convex_arc_lambda=convex_arc_lambda,
         node_seed=node_seed,
+        allowed_vehicles=allowed_vehicles,
+        warm_start_routes=warm_start_routes,
     )
     return solver.solve(timer=timer)
 
@@ -92,6 +96,8 @@ def build_strategy_solver(
     time_global_span_coef=0,
     convex_arc_lambda=0.0,
     node_seed=0,
+    allowed_vehicles=None,
+    warm_start_routes=None,
 ):
     spatial = strategy == RoutingSolution.Strategy.SPATIAL_TERM.value
     return ArbocensusVRPSolver(
@@ -108,6 +114,8 @@ def build_strategy_solver(
         penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
         node_seed=node_seed,
+        allowed_vehicles=allowed_vehicles,
+        warm_start_routes=warm_start_routes,
     )
 
 

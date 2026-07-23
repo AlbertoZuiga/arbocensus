@@ -207,6 +207,13 @@ def node_permutation(node_count, seed):
     return order
 
 
+def inverse_permutation(permutation):
+    inverse = [0] * len(permutation)
+    for position, node in enumerate(permutation):
+        inverse[node] = position
+    return inverse
+
+
 @profile
 def build_open_matrix(matrix):
     real = np.asarray(matrix, dtype=float)
@@ -244,6 +251,8 @@ class ArbocensusVRPSolver:
         penalties=DEFAULT_PENALTIES,
         convex_arc_lambda=0.0,
         node_seed=0,
+        allowed_vehicles=None,
+        warm_start_routes=None,
     ):
         real = np.asarray(matrix, dtype=float)
         # OR-Tools exposes no RNG seed on either parameter proto, so replication is
@@ -255,6 +264,13 @@ class ArbocensusVRPSolver:
             real = real[np.ix_(self.node_permutation, self.node_permutation)]
             if spatial_points is not None:
                 spatial_points = [spatial_points[i] for i in self.node_permutation]
+            if allowed_vehicles is not None:
+                allowed_vehicles = [allowed_vehicles[i] for i in self.node_permutation]
+            if warm_start_routes is not None:
+                inverse = inverse_permutation(self.node_permutation)
+                warm_start_routes = [
+                    [inverse[node] for node in route] for route in warm_start_routes
+                ]
         self.matrix = build_open_matrix(real)
         self.node_count = self.matrix.shape[0] - 1
         self.min_route_time_sec = min_route_time_sec
@@ -268,6 +284,8 @@ class ArbocensusVRPSolver:
         self.time_global_span_coef = time_global_span_coef
         self.penalties = penalties
         self.convex_arc_lambda = convex_arc_lambda
+        self.allowed_vehicles = allowed_vehicles
+        self.warm_start_routes = warm_start_routes
 
     @profile
     def solve(self, timer=None):
@@ -374,6 +392,16 @@ class ArbocensusVRPSolver:
                 for node in range(1, n):
                     routing.AddDisjunction([manager.NodeToIndex(node)], DROP_PENALTY)
 
+            if self.allowed_vehicles is not None:
+                # Restricting the VehicleVar domain, not SetAllowedVehiclesForIndex:
+                # the latter takes an absl::Span that the 9.15 Python binding cannot
+                # convert. -1 stays in the domain so the disjunction above still lets
+                # the solver drop a node instead of turning the model infeasible.
+                with timer.phase("model_build", "allowed_vehicles"):
+                    for node in range(1, n):
+                        vehicle_var = routing.VehicleVar(manager.NodeToIndex(node))
+                        vehicle_var.SetValues([-1, *self.allowed_vehicles[node - 1]])
+
             total_service_sec = self.node_count * self.service_time_sec
             with timer.phase("model_build", "vehicle_bounds"):
                 for vehicle_id in range(self.max_vehicles):
@@ -408,7 +436,7 @@ class ArbocensusVRPSolver:
                 )
                 search_params.time_limit.FromSeconds(self.time_limit_sec)
 
-        solution = self._solve_with_timing(routing, search_params, timer)
+        solution = self._solve_with_timing(routing, manager, search_params, timer)
         if solution is None:
             return None
 
@@ -463,7 +491,27 @@ class ArbocensusVRPSolver:
     def _p95_arc_travel(self):
         return p95_nearest_neighbor_travel(self.matrix)
 
-    def _solve_with_timing(self, routing, search_params, timer):
+    def _read_warm_start(self, routing, manager, search_params, warm_routes):
+        # The model must be closed with the same parameters the solve will use, or the
+        # assignment is read against a different model than the one being solved.
+        routing.CloseModelWithParameters(search_params)
+        if len(warm_routes) > self.max_vehicles:
+            raise ValueError(
+                f"warm start has {len(warm_routes)} routes but only "
+                f"{self.max_vehicles} vehicles are available"
+            )
+        seed = [
+            [manager.NodeToIndex(node + 1) for node in route] for route in warm_routes
+        ]
+        seed += [[]] * (self.max_vehicles - len(seed))
+        assignment = routing.ReadAssignmentFromRoutes(seed, True)
+        if assignment is None:
+            raise ValueError(
+                "warm start routes are not a feasible assignment for this model"
+            )
+        return assignment
+
+    def _solve_with_timing(self, routing, manager, search_params, timer):
         first_solution_elapsed = None
         solve_start = time.perf_counter()
 
@@ -473,7 +521,15 @@ class ArbocensusVRPSolver:
                 first_solution_elapsed = time.perf_counter() - solve_start
 
         routing.AddAtSolutionCallback(on_solution)
-        solution = routing.SolveWithParameters(search_params)
+        if self.warm_start_routes is None:
+            solution = routing.SolveWithParameters(search_params)
+        else:
+            assignment = self._read_warm_start(
+                routing, manager, search_params, self.warm_start_routes
+            )
+            solution = routing.SolveFromAssignmentWithParameters(
+                assignment, search_params
+            )
         solve_elapsed = time.perf_counter() - solve_start
 
         if first_solution_elapsed is None:

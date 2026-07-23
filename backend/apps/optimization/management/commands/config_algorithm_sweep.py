@@ -57,6 +57,7 @@ from apps.optimization.solver import (
     build_open_matrix,
 )
 from apps.optimization.strategies import SPATIAL_SPAN_COEF
+from apps.optimization.warm_start import WARM_START_CLUSTER_FIRST, WARM_START_GREEDY
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -93,6 +94,8 @@ class Cell(NamedTuple):
     post_resequence: bool = False
     arc_lambda: float = 0.0
     time_global_span_coef: int = 0
+    cluster_neighbors: int | None = None
+    warm_start: str | None = None
 
 
 # Config axis fixes strategy at spatial_term and sweeps duration soft-bound arms,
@@ -154,6 +157,25 @@ CONFIG_AXIS = [
     Cell("feasible-floor-b095-stops5", SPATIAL, BALANCE_ARM_COMBINED_B095_STOPS5),
     Cell("feasible-floor-b095-stops10", SPATIAL, BALANCE_ARM_COMBINED_B095_STOPS10),
     Cell("feasible-floor-b095-stops15", SPATIAL, BALANCE_ARM_COMBINED_B095_STOPS15),
+    # Soft clusters: kmeans over the coordinates restricts each node to the vehicles
+    # of its own cluster plus its r nearest ones. This shrinks the feasible SET
+    # instead of repricing the objective, while keeping a single global pass that can
+    # still rebalance the cluster borders.
+    Cell("cluster-r0", SPATIAL, BALANCE_ARM_ACTUAL, cluster_neighbors=0),
+    Cell("cluster-r1", SPATIAL, BALANCE_ARM_ACTUAL, cluster_neighbors=1),
+    Cell("cluster-r2", SPATIAL, BALANCE_ARM_ACTUAL, cluster_neighbors=2),
+    # Same restriction without the duration floor, since padding to reach T_min is the
+    # measured source of intra-route crossings that spatial coherence alone cannot fix.
+    Cell("cluster-r1-no-floor", SPATIAL, BALANCE_ARM_NO_FLOOR, cluster_neighbors=1),
+    # Warm start: seed the metaheuristic with a spatially coherent construction
+    # instead of letting PATH_CHEAPEST_ARC build one from scratch.
+    Cell("warm-greedy", SPATIAL, BALANCE_ARM_ACTUAL, warm_start=WARM_START_GREEDY),
+    Cell(
+        "warm-cluster",
+        SPATIAL,
+        BALANCE_ARM_ACTUAL,
+        warm_start=WARM_START_CLUSTER_FIRST,
+    ),
 ]
 ALGO_AXIS = [
     Cell("global", GLOBAL, BALANCE_ARM_ACTUAL),
@@ -180,6 +202,10 @@ COLUMNS = [
     "post_resequence",
     "arc_lambda",
     "arc_tau",
+    "cluster_neighbors",
+    "cluster_count",
+    "vehicles_per_cluster",
+    "warm_start",
     "seed",
     "starts",
     "budget_mode",
@@ -214,6 +240,10 @@ COLUMNS = [
 
 class _RollbackError(Exception):
     pass
+
+
+def _blank_if_none(value):
+    return "" if value is None else str(value)
 
 
 class Command(BaseCommand):
@@ -331,6 +361,8 @@ class Command(BaseCommand):
                         str(cell.time_global_span_coef),
                         str(cell.post_resequence),
                         str(cell.arc_lambda),
+                        _blank_if_none(cell.cluster_neighbors),
+                        _blank_if_none(cell.warm_start),
                         str(spatial_span_coef),
                         str(stops_penalty),
                         str(max_vehicles or ""),
@@ -380,6 +412,8 @@ class Command(BaseCommand):
                     r.get("time_global_span_coef", "0"),
                     r.get("post_resequence", "False"),
                     r.get("arc_lambda", "0.0"),
+                    r.get("cluster_neighbors", ""),
+                    r.get("warm_start", ""),
                     r.get("spatial_span_coef", str(SPATIAL_SPAN_COEF)),
                     r.get("stops_floor_penalty", str(STOPS_FLOOR_PENALTY)),
                     r.get("max_vehicles_forced", ""),
@@ -427,8 +461,9 @@ class Command(BaseCommand):
         wall_start = time.perf_counter()
         if cell.strategy == GREEDY:
             rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
+            plan = {}
         else:
-            rows, worst_iou, interleave, timing = self._ortools_cell(
+            rows, worst_iou, interleave, timing, plan = self._ortools_cell(
                 trees,
                 matrix,
                 cell,
@@ -457,6 +492,7 @@ class Command(BaseCommand):
             worst_iou,
             interleave,
             timing,
+            plan,
             nn_travel,
             mst_edges,
             wall,
@@ -480,6 +516,7 @@ class Command(BaseCommand):
         )
         dataset = trees[0].dataset
         raw_routes = None
+        plan = {}
         rows = worst = interleave = timing = drops_count = None
         try:
             with transaction.atomic():
@@ -501,10 +538,16 @@ class Command(BaseCommand):
                     max_vehicles=max_vehicles,
                     time_limit_sec=per_start_limit,
                     node_seeds=start_seeds(seed, starts),
+                    cluster_neighbors=cell.cluster_neighbors,
+                    warm_start=cell.warm_start,
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
                 drops_count = len(metrics["dropped_trees"])
                 timing = solution.timing
+                plan = {
+                    "cluster_count": metrics["cluster_count"],
+                    "vehicles_per_cluster": metrics["vehicles_per_cluster"],
+                }
 
                 if cell.post_resequence:
                     tree_id_to_idx = {tree.id: i for i, tree in enumerate(trees)}
@@ -537,7 +580,7 @@ class Command(BaseCommand):
                 reseq, trees, matrix, drops_count
             )
 
-        return rows, worst, interleave, timing
+        return rows, worst, interleave, timing, plan
 
     def _compute_route_metrics(self, routes, trees, matrix, drops_count):
         rows = []
@@ -612,6 +655,7 @@ class Command(BaseCommand):
         worst_iou,
         interleave,
         timing,
+        plan,
         nn_travel,
         mst_edges,
         wall,
@@ -666,6 +710,10 @@ class Command(BaseCommand):
             "post_resequence": cell.post_resequence,
             "arc_lambda": cell.arc_lambda,
             "arc_tau": round(arc_tau, 1),
+            "cluster_neighbors": _blank_if_none(cell.cluster_neighbors),
+            "cluster_count": plan.get("cluster_count", ""),
+            "vehicles_per_cluster": plan.get("vehicles_per_cluster", ""),
+            "warm_start": _blank_if_none(cell.warm_start),
             "seed": seed,
             "starts": starts,
             "budget_mode": budget,
