@@ -889,7 +889,7 @@ medible.
 Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
 
 \begin{itemize}
-  \item \textbf{Matrices de costos de gran escala}: fragmentación (\textit{chunking}) de consultas OSRM para \textit{datasets} que superen los 5\,000 puntos activos, límite \texttt{--max-table-size} de una única solicitud.
+  \item \textbf{Matrices de costos de gran escala}: superar el tope de $2\,000$ árboles que hoy acota la dimensión de la matriz de costos ---impuesto por el crecimiento $O(n^2)$ de su tamaño en disco--- mediante almacenamiento disperso o la segmentación previa del \textit{dataset}, para censos que excedan ese umbral.
   \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual (Sección~\ref{sec:ui}) por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
   \item \textbf{Importación de formatos adicionales}: soporte de GeoJSON como formato de entrada de \textit{datasets}, que actualmente se importan desde archivos CSV o JSON, o bien desde las fuentes legadas (Sección~\ref{sec:legacy}).
   \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos completos de administrador y censador mediante Playwright.
@@ -908,13 +908,15 @@ iteración de Arbocensus.
   \texttt{HttpOnly}. El riesgo es aceptado para un sistema de intranet
   operado por personal interno.
 
-  \item \textbf{Escala de la matriz de costos}: la construcción de la matriz
-  de distancias no aplica fragmentación (\textit{chunking}), de modo que el
-  tamaño del \textit{dataset} queda acotado por el límite de tabla de una
-  única solicitud al servicio OSRM (\texttt{--max-table-size}). Para
-  \textit{datasets} que superen ese umbral se requiere dividir las consultas
-  y ensamblar la matriz por bloques, extensión documentada en el apartado
-  anterior.
+  \item \textbf{Escala de la matriz de costos}: la matriz se construye por
+  fragmentación (\textit{chunking}) en bloques cuando el \textit{dataset}
+  supera las $350$ coordenadas que admite una única solicitud a OSRM
+  (Sección~\ref{sec:matriz}), de modo que censos de miles de árboles ---como
+  el conjunto de evaluación de $n = 1\,607$--- se procesan sin dificultad. El
+  límite vigente es un tope de $2\,000$ árboles sobre la dimensión de la
+  matriz, impuesto porque su tamaño en disco crece como $O(n^2)$; procesar
+  \textit{datasets} que lo excedan requeriría almacenamiento disperso o la
+  segmentación previa del arbolado.
 
   \item \textbf{Alcance del problema de ruteo}: el motor optimiza el
   \textit{dataset} completo como un único problema, sin segmentación previa
