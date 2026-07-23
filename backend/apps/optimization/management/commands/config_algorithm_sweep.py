@@ -27,7 +27,10 @@ from apps.optimization.route_audit import (
     worst_overlap_pair,
 )
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
-from apps.optimization.route_resequencer import resequence_routes
+from apps.optimization.route_resequencer import (
+    resequence_routes,
+    solution_two_opt_gap,
+)
 from apps.optimization.solver import (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_COMBINED_B060_STOPS10,
@@ -57,6 +60,7 @@ from apps.optimization.solver import (
     build_open_matrix,
 )
 from apps.optimization.strategies import SPATIAL_SPAN_COEF
+from apps.optimization.sweep_sequences import append_sequences
 from apps.optimization.warm_start import WARM_START_CLUSTER_FIRST, WARM_START_GREEDY
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -235,6 +239,7 @@ COLUMNS = [
     "t_first_solution_sec",
     "t_metaheuristic_sec",
     "t_extraction_sec",
+    "two_opt_gap",
 ]
 
 
@@ -252,7 +257,8 @@ class Command(BaseCommand):
         "Reference census config: service 2 min, T_max 3 h. Appends one row per "
         "cell to a master CSV and is resumable: cells already present are skipped. "
         "OR-Tools cells run inside a rolled-back transaction so the shared database "
-        "is not polluted with hundreds of throwaway solutions."
+        "is not polluted with hundreds of throwaway solutions. The stop sequence of "
+        "every route is written to a .sequences.jsonl file next to the CSV."
     )
 
     def add_arguments(self, parser):
@@ -373,7 +379,7 @@ class Command(BaseCommand):
                     if key in done:
                         self.stdout.write(f"skip {slug} {cell.label} seed={seed}")
                         continue
-                    row = self._run_cell(
+                    row, sequences = self._run_cell(
                         slug,
                         trees,
                         matrix,
@@ -390,6 +396,7 @@ class Command(BaseCommand):
                         budget,
                     )
                     self._append(csv_path, row)
+                    append_sequences(csv_path, row, sequences)
                     done.add(key)
                     self.stdout.write(
                         f"done {slug} {cell.label} seed={seed} "
@@ -460,10 +467,12 @@ class Command(BaseCommand):
         )
         wall_start = time.perf_counter()
         if cell.strategy == GREEDY:
-            rows, worst_iou, interleave, timing = self._greedy_cell(trees, matrix)
+            rows, worst_iou, interleave, timing, routes = self._greedy_cell(
+                trees, matrix
+            )
             plan = {}
         else:
-            rows, worst_iou, interleave, timing, plan = self._ortools_cell(
+            rows, worst_iou, interleave, timing, plan, routes = self._ortools_cell(
                 trees,
                 matrix,
                 cell,
@@ -475,7 +484,9 @@ class Command(BaseCommand):
                 per_start_limit,
             )
         wall = round(time.perf_counter() - wall_start, 2)
-        return self._metrics_row(
+        gap = solution_two_opt_gap(routes, matrix)
+        sequences = [[trees[node].id for node in route] for route in routes]
+        row = self._metrics_row(
             slug,
             len(trees),
             axis,
@@ -496,7 +507,9 @@ class Command(BaseCommand):
             nn_travel,
             mst_edges,
             wall,
+            gap,
         )
+        return row, sequences
 
     def _ortools_cell(
         self,
@@ -515,7 +528,7 @@ class Command(BaseCommand):
             balance_arm=cell.balance_arm, stops_floor_penalty=stops_penalty
         )
         dataset = trees[0].dataset
-        raw_routes = None
+        raw_routes = []
         plan = {}
         rows = worst = interleave = timing = drops_count = None
         try:
@@ -549,15 +562,13 @@ class Command(BaseCommand):
                     "vehicles_per_cluster": metrics["vehicles_per_cluster"],
                 }
 
-                if cell.post_resequence:
-                    tree_id_to_idx = {tree.id: i for i, tree in enumerate(trees)}
-                    raw_routes = []
-                    for route in solution.routes.order_by("route_number"):
-                        stops = list(route.stops.order_by("sequence"))
-                        raw_routes.append(
-                            [tree_id_to_idx[stop.tree_id] for stop in stops]
-                        )
-                else:
+                tree_id_to_idx = {tree.id: i for i, tree in enumerate(trees)}
+                raw_routes = []
+                for route in solution.routes.order_by("route_number"):
+                    stops = list(route.stops.order_by("sequence"))
+                    raw_routes.append([tree_id_to_idx[stop.tree_id] for stop in stops])
+
+                if not cell.post_resequence:
                     audited = audit_solution(
                         solution,
                         min_route_time_sec=CENSUS_MIN_ROUTE_TIME_SEC,
@@ -574,13 +585,14 @@ class Command(BaseCommand):
         except _RollbackError:
             pass
 
-        if cell.post_resequence and raw_routes is not None:
-            reseq = resequence_routes(raw_routes, matrix)
+        routes = raw_routes
+        if cell.post_resequence:
+            routes = resequence_routes(raw_routes, matrix)
             rows, worst, interleave = self._compute_route_metrics(
-                reseq, trees, matrix, drops_count
+                routes, trees, matrix, drops_count
             )
 
-        return rows, worst, interleave, timing, plan
+        return rows, worst, interleave, timing, plan, routes
 
     def _compute_route_metrics(self, routes, trees, matrix, drops_count):
         rows = []
@@ -635,7 +647,13 @@ class Command(BaseCommand):
             row["drops"] = 0
             rows.append(row)
         spatial = aggregate_metrics(routes_from_points(routes, trees))
-        return rows, spatial["worst_pair_iou"], spatial["interleave_per_route"], None
+        return (
+            rows,
+            spatial["worst_pair_iou"],
+            spatial["interleave_per_route"],
+            None,
+            routes,
+        )
 
     def _metrics_row(
         self,
@@ -659,6 +677,7 @@ class Command(BaseCommand):
         nn_travel,
         mst_edges,
         wall,
+        two_opt_gap,
     ):
         durations = [r["duration_sec"] for r in rows]
         travels = [r["travel_sec"] for r in rows]
@@ -741,6 +760,7 @@ class Command(BaseCommand):
             "deficit_sec": deficit,
             "wall_clock_sec": wall,
             **phases,
+            "two_opt_gap": round(two_opt_gap, 4),
         }
 
     def _degenerate_count(self, rows):
