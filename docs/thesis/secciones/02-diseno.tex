@@ -694,9 +694,17 @@ censador.
 
 \capturaui{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de \textit{datasets} e importación de archivos (\texttt{/admin/datasets}).}{fig:ui_datasets}
 
-\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa de árboles ---con el historial de observaciones de un árbol--- y formulario de parámetros temporales y de estrategia, con el trabajo en curso.}{fig:ui_optimization}
+\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa con las rutas de la última optimización, el comparador de estrategias y el formulario de parámetros temporales y de estrategia.}{fig:ui_optimization}
 
 \capturaui{ui-routes.png}{Detalle de un \textit{dataset}: pestaña de asignación}{El mismo detalle en su pestaña de asignación: pestañas de estrategia con sus métricas, polilíneas coloreadas sobre la red peatonal y asignación de cada ruta a un censador. El trabajo se lanzó en modo \texttt{compare}, de ahí las tres soluciones comparables.}{fig:ui_routes}
+
+Publicado el plan, el administrador supervisa el avance del censo en terreno desde
+la pestaña de progreso del \textit{dataset}. El tablero resume el porcentaje de
+árboles censados, omitidos y pendientes, los sitúa sobre el mapa coloreados según su
+estado y desglosa el avance por ruta y por censador, de modo que el administrador
+puede identificar qué rutas van retrasadas y redistribuir la carga.
+
+\capturaui{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}): porcentaje de árboles censados, omitidos y pendientes; mapa coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.}{fig:ui_progress}
 
 El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first}
 orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente
@@ -705,7 +713,7 @@ solo puede marcarse como visitada cuando las anteriores ya lo han sido. La ubica
 del censador se sigue mediante la API de geolocalización del navegador y se calcula la
 distancia \textit{haversine} a la parada activa; el registro de visita se habilita al
 entrar en un radio de proximidad de 30\,m, con la opción de forzar el registro
-(\textit{«Marcar de todos modos»}) cuando la señal GPS es imprecisa. Tanto la visita
+(\textit{«Registrar de todos modos»}) cuando la señal GPS es imprecisa. Tanto la visita
 como la omisión de una parada generan una observación del árbol, con captura
 fotográfica y estado, según el diseño descrito en la
 Sección~\ref{sec:recenso}. Cada parada ofrece
