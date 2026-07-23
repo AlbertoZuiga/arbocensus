@@ -76,7 +76,7 @@ Medido sobre las instancias congeladas (aritmética pura, sin solver):
 
 Costo objetivo de absorber **una parada vecina** en `reference-n1607`:
 
-```
+```text
 17.1 s (arco)  +  3 × 19.9 m (span)  =  76.7 unidades de objetivo
 ```
 
@@ -202,7 +202,7 @@ que la comparación entre ellos sí es válida.
 
 Una diferencia entre brazos cuenta como **real** sólo si
 
-```
+```text
 |media_A − media_B| > desv_A + desv_B
 ```
 
@@ -322,7 +322,7 @@ en la **misma solución**.
 Volcado directo de esa solución (`reference-n1607`, semilla 5, `b095+stops10`), a las dos
 fuerzas:
 
-```
+```text
 k=25  drops=0
 sizes: [3, 53, 56, 57, 57, 59, 61, 64, 65, 65, 65, 65, 67, 67, 68, 68, 69, 71, 73, 74, 74, 75, 76, 77, 78]
 RUTA CORTA: 3 paradas, travel=10 125 s, duración=10 485 s

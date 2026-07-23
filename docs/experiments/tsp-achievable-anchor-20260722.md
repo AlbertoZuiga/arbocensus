@@ -15,7 +15,7 @@ actual, coeficiente de span espacial 3) quedan intactos. Lo nuevo es un comando 
 
 La métrica que juzga el relleno en toda la serie desde `sweep-metrology-20260720.md` es
 
-```
+```text
 relleno_msf := travel_total − MSF_k
 ```
 
@@ -39,7 +39,7 @@ mide.
 
 Simétrica a la que ya existe, y con la misma operación elemental:
 
-```
+```text
 MSF_k = MST          menos las k−1 aristas más pesadas  → cota INFERIOR (relajación)
 UB_k  = camino TSP   menos las k−1 aristas más pesadas  → cota SUPERIOR (construida)
 ```
@@ -98,7 +98,7 @@ racionalizarlo después.
 
 Con el mismo `k` en ambos brazos, la variación relativa que juzga el criterio es
 
-```
+```text
 Δ%  =  (travel_arm − travel_actual) / (travel_actual − ancla)
 ```
 
@@ -109,12 +109,12 @@ bajo el ancla alcanzable es **más chico**. Por lo tanto:
 > `|Δ%|` medido contra `UB_k` será **mayor o igual** que medido contra `MSF_k`. Es decir: el ancla
 > alcanzable es **más indulgente**, y el criterio anclado en `MSF_k` es el **conservador** de los
 > dos.
-
+>
 > **Predicción pre-registrada 2.** En consecuencia, ninguna celda que **pasaba** bajo `MSF_k` puede
 > **fallar** bajo `UB_k` (con `k` igual). Los únicos cambios de veredicto posibles son
 > fallo → aprobación. Si se observa un cambio aprobación → fallo, la causa sólo puede ser un `k`
 > distinto entre brazos, y se investigará y reportará como tal.
-
+>
 > **Predicción pre-registrada 3.** La brecha `gap_pct` será **mayor en las instancias chicas y
 > dispersas** que en las densas: cuanto más disperso el conjunto, más aristas largas obligadas y
 > más se aleja el MST de un camino factible.
@@ -460,7 +460,7 @@ lado se juzga contra su propia ancla (`MSF_2`=914 / `UB_2`=1 036 para `actual`; 
 Por eso el Δ% de la tabla es la variación relativa del **relleno**, con cada lado contra el ancla
 de su propia `k`:
 
-```
+```text
 Δ%  =  (relleno_arm − relleno_actual) / relleno_actual,    relleno_X = travel_X − ancla(k_X)
 ```
 
@@ -606,4 +606,3 @@ quedan intactos.
 cero es una cota demostrada y no depende del presupuesto de cómputo de un TSP. `relleno_ub` queda
 disponible como **columna de contexto**, para reportar cuánto de un relleno medido es flojedad de
 la cota. Recomendación para ciclos futuros: publicar ambas, juzgar con `relleno_msf`.
-

@@ -227,4 +227,3 @@ Los brazos que atacaban el relleno (`tmin-scaled`, `service-floor`, `exempt-last
 
 El código de los *overrides* queda en el árbol (opt-in, producción intacta) para reproducir el
 barrido y para habilitar la compuerta cuando se implemente el selector por saturación.
-
