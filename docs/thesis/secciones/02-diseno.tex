@@ -290,9 +290,10 @@ Problem}) con las siguientes características:
   \item \textbf{Cota inferior de tiempo ($T_{\min}$, restricción blanda)}:
         implementada mediante \texttt{SetCumulVarSoftLowerBound} en el nodo terminal
         de cada vehículo, con coeficiente de penalización $10\,000$.
-        Las restricciones duras de cota inferior tienden a generar infactibilidad;
-        la formulación blanda permite al \textit{solver} explorar el espacio de búsqueda con
-        mayor robustez.
+        Una cota inferior dura volvería el modelo infactible cuando el número de rutas
+        necesarias multiplicado por $T_{\min}$ supera el trabajo disponible; la
+        formulación blanda evita esa infactibilidad al penalizar el déficit en lugar de
+        prohibirlo.
   \item \textbf{Balance de rutas}:
         \texttt{SetCumulVarSoftUpperBound} dirige las rutas hacia el punto medio
         $(T_{\min} + T_{\max})/2$, lo que reduce la varianza entre rutas.
