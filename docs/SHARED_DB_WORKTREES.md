@@ -79,7 +79,7 @@ docker network ls | grep _default      # → arbocensus_default
 **cualquier** `docker compose ...` en un worktree (incluidos `config`, `run` y las
 recetas de experimentos de más abajo) falla si la infra nunca se levantó:
 
-```
+```text
 network arbocensus_default declared as external, but could not be found
 ```
 
@@ -146,7 +146,7 @@ Ejecutado **antes** del renombre de archivos/proyecto (la infra se llamaba
 transcribe tal cual se corrió. Desde el worktree `shared-db-worktrees`,
 contenedor efímero atado a la red compartida:
 
-```
+```bash
 $ docker compose -f docker-compose.worktree.yml -p arbo-wt-shareddb \
     run --rm --no-deps backend python manage.py objective_audit \
     --dataset area-36-n13 --time-limit 5

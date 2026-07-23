@@ -65,7 +65,7 @@ Dos propiedades que importan:
 
 ### Métrica nueva `relleno_msf_sec`
 
-```
+```text
 relleno_msf := travel_total − MSF_k
 ```
 
@@ -133,7 +133,7 @@ con otro umbral, o con la regla antigua: `relleno_sec` sigue en el CSV.
 
 Con réplicas reales, una diferencia entre brazos cuenta como **real** sólo si
 
-```
+```text
 |media_A − media_B| > desv_A + desv_B
 ```
 

@@ -69,7 +69,7 @@ Notación: `n` nodos, `k` rutas abiertas, servicio `s = 120 s/árbol`, `T_max = 
 El driver define **relleno** como el exceso de travel sobre una cota inferior de vecino más
 cercano:
 
-```
+```text
 relleno := travel_total − (n − k) · nn̄
 ```
 
@@ -88,7 +88,7 @@ Sobre esa definición se fijan tres cotas, todas verificables:
 
 De donde, para cada `k`, la cota inferior de relleno que ese `k` impone:
 
-```
+```text
 relleno_LB(k, F) = max(LB-geom, LB-piso) − (n − k) · nn̄
 ```
 

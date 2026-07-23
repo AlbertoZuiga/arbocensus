@@ -111,6 +111,7 @@ por sub-rama son:
    incluso a n=1000. No representan cuello de botella en ningún régimen.
 
 **A partir de qué n cada rama importa:**
+
 - `osrm_fetch` domina desde n=1.
 - `persist` y `geo_matrix` se vuelven perceptibles (>100 ms) desde n≈400.
 - El modo chunked (off-diagonal dominante) se activa desde n>350.

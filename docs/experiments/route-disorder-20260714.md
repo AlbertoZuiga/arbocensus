@@ -117,7 +117,7 @@ instancia** (unión de ~12 km sin correlato operativo), no el solver.
 
 ## c. Resultados
 
-_(se completa tras correr; una fila por celda desde los CSV)_
+(se completa tras correr; una fila por celda desde los CSV)
 
 ### c.1 Grilla central n=1607
 
