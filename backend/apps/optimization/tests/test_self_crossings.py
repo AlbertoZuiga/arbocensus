@@ -3,7 +3,7 @@ from itertools import combinations
 
 import numpy as np
 import pytest
-from apps.optimization.route_audit import self_crossings
+from apps.optimization.route_audit import road_self_crossings, self_crossings
 from apps.optimization.strategies import project_equirectangular
 
 SANTIAGO_LON = -70.65
@@ -102,6 +102,61 @@ def test_counts_a_bowtie():
         (SANTIAGO_LAT, SANTIAGO_LON + 0.01),
     ]
     assert self_crossings(bowtie) == 1
+
+
+def test_road_crossings_equal_chord_metric_when_the_polyline_is_the_chords():
+    # An OSRM polyline of a route with no intermediate street vertices IS the
+    # straight chords, expressed [lon, lat]. Fed that degenerate polyline, the road
+    # counter must reproduce the chord metric exactly — the equivalence that anchors
+    # crossings_road to the existing crossings_chord.
+    rng = np.random.default_rng(42)
+    for _ in range(30):
+        stops = [
+            (SANTIAGO_LAT + float(dlat), SANTIAGO_LON + float(dlon))
+            for dlat, dlon in rng.normal(0, 0.01, size=(12, 2))
+        ]
+        polyline = [(lon, lat) for lat, lon in stops]
+        assert road_self_crossings(polyline) == self_crossings(stops)
+
+
+def test_road_crossings_counts_a_bowtie_polyline():
+    # Same bowtie as the chord test, but as an OSRM-shaped [lon, lat] polyline.
+    bowtie = [
+        (SANTIAGO_LON, SANTIAGO_LAT),
+        (SANTIAGO_LON + 0.01, SANTIAGO_LAT + 0.01),
+        (SANTIAGO_LON, SANTIAGO_LAT + 0.01),
+        (SANTIAGO_LON + 0.01, SANTIAGO_LAT),
+    ]
+    assert road_self_crossings(bowtie) == 1
+
+
+def test_road_crossings_sees_a_crossing_that_the_chords_hide():
+    # Two stops whose straight chord does not cross the route, but whose real street
+    # path detours through a loop that does. This is exactly the chord/road mismatch
+    # the cycle exists to measure: chords miss it, the polyline catches it.
+    stops = [
+        (SANTIAGO_LAT, SANTIAGO_LON),
+        (SANTIAGO_LAT + 0.02, SANTIAGO_LON + 0.02),
+        (SANTIAGO_LAT + 0.02, SANTIAGO_LON),
+        (SANTIAGO_LAT + 0.04, SANTIAGO_LON + 0.02),
+    ]
+    chords = [(lon, lat) for lat, lon in stops]
+    assert road_self_crossings(chords) == self_crossings(stops) == 0
+    detoured = [
+        (SANTIAGO_LON, SANTIAGO_LAT),
+        (SANTIAGO_LON + 0.03, SANTIAGO_LAT + 0.01),
+        (SANTIAGO_LON + 0.02, SANTIAGO_LAT + 0.02),
+        (SANTIAGO_LON, SANTIAGO_LAT + 0.02),
+        (SANTIAGO_LON + 0.01, SANTIAGO_LAT + 0.005),
+        (SANTIAGO_LON + 0.04, SANTIAGO_LAT + 0.02),
+    ]
+    assert road_self_crossings(detoured) == 1
+
+
+def test_road_crossings_zero_on_routes_too_short_to_cross():
+    polyline = [(SANTIAGO_LON, SANTIAGO_LAT), (SANTIAGO_LON + 0.01, SANTIAGO_LAT)]
+    for size in range(4):
+        assert road_self_crossings(polyline[:size]) == 0
 
 
 def test_handles_a_road_polyline_sized_input():

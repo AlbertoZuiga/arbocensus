@@ -24,6 +24,7 @@ from apps.optimization.pipeline import OptimizationPipeline, default_time_limit_
 from apps.optimization.route_audit import (
     audit_route,
     audit_solution,
+    road_self_crossings,
     worst_overlap_pair,
 )
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
@@ -62,6 +63,7 @@ from apps.optimization.solver import (
 from apps.optimization.strategies import SPATIAL_SPAN_COEF
 from apps.optimization.sweep_sequences import append_sequences
 from apps.optimization.warm_start import WARM_START_CLUSTER_FIRST, WARM_START_GREEDY
+from apps.routes.osrm import fetch_route_paths
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -223,7 +225,8 @@ COLUMNS = [
     "dur_min_sec",
     "dur_median_sec",
     "dur_max_sec",
-    "crossings",
+    "crossings_chord",
+    "crossings_road",
     "worst_iou",
     "interleave_per_route",
     "walk_ratio",
@@ -401,7 +404,8 @@ class Command(BaseCommand):
                     self.stdout.write(
                         f"done {slug} {cell.label} seed={seed} "
                         f"k={row['k']} bal={row['balance']} "
-                        f"cross={row['crossings']} wall={row['wall_clock_sec']}s"
+                        f"chord={row['crossings_chord']} road={row['crossings_road']} "
+                        f"wall={row['wall_clock_sec']}s"
                     )
         self.stdout.write(self.style.SUCCESS(f"Sweep CSV: {csv_path}"))
 
@@ -485,6 +489,7 @@ class Command(BaseCommand):
             )
         wall = round(time.perf_counter() - wall_start, 2)
         gap = solution_two_opt_gap(routes, matrix)
+        crossings_road = self._crossings_road(routes, trees)
         sequences = [[trees[node].id for node in route] for route in routes]
         row = self._metrics_row(
             slug,
@@ -508,8 +513,19 @@ class Command(BaseCommand):
             mst_edges,
             wall,
             gap,
+            crossings_road,
         )
         return row, sequences
+
+    def _crossings_road(self, routes, trees):
+        # Same [lon, lat] stop coordinates the surveyor endpoint feeds OSRM, so the
+        # polyline this counts crossings on is the one drawn on the surveyor map.
+        coordinate_lists = [
+            [(trees[node].location.x, trees[node].location.y) for node in route]
+            for route in routes
+        ]
+        paths = fetch_route_paths(coordinate_lists)
+        return sum(road_self_crossings(path) for path in paths)
 
     def _ortools_cell(
         self,
@@ -678,6 +694,7 @@ class Command(BaseCommand):
         mst_edges,
         wall,
         two_opt_gap,
+        crossings_road,
     ):
         durations = [r["duration_sec"] for r in rows]
         travels = [r["travel_sec"] for r in rows]
@@ -746,7 +763,8 @@ class Command(BaseCommand):
             "dur_min_sec": round(min(durations)) if durations else 0,
             "dur_median_sec": round(median(durations)) if durations else 0,
             "dur_max_sec": round(max(durations)) if durations else 0,
-            "crossings": sum(r["self_crossings"] for r in rows),
+            "crossings_chord": sum(r["self_crossings"] for r in rows),
+            "crossings_road": crossings_road,
             "worst_iou": round(worst_iou, 3),
             "interleave_per_route": round(interleave, 3),
             "walk_ratio": (

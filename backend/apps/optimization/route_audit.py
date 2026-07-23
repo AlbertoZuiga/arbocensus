@@ -64,6 +64,13 @@ def self_crossings(points):
     return total
 
 
+def road_self_crossings(path):
+    # `path` is the OSRM road polyline as [lon, lat] vertices — the geometry the
+    # surveyor map draws — whereas self_crossings projects (lat, lon). The chord
+    # metric joins stops directly; this counts crossings of the walked streets.
+    return self_crossings([(lat, lon) for lon, lat in path])
+
+
 def audit_route(
     route_number,
     points,
