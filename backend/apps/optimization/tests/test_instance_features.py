@@ -45,6 +45,17 @@ def test_principal_extents_follow_the_long_axis_of_a_rotated_line():
     assert minor == pytest.approx(0, abs=1e-6)
 
 
+def test_major_extent_is_the_longer_side_even_when_variance_disagrees():
+    # Two dense clusters set the largest variance along x, while a lone point
+    # stretches the range along y further.
+    projected = np.array(
+        [[-100.0, 0.0], [-100.0, 0.0], [100.0, 0.0], [100.0, 0.0], [0.0, 300.0]]
+    )
+    major, minor = principal_extents(projected)
+    assert major == pytest.approx(300, rel=1e-6)
+    assert minor == pytest.approx(200, rel=1e-6)
+
+
 def test_density_counts_trees_over_the_bounding_box():
     side = degrees_north(1000)
     east = side / math.cos(math.radians(-33.45))

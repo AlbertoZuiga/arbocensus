@@ -27,7 +27,10 @@ def principal_extents(projected):
     _, _, components = np.linalg.svd(centered, full_matrices=False)
     scores = centered @ components.T
     spans = scores.max(axis=0) - scores.min(axis=0)
-    return float(spans[0]), float(spans[1])
+    # The axis of largest variance is not always the axis of largest range, so the
+    # extents are ordered by range: "major" has to be the longer side.
+    major, minor = sorted(spans, reverse=True)
+    return float(major), float(minor)
 
 
 def geometry_features(points):
