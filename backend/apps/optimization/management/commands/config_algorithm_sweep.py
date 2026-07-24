@@ -56,6 +56,9 @@ from apps.optimization.solver import (
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
+    SOFT_LOWER_PENALTY,
+    SOFT_UPPER_TARGET_MIDPOINT,
+    SOFT_UPPER_TARGET_TMAX,
     STOPS_FLOOR_PENALTY,
     PenaltyConfig,
     build_open_matrix,
@@ -102,6 +105,8 @@ class Cell(NamedTuple):
     time_global_span_coef: int = 0
     cluster_neighbors: int | None = None
     warm_start: str | None = None
+    soft_lower_penalty: int = SOFT_LOWER_PENALTY
+    soft_upper_target: str = SOFT_UPPER_TARGET_MIDPOINT
 
 
 # Config axis fixes strategy at spatial_term and sweeps duration soft-bound arms,
@@ -188,6 +193,23 @@ ALGO_AXIS = [
     Cell("greedy", GREEDY, BALANCE_ARM_ACTUAL),
 ]
 
+# Factorial over the two duration-channel prices of the `actual` arm: the soft
+# lower floor price (A) and the soft upper target (B). `floor10000-mid` is the
+# production baseline (`actual`), re-run inside the cycle rather than compared to
+# published means. Selected with --factorial; run one label at a time with
+# --only-cell to parallelize one CSV per cell.
+FACTORIAL_AXIS = [
+    Cell(
+        f"floor{penalty}-{'tmax' if target == SOFT_UPPER_TARGET_TMAX else 'mid'}",
+        SPATIAL,
+        BALANCE_ARM_ACTUAL,
+        soft_lower_penalty=penalty,
+        soft_upper_target=target,
+    )
+    for penalty in (10000, 2000, 500, 100)
+    for target in (SOFT_UPPER_TARGET_MIDPOINT, SOFT_UPPER_TARGET_TMAX)
+]
+
 SEEDS = [1, 2, 3]
 
 DEGENERATE_MIN_STOPS = 5
@@ -200,6 +222,8 @@ COLUMNS = [
     "cell",
     "strategy",
     "balance_arm",
+    "soft_lower_penalty",
+    "soft_upper_target",
     "span_coef",
     "spatial_span_coef",
     "stops_floor_penalty",
@@ -279,6 +303,14 @@ class Command(BaseCommand):
             help="Restrict the sweep to a single config/algo cell label",
         )
         parser.add_argument(
+            "--factorial",
+            action="store_true",
+            help=(
+                "Run the floor-price x upper-target factorial axis instead of the "
+                "config/algo axes"
+            ),
+        )
+        parser.add_argument(
             "--spatial-span-coef",
             type=int,
             default=SPATIAL_SPAN_COEF,
@@ -336,8 +368,11 @@ class Command(BaseCommand):
                 raise CommandError(f"unknown instance '{options['only_instance']}'")
             instances = [options["only_instance"]]
 
-        cells = [("config", cell) for cell in CONFIG_AXIS]
-        cells += [("algo", cell) for cell in ALGO_AXIS]
+        if options["factorial"]:
+            cells = [("factorial", cell) for cell in FACTORIAL_AXIS]
+        else:
+            cells = [("config", cell) for cell in CONFIG_AXIS]
+            cells += [("algo", cell) for cell in ALGO_AXIS]
         if options["only_cell"]:
             cells = [c for c in cells if c[1].label == options["only_cell"]]
             if not cells:
@@ -366,6 +401,8 @@ class Command(BaseCommand):
                         cell.label,
                         cell.strategy,
                         cell.balance_arm,
+                        str(cell.soft_lower_penalty),
+                        cell.soft_upper_target,
                         str(cell.span_coef),
                         str(cell.time_global_span_coef),
                         str(cell.post_resequence),
@@ -419,6 +456,8 @@ class Command(BaseCommand):
                     r["cell"],
                     r["strategy"],
                     r["balance_arm"],
+                    r.get("soft_lower_penalty", str(SOFT_LOWER_PENALTY)),
+                    r.get("soft_upper_target", SOFT_UPPER_TARGET_MIDPOINT),
                     r["span_coef"],
                     r.get("time_global_span_coef", "0"),
                     r.get("post_resequence", "False"),
@@ -541,7 +580,10 @@ class Command(BaseCommand):
     ):
         strategy = cell.strategy
         penalties = PenaltyConfig(
-            balance_arm=cell.balance_arm, stops_floor_penalty=stops_penalty
+            balance_arm=cell.balance_arm,
+            stops_floor_penalty=stops_penalty,
+            soft_lower_penalty=cell.soft_lower_penalty,
+            soft_upper_target=cell.soft_upper_target,
         )
         dataset = trees[0].dataset
         raw_routes = []
@@ -738,6 +780,8 @@ class Command(BaseCommand):
             "cell": cell.label,
             "strategy": cell.strategy,
             "balance_arm": cell.balance_arm,
+            "soft_lower_penalty": cell.soft_lower_penalty,
+            "soft_upper_target": cell.soft_upper_target,
             "span_coef": cell.span_coef,
             "spatial_span_coef": spatial_span_coef,
             "stops_floor_penalty": stops_penalty,

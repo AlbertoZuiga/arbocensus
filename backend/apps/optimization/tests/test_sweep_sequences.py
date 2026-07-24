@@ -16,6 +16,8 @@ def sweep_row(**overrides):
         "cell": "actual",
         "strategy": "spatial_term",
         "balance_arm": "actual",
+        "soft_lower_penalty": 10000,
+        "soft_upper_target": 9000,
         "span_coef": 0,
         "time_global_span_coef": 0,
         "post_resequence": False,

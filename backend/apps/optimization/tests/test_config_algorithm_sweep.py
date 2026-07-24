@@ -1,8 +1,10 @@
 from apps.optimization.management.commands.config_algorithm_sweep import (
     ALGO_AXIS,
     CONFIG_AXIS,
+    FACTORIAL_AXIS,
     Command,
 )
+from apps.optimization.solver import PenaltyConfig
 
 
 def route_row(n_trees, duration_sec):
@@ -10,8 +12,21 @@ def route_row(n_trees, duration_sec):
 
 
 def test_cell_labels_are_unique():
-    labels = [cell.label for cell in CONFIG_AXIS + ALGO_AXIS]
+    labels = [cell.label for cell in CONFIG_AXIS + ALGO_AXIS + FACTORIAL_AXIS]
     assert len(labels) == len(set(labels))
+
+
+def test_factorial_axis_carries_both_factors_into_the_penalty_config():
+    for cell in FACTORIAL_AXIS:
+        penalties = PenaltyConfig(
+            balance_arm=cell.balance_arm,
+            soft_lower_penalty=cell.soft_lower_penalty,
+            soft_upper_target=cell.soft_upper_target,
+        )
+        assert penalties.soft_lower_penalty == cell.soft_lower_penalty
+        assert penalties.soft_upper_bound(7200, 10800) == (
+            10800 if cell.soft_upper_target == "tmax" else 9000
+        )
 
 
 def test_degenerate_count_is_zero_without_routes():
