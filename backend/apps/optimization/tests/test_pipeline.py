@@ -219,3 +219,40 @@ def test_pipeline_forwards_penalty_overrides(requests_mock, monkeypatch):
     )
 
     assert captured == [penalties]
+
+
+def test_pipeline_applies_2opt_resequencing(requests_mock, monkeypatch):
+    tree_count = 10
+    job = make_job(tree_count)
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+
+    called = []
+    original_resequence = pipeline.resequence_routes
+
+    def spy_resequence(routes, matrix):
+        called.append(True)
+        return original_resequence(routes, matrix)
+
+    monkeypatch.setattr(pipeline, "resequence_routes", spy_resequence)
+
+    OptimizationPipeline(job).run(strategy="global", time_limit_sec=2)
+
+    assert len(called) == 1
+
+
+def test_pipeline_resequencing_preserves_stops_per_route(requests_mock):
+    tree_count = 15
+    job = make_job(tree_count)
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+
+    OptimizationPipeline(job).run(strategy="global", time_limit_sec=2)
+
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
+    total_stops = 0
+    for route in Route.objects.filter(solution=solution):
+        stops = list(route.stops.order_by("sequence").values_list("tree_id", flat=True))
+        total_stops += len(stops)
+        assert len(stops) > 0
+        assert len(set(stops)) == len(stops)
+
+    assert total_stops == tree_count

@@ -8,6 +8,7 @@ from apps.optimization.multistart import solve_multistart
 from apps.optimization.n_estimator import estimate_max_vehicles
 from apps.optimization.profiling import PhaseTimer, merge_timing
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
+from apps.optimization.route_resequencer import resequence_routes
 from apps.optimization.solver import DEFAULT_PENALTIES, build_open_matrix
 from apps.optimization.strategies import SPATIAL_SPAN_COEF, solve_by_strategy
 from apps.optimization.warm_start import build_warm_start_routes
@@ -203,6 +204,7 @@ class OptimizationPipeline:
         cost_matrix_timing,
         timer,
     ):
+        routes = resequence_routes(routes, matrix)
         route_times = [self._travel_time(matrix, route) for route in routes]
         estimated_times = [
             travel + len(route) * self.config.service_time_sec
