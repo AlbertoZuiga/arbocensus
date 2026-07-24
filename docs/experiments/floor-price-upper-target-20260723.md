@@ -149,4 +149,181 @@ elegir la mejor celda a posteriori.
 
 ## Resultados
 
-_(pendiente — se agrega tras medir, sin tocar el criterio de arriba)_
+Datos: `floor-price-upper-target-20260723.csv` (**288 filas** = 8 celdas × 12 instancias ×
+3 semillas) y su `.sequences.jsonl`. Un solo barrido secuencial, mismo presupuesto de
+producción (120 s) para las 8 celdas. `wall_clock` no juzga nada. Toda `σ` reportada es la
+desviación **poblacional** sobre las 3 semillas del grupo.
+
+### Comprobaciones del instrumento (antes de leer nada más)
+
+- **P1 (cordura) — pasa.** `floor10000-mid` en `n=1607` da chord 64,7 ± 9,0, road 41,0 ± 5,1,
+  `k` = 25, balance 0,849 — dentro de la varianza del `actual` publicado por el ciclo previo
+  (chord 65,3 ± 7,0, road 43,0 ± 4,0). El cableado del factorial reproduce la línea base.
+- **Semillas reales — pasa.** 90 grupos `(celda, instancia)` tienen σ > 0 entre sus tres
+  semillas; **0 grupos** tienen σ = 0 fuera de los casos `k = 1` deterministas por construcción.
+  Las permutaciones de nodos llegaron al solver.
+
+### Factor A — precio del piso `soft_lower_penalty` (a target midpoint fijo)
+
+| celda | k | travel | Δtravel | balance | chord | road | deg |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `floor10000-mid` **(control)** | 25,0 | 59 946 | +0,0 % | 0,849 | 64,7 ± 9,0 | 41,0 | 0,0 |
+| `floor2000-mid` | 25,0 | 59 941 | −0,0 % | 0,849 | 64,7 ± 9,0 | 41,0 | 0,0 |
+| `floor500-mid` | 25,0 | 59 729 | −0,4 % | 0,848 | 66,7 ± 9,7 | 41,7 | 0,0 |
+| `floor100-mid` | 25,7 | 62 596 | **+4,4 %** | 0,833 | 69,0 ± 1,4 | 45,0 | 0,3 |
+
+(valores de `n=1607`; medias de 3 semillas). El precio del piso es **inerte entre 10 000 y 500**:
+`floor2000-mid` reproduce el control al segundo en 2 de sus 3 semillas de `n=1607` (travel 59 941
+vs 59 946) y `floor500-mid` queda a −0,4 % de travel y +2,0 cuerdas, muy dentro de la σ entre
+semillas del control (±9,0 en chord). *Inerte* significa **sin efecto sistemático**, no
+bit-a-bit: sobre las 12 instancias, 53/216 comparaciones celda-semilla de `floor2000-mid` y
+74/216 de `floor500-mid` difieren del control en algún dígito — el precio perturba la trayectoria
+de GLS y hace caer la búsqueda en otro óptimo local del mismo nivel, sin mover ninguna métrica en
+una dirección. Es la predicción del marco de precios
+marginales — un piso a 500/s todavía supera con creces la presión del arco (1/s), así que sigue
+siendo una **restricción dura disfrazada de precio**. Solo a **100** el relleno bajo `T_min` se
+afloja lo suficiente para mover algo, y lo que mueve es **malo**: travel +4,4 % (supera el techo
++3 % del criterio), balance cae hasta **0,577** en su peor instancia (bajo el piso 0,60 del
+criterio), `k` sube. Bajar el precio del piso no compra geometría; erosiona la contención de
+flota y el balance. **P2 (rampa) confirmada en dirección**: al abaratar el piso, `relleno_msf` no
+sube y `k` no baja; el único punto que se mueve (100) degrada.
+
+### Factor B — target del soft upper a `T_max` (con el piso default 7 200)
+
+| celda | k | travel | Δtravel | balance | chord | Δchord | road | Δroad | deg |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `floor10000-mid` **(control)** | 25,0 | 59 946 | +0,0 % | 0,849 | 64,7 ± 9,0 | +0 % | 41,0 ± 5,1 | +0 % | 0,0 |
+| `floor10000-tmax` | 25,0 | 58 363 | −2,6 % | 0,723 | 4,3 ± 0,5 | **−93 %** | 58,3 ± 10,3 | **+42 %** | 0,7 |
+| `floor2000-tmax` | 25,0 | 58 356 | −2,7 % | 0,723 | 4,3 ± 0,5 | −93 % | 58,3 ± 10,3 | +42 % | 0,7 |
+| `floor500-tmax` | 25,0 | 58 356 | −2,7 % | 0,723 | 4,3 ± 0,5 | −93 % | 58,3 ± 10,3 | +42 % | 0,7 |
+| `floor100-tmax` | 25,0 | 58 466 | −2,5 % | 0,707 | 4,3 ± 0,5 | −93 % | 59,3 ± 10,9 | +45 % | 0,7 |
+
+(valores de `n=1607`). Mover el techo a `T_max` **colapsa `crossings_chord` un 93 %** (64,7 → 4,3)
+a cualquier precio del piso, con travel **−2,6 %** y `k` = 25 sin drops. Leída solo sobre cuerdas,
+parece la ganadora rotunda del criterio (chord −≥30 %, travel ≤+3 %, k≤26). **No lo es**, y la
+reserva pre-registrada del §1 dice exactamente por qué:
+
+- **`crossings_road` en `n=1607` SUBE +42 %** (41,0 → 58,3). La métrica validada — la que ordena
+  como el solver optimiza y el censista camina — dice que la geometría **empeora**.
+- **La Spearman chord~road sobre `n=1607` es −0,618** (global 0,520). El −93 % de chord es
+  literalmente el **artefacto de inversión** que el ciclo previo dejó pre-registrado. Este ciclo
+  lo **replica de forma independiente** sobre 8 configuraciones nuevas (ρ global 0,520 vs 0,527
+  del ciclo previo; `n=1607` −0,618 vs −0,575).
+- **balance** cae 0,849 → 0,723 y aparece una **ruta degenerada** en 2 de 3 semillas (< 5 paradas;
+  `dur_min` = 7 578 s, así que es un stub de pocas paradas muy dispersas, no una ruta corta).
+
+### Áreas — `relleno_msf` y cruces (medias de 3 semillas)
+
+| celda | area-26 relleno | area-27 relleno | area-29 relleno | area-26 chord | area-27 chord | area-29 chord |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `floor10000-mid` **(control)** | 1 440 | 4 821 | 1 242 | 0,3 | 6,7 | 6,0 |
+| `floor10000-tmax` | 1 081 (**−25 %**) | 1 727 (−64 %) | 1 234 (**−0,6 %**) | 1,0 (**+200 %**) | 2,7 (−60 %) | 6,3 (**+6 %**) |
+| `floor*-tmax` (2000/500/100) | 1 081–1 225 (−15…−25 %) | 178–199 (**−96 %**) | 1 234–1 238 (−0,6 %) | 0,7–1,0 (peor) | 0,0 (−100 %) | 2,0 (−67 %) |
+| `floor*-mid` (2000/500/100) | ≈ control | ≈ control | ≈ control | ≈ control | 4,7–8,3 | 3,0–4,7 |
+
+**La diferencia entre `floor10000-tmax` (−64 %) y los pisos baratos (−96 %) en `area-27` no es un
+efecto del precio.** Es una sola semilla: `floor10000-tmax` seed 1 aterriza en `k = 2`
+(relleno 4 824) mientras sus otras dos semillas y todas las de los pisos baratos dan `k = 1`
+(relleno 178–199). Con `n = 72` la media de 3 semillas es frágil ante ese salto de `k`; leer ahí
+una interacción precio×target sería leer ruido. El resto de las áreas no distingue precios.
+
+Las áreas revelan que `T_max` es **regime-dependent**: en `area-27` (holgada) el relleno cae hasta
+**−96 %** y los cruces desaparecen, pero en **`area-26` el relleno solo baja −25 %** (bajo el
+−30 % del criterio) **y sus cuerdas empeoran +200 %**, y en **`area-29` el relleno no se mueve**
+(−0,6 %) mientras sus cuerdas empeoran en el brazo `10000-tmax` (+6 %). No hay un único default que
+sirva a las tres áreas.
+
+### Autocruces sobre calles — agregado de las 12 instancias
+
+El criterio geométrico solo mira `n=1607` y las áreas. Sumando `crossings_road` (autocruces
+**dentro de cada ruta**, sobre la traza OSRM) de las 12 instancias, **ninguna celda mejora al
+control**:
+
+| celda | Σ road (12 instancias) | Δ | instancias mejor / peor |
+| --- | ---: | ---: | ---: |
+| `floor10000-mid` **(control)** | 190 | +0 % | — |
+| `floor2000-mid` | 198 | +4 % | 1 / 3 |
+| `floor500-mid` | 202 | +6 % | 2 / 5 |
+| `floor100-mid` | 242 | +27 % | 0 / 10 |
+| `floor10000-tmax` | 286 | **+51 %** | 5 / 7 |
+| `floor2000-tmax` | 288 | +51 % | 4 / 8 |
+| `floor500-tmax` | 280 | +48 % | 4 / 8 |
+| `floor100-tmax` | 293 | **+54 %** | 3 / 9 |
+
+Los brazos `*-tmax` ganan cruces en instancias chicas u holgadas (`area-27` 12,7 → 2,3;
+`battery-n50` 3,3 → 1,0) y los pierden con creces en las densas (`battery-n800` 22,0 → 56,7;
+`battery-n1000` 47,0 → 72,3; `battery-n400` 17,7 → 30,7; `n=1607` 41,0 → 58,3). Sobre la métrica
+validada, **ninguna configuración de este factorial reduce los autocruces intra-ruta**; el −93 %
+de cuerdas es de signo contrario al agregado de calles.
+
+### Balance, degeneración y drops — global (12 instancias)
+
+| celda | min balance | max rutas degeneradas | total drops |
+| --- | ---: | ---: | ---: |
+| `floor10000-mid` / `floor2000-mid` / `floor500-mid` | 0,837–0,839 | 0 | 0 |
+| `floor100-mid` | **0,577** | 0,3 | 0 |
+| `floor{10000,2000,500,100}-tmax` | 0,707–0,709 | **0,7** | 0 |
+
+### Cuadro de predicciones
+
+| # | predicción | resultado | veredicto |
+| --- | --- | --- | --- |
+| P1 | `floor10000-mid` ≈ `actual` (cordura) | chord/road/k/balance dentro de varianza | **acertada** |
+| P2 | abaratar el piso: `relleno_msf` no sube, `k` no baja; rampa monótona | inerte hasta 500, degrada a 100 (balance 0,577, travel +4,4 %) | **acertada** |
+| P3 | `*-tmax`: `k` ≤ el de `*-mid` | `k` = 25 en ambos (igual, no menor; `n=1607` saturada) | **acertada (débil)** |
+| P4 | `*-tmax` baja `crossings_chord` en `n=1607`; reserva: `road` puede no acompañar | chord −93 %, pero **road +42 %** e inversión ρ −0,618 | **chord acertada, refutada por la reserva** |
+
+---
+
+## Veredicto
+
+**Ninguna de las 8 celdas cumple el criterio de aceptación completo. Ningún default de producción
+cambia.**
+
+Se aplica el criterio a priori **sin renegociarlo**, celda por celda:
+
+- **`floor{2000,500}-mid`** — indistinguibles del control dentro de la σ entre semillas. Fallan el
+  criterio 1 (chord de `n=1607` +0…+3 %, lejos del −30 %), el 4 (relleno de las áreas ≈ control) y
+  el 5 (`floor2000-mid` empeora las cuerdas de `area-27` 6,7 → 7,3; `floor500-mid` las de
+  `area-26` 0,3 → 0,7). El piso es una restricción dura hasta un precio ≈ 500; abaratarlo ahí no
+  hace nada: **no gana**.
+- **`floor100-mid`** — falla el criterio 2 (travel +4,4 % > +3 %), el 7 (balance 0,577 < 0,60) y
+  el 8 (ruta degenerada en 1 de 3 semillas de `n=1607`), además del 1, el 4 y el 5.
+  Abaratar el piso hasta que muerda **rompe** balance y travel sin comprar geometría: **no gana**.
+- **`floor{10000,2000,500,100}-tmax`** — su único triunfo aparente es `crossings_chord` −93 %,
+  y ese triunfo lo **refuta la reserva pre-registrada**: sobre `crossings_road` (la métrica
+  validada) los cruces de `n=1607` **suben +42 %**, con ρ chord~road = −0,618 confirmando que el
+  −93 % es el artefacto de inversión, y en el agregado de las 12 instancias `road` sube +48…+54 %.
+  Además fallan el criterio 4 (área-26 relleno −25 %, área-29
+  −0,6 %; ambos sobre el −30 %), el 5 (área-26 chord +200 %, área-29 chord peor) y el 8 (ruta
+  degenerada en 2/3 semillas de `n=1607`). Un brazo que baja las cuerdas y **sube las calles** no
+  es ganadora parcial: **falla el criterio**.
+
+**Resultado negativo, publicado como estaba pre-registrado.** No se propone ningún cambio de
+default.
+
+### Lo que queda establecido
+
+1. **El precio del piso de duración no es una palanca.** Entre 10 000 y 500 es inerte (piso duro);
+   a 100 empieza a morder y lo que produce es peor balance y más travel, no mejor geometría. Queda
+   **descartado** barrer el precio del piso como vía para relajar el relleno: hay que quitar el
+   piso o mover su target (ejes ya refutados en la familia `feasible-floor`/`no-floor`), no
+   abaratarlo.
+2. **El upper@`T_max` con el piso default es regime-dependent y su ganancia en `n=1607` es un
+   artefacto de cuerdas.** Ayuda a un área holgada (`area-27`) pero rompe otras (`area-26`,
+   `area-29`) y, en la instancia densa, su −93 % de cuerdas es +42 % de calles; sobre las 12
+   instancias el agregado de autocruces sobre calles sube +48…+54 %. Queda **descartado**
+   como default global. Confirma el hallazgo previo de "guardia por régimen, no un único config".
+3. **Replicación independiente del ciclo de la métrica de cruces.** Sobre 8 configuraciones
+   nuevas, la divergencia chord/road se reproduce (ρ global 0,520 ≈ 0,527; `n=1607` −0,618 ≈
+   −0,575). El criterio geométrico de la serie leído sobre cuerdas en `n=1607` está midiendo el
+   signo equivocado; este ciclo lo confirma con datos nuevos, no reciclados.
+
+### Lo que este ciclo deja abierto
+
+Adoptar `crossings_road` como criterio geométrico de referencia — ya propuesto por el ciclo previo
+— gana aquí una **segunda confirmación independiente**. Su adopción formal, y la re-lectura de los
+veredictos juzgados sobre cuerdas, sigue correspondiendo a un ciclo con su propio pre-registro.
+Un `T_max` **condicionado al régimen del área** (holgada vs densa) queda como hipótesis no
+probada: este factorial midió un target global, no uno por régimen. Las secuencias quedan
+persistidas (`.sequences.jsonl`), así que ese re-juicio no exige re-resolver.
