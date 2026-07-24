@@ -45,6 +45,7 @@ class Command(BaseCommand):
         seeds = [int(s) for s in options["seeds"].split(",")]
         strategy = options["strategy"]
 
+        tree_count = Tree.objects.filter(dataset=dataset, is_active=True).count()
         rows = []
         for seed in seeds:
             print(f"Running seed {seed}...")
@@ -58,7 +59,7 @@ class Command(BaseCommand):
 
             row = {
                 "instance": dataset.name,
-                "n": len(Tree.objects.filter(dataset=dataset, is_active=True)),
+                "n": tree_count,
                 "strategy": strategy,
                 "seed": seed,
                 "k": solution.total_routes,
