@@ -250,10 +250,17 @@ class ArbocensusVRPSolver:
         time_global_span_coef=0,
         penalties=DEFAULT_PENALTIES,
         convex_arc_lambda=0.0,
+        arc_coef=1,
         node_seed=0,
         allowed_vehicles=None,
         warm_start_routes=None,
     ):
+        # Two different pricings of the same arc: only one evaluator gets registered,
+        # so combining them would silently drop the linear weight.
+        if convex_arc_lambda > 0 and arc_coef != 1:
+            raise ValueError(
+                "convex_arc_lambda and arc_coef are alternative arc pricings; set one"
+            )
         real = np.asarray(matrix, dtype=float)
         # OR-Tools exposes no RNG seed on either parameter proto, so replication is
         # obtained by permuting the node order: it changes PATH_CHEAPEST_ARC tie
@@ -284,6 +291,7 @@ class ArbocensusVRPSolver:
         self.time_global_span_coef = time_global_span_coef
         self.penalties = penalties
         self.convex_arc_lambda = convex_arc_lambda
+        self.arc_coef = arc_coef
         self.allowed_vehicles = allowed_vehicles
         self.warm_start_routes = warm_start_routes
 
@@ -319,7 +327,14 @@ class ArbocensusVRPSolver:
 
             time_cb_index = routing.RegisterTransitCallback(time_callback)
 
-            # Arc cost evaluator: convex variant when lambda > 0, else same as time.
+            # Arc cost evaluator: convex variant when lambda > 0, linearly reweighted
+            # variant when arc_coef != 1, else the very same callback as time.
+            #
+            # The weight multiplies travel ONLY here, never in time_callback: the Time
+            # dimension bounds T_max and feeds the soft floor and ceiling, so scaling it
+            # would change the meaning of T_max instead of the price of the arc. Service
+            # time is left unweighted too — its total is fixed for a solution that drops
+            # nothing, so weighting it would only move how attractive dropping is.
             if self.convex_arc_lambda > 0:
                 lam = self.convex_arc_lambda
                 tau = self._p95_arc_travel()
@@ -332,6 +347,17 @@ class ArbocensusVRPSolver:
                     return math.ceil(travel + convex)
 
                 arc_cb_index = routing.RegisterTransitCallback(convex_cost_callback)
+            elif self.arc_coef != 1:
+                coef = self.arc_coef
+
+                def weighted_cost_callback(from_index, to_index):
+                    from_node = manager.IndexToNode(from_index)
+                    to_node = manager.IndexToNode(to_index)
+                    travel = self.matrix[from_node][to_node]
+                    service = self.service_time_sec if from_node != 0 else 0
+                    return math.ceil(coef * travel + service)
+
+                arc_cb_index = routing.RegisterTransitCallback(weighted_cost_callback)
             else:
                 arc_cb_index = time_cb_index
 
@@ -472,6 +498,7 @@ class ArbocensusVRPSolver:
             "effective_tmin": effective_tmin,
             "span_coef": self.span_coef,
             "convex_arc_lambda": self.convex_arc_lambda,
+            "arc_coef": self.arc_coef,
         }
         return routes, dropped, debug
 

@@ -107,6 +107,7 @@ class Cell(NamedTuple):
     warm_start: str | None = None
     soft_lower_penalty: int = SOFT_LOWER_PENALTY
     soft_upper_target: str = SOFT_UPPER_TARGET_MIDPOINT
+    arc_coef: int = 1
 
 
 # Config axis fixes strategy at spatial_term and sweeps duration soft-bound arms,
@@ -210,6 +211,15 @@ FACTORIAL_AXIS = [
     for target in (SOFT_UPPER_TARGET_MIDPOINT, SOFT_UPPER_TARGET_TMAX)
 ]
 
+# Linear arc weight: the coefficient multiplies travel in the arc cost evaluator
+# only, never in the Time dimension. `arc-w1` is the production baseline (`actual`),
+# re-run inside the cycle rather than compared to published means, and it registers
+# the very same callback as the control, so it must reproduce it exactly.
+ARC_WEIGHT_AXIS = [
+    Cell(f"arc-w{coef}", SPATIAL, BALANCE_ARM_ACTUAL, arc_coef=coef)
+    for coef in (1, 3, 10, 30)
+]
+
 SEEDS = [1, 2, 3]
 
 DEGENERATE_MIN_STOPS = 5
@@ -232,6 +242,7 @@ COLUMNS = [
     "post_resequence",
     "arc_lambda",
     "arc_tau",
+    "arc_coef",
     "cluster_neighbors",
     "cluster_count",
     "vehicles_per_cluster",
@@ -311,6 +322,11 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--arc-weight",
+            action="store_true",
+            help=("Run the linear arc-weight axis instead of the config/algo axes"),
+        )
+        parser.add_argument(
             "--spatial-span-coef",
             type=int,
             default=SPATIAL_SPAN_COEF,
@@ -370,6 +386,8 @@ class Command(BaseCommand):
 
         if options["factorial"]:
             cells = [("factorial", cell) for cell in FACTORIAL_AXIS]
+        elif options["arc_weight"]:
+            cells = [("arc-weight", cell) for cell in ARC_WEIGHT_AXIS]
         else:
             cells = [("config", cell) for cell in CONFIG_AXIS]
             cells += [("algo", cell) for cell in ALGO_AXIS]
@@ -407,6 +425,7 @@ class Command(BaseCommand):
                         str(cell.time_global_span_coef),
                         str(cell.post_resequence),
                         str(cell.arc_lambda),
+                        str(cell.arc_coef),
                         _blank_if_none(cell.cluster_neighbors),
                         _blank_if_none(cell.warm_start),
                         str(spatial_span_coef),
@@ -462,6 +481,7 @@ class Command(BaseCommand):
                     r.get("time_global_span_coef", "0"),
                     r.get("post_resequence", "False"),
                     r.get("arc_lambda", "0.0"),
+                    r.get("arc_coef", "1"),
                     r.get("cluster_neighbors", ""),
                     r.get("warm_start", ""),
                     r.get("spatial_span_coef", str(SPATIAL_SPAN_COEF)),
@@ -606,6 +626,7 @@ class Command(BaseCommand):
                     time_span_coef=cell.span_coef,
                     time_global_span_coef=cell.time_global_span_coef,
                     convex_arc_lambda=cell.arc_lambda,
+                    arc_coef=cell.arc_coef,
                     max_vehicles=max_vehicles,
                     time_limit_sec=per_start_limit,
                     node_seeds=start_seeds(seed, starts),
@@ -790,6 +811,7 @@ class Command(BaseCommand):
             "post_resequence": cell.post_resequence,
             "arc_lambda": cell.arc_lambda,
             "arc_tau": round(arc_tau, 1),
+            "arc_coef": cell.arc_coef,
             "cluster_neighbors": _blank_if_none(cell.cluster_neighbors),
             "cluster_count": plan.get("cluster_count", ""),
             "vehicles_per_cluster": plan.get("vehicles_per_cluster", ""),

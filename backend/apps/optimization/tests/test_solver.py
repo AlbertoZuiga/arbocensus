@@ -303,3 +303,56 @@ def test_seed_zero_is_the_identity_permutation():
 def test_seed_zero_is_deterministic():
     matrix = scattered_matrix(24)
     assert solve_seeded(0, matrix) == solve_seeded(0, matrix)
+
+
+def test_arc_coef_one_reproduces_the_default_solution():
+    def solve(**extra):
+        return unwrap(
+            ArbocensusVRPSolver(
+                uniform_matrix(8),
+                min_route_time_sec=600,
+                max_route_time_sec=100_000,
+                service_time_sec=300,
+                max_vehicles=4,
+                time_limit_sec=5,
+                node_seed=2,
+                **extra,
+            ).solve()
+        )
+
+    assert solve(arc_coef=1) == solve()
+
+
+def test_arc_coef_does_not_reach_the_time_dimension():
+    # T_max is sized to fit every node in one route at the unweighted travel. A
+    # coefficient leaking into time_callback would inflate the Time cumul past
+    # T_max and force the solver to abandon nodes.
+    travel, service, n = 60.0, 300, 8
+    t_max = int(n * (travel + service))
+    routes, dropped = unwrap(
+        ArbocensusVRPSolver(
+            uniform_matrix(n, travel),
+            min_route_time_sec=600,
+            max_route_time_sec=t_max,
+            service_time_sec=service,
+            max_vehicles=1,
+            time_limit_sec=5,
+            arc_coef=10,
+        ).solve()
+    )
+    assert dropped == []
+    assert sorted(node for route in routes for node in route) == list(range(n))
+
+
+def test_arc_coef_and_convex_arc_lambda_cannot_be_combined():
+    with pytest.raises(ValueError):
+        ArbocensusVRPSolver(
+            uniform_matrix(8),
+            min_route_time_sec=600,
+            max_route_time_sec=100_000,
+            service_time_sec=300,
+            max_vehicles=4,
+            time_limit_sec=5,
+            convex_arc_lambda=1.0,
+            arc_coef=10,
+        )
