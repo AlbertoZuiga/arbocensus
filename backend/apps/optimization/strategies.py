@@ -39,6 +39,7 @@ def solve_by_strategy(
     time_span_coef=0,
     time_global_span_coef=0,
     convex_arc_lambda=0.0,
+    arc_coef=1,
     node_seed=0,
     allowed_vehicles=None,
     warm_start_routes=None,
@@ -56,6 +57,7 @@ def solve_by_strategy(
             time_span_coef=time_span_coef,
             time_global_span_coef=time_global_span_coef,
             convex_arc_lambda=convex_arc_lambda,
+            arc_coef=arc_coef,
             node_seed=node_seed,
             timer=timer,
         )
@@ -73,6 +75,7 @@ def solve_by_strategy(
         time_span_coef=time_span_coef,
         time_global_span_coef=time_global_span_coef,
         convex_arc_lambda=convex_arc_lambda,
+        arc_coef=arc_coef,
         node_seed=node_seed,
         allowed_vehicles=allowed_vehicles,
         warm_start_routes=warm_start_routes,
@@ -95,6 +98,7 @@ def build_strategy_solver(
     time_span_coef=0,
     time_global_span_coef=0,
     convex_arc_lambda=0.0,
+    arc_coef=1,
     node_seed=0,
     allowed_vehicles=None,
     warm_start_routes=None,
@@ -113,6 +117,7 @@ def build_strategy_solver(
         time_global_span_coef=time_global_span_coef,
         penalties=penalties,
         convex_arc_lambda=convex_arc_lambda,
+        arc_coef=arc_coef,
         node_seed=node_seed,
         allowed_vehicles=allowed_vehicles,
         warm_start_routes=warm_start_routes,
@@ -196,6 +201,7 @@ def solve_cluster_first(
     time_span_coef=0,
     time_global_span_coef=0,
     convex_arc_lambda=0.0,
+    arc_coef=1,
     timer=None,
 ):
     matrix = np.asarray(matrix, dtype=float)
@@ -227,6 +233,7 @@ def solve_cluster_first(
             time_global_span_coef=time_global_span_coef,
             penalties=penalties,
             convex_arc_lambda=convex_arc_lambda,
+            arc_coef=arc_coef,
             node_seed=node_seed,
         ).solve(timer=timer)
         if result is None:

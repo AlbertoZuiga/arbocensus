@@ -60,6 +60,7 @@ class OptimizationPipeline:
         time_span_coef=0,
         time_global_span_coef=0,
         convex_arc_lambda=0.0,
+        arc_coef=1,
         max_vehicles=None,
         node_seed=0,
         node_seeds=None,
@@ -147,6 +148,7 @@ class OptimizationPipeline:
                 "time_span_coef": time_span_coef,
                 "time_global_span_coef": time_global_span_coef,
                 "convex_arc_lambda": convex_arc_lambda,
+                "arc_coef": arc_coef,
                 "allowed_vehicles": allowed_vehicles,
                 "warm_start_routes": warm_start_routes,
             }
