@@ -66,6 +66,20 @@ la redacción de la tesis.
   `--anchor <csv>` (salida de `instance_tsp_anchor`) agrega además `relleno_ub_sec`, la
   misma métrica contra el ancla construida; esa columna **no** se recorta en cero, porque
   `UB_k` es un recorrido construido y no una cota: un brazo puede batirlo.
+- `manage.py instance_regime_features` → CSV con `--csv <ruta>`. Features de una o varias
+  instancias (`--instance <slug> ...`) calculables **antes** de resolver: extensión, densidad,
+  diámetro par-a-par, flota mínima factible `k_hat` y el cociente `rho_pad = k_hat · T_min /
+  trabajo`, que marca cuándo el piso de duración es infactible y el modelo está pagado por
+  rellenar. Lee las coordenadas de `instances/` y reusa `MSF_k` de `--decomposition <csv>`,
+  así que no llama al solver ni a OSRM.
+- `manage.py regime_winner_rejudge` → dos CSV con `--out-prefix <ruta>`. Juzga un barrido ya
+  publicado (`--sweep <csv>`) instancia por instancia bajo el criterio lexicográfico de la
+  serie (puertas de drops, degeneración y balance; luego relleno, auto-cruces sobre calles y
+  travel, con empates del ancho de la σ entre semillas) y confronta cada ganador con el que
+  predice el régimen de `--features <csv>`. Reporta el mejor default único y el guard de
+  régimen lado a lado, más la regla trivial de clase mayoritaria contra la que hay que
+  compararlos y la correlación de Spearman entre cada feature de régimen y la mejor caída de
+  relleno alcanzable en la instancia.
 
 Las instancias reales sobre las que corren estos comandos viven congeladas en
 [`instances/`](instances/README.md) (`manage.py freeze_legacy` las vuelca desde la
