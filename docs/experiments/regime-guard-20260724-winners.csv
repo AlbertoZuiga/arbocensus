@@ -1,0 +1,13 @@
+instance,n,k_hat,rho_pad,saturation_hat,density_per_km2,regime,winner,survivors,predicted_winner,predicted_ok,best_relleno_drop,relleno_target_met,h1_ok
+reference-n1607,1607,21,0.675,0.988,21.9,floor-satisfiable,floor10000-mid,floor10000-mid floor2000-mid floor500-mid,floor10000-tmax,False,0.055,False,False
+battery-sparse-n500,500,7,0.684,0.974,139.5,floor-satisfiable,floor10000-mid,floor10000-mid floor2000-mid floor500-mid,floor10000-tmax,False,0.0,False,False
+battery-n1000,1000,13,0.69,0.966,275.5,floor-satisfiable,floor10000-mid,floor10000-mid floor2000-mid floor500-mid,floor10000-tmax,False,0.007,False,False
+battery-sparse-n250,250,4,0.697,0.957,70.3,floor-satisfiable,floor100-tmax,floor100-mid floor100-tmax,floor10000-tmax,False,0.106,False,False
+area-27-n72,72,1,0.724,0.921,172.4,floor-satisfiable,floor500-tmax,floor100-tmax floor10000-tmax floor500-tmax,floor10000-tmax,False,0.963,True,True
+battery-n800,800,11,0.73,0.913,245.7,floor-satisfiable,floor10000-mid,floor10000-mid floor2000-mid floor500-mid,floor10000-tmax,False,0.0,False,False
+battery-n200,200,3,0.752,0.887,116.5,floor-satisfiable,floor10000-mid,floor100-mid floor100-tmax floor10000-mid floor10000-tmax floor2000-mid floor2000-tmax floor500-mid floor500-tmax,floor10000-tmax,False,0.031,False,False
+battery-n400,400,6,0.779,0.856,169.1,floor-satisfiable,floor10000-mid,floor10000-mid floor2000-mid floor500-mid,floor10000-tmax,False,0.037,False,False
+battery-n50,50,1,0.823,0.81,65.4,floor-satisfiable,floor10000-tmax,floor100-tmax floor10000-tmax floor2000-tmax floor500-tmax,floor10000-tmax,True,0.895,True,True
+area-26-n157,157,3,0.962,0.693,129.9,floor-satisfiable,floor10000-tmax,floor100-mid floor100-tmax floor10000-tmax floor2000-tmax floor500-tmax,floor10000-tmax,True,0.25,False,False
+battery-n100,100,2,0.986,0.676,105.2,floor-satisfiable,floor10000-mid,floor100-mid floor100-tmax floor10000-mid floor10000-tmax floor2000-mid floor2000-tmax floor500-mid floor500-tmax,floor10000-tmax,False,0.0,False,False
+area-29-n43,43,1,1.21,0.551,492.6,padding-bound,floor10000-mid,floor10000-mid,floor10000-mid,True,0.006,False,True
