@@ -1,4 +1,5 @@
 import csv
+import statistics
 from datetime import UTC, datetime
 
 from apps.datasets.models import Dataset, Tree
@@ -50,12 +51,22 @@ class Command(BaseCommand):
         for seed in seeds:
             print(f"Running seed {seed}...")
             solution, dropped = self._run_pipeline(dataset, strategy, seed)
+            max_route_time_sec = 10800
             audited = audit_solution(
                 solution,
                 min_route_time_sec=7200,
-                max_route_time_sec=10800,
+                max_route_time_sec=max_route_time_sec,
             )
             summary = summarize_audit(audited)
+
+            route_durations = [entry["row"]["duration_sec"] for entry in audited]
+            route_time_mean = statistics.mean(route_durations) if route_durations else 0
+            route_time_std = (
+                statistics.stdev(route_durations) if len(route_durations) > 1 else 0
+            )
+            routes_over_t_max = sum(
+                1 for d in route_durations if d > max_route_time_sec
+            )
 
             row = {
                 "instance": dataset.name,
@@ -71,6 +82,10 @@ class Command(BaseCommand):
                 "interleave_per_route": solution.interleave_per_route,
                 "walk_ratio": summary["walk_ratio"],
                 "saturation_mean": summary["saturation"],
+                "route_time_mean_sec": int(route_time_mean),
+                "route_time_std_sec": int(route_time_std),
+                "routes_over_t_max": routes_over_t_max,
+                "dropped_trees": len(dropped),
             }
             rows.append(row)
             print(
