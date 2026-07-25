@@ -71,6 +71,29 @@ BALANCE_ARM_COMBINED_B095_STOPS10 = (
 BALANCE_ARM_COMBINED_B095_STOPS15 = (
     f"{BALANCE_ARM_FEASIBLE_FLOOR_B095}{STOPS_FLOOR_SUFFIX}15"
 )
+# Asymmetric fleet: the production prices, but with ONE vehicle freed from a soft
+# duration bound so it can act as a sink — a long route that absorbs excess without
+# opening another vehicle, a short one that absorbs the residual without forcing the
+# rest to pad. `exempt-none` frees nobody and must reproduce `actual` exactly.
+BALANCE_ARM_EXEMPT_NONE = "exempt-none"
+BALANCE_ARM_EXEMPT_LOWER = "exempt-lower"
+BALANCE_ARM_EXEMPT_UPPER = "exempt-upper"
+BALANCE_ARM_EXEMPT_BOTH = "exempt-both"
+BALANCE_ARM_EXEMPT_LOWER_LAST = "exempt-lower-last"
+EXEMPTION_ARMS = (
+    BALANCE_ARM_EXEMPT_NONE,
+    BALANCE_ARM_EXEMPT_LOWER,
+    BALANCE_ARM_EXEMPT_UPPER,
+    BALANCE_ARM_EXEMPT_BOTH,
+    BALANCE_ARM_EXEMPT_LOWER_LAST,
+)
+# max_vehicles is a loose upper bound (ceil(work/T_min) + 5), so its last indices
+# are the ones that stay empty — and an empty vehicle pays no soft bound, which makes
+# an exemption there inert. PATH_CHEAPEST_ARC fills vehicles from 0 up, so the sinks
+# target the low indices. `exempt-lower-last` keeps the last index on purpose, to
+# measure that inertness rather than assume it.
+EXEMPT_UPPER_VEHICLE = 0
+EXEMPT_LOWER_VEHICLE = 1
 BALANCE_ARMS = (
     BALANCE_ARM_ACTUAL,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
@@ -95,6 +118,7 @@ BALANCE_ARMS = (
     BALANCE_ARM_COMBINED_B095_STOPS5,
     BALANCE_ARM_COMBINED_B095_STOPS10,
     BALANCE_ARM_COMBINED_B095_STOPS15,
+    *EXEMPTION_ARMS,
 )
 
 # Charged per MISSING STOP, unlike SOFT_LOWER_PENALTY which is charged per second of
@@ -141,6 +165,23 @@ class PenaltyConfig:
             return None
         return int(stops)
 
+    def exempt_vehicles(self, max_vehicles):
+        # (lower, upper): the vehicle id freed from each soft bound, or None when this
+        # arm frees nobody from it. An id the fleet does not reach frees nobody either.
+        arm = self.balance_arm
+        lower = upper = None
+        if arm in (BALANCE_ARM_EXEMPT_LOWER, BALANCE_ARM_EXEMPT_BOTH):
+            lower = EXEMPT_LOWER_VEHICLE
+        elif arm == BALANCE_ARM_EXEMPT_LOWER_LAST:
+            lower = max_vehicles - 1
+        if arm in (BALANCE_ARM_EXEMPT_UPPER, BALANCE_ARM_EXEMPT_BOTH):
+            upper = EXEMPT_UPPER_VEHICLE
+        if lower is not None and lower >= max_vehicles:
+            lower = None
+        if upper is not None and upper >= max_vehicles:
+            upper = None
+        return lower, upper
+
     def vehicle_bounds(
         self,
         *,
@@ -148,17 +189,23 @@ class PenaltyConfig:
         max_route_time_sec,
         total_service_sec,
         max_vehicles,
-        is_last,
+        vehicle_id,
     ):
         # Returns (lower, upper) where each is either (target_sec, penalty) applied to
         # the route end cumul, or None to leave that side of the balance band open.
         arm = self.balance_arm
+        production_lower = (min_route_time_sec, self.soft_lower_penalty)
+        production_upper = (
+            self.soft_upper_bound(min_route_time_sec, max_route_time_sec),
+            self.soft_upper_penalty,
+        )
         if arm == BALANCE_ARM_ACTUAL:
-            lower = (min_route_time_sec, self.soft_lower_penalty)
-            upper = (
-                self.soft_upper_bound(min_route_time_sec, max_route_time_sec),
-                self.soft_upper_penalty,
-            )
+            lower = production_lower
+            upper = production_upper
+        elif arm in EXEMPTION_ARMS:
+            exempt_lower, exempt_upper = self.exempt_vehicles(max_vehicles)
+            lower = None if vehicle_id == exempt_lower else production_lower
+            upper = None if vehicle_id == exempt_upper else production_upper
         elif arm == BALANCE_ARM_UPPER_TMAX_TMIN9000:
             lower = (TIGHT_TMIN_SEC, self.soft_lower_penalty)
             upper = (max_route_time_sec, self.soft_upper_penalty)
@@ -191,7 +238,10 @@ class PenaltyConfig:
             upper = (max_route_time_sec, self.soft_upper_penalty)
         else:
             floor = min(min_route_time_sec, total_service_sec // max_vehicles)
-            exempt = arm == BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST and is_last
+            exempt = (
+                arm == BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST
+                and vehicle_id == max_vehicles - 1
+            )
             lower = None if exempt else (floor, self.soft_lower_penalty)
             upper = ((floor + max_route_time_sec) // 2, self.soft_upper_penalty)
         return lower, upper
@@ -437,7 +487,7 @@ class ArbocensusVRPSolver:
                         max_route_time_sec=self.max_route_time_sec,
                         total_service_sec=total_service_sec,
                         max_vehicles=self.max_vehicles,
-                        is_last=vehicle_id == self.max_vehicles - 1,
+                        vehicle_id=vehicle_id,
                     )
                     if lower is not None:
                         time_dimension.SetCumulVarSoftLowerBound(
@@ -487,9 +537,20 @@ class ArbocensusVRPSolver:
                 solution.Value(stops_dimension.CumulVar(routing.End(v)))
                 for v in range(self.max_vehicles)
             ]
+        exempt_lower_vehicle, exempt_upper_vehicle = self.penalties.exempt_vehicles(
+            self.max_vehicles
+        )
+        active_vehicles = [
+            v
+            for v in range(self.max_vehicles)
+            if not routing.IsEnd(solution.Value(routing.NextVar(routing.Start(v))))
+        ]
         debug = {
             "objective_ortools": solution.ObjectiveValue(),
             "stops_end_cumuls": stops_end_cumuls,
+            "exempt_lower_vehicle": exempt_lower_vehicle,
+            "exempt_upper_vehicle": exempt_upper_vehicle,
+            "active_vehicles": active_vehicles,
             "time_end_cumuls": time_end_cumuls,
             "dist_end_cumuls": dist_end_cumuls,
             "max_vehicles": self.max_vehicles,
