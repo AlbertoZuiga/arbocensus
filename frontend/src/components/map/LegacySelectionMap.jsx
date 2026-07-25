@@ -56,7 +56,7 @@ const TreeMarker = memo(function TreeMarker({
       ? MARKER_STYLES.selected
       : MARKER_STYLES.available;
   // An imported tree can no longer be selected, but its history is worth opening.
-  const clickable = (!tree.already_imported || !!tree.tree_id) && !drawing;
+  const clickable = !drawing;
   return (
     <CircleMarker
       center={[tree.lat, tree.lon]}
@@ -270,7 +270,7 @@ export default function LegacySelectionMap({
   const handleTreeClick = useCallback(
     (tree) => {
       onToggleTree(tree);
-      setPreviewTree(tree.tree_id ? tree : null);
+      setPreviewTree(tree);
     },
     [onToggleTree],
   );
@@ -309,7 +309,10 @@ export default function LegacySelectionMap({
           maxWidth={280}
           keepInView
         >
-          <TreeHistoryPopup treeId={previewTree.tree_id} />
+          <TreeHistoryPopup
+            treeId={previewTree.tree_id}
+            legacyTree={previewTree}
+          />
         </Popup>
       )}
       {shapes.map((shape) => (

@@ -4,7 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import LegacySelectionMap from "./LegacySelectionMap.jsx";
-import { fetchTreeObservations } from "@/api/datasets.js";
+import {
+  fetchLegacyTreeObservations,
+  fetchTreeObservations,
+} from "@/api/datasets.js";
 
 let mapHandlers = {};
 let dragTarget = { lat: 0, lng: 0 };
@@ -28,6 +31,7 @@ const fakeMap = {
 
 vi.mock("@/api/datasets.js", () => ({
   fetchTreeObservations: vi.fn().mockResolvedValue([]),
+  fetchLegacyTreeObservations: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("react-leaflet", () => ({
@@ -402,15 +406,22 @@ describe("LegacySelectionMap tree history", () => {
     expect(onToggleTree).toHaveBeenCalledWith(TREES[0]);
   });
 
-  it("selects a tree with no history without opening a popup", async () => {
+  it("opens the legacy history of a tree that was never imported", async () => {
     const onToggleTree = vi.fn();
     renderMap({ trees: TREES, selectionMode: null, onToggleTree });
 
     await userEvent.click(screen.getAllByTestId("circle-marker")[1]);
 
     expect(onToggleTree).toHaveBeenCalledWith(TREES[1]);
-    expect(screen.queryByTestId("popup")).not.toBeInTheDocument();
     expect(fetchTreeObservations).not.toHaveBeenCalled();
+    expect(fetchLegacyTreeObservations).toHaveBeenCalledExactlyOnceWith(
+      "legacy_app",
+      96905,
+    );
+    expect(screen.getByTestId("popup")).toHaveAttribute(
+      "data-position",
+      JSON.stringify([-33.41, -70.53]),
+    );
   });
 
   it("reopens the history of the same tree after the popup is closed", async () => {

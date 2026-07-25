@@ -20,6 +20,13 @@ export async function fetchTreeObservations(treeId) {
   return data;
 }
 
+export async function fetchLegacyTreeObservations(source, externalId) {
+  const { data } = await client.get(
+    `/datasets/legacy/trees/${source}/${externalId}/observations/`,
+  );
+  return data;
+}
+
 export async function fetchLegacyAreas() {
   const { data } = await client.get("/datasets/legacy/areas/");
   return data;
