@@ -32,6 +32,10 @@ export default function DatasetMap({ markers, solutionId }) {
     return markers.map((m) => m.position);
   }, [hasRoutes, routes, markers]);
 
+  const openTree = (treeId) => setOpenTreeId(treeId);
+  const closeTree = (treeId) =>
+    setOpenTreeId((current) => (current === treeId ? null : current));
+
   return (
     <div className="relative h-full w-full">
       <BaseMap bounds={bounds}>
@@ -51,9 +55,8 @@ export default function DatasetMap({ markers, solutionId }) {
                   fillOpacity: open ? 1 : 0.7,
                 }}
                 eventHandlers={{
-                  popupopen: () => setOpenTreeId(marker.id),
-                  popupclose: () =>
-                    setOpenTreeId((id) => (id === marker.id ? null : id)),
+                  popupopen: () => openTree(marker.id),
+                  popupclose: () => closeTree(marker.id),
                 }}
               >
                 <Popup minWidth={248} maxWidth={280} keepInView>
@@ -76,10 +79,10 @@ export default function DatasetMap({ markers, solutionId }) {
                   opacity: active ? 0.85 : 0.15,
                 }}
               />
-              {route.stops.map((position, index) => (
+              {route.stops.map((stop, index) => (
                 <CircleMarker
-                  key={index}
-                  center={position}
+                  key={stop.treeId}
+                  center={stop.position}
                   radius={6}
                   pathOptions={{
                     color: "#fff",
@@ -87,9 +90,18 @@ export default function DatasetMap({ markers, solutionId }) {
                     fillColor: route.color,
                     fillOpacity: active ? 0.9 : 0.15,
                   }}
+                  eventHandlers={{
+                    popupopen: () => openTree(stop.treeId),
+                    popupclose: () => closeTree(stop.treeId),
+                  }}
                 >
-                  <Popup>
-                    Ruta {route.routeNumber} · Parada {index + 1}
+                  <Popup minWidth={248} maxWidth={280} keepInView>
+                    <span className="mb-1.5 block text-xs font-medium">
+                      Ruta {route.routeNumber} · Parada {index + 1}
+                    </span>
+                    {openTreeId === stop.treeId && (
+                      <TreeHistoryPopup treeId={stop.treeId} />
+                    )}
                   </Popup>
                 </CircleMarker>
               ))}

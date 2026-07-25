@@ -192,10 +192,29 @@ def test_list_trees_assigns_area_id_by_polygon_containment(legacy_db):
 
 @pytest.mark.django_db
 def test_list_trees_flags_already_imported(legacy_db):
-    legacy.create_dataset("Existing", [APP_TREES[0]])
+    dataset = legacy.create_dataset("Existing", [APP_TREES[0]])
     trees = legacy.list_trees()
     flagged = {(t["source"], t["external_id"]) for t in trees if t["already_imported"]}
     assert flagged == {(legacy.SOURCE_APP, 96905)}
+
+    by_key = {(t["source"], t["external_id"]): t["tree_id"] for t in trees}
+    imported_tree = Tree.objects.get(dataset=dataset)
+    assert by_key[(legacy.SOURCE_APP, 96905)] == str(imported_tree.id)
+    assert by_key[(legacy.SOURCE_API, 776)] is None
+
+
+@pytest.mark.django_db
+def test_list_trees_points_a_twice_imported_tree_at_the_newest_dataset(legacy_db):
+    legacy.create_dataset("Old", [APP_TREES[0]])
+    newest = legacy.create_dataset("New", [APP_TREES[0]])
+
+    by_key = {
+        (t["source"], t["external_id"]): t["tree_id"] for t in legacy.list_trees()
+    }
+
+    assert by_key[(legacy.SOURCE_APP, 96905)] == str(
+        Tree.objects.get(dataset=newest).id
+    )
 
 
 @pytest.mark.django_db
@@ -341,6 +360,7 @@ def test_legacy_trees_endpoint_returns_both_sources(legacy_db):
         "species": "Quillaja saponaria",
         "area_id": 26,
         "already_imported": False,
+        "tree_id": None,
     }
 
 

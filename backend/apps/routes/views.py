@@ -63,6 +63,16 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             [stop.tree.location.x, stop.tree.location.y] for stop in route.stops.all()
         ]
 
+    @staticmethod
+    def _stop_markers(route):
+        return [
+            {
+                "tree_id": str(stop.tree.id),
+                "coordinates": [stop.tree.location.x, stop.tree.location.y],
+            }
+            for stop in route.stops.all()
+        ]
+
     @classmethod
     def _route_geometry(cls, route):
         stop_coordinates = cls._stop_coordinates(route)
@@ -77,12 +87,11 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                 status=400,
             )
         routes = list(self.get_queryset())
-        stop_coordinates_by_route = [self._stop_coordinates(route) for route in routes]
-        paths = osrm.fetch_route_paths(stop_coordinates_by_route)
+        paths = osrm.fetch_route_paths(
+            [self._stop_coordinates(route) for route in routes]
+        )
         features = []
-        for route, stop_coordinates, coordinates in zip(
-            routes, stop_coordinates_by_route, paths, strict=True
-        ):
+        for route, coordinates in zip(routes, paths, strict=True):
             features.append(
                 {
                     "type": "Feature",
@@ -94,7 +103,7 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                         "total_service_time_sec": route.total_estimated_time_sec
                         - route.travel_time_sec,
                         "total_estimated_time_sec": route.total_estimated_time_sec,
-                        "stops": stop_coordinates,
+                        "stops": self._stop_markers(route),
                     },
                 }
             )

@@ -168,6 +168,7 @@ def test_progress_geojson_returns_stops_with_status(make_solution):
     features = response.data["features"]
     assert len(features) == 2
     assert features[0]["geometry"]["coordinates"] == [-70.65, -33.45]
+    assert features[0]["properties"]["tree_id"] == str(trees[0].id)
     assert features[0]["properties"]["status"] == RouteStop.Status.VISITED
     assert features[0]["properties"]["surveyor_name"] == "ana"
     assert features[1]["properties"]["status"] == RouteStop.Status.PENDING

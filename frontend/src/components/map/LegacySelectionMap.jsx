@@ -1,10 +1,11 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { divIcon, latLngBounds } from "leaflet";
 import {
   CircleMarker,
   Marker,
   Polygon,
   Polyline,
+  Popup,
   Rectangle,
   Tooltip,
   useMapEvents,
@@ -13,6 +14,7 @@ import {
 import { areaShapes, selectableKeys, treeKey } from "@/lib/legacySelection.js";
 import { midpoint, pointInRing, ringFromCorners } from "@/lib/geometry.js";
 import BaseMap from "./BaseMap.jsx";
+import TreeHistoryPopup from "./TreeHistoryPopup.jsx";
 
 const MARKER_STYLES = {
   imported: { color: "#64748b", fillColor: "#94a3b8", fillOpacity: 0.4, weight: 1 },
@@ -46,24 +48,31 @@ const TreeMarker = memo(function TreeMarker({
   tree,
   selected,
   drawing,
-  onToggle,
+  onClick,
 }) {
   const style = tree.already_imported
     ? MARKER_STYLES.imported
     : selected
       ? MARKER_STYLES.selected
       : MARKER_STYLES.available;
-  const clickable = !tree.already_imported && !drawing;
+  // An imported tree can no longer be selected, but its history is worth opening.
+  const clickable = (!tree.already_imported || !!tree.tree_id) && !drawing;
   return (
     <CircleMarker
       center={[tree.lat, tree.lon]}
       radius={selected ? 6 : 5}
       pathOptions={style}
-      interactive={!tree.already_imported}
-      eventHandlers={clickable ? { click: () => onToggle(tree) } : undefined}
+      interactive={clickable}
+      eventHandlers={clickable ? { click: () => onClick(tree) } : undefined}
     />
   );
 });
+
+// Leaflet fires popupclose on the map, never on a popup that no layer owns.
+function PopupCloseWatcher({ onClose }) {
+  useMapEvents({ popupclose: onClose });
+  return null;
+}
 
 function EditableShape({ shape, editable, onChange }) {
   const ring = shape.ring;
@@ -256,6 +265,16 @@ export default function LegacySelectionMap({
       }),
     [areas, trees],
   );
+  const [previewTree, setPreviewTree] = useState(null);
+
+  const handleTreeClick = useCallback(
+    (tree) => {
+      onToggleTree(tree);
+      setPreviewTree(tree.tree_id ? tree : null);
+    },
+    [onToggleTree],
+  );
+  const closePreview = useCallback(() => setPreviewTree(null), []);
 
   return (
     <BaseMap bounds={bounds} preferCanvas>
@@ -279,9 +298,20 @@ export default function LegacySelectionMap({
           tree={tree}
           selected={selectedKeys.has(treeKey(tree))}
           drawing={drawing}
-          onToggle={onToggleTree}
+          onClick={handleTreeClick}
         />
       ))}
+      <PopupCloseWatcher onClose={closePreview} />
+      {previewTree && (
+        <Popup
+          position={[previewTree.lat, previewTree.lon]}
+          minWidth={248}
+          maxWidth={280}
+          keepInView
+        >
+          <TreeHistoryPopup treeId={previewTree.tree_id} />
+        </Popup>
+      )}
       {shapes.map((shape) => (
         <EditableShape
           key={shape.id}

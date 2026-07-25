@@ -19,7 +19,10 @@ export function geojsonToRoutes(featureCollection) {
       ([lon, lat]) => [lat, lon],
     );
     const props = feature.properties ?? {};
-    const stops = (props.stops ?? []).map(([lon, lat]) => [lat, lon]);
+    const stops = (props.stops ?? []).map((stop) => ({
+      treeId: stop.tree_id,
+      position: [stop.coordinates[1], stop.coordinates[0]],
+    }));
     return {
       routeNumber: props.route_number,
       totalTrees: props.total_trees,

@@ -105,7 +105,10 @@ def test_geojson_returns_street_following_path_per_route(
     feature = response.data["features"][0]
     assert feature["geometry"]["type"] == "LineString"
     assert feature["geometry"]["coordinates"] == street_path
-    assert feature["properties"]["stops"] == [[-70.65, -33.45], [-70.66, -33.46]]
+    assert [stop["coordinates"] for stop in feature["properties"]["stops"]] == [
+        [-70.65, -33.45],
+        [-70.66, -33.46],
+    ]
     assert feature["properties"]["total_service_time_sec"] == (
         feature["properties"]["total_estimated_time_sec"]
         - feature["properties"]["travel_time_sec"]
@@ -142,8 +145,13 @@ def test_geojson_keeps_route_order_when_fetches_finish_out_of_order(
     assert [f["properties"]["route_number"] for f in features] == [1, 2, 3]
     for feature in features:
         stops = feature["properties"]["stops"]
-        assert feature["geometry"]["coordinates"] == [stops[0], stops[-1]]
-    assert features[0]["properties"]["stops"][0][0] == pytest.approx(-70.65)
+        assert feature["geometry"]["coordinates"] == [
+            stops[0]["coordinates"],
+            stops[-1]["coordinates"],
+        ]
+    first_stop = features[0]["properties"]["stops"][0]
+    assert first_stop["coordinates"][0] == pytest.approx(-70.65)
+    assert first_stop["tree_id"]
     assert set(features[0]["properties"].keys()) == {
         "route_number",
         "total_trees",

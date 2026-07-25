@@ -20,8 +20,8 @@ const collection = {
         travel_time_sec: 600,
         total_service_time_sec: 600,
         stops: [
-          [-70.65, -33.45],
-          [-70.66, -33.46],
+          { tree_id: "t1", coordinates: [-70.65, -33.45] },
+          { tree_id: "t2", coordinates: [-70.66, -33.46] },
         ],
       },
     },
@@ -33,7 +33,7 @@ const collection = {
         total_trees: 1,
         travel_time_sec: 120,
         total_service_time_sec: 300,
-        stops: [[-70.7, -33.5]],
+        stops: [{ tree_id: "t3", coordinates: [-70.7, -33.5] }],
       },
     },
   ],
@@ -53,10 +53,12 @@ describe("geojsonToRoutes", () => {
   it("separates stop markers from the street path and inverts them", () => {
     const routes = geojsonToRoutes(collection);
     expect(routes[0].stops).toEqual([
-      [-33.45, -70.65],
-      [-33.46, -70.66],
+      { treeId: "t1", position: [-33.45, -70.65] },
+      { treeId: "t2", position: [-33.46, -70.66] },
     ]);
-    expect(routes[1].stops).toEqual([[-33.5, -70.7]]);
+    expect(routes[1].stops).toEqual([
+      { treeId: "t3", position: [-33.5, -70.7] },
+    ]);
   });
 
   it("maps route properties and assigns distinct colors per route", () => {
