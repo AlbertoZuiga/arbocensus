@@ -1,14 +1,78 @@
-\chapter{BITÁCORA DE TRABAJO}
+\chapter*{\centering BITÁCORA DE TRABAJO}
 
-\begin{xltabular}{\textwidth}{|p{2.2cm}|p{2.5cm}|X|c|p{2.6cm}|c|c|p{2.2cm}|}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{xltabular}{\linewidth}{|p{3cm}|X|p{3cm}|r|l|}
 \hline
-\textbf{Nombre} & \textbf{Actividad} & \textbf{Descripción de la Actividad} & \textbf{Realizada} & \textbf{Rango de fechas} & \textbf{Horas} & \textbf{Dedicación} & \textbf{Responsable} \\
+\textbf{Nombre Actividad} & \textbf{Descripción de la Actividad} & \textbf{Rango de fechas} & \textbf{Horas} & \textbf{Responsable} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Nombre Actividad} & \textbf{Descripción de la Actividad} & \textbf{Rango de fechas} & \textbf{Horas} & \textbf{Responsable} \\
 \hline
 \endhead
 \hline
 \endfoot
-Actividad 1 & & & & & & & \\
+Exploración del problema y selector de área de estudio & Revisión del problema de ruteo de censo y de los datos disponibles en las bases del proyecto. Construcción de una herramienta web mínima para delimitar sobre un mapa el rectángulo de estudio y extraer el arbolado contenido en él, con su empaquetado en contenedor y sus primeras pruebas. & 2025-11-24 a\newline 2025-11-30 & 9 & A. Zúñiga \\
 \hline
-Actividad 2 & & & & & & & \\
+Prototipo de tubería por etapas y visor cartográfico & Prototipo de la solución como una tubería de etapas encadenadas: carga de entrada, filtrado y recorte al polígono, construcción del grafo con distancias de haversine, agrupamiento por capacidad y recorrido por vecino más cercano con mejora 2-opt. Exportación de cada etapa a GeoJSON y visor sobre Leaflet para inspeccionar los resultados. & 2025-11-30 a\newline 2025-12-02 & 20 & A. Zúñiga \\
+\hline
+Refactorización y consolidación del prototipo & Modularización de las consultas a la base de datos, unificación de constantes y rutas por defecto, tipado y manejo explícito de excepciones a lo largo de las etapas de la tubería. & 2025-12-10 & 8 & A. Zúñiga \\
+\hline
+Extracción del selector, limpieza de la interfaz de línea de comandos y herramientas de proyecto & Traslado del selector de área a un repositorio propio y depuración del módulo de línea de comandos. Instalación de las herramientas transversales del proyecto: formateo automático, validación de mensajes de commit y plantilla de solicitud de incorporación de cambios. & 2026-03-15 a\newline 2026-03-22 & 17 & A. Zúñiga \\
+\hline
+Recorrido de camino abierto y grafo disperso con árbol k-dimensional & Adaptación del recorrido para producir caminos abiertos, sin retorno al punto de partida, y sustitución del grafo completo por uno disperso construido con un árbol k-dimensional para acotar el número de aristas evaluadas. & 2026-03-21 & 10 & A. Zúñiga \\
+\hline
+Agrupamiento balanceado por k-medias y optimización entre rutas & Reemplazo del agrupamiento por división recursiva por uno balanceado basado en k-medias, y primera pasada de optimización entre rutas para reasignar nodos de borde entre grupos vecinos. & 2026-03-22 a\newline 2026-03-23 & 16 & A. Zúñiga \\
+\hline
+Clientes de ruteo y orquestador de la tubería & Abstracción del acceso a los servicios de ruteo tras una interfaz común y construcción de un orquestador que encadena las etapas y expone sus métricas, en lugar de invocarlas una a una. & 2026-03-22 a\newline 2026-03-23 & 14 & A. Zúñiga \\
+\hline
+Integración de OSRM local y exportación de trazados & Despliegue de una instancia local de OSRM sobre datos de OpenStreetMap y sustitución de las distancias geométricas por tiempos de caminata reales. Exportación del trazado de cada ruta sobre la red vial. & 2026-03-27 & 10 & A. Zúñiga \\
+\hline
+Consolidación de la versión de prototipo y retiro del código heredado & Simplificación de la tubería mediante la eliminación de la etapa de agrupamiento previo, incorporación de controles y métricas de ruteo al visor, y retiro del código de las versiones anteriores del prototipo. & 2026-03-27 a\newline 2026-03-28 & 21 & A. Zúñiga \\
+\hline
+Reinicio del repositorio y decisión de arquitectura de la plataforma & Cierre de la etapa de prototipo y decisión de reconstruir la solución como plataforma web completa, con separación de servicio de aplicación, cola de tareas asíncronas y motor de ruteo, en lugar de una tubería de línea de comandos. & 2026-05-22 a\newline 2026-05-23 & 2 & A. Zúñiga \\
+\hline
+Infraestructura de contenedores y entorno de desarrollo & Definición de la composición de contenedores para base de datos espacial, cola de tareas, motor de ruteo, aplicación e interfaz. Resolución automática de puertos libres para permitir varios entornos simultáneos, verificaciones de salud de los servicios y utilidades de desarrollo. & 2026-06-01 a\newline 2026-06-23 & 17 & A. Zúñiga \\
+\hline
+Andamiaje del backend e integración continua & Estructura del proyecto Django por módulos de dominio y flujos de integración continua con análisis de estilo, verificación de tipos y ejecución de pruebas sobre una base de datos espacial real. & 2026-06-09 a\newline 2026-06-19 & 13 & A. Zúñiga \\
+\hline
+Modelo de datos e importador de conjuntos de árboles & Definición de las entidades de dominio con claves primarias de identificador único y geometría en el sistema de referencia 4326. Importador de archivos separados por comas y de notación de objetos, con detección automática de las columnas de coordenadas, y fábricas de datos para las pruebas. & 2026-06-21 a\newline 2026-06-26 & 14 & A. Zúñiga \\
+\hline
+Matriz de costos con caché persistente & Construcción de la matriz de tiempos de caminata contra el servicio de tablas de OSRM y persistencia de la matriz indexada por una huella criptográfica del conjunto de árboles activos, de modo que un mismo conjunto no se recalcule. & 2026-06-21 a\newline 2026-06-26 & 10 & A. Zúñiga \\
+\hline
+Estimador de flota y motor de optimización con OR-Tools & Formulación del problema como ruteo de vehículos con depósito ficticio para obtener rutas abiertas, cota dura de jornada, cotas blandas de balance y costo fijo por vehículo activo. Estimador del techo de flota a partir del trabajo total y cobertura de pruebas del motor. & 2026-06-22 a\newline 2026-06-23 & 19 & A. Zúñiga \\
+\hline
+API REST y autorización por rol & Exposición de los recursos de la plataforma sobre Django REST Framework, con autenticación por token y permisos propios definidos sobre el rol de negocio en lugar de los permisos estándar del marco de trabajo. Idempotencia de la creación de trabajos de optimización. & 2026-06-22 a\newline 2026-06-26 & 11 & A. Zúñiga \\
+\hline
+Interfaz: andamiaje, panel de administración y portal del censador & Aplicación de página única con gestión de estado de servidor, sesión autenticada y biblioteca de componentes. Panel de administración con listado y detalle de conjuntos de árboles, y primera versión del portal del censador con orden secuencial estricto de paradas. & 2026-06-26 a\newline 2026-06-28 & 24 & A. Zúñiga \\
+\hline
+Panel de optimización, estrategias espaciales y comparador & Formulario de parámetros temporales y lanzamiento de trabajos con seguimiento de estado por consulta periódica, historial de trabajos y comando de siembra de datos de demostración. Estrategias de partición espacial y modo de comparación que ejecuta las tres sobre un mismo conjunto. & 2026-06-28 a\newline 2026-06-30 & 14 & A. Zúñiga \\
+\hline
+Mapa de rutas, ciclo de publicación y asignación de censadores & Visualización de las rutas resultantes como polilíneas sobre la red peatonal real. Ciclo de vida de publicación con a lo más una solución vigente por conjunto, asignación de censadores restringida a esa solución y corrección de la autorización del listado de rutas. & 2026-07-04 a\newline 2026-07-06 & 14 & A. Zúñiga \\
+\hline
+Estimación de flota por vecino más cercano y disyunciones de nodos & Sustitución del estimador de flota por uno basado en el viaje medio al vecino más cercano, con punto de consulta previo a la optimización, y declaración de cada nodo como disyunción penalizada para garantizar que un árbol inalcanzable no deje sin solución a todo el conjunto. & 2026-07-06 a\newline 2026-07-07 & 13 & A. Zúñiga \\
+\hline
+Importación desde las bases legadas y mapa de selección & Acceso de solo lectura a las dos bases de datos de las iteraciones anteriores, con reconstrucción de la posición por mediana de muestras y de los polígonos de área por inclusión punto en polígono. Mapa de selección con brochas por área, por rectángulo y por árbol, y materialización transaccional del conjunto seleccionado. & 2026-07-10 a\newline 2026-07-18 & 19 & A. Zúñiga \\
+\hline
+Re-censo: observaciones, historial e instantánea legada & Entidad de observación histórica desacoplada de la parada que la origina, con su historial por árbol, e importación de las observaciones previas de ambas fuentes legadas dentro de la misma transacción de importación. & 2026-07-10 a\newline 2026-07-12 & 11 & A. Zúñiga \\
+\hline
+Portal en terreno: fotografía, omisiones y cola sin conexión & Captura fotográfica desde la cámara del dispositivo con compresión en el cliente, registro de omisiones con motivo obligatorio, seguimiento de la posición y umbral de proximidad, permanencia de la pantalla encendida y cola de operaciones sin conexión con reanudación de las mutaciones pendientes. & 2026-07-10 a\newline 2026-07-21 & 17 & A. Zúñiga \\
+\hline
+Matriz fragmentada y perfilado por fases de la tubería & Fragmentación de la matriz de costos en bloques para superar el límite de longitud de la petición al servicio de tablas, e instrumentación de la tubería por fases para localizar dónde se concentra el tiempo de ejecución en frío y en caliente. & 2026-07-10 a\newline 2026-07-18 & 14 & A. Zúñiga \\
+\hline
+Comparación de estrategias y ajuste de los valores por defecto & Corrección de dos defectos de la estrategia de agrupamiento previo, comparación de las tres estrategias bajo condiciones idénticas con criterio de decisión fijado antes de ejecutar, corrección del redondeo del tiempo de tránsito y adopción de los valores por defecto que se desprenden del experimento. & 2026-07-12 a\newline 2026-07-13 & 11 & A. Zúñiga \\
+\hline
+Auditoría de rutas, sensibilidad de penalizaciones y suite de instancias & Instrumentación de auditoría geométrica de rutas, experimento de sensibilidad a los coeficientes de penalización de la función objetivo, congelación de una suite de instancias reproducibles y traslado del volumen de base de datos a un almacenamiento compartido entre entornos. & 2026-07-13 a\newline 2026-07-16 & 16 & A. Zúñiga \\
+\hline
+Tablero de avance del censo y gestión de usuarios & Tablero con la proporción de árboles censados, omitidos y pendientes, su distribución sobre el mapa y el desglose por ruta y por censador. Administración de cuentas con desactivación lógica y pantalla de inicio del administrador. & 2026-07-13 a\newline 2026-07-20 & 13 & A. Zúñiga \\
+\hline
+Barrido de configuración por algoritmo y familia de pisos de balance & Serie de experimentos sobre la función objetivo: barrido de configuración por algoritmo y por tamaño, auditoría del objetivo, pisos de balance escalados y factibles, piso por número de paradas, piso combinado, supresión del piso y multi-arranque. Corrección de la metrología del barrido, que reveló que las semillas no llegaban al motor. & 2026-07-18 a\newline 2026-07-22 & 24 & A. Zúñiga \\
+\hline
+Cotas de referencia, métrica de auto-cruces y adopción del post-proceso & Construcción de un ancla alcanzable para dimensionar la flojedad de la cota inferior de viaje, instrumentación y validación de la métrica de auto-cruces contra el trazado real de calles, refutación de la compuerta por régimen y del peso lineal del arco, y adopción del post-proceso de resecuenciación intrmo valor por defecto. & 2026-07-22 a\newline 2026-07-24 & 22 & A. Zúñiga \\
+\hline
+Redacción de la memoria y de los informes de experimento & Escritura de la memoria y de los informes de cada ciclo experimental, con su protocolo, sus criterios de decisión fijados antes de ejecutar y sus datos crudos versionados. Incluye las revisiones de coherencia del documento y la sincronización de sus cifras con las mediciones vigentes. & 2026-06-01 a\newline 2026-07-24 & 29 & A. Zúñiga \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Total}} & \textbf{452} & \\
 \hline
 \end{xltabular}

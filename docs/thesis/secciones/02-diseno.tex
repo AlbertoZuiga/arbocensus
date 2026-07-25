@@ -1,4 +1,5 @@
 \chapter{DISEÑO DEL PRODUCTO}
+\label{cap:diseno}
 
 % La cota de altura es obligatoria: la captura del portal del censador es
 % vertical, y a 0.9\textwidth su alto excede la caja de texto.
@@ -12,18 +13,20 @@
 }
 
 \section{ARQUITECTURA DEL SISTEMA}
+\label{sec:arquitectura}
 La arquitectura del sistema sigue el patrón de monolito modular: un único servicio
-Django con módulos claramente separados por dominio
+Django \citep{django} con módulos claramente separados por dominio
 (\texttt{accounts}, \texttt{datasets}, \texttt{optimization}, \texttt{routes}).
 
-Las tareas de optimización se ejecutan de forma asíncrona mediante Celery con Redis
-como broker, dado que el proceso de construcción de la matriz de costos y la
-ejecución del \textit{solver} pueden tardar varios minutos para conjuntos de cien o más
-puntos.
+Las tareas de optimización se ejecutan de forma asíncrona mediante Celery
+\citep{celery} con Redis como \textit{broker}, dado que el proceso de construcción de
+la matriz de costos y la ejecución del \textit{solver} pueden tardar varios minutos
+para conjuntos de cien o más puntos.
 
 El motor de ruteo peatonal (OSRM) se despliega localmente en Docker y procesa
-datos de \textit{OpenStreetMap} de Chile, lo que elimina costos de API y dependencias de red
-durante la optimización.
+datos de \textit{OpenStreetMap} \citep{openstreetmap} de Chile, lo que elimina costos
+de API y dependencias de red durante la optimización. La persistencia geográfica se
+apoya en la extensión espacial PostGIS de PostgreSQL \citep{postgis}.
 
 La Figura~\ref{fig:arquitectura} resume las capas del sistema y el recorrido de una
 optimización: el navegador solicita el trabajo a la API, esta lo encola en Celery en
@@ -65,6 +68,7 @@ solución en PostGIS. El \textit{frontend} consulta el estado del trabajo por
 
 % ---- 2.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
+\label{sec:modelo-datos}
 
 Los modelos de dominio centrales son los siguientes:
 
@@ -150,46 +154,215 @@ que lo es el censador de una ruta. Todas las entidades usan claves primarias UUI
 
 % ---- 2.3.1 ------------------------------------------------------
 \subsection{Formulación del Problema}
+\label{sec:formulacion}
 
-El problema se define formalmente sobre un conjunto de puntos
+\subsubsection*{Conjuntos, parámetros y variables}
+
+El problema se define sobre un conjunto de puntos
 $P = \{p_1, p_2, \ldots, p_n\}$ correspondientes a las ubicaciones geográficas
-de los árboles a censar.
+de los árboles a censar. Para modelar rutas abiertas ---sin punto de inicio ni de
+término predefinido--- se añade un depósito ficticio (\textit{dummy depot})
+$p_0$, de modo que el grafo del modelo se define sobre
+$V = \{0, 1, \ldots, n\}$, donde el índice $0$ corresponde al depósito y los
+índices $1$ a $n$ a los árboles reales. Se dispone de un conjunto
+$R = \{1, \ldots, N_{\max}\}$ de vehículos, cuyo cardinal es una cota superior
+calculada por la Ecuación~\ref{eq:nmax} y no el número de rutas de la solución.
 
-La función de costo $c(p_i, p_j)$ representa el tiempo de caminata entre los
-puntos $p_i$ y $p_j$, calculado sobre la red vial peatonal real mediante OSRM.
+La función de costo $c_{ij}$ representa el tiempo de caminata entre los
+puntos $p_i$ y $p_j$, calculado sobre la red vial peatonal real mediante OSRM. Los
+arcos que tocan el depósito tienen costo nulo, $c_{0j} = c_{i0} = 0$, lo que es
+precisamente el mecanismo que abre las rutas: entrar y salir del depósito es
+gratuito, de modo que la ruta efectiva es la secuencia de árboles que hay entre
+ambos extremos. El parámetro $s$ es el tiempo de servicio constante por árbol, y
+$d_{ij}$ la distancia de \textit{haversine} entre $p_i$ y $p_j$, empleada por la
+dimensión geográfica de la Sección~\ref{sec:estrategias}.
 
-El tiempo total de una ruta $R_r$ se define como:
+El modelo emplea tres familias de variables de decisión:
+
+\begin{itemize}
+  \item $x_{ijr} \in \{0,1\}$: vale $1$ si el vehículo $r$ recorre el arco
+        $(i,j)$ y $0$ en caso contrario.
+  \item $u_i \in \{0,1\}$, para $i \in \{1,\ldots,n\}$: vale $1$ si el árbol $p_i$
+        queda incluido en el plan y $0$ si la solución lo descarta
+        (Sección~\ref{sec:disyunciones}).
+  \item $z_r \in \{0,1\}$: vale $1$ si el vehículo $r$ queda activo, esto es, si
+        se le asigna al menos un árbol.
+\end{itemize}
+
+A ellas se añaden las variables acumuladas $t_i \geq 0$ de la dimensión temporal,
+que registran el tiempo transcurrido al abandonar el nodo $i$, y su análogo
+$g_i \geq 0$ sobre la dimensión geográfica.
+
+\subsubsection*{Restricciones}
+
+Cada árbol incluido en el plan se visita exactamente una vez, y cada visita es
+consistente entre la entrada y la salida del nodo:
+
 \begin{equation}
-  T_r = \sum_{(p_i, p_j) \in R_r} c(p_i, p_j) + m_r \cdot s
+  \sum_{r \in R} \sum_{i \in V} x_{ijr} = u_j, \quad \forall j \in \{1,\ldots,n\}
+  \label{eq:grado}
+\end{equation}
+
+\begin{equation}
+  \sum_{i \in V} x_{ihr} - \sum_{j \in V} x_{hjr} = 0,
+  \quad \forall h \in \{1,\ldots,n\},\ \forall r \in R
+  \label{eq:flujo}
+\end{equation}
+
+La Ecuación~\ref{eq:grado} es la restricción de grado ---un árbol incluido recibe
+exactamente un arco entrante, y uno descartado, ninguno--- y la
+Ecuación~\ref{eq:flujo} es la conservación de flujo, que impide que un vehículo
+entre a un nodo sin salir de él. Cada vehículo activo sale del depósito y regresa a
+él a lo sumo una vez:
+
+\begin{equation}
+  \sum_{j \in V} x_{0jr} = \sum_{i \in V} x_{i0r} = z_r, \quad \forall r \in R
+  \label{eq:deposito}
+\end{equation}
+
+La Ecuación~\ref{eq:deposito} liga la activación de un vehículo con su uso efectivo:
+un vehículo inactivo no sale del depósito y, por la Ecuación~\ref{eq:flujo}, no puede
+tocar nodo alguno. La dimensión temporal, definida en la
+Ecuación~\ref{eq:dimension-tiempo}, encadena los tiempos acumulados a lo largo de cada
+ruta y acota su valor terminal:
+
+\begin{equation}
+  x_{ijr} = 1 \;\Longrightarrow\; t_j \geq t_i + \left\lceil c_{ij} + s\cdot\mathbf{1}[i \neq 0] \right\rceil,
+  \qquad t_0 = 0
+  \label{eq:dimension-tiempo}
+\end{equation}
+
+El tiempo de servicio se carga al abandonar un nodo real y no al llegar a él, y el
+depósito ficticio queda exento por la condición $i \neq 0$ del término indicador. El
+tiempo total de la ruta del vehículo $r$ es el valor terminal de esa dimensión, que
+por la Ecuación~\ref{eq:route_time} equivale al desplazamiento más el servicio de sus
+$m_r$ árboles:
+
+\begin{equation}
+  T_r = \sum_{(i,j)} c_{ij}\,x_{ijr} + m_r \cdot s
   \label{eq:route_time}
 \end{equation}
-donde $m_r$ es el número de árboles asignados a la ruta $r$ y $s$ es el tiempo de
-servicio constante por árbol.
 
-Las restricciones temporales por ruta son:
+La única restricción temporal dura del modelo es la cota superior de la
+Ecuación~\ref{eq:time_constraints}, implementada como capacidad de la dimensión:
+
 \begin{equation}
-  T_{\min} \leq T_r \leq T_{\max}, \quad \forall r \in \{1, \ldots, k\}
+  T_r \leq T_{\max}, \quad \forall r \in R
   \label{eq:time_constraints}
 \end{equation}
-con valores por defecto $T_{\min} = 2\,\text{h}$ y $T_{\max} = 3\,\text{h}$,
-parametrizables por el administrador.
 
-Los objetivos del problema son:
+con valores por defecto $T_{\min} = 2\,\text{h}$ y $T_{\max} = 3\,\text{h}$,
+parametrizables por el administrador. La cota inferior $T_{\min}$
+no es una restricción del modelo sino un objetivo blando: se penaliza el
+déficit en la función objetivo en lugar de prohibirlo, por la razón que se detalla
+en la Sección~\ref{sec:solver}. En consecuencia, una solución puede presentar rutas
+de duración inferior a $T_{\min}$, y de hecho las presenta: la solución de
+producción reportada en el Capítulo~\ref{cap:resultados} tiene tres.
+
+\subsubsection*{Función objetivo}
+
+El modelo es monobjetivo: los tres propósitos enunciados más abajo se escalarizan
+en una suma ponderada de seis términos, y no se resuelven de forma lexicográfica ni
+se construye un frente de Pareto. La función que el \textit{solver} minimiza es
+
+\begin{equation}
+  \begin{aligned}
+    \min \quad
+      &\underbrace{\sum_{r \in R} \sum_{(i,j)} \left\lceil c_{ij} + s\cdot\mathbf{1}[i \neq 0] \right\rceil x_{ijr}}_{\text{costo de arco}}
+      \;+\; \underbrace{C_{\text{fijo}} \sum_{r \in R} z_r}_{\text{flota}} \\[2pt]
+      &+\; \underbrace{\alpha \sum_{r \in R} \max\!\left(0,\; T_{\min} - T_r\right)}_{\text{penalización inferior}}
+      \;+\; \underbrace{\beta \sum_{r \in R} \max\!\left(0,\; T_r - \tau\right)}_{\text{penalización superior}} \\[2pt]
+      &+\; \underbrace{\pi \sum_{i=1}^{n} \left(1 - u_i\right)}_{\text{descarte}}
+      \;+\; \underbrace{\lambda_{\text{span}} \sum_{r \in R} \operatorname{span}_r}_{\text{extensión geográfica}}
+  \end{aligned}
+  \label{eq:objetivo}
+\end{equation}
+
+donde $\operatorname{span}_r = \max_i g_i - \min_i g_i$ sobre los nodos del
+vehículo $r$ es la extensión de la ruta en la dimensión geográfica, y las
+constantes toman los valores de la Tabla~\ref{tab:coeficientes}. Las penalizaciones
+inferior y superior se aplican, en la implementación, sobre la variable acumulada
+del nodo terminal de cada vehículo, que es donde $t_i$ vale $T_r$; un vehículo
+inactivo no contribuye a ninguno de los seis términos.
+
+\begin{table}[H]
+  \centering
+  \caption{Coeficientes de la función objetivo y su magnitud en la configuración de producción.}
+  \label{tab:coeficientes}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l l l X@{}}
+    \toprule
+    Símbolo & Término & Valor & Unidad y lectura \\
+    \midrule
+    --- & Costo de arco & $1$ & Por segundo de tránsito: el término que expresa el tiempo de caminata que el modelo minimiza. \\
+    $C_{\text{fijo}}$ & Costo fijo de vehículo & $100\,000$ & Por vehículo activo. Es el mecanismo que minimiza la flota (Sección~\ref{sec:flota}). \\
+    $\alpha$ & Penalización inferior & $10\,000$ & Por segundo en que $T_r$ queda bajo $T_{\min}$. \\
+    $\beta$ & Penalización superior & $500$ & Por segundo en que $T_r$ supera el objetivo blando $\tau$. \\
+    $\tau$ & Objetivo blando superior & $(T_{\min}+T_{\max})/2$ & En segundos: el punto medio del intervalo de jornada. \\
+    $\pi$ & Penalización de descarte & $10^{6}$ & Por árbol excluido del plan, esto es $10\,C_{\text{fijo}}$ (Sección~\ref{sec:disyunciones}). \\
+    $\lambda_{\text{span}}$ & Coeficiente de extensión geográfica & $3$ & Por metro de extensión de la ruta en la dimensión de \textit{haversine} (Sección~\ref{sec:estrategias}). \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Los tres propósitos que la Ecuación~\ref{eq:objetivo} escalariza son:
+
 \begin{enumerate}
-  \item Minimizar el número de rutas $k$ (minimizar equipos necesarios).
-  \item Minimizar el tiempo total de desplazamiento entre el conjunto de rutas.
-  \item Balancear la carga de trabajo entre rutas (minimizar la desviación estándar de $T_r$).
+  \item Minimizar el número de rutas $k = \sum_r z_r$, a través del término de flota.
+  \item Minimizar el tiempo total de desplazamiento, a través del costo de arco.
+  \item Reducir el desbalance de carga entre rutas, a través de las dos penalizaciones
+        blandas que empujan cada $T_r$ hacia el intervalo $[T_{\min},\,\tau]$.
 \end{enumerate}
 
-Las rutas son abiertas: no existe un punto de inicio ni de término predefinido.
+Corresponde precisar el tercero, porque su enunciado usual ---«minimizar la
+desviación estándar de $T_r$»--- no describe lo que el modelo hace. Una desviación
+estándar es una propiedad del conjunto de rutas y no se puede expresar como costo
+aditivo por arco, que es la única forma que admite la formulación: el
+\textit{solver} evalúa un costo por cada arco recorrido y por cada variable
+acumulada terminal, nunca un estadístico de la solución completa. Lo que el modelo
+implementa son las dos penalizaciones blandas bilaterales de la
+Ecuación~\ref{eq:objetivo}, y lo que el Capítulo~\ref{cap:resultados} reporta como
+balance es un tercer objeto, el cociente $\min_r T_r / \max_r T_r$. Los tres
+---objetivo declarado, mecanismo implementado y métrica reportada--- apuntan en la
+misma dirección, pero no son la misma cantidad, y en esta memoria se nombran por
+separado.
+
+Conviene situar el modelo dentro de la taxonomía de la investigación operativa
+\citep{toth2014vehicle}, porque la denominación abreviada \textit{Open mTSP} omite
+tres extensiones que sí están presentes y que determinan la solución. Las rutas
+abiertas ---sin depósito de partida ni de retorno--- corresponden al \textit{Open
+Vehicle Routing Problem} \citep{li2007open}, y aquí se obtienen mediante el depósito
+ficticio de costo nulo descrito más arriba. Las visitas opcionales penalizadas sitúan
+el modelo en la familia de los problemas de ruteo con beneficios o
+\textit{prize-collecting} \citep{balas1989prize,feillet2005traveling}, en los que
+omitir un nodo no es infactible sino costoso. Y la dimensión acumulativa con capacidad
+dura $T_{\max}$ es estructuralmente una restricción de capacidad, aunque su unidad sea
+el tiempo y no la carga. El caso base sin ninguna de las tres es el \textit{Multiple
+Travelling Salesman Problem} \citep{bektas2006multiple,laporte1992traveling}, y la
+combinación de varias de ellas sobre un mismo modelo es lo que la literatura reciente
+denomina un problema de ruteo multiatributo \citep{vidal2013heuristics}.
+
+La escala relativa de los coeficientes importa más que sus valores absolutos, y
+conviene leerla en términos marginales, esto es, como el precio de un segundo
+adicional de caminata en una ruta. Con los valores por defecto, ese precio es de
+$-9\,999$ mientras la ruta está por debajo de $T_{\min}$ ---el \textit{solver} está
+pagado por alargarla---, de $+1$ entre $T_{\min}$ y el objetivo blando $\tau$, y de
+$+501$ por encima de $\tau$. Esa asimetría, y no el costo de arco, es el canal
+dominante del objetivo, y explica los resultados de sensibilidad a las
+penalizaciones de la Sección~\ref{sec:discusion-calidad}.
 
 % ---- 2.3.2 ------------------------------------------------------
 \subsection{Construcción de la Matriz de Costos}
 \label{sec:matriz}
 
 La matriz de costos $C \in \mathbb{R}^{n \times n}$ se construye consultando el
-\textit{endpoint} \texttt{/table/v1/foot} de OSRM, que devuelve los tiempos de caminata
-reales entre todos los pares de puntos en una única solicitud HTTP.
+\textit{endpoint} \texttt{/table/v1/foot} de OSRM \citep{osrm}, que devuelve los
+tiempos de caminata reales entre todos los pares de puntos en una única solicitud
+HTTP. El servicio resuelve esas consultas sobre el grafo de \textit{OpenStreetMap}
+preprocesado con el algoritmo \textit{Multi-Level Dijkstra}, que particiona la red en
+niveles jerárquicos y precalcula atajos entre celdas, lo que permite responder
+consultas de camino mínimo en tiempo prácticamente independiente de la longitud del
+trayecto \citep{delling2017customizable}.
 
 Para evitar recomputaciones costosas, la matriz se persiste en el modelo
 \texttt{DistanceMatrix} asociado al \textit{dataset}.
@@ -198,8 +371,14 @@ La clave de caché es un hash SHA-256 calculado sobre los identificadores de los
 y la matriz se recalcula automáticamente.
 
 Los nodos inalcanzables (devueltos como \texttt{null} por OSRM) se reemplazan por
-una penalización de $9\,999\,999$ segundos, lo que garantiza la viabilidad numérica del
-\textit{solver} sin alterar la topología de la solución.
+una penalización de $9\,999\,999$ segundos, lo que garantiza la viabilidad numérica
+del \textit{solver}: la matriz queda sin valores nulos y toda operación aritmética
+sobre ella está definida. La sustitución sí altera la topología de la solución, y esa
+es justamente su función: un arco de ese costo excede cualquier cota de jornada
+concebible, de modo que ninguna ruta puede incorporarlo y el nodo afectado termina
+descartado por la disyunción que lo cubre (Sección~\ref{sec:disyunciones}). Lo que la
+penalización evita no es el cambio de topología sino la propagación de valores nulos
+al modelo.
 
 El factor que limita el tamaño de una consulta no es el parámetro
 \texttt{--max-table-size} de OSRM (fijado en $5\,000$), sino la longitud máxima de
@@ -303,9 +482,15 @@ Problem}) con las siguientes características:
         cada árbol puede quedar fuera de la solución a un costo de
         $1\,000\,000$ (Sección~\ref{sec:disyunciones}).
   \item \textbf{Búsqueda local}:
-        estrategia \textit{Guided Local Search} (GLS) con solución inicial
-        \textit{PATH\_CHEAPEST\_ARC}, con tiempo límite configurable
-        (por defecto 120 segundos).
+        estrategia \textit{Guided Local Search} (GLS)
+        \citep{voudouris1999guided} con solución inicial
+        \textit{PATH\_CHEAPEST\_ARC} ---una construcción voraz por arco más barato,
+        de la misma familia que el clásico algoritmo de ahorros
+        \citep{clarke1964scheduling}---, con tiempo límite configurable. A falta de
+        un valor explícito, el \textit{pipeline} lo deriva del tamaño del problema
+        como $\min(30 + 1{,}5\,n,\ 120)$ segundos, de modo que un \textit{dataset}
+        pequeño no consume el presupuesto completo; para los tamaños de esta
+        memoria la expresión satura en su tope de $120$\,s.
 \end{itemize}
 
 Si el \textit{solver} no encuentra solución, el \textit{pipeline} no falla en silencio: emite
@@ -344,7 +529,8 @@ La calibración de $\pi$ es la decisión de diseño relevante. El sistema fija
   \label{eq:drop_penalty}
 \end{equation}
 
-es decir, un orden de magnitud por sobre el costo fijo de activar un vehículo. La
+La Ecuación~\ref{eq:drop_penalty} sitúa la penalización un orden de magnitud por
+sobre el costo fijo de activar un vehículo. La
 relación entre ambas constantes ---y no sus valores absolutos--- es lo que gobierna
 el comportamiento del \textit{solver}: descartar un árbol es diez veces más caro que abrir una
 ruta entera para él. En consecuencia, mientras exista alguna ruta factible que pueda
@@ -359,10 +545,12 @@ de la solución ---son los nodos cuya variable de sucesión apunta a sí misma--
 propaga como parte del resultado del trabajo de optimización (campo
 \texttt{dropped\_trees}), de modo que el administrador sabe exactamente qué árboles
 quedaron fuera del plan y puede tratarlos como excepciones. El comportamiento
-observado en el \textit{dataset} real es consistente con la calibración descrita: de
-las seis variantes operacionales evaluadas, solo la más restrictiva (tiempo de
-servicio de $3$\,min con $T_{\max}=2$\,h) descarta árboles, y descarta exactamente
-uno (Capítulo~\ref{cap:resultados}).
+observado en el \textit{dataset} real es consistente con la calibración descrita: en
+la grilla de seis variantes operacionales de la Tabla~\ref{tab:grilla-spatial}, solo
+las dos variantes de $T_{\max}=2$\,h con tiempo de servicio alto descartan árboles
+---un árbol con servicio de $2$\,min y dos con servicio de $3$\,min---, de forma
+consistente en las tres semillas; las cuatro variantes restantes alcanzan cobertura
+total.
 
 El costo de esta garantía es de espacio de búsqueda: cada nodo incorpora una
 decisión binaria adicional ---visitarlo u omitirlo---, lo que amplía el vecindario
@@ -371,9 +559,8 @@ está acotada por un límite de tiempo de reloj y que el GLS concentra práctica
 todo el tiempo de ejecución del \textit{pipeline}
 (Capítulo~\ref{cap:resultados}), cabe esperar que el efecto no se manifieste como un
 mayor tiempo total sino como una menor calidad alcanzable dentro del mismo
-presupuesto. [COMPLETAR CON DATOS REALES: la magnitud de ese efecto no está medida;
-requiere una ablación con y sin disyunciones sobre el mismo \textit{dataset} y el
-mismo presupuesto de \textit{solver}.]
+presupuesto. Esa expectativa no se verificó experimentalmente y se asume como
+limitación del trabajo (Sección~\ref{sec:posibles-mejoras}).
 
 % ---- 2.3.6 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
@@ -399,7 +586,8 @@ resultados de la comparación (Capítulo~\ref{cap:resultados}).
   \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
         Sección~\ref{sec:solver}, sin término espacial. Constituye la línea base.
   \item \textbf{\texttt{spatial\_term}}: añade una segunda dimensión de
-        \textit{distancia geográfica} (Haversine entre paradas) y penaliza la
+        \textit{distancia geográfica} ---la fórmula de \textit{haversine} entre
+        paradas \citep{sinnott1984virtues}--- y penaliza la
         extensión geográfica de cada ruta mediante
         \texttt{SetSpanCostCoefficientForAllVehicles} con coeficiente
         $\lambda_{\text{span}} = 3$. El \textit{span} de una ruta es la diferencia
@@ -408,15 +596,78 @@ resultados de la comparación (Capítulo~\ref{cap:resultados}).
         de mayor tiempo total. La cota superior temporal se ajusta al punto medio
         $(T_{\min} + T_{\max})/2$ para preservar el balance.
   \item \textbf{\texttt{cluster\_first}}: enfoque \textit{cluster-first,
-        route-second}. Primero se proyectan las coordenadas a un plano local
-        mediante una aproximación equirectangular y se particionan en $k$ grupos
-        con \textit{k-means++}; el número de grupos $k$ se estima a partir de la
+        route-second}, esto es, resolver primero la asignación de nodos a grupos y
+        después un recorrido por grupo \citep{fisher1981generalized}. Primero se
+        proyectan las coordenadas a un plano local mediante una aproximación
+        equirectangular y se particionan en $k$ grupos con el algoritmo de Lloyd
+        \citep{lloyd1982least} bajo la inicialización \textit{k-means++}
+        \citep{arthur2007kmeans}, que elige los centros iniciales con probabilidad
+        proporcional al cuadrado de su distancia al centro más cercano ya escogido y
+        acota en esperanza el error respecto del óptimo; el número de grupos $k$ se
+        estima a partir de la
         carga de trabajo por árbol (servicio más desplazamiento promedio) sobre el
         tiempo objetivo. Luego se resuelve un VRP independiente por grupo con el
         mismo \texttt{ArbocensusVRPSolver}, lo que acota la dispersión geográfica
         de cada ruta por construcción. Una aserción de cobertura verifica que la
         unión de los grupos cubra exactamente el conjunto de árboles.
 \end{itemize}
+
+% ---- 2.3.7 ------------------------------------------------------
+\subsection{Post-proceso de resecuenciación intra-ruta}
+\label{sec:postpass}
+
+La asignación de árboles a rutas y el orden de visita dentro de cada ruta son dos
+decisiones que el \textit{solver} toma de forma simultánea, bajo un presupuesto de
+tiempo que se agota antes de que la búsqueda converja
+(Capítulo~\ref{cap:resultados}). Al cortarse por reloj de pared, el GLS entrega
+soluciones en las que la asignación ya es buena pero el ordenamiento interno de
+alguna ruta conserva cruces que un refinamiento local elimina de inmediato. El
+sistema explota esa asimetría con un post-proceso que se aplica a toda solución
+antes de persistirla, sin condición ni parámetro que lo desactive.
+
+El procedimiento es un 2-opt de camino abierto \citep{croes1958method,lin1965computer},
+aplicado a cada ruta de forma independiente. Dada la secuencia de paradas de una
+ruta, examina todo par de posiciones no adyacentes, invierte el segmento comprendido
+entre ellas y conserva la inversión cuando reduce el costo del camino; repite el
+barrido hasta que ninguna inversión mejora. La variante es de camino \textit{abierto}
+---y no la clásica de circuito--- porque las rutas del problema no se cierran sobre
+un depósito: al invertir un segmento que llega hasta el último nodo, el costo del
+arco de retorno no existe y no debe contabilizarse.
+
+Tres propiedades hacen que el post-proceso sea seguro incorporarlo de forma
+incondicional:
+
+\begin{itemize}
+  \item \textbf{Optimiza la misma magnitud que el \textit{solver}.} El 2-opt evalúa
+        las inversiones sobre la matriz de tiempos de OSRM, exactamente la misma que
+        alimenta el costo de arco de la Ecuación~\ref{eq:objetivo}. No introduce un
+        criterio nuevo ni una geometría distinta.
+  \item \textbf{Nunca empeora una ruta.} Solo acepta una inversión cuando el costo
+        del camino disminuye, de modo que el tiempo de desplazamiento de cada ruta
+        es menor o igual al que entregó el \textit{solver}, y el de la solución
+        completa también.
+  \item \textbf{No altera nada más.} Reordena las paradas dentro de cada ruta, sin
+        mover un árbol de una ruta a otra. La asignación, el número de rutas $k$, el
+        conjunto de árboles descartados y el número de paradas por ruta quedan
+        intactos. El índice de balance, en cambio, no queda garantizado: como es el
+        cociente $\min_r T_r / \max_r T_r$, puede subir o bajar según cuál sea la
+        ruta que el refinamiento acorta, aunque ninguna duración aumente.
+\end{itemize}
+
+Su costo computacional es despreciable frente al del \textit{solver}. Cada barrido
+examina $O(m_r^2)$ pares para una ruta de $m_r$ paradas y el procedimiento repite
+barridos hasta el óptimo local; como la carga de servicio acota $m_r$ a unas
+decenas de árboles en las configuraciones operacionales, el post-proceso completo se
+ejecuta en un tiempo que no aparece en el desglose por fases del
+\textit{pipeline}, dominado por los $120$\,s del GLS
+(Sección~\ref{sec:perfil-rendimiento}).
+
+La adopción de este post-proceso como comportamiento por defecto no fue inmediata:
+una primera evaluación lo rechazó por empeorar la métrica de auto-cruces, y solo la
+corrección posterior de esa métrica ---que medía sobre cuerdas rectas y no sobre el
+trazado real de calles--- permitió establecer que el algoritmo mejora
+simultáneamente el tiempo de viaje y la geometría real. Esa historia, y la medición
+que la cierra, se documentan en la Sección~\ref{sec:discusion-calidad}.
 
 % ---- 2.4 -------------------------------------------------------
 \section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
@@ -564,11 +815,34 @@ fuente no respalda.
 
 En el portal del censador (Sección~\ref{sec:ui}), toda parada genera una observación,
 tanto si el árbol se visita como si se omite. Al registrar una visita, el censador
-selecciona el estado del árbol y captura una fotografía; la fotografía es
-\textbf{obligatoria} en este caso, y la confirmación permanece deshabilitada mientras
-no se haya tomado. La razón es de auditoría: la fotografía es la única evidencia
-verificable de que el censador estuvo frente al árbol, y sin ella la observación es
-un dato no contrastable.
+selecciona el estado del árbol y captura una fotografía. La fotografía es obligatoria
+cuando el estado declarado afirma haber visto el árbol ---\texttt{alive} o
+\texttt{removed}---: la interfaz mantiene la confirmación deshabilitada mientras no se
+haya tomado, y el servidor rechaza con un código 400 la petición que llegue sin ella.
+La validación se duplica de forma deliberada en ambos extremos, porque un control que
+solo existe en el cliente es evadible con cualquier herramienta HTTP y no constituye
+una garantía del sistema.
+
+La excepción es el estado \texttt{not\_found}, que se registra como visita pero sin
+exigir imagen, por la razón evidente de que no hay árbol que fotografiar; lo mismo
+vale para las omisiones, que se tratan más abajo. La regla es entonces que se exige
+evidencia gráfica de toda afirmación positiva sobre el estado de un árbol, y no de la
+constatación de su ausencia.
+
+Conviene precisar el alcance de esa garantía. La fotografía es la evidencia
+\textit{documental} de la observación ---sin ella el estado declarado no es
+contrastable a posteriori por el administrador---, pero no acredita por sí sola que el
+censador haya estado frente al árbol correcto: no se verifica su contenido, ni sus
+metadatos de posición, ni el instante de captura. El control de proximidad de
+$30$\,m que la interfaz aplica antes de habilitar el registro
+(Sección~\ref{sec:ui}) tampoco cierra esa brecha, porque se evalúa en el cliente
+---que además ofrece la opción de forzar el registro cuando la señal de GPS es
+imprecisa--- y el servidor acepta las coordenadas que reciba sin contrastarlas con la
+posición del árbol. La trazabilidad que el sistema sí garantiza es de autoría y
+momento: cada observación queda ligada al usuario que la registró y a su marca
+temporal, y no puede alterarse retroactivamente. Verificar la presencia física en
+terreno exigiría un control del lado del servidor sobre la coordenada reportada, que
+esta iteración no implementa.
 
 La captura se realiza con la cámara del dispositivo desde el propio navegador
 ---solicitando la cámara trasera y comprimiendo el fotograma a JPEG--- y la
@@ -606,6 +880,7 @@ completada---, mapeando la muestra completada a \texttt{alive} y el resto a
 
 % ---- 2.6 -------------------------------------------------------
 \section{API REST}
+\label{sec:api}
 
 La API REST se implementa con Django REST Framework y expone los siguientes
 grupos de recursos:
@@ -665,10 +940,11 @@ el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
 \section{INTERFAZ DE USUARIO}
 \label{sec:ui}
 
-La interfaz se implementa como una \textit{Single Page Application} con \textit{React}~18 y
-Vite. El estado de servidor se gestiona con \textit{React Query} y el estado de sesión
-(autenticación, notificaciones) con Zustand; los mapas emplean \textit{Leaflet} sobre teselas
-de \textit{OpenStreetMap}. La aplicación distingue dos experiencias según el rol del usuario:
+La interfaz se implementa como una \textit{Single Page Application} con \textit{React}~18
+\citep{react} y Vite. El estado de servidor se gestiona con \textit{React Query} y el
+estado de sesión (autenticación, notificaciones) con Zustand; los mapas emplean
+\textit{Leaflet} \citep{leaflet} sobre teselas de \textit{OpenStreetMap}
+\citep{openstreetmap}. La aplicación distingue dos experiencias según el rol del usuario:
 el panel de administración y el portal del censador.
 
 El panel de administración comprende cinco etapas. En primer lugar, el administrador
@@ -712,7 +988,8 @@ orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente
 asignadas al usuario y presenta las paradas en orden secuencial estricto: una parada
 solo puede marcarse como visitada cuando las anteriores ya lo han sido. La ubicación
 del censador se sigue mediante la API de geolocalización del navegador y se calcula la
-distancia \textit{haversine} a la parada activa; el registro de visita se habilita al
+distancia de \textit{haversine} \citep{sinnott1984virtues} a la parada activa; el
+registro de visita se habilita al
 entrar en un radio de proximidad de 30\,m, con la opción de forzar el registro
 (\textit{«Registrar de todos modos»}) cuando la señal GPS es imprecisa. Tanto la visita
 como la omisión de una parada generan una observación del árbol, con captura
@@ -720,8 +997,67 @@ fotográfica y estado, según el diseño descrito en la
 Sección~\ref{sec:recenso}. Cada parada ofrece
 un enlace directo (\textit{deep-link}) a la navegación peatonal de Google Maps. La
 pantalla se mantiene encendida durante el recorrido mediante la \textit{Screen Wake
-Lock API}, y una cola de operaciones offline básica ---persistencia del cliente de
-\textit{React Query} en \texttt{localStorage} con reanudación de mutaciones pausadas--- permite
-que el registro de visitas realizado sin conexión se sincronice al recuperar la red.
+Lock API}, y una cola de operaciones \textit{offline} básica ---persistencia del
+cliente de \textit{React Query} en \textit{IndexedDB} con reanudación de mutaciones
+pausadas--- permite que el registro de visitas realizado sin conexión se sincronice al
+recuperar la red. El almacén es \textit{IndexedDB} y no \texttt{localStorage} porque
+la cola debe conservar el objeto \texttt{File} de la fotografía pendiente de envío, y
+\texttt{localStorage} solo admite cadenas de texto: serializar la imagen a texto la
+perdería o multiplicaría su tamaño.
 
 \capturaui{ui-surveyor.png}{Portal del censador en vista \textit{mobile}}{Portal del censador (\texttt{/}, vista \textit{mobile}): parada activa, distancia a la parada, captura fotográfica y registro de visita u omisión.}{fig:ui_surveyor}
+
+% ---- 2.8 -------------------------------------------------------
+\section{VERIFICACIÓN Y VALIDACIÓN}
+\label{sec:verificacion}
+
+El comportamiento descrito en este capítulo ---y con él los requisitos funcionales
+comprometidos en la Sección~\ref{sec:requisitos-funcionales}--- se sostiene sobre una
+suite de pruebas automatizadas que se ejecuta en cada integración de cambios. La
+Tabla~\ref{tab:verificacion} resume su volumen y las comprobaciones que la
+acompañan.
+
+% La tabla no cabe en el remanente de la página y su columna de alcance no admite
+% recorte: en un flotante [H] se desborda 330 pt fuera de la caja de texto. En
+% xltabular se parte entre páginas y queda donde la prosa la introduce.
+\small
+\begin{xltabular}{\textwidth}{@{}l l X@{}}
+  \caption{Verificación automatizada del sistema.}
+  \label{tab:verificacion} \\
+  \toprule
+  Componente & Volumen & Alcance \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Componente & Volumen & Alcance \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
+  Pruebas de \textit{backend} & 414 funciones en 42 archivos, 441 casos con parametrización & Solver y \textit{pipeline} de optimización, estimación de flota, construcción y caché de la matriz de costos, importadores de CSV y de ambas fuentes legadas, ciclo de publicación, autorización por rol y registro de visitas y omisiones. \\
+  Pruebas de \textit{frontend} & 209 casos en 40 archivos & Componentes de la interfaz, cliente de API, cola \textit{offline}, utilidades de selección cartográfica y de progreso. \\
+  Análisis estático & Tres verificaciones & Estilo y formato con \textit{Ruff}, tipos con \textit{Pyright} y estilo de \textit{JavaScript} con \textit{ESLint}. \\
+  Integración continua & Tres flujos de trabajo & Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso del \textit{frontend}, la construcción del paquete de producción. \\
+\end{xltabular}
+\normalsize
+
+Las pruebas del \textit{backend} se apoyan en \textit{pytest} con una base de datos
+PostGIS real y no en dobles de prueba, de modo que las consultas geográficas y las
+restricciones de unicidad parcial descritas en la Sección~\ref{sec:modelo-datos} se
+ejercitan tal como operan en producción. Las del motor de optimización comprueban
+propiedades del modelo y no valores concretos ---que dependerían del corte por reloj
+de pared del \textit{solver}---: que el depósito ficticio no aparezca en ninguna ruta
+extraída, que la suma de paradas más descartes cubra el conjunto de árboles, que la
+clave de caché de la matriz sea independiente del orden de consulta y que ninguna
+ruta exceda $T_{\max}$ en la aritmética entera del \textit{solver}.
+
+Corresponde acotar el alcance de esta verificación, en línea con lo declarado en la
+Sección~\ref{sec:alcance} y con los atributos de calidad de la
+Sección~\ref{sec:atributos-calidad}. No existen pruebas automatizadas de extremo a extremo: los
+flujos completos de administrador y de censador se comprueban por partes, nunca
+encadenados sobre el sistema en pie. La cobertura de código está configurada en el
+proyecto pero no se ejecuta como parte de la integración continua, de modo que esta
+memoria no reporta una cifra de cobertura. Y, sobre todo, lo que se verifica es que
+el sistema hace lo que su diseño dice: la validación con usuarios reales ---una
+jornada de censo ejecutada con censadores en terreno--- queda fuera del alcance de
+esta iteración y es la comprobación que ninguna suite de pruebas sustituye.

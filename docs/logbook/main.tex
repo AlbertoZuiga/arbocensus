@@ -66,6 +66,10 @@
 \usepackage{booktabs}
 \usepackage{xltabular}
 \usepackage{xcolor}
+% La bitácora tiene ocho columnas y no cabe a lo ancho de la caja vertical: en
+% vertical la columna flexible de descripción colapsa y cada fila se desborda.
+% pdflscape rota en el PDF las páginas de la tabla y ensancha su caja de texto.
+\usepackage{pdflscape}
 
 % ---- Metadatos -----------------------------------------
 \usepackage[hidelinks]{hyperref}

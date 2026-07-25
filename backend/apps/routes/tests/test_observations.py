@@ -11,11 +11,6 @@ from tests.factories import CustomUserFactory
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture(autouse=True)
-def media_root(settings, tmp_path):
-    settings.MEDIA_ROOT = tmp_path
-
-
 @pytest.fixture
 def surveyor():
     return CustomUserFactory(role="surveyor")
@@ -79,21 +74,60 @@ def test_visit_with_explicit_status_overrides_default(solution_with_route, surve
     assert observation.status == TreeObservation.Status.OTHER
 
 
-def test_visit_without_photo_creates_observation(solution_with_route, surveyor):
+def test_visit_without_photo_returns_400(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert TreeObservation.objects.count() == 0
+
+
+def test_visit_removed_without_photo_returns_400(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"status": "removed"},
+        format="json",
+    )
+    assert response.status_code == 400
+    stops[0].refresh_from_db()
+    assert stops[0].status == RouteStop.Status.PENDING
+    assert TreeObservation.objects.count() == 0
+
+
+def test_visit_not_found_without_photo_is_allowed(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"status": "not_found"},
+        format="json",
+    )
     assert response.status_code == 200
     observation = TreeObservation.objects.get(tree=stops[0].tree)
-    assert observation.status == TreeObservation.Status.ALIVE
+    assert observation.status == TreeObservation.Status.NOT_FOUND
     assert not observation.photo
+
+
+def test_visit_removed_with_photo_creates_observation(solution_with_route, surveyor):
+    _, _, stops = solution_with_route
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"status": "removed", "photo": _photo()},
+        format="multipart",
+    )
+    assert response.status_code == 200
+    observation = TreeObservation.objects.get(tree=stops[0].tree)
+    assert observation.status == TreeObservation.Status.REMOVED
+    assert observation.photo.storage.exists(observation.photo.name)
 
 
 def test_visit_with_valid_latlon_saves_location(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     response = _client(surveyor).post(
         f"/api/routes/stops/{stops[0].id}/visit/",
-        {"lat": -33.45, "lon": -70.65},
-        format="json",
+        {"lat": -33.45, "lon": -70.65, "photo": _photo()},
+        format="multipart",
     )
     assert response.status_code == 200
     stops[0].refresh_from_db()
@@ -105,8 +139,8 @@ def test_visit_with_boundary_latlon_saves_location(solution_with_route, surveyor
     _, _, stops = solution_with_route
     response = _client(surveyor).post(
         f"/api/routes/stops/{stops[0].id}/visit/",
-        {"lat": -90, "lon": 180},
-        format="json",
+        {"lat": -90, "lon": 180, "photo": _photo()},
+        format="multipart",
     )
     assert response.status_code == 200
     stops[0].refresh_from_db()
@@ -200,7 +234,11 @@ def test_visit_with_only_lon_returns_400(solution_with_route, surveyor):
 
 def test_visit_without_latlon_saves_no_location(solution_with_route, surveyor):
     _, _, stops = solution_with_route
-    response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"photo": _photo()},
+        format="multipart",
+    )
     assert response.status_code == 200
     stops[0].refresh_from_db()
     assert stops[0].visit_location is None
@@ -221,8 +259,9 @@ def test_visit_with_invalid_status_returns_400(solution_with_route, surveyor):
 
 def test_revisit_does_not_duplicate_observation(solution_with_route, surveyor):
     _, _, stops = solution_with_route
-    _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
-    _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    url = f"/api/routes/stops/{stops[0].id}/visit/"
+    _client(surveyor).post(url, {"photo": _photo()}, format="multipart")
+    _client(surveyor).post(url, {"photo": _photo()}, format="multipart")
     assert TreeObservation.objects.count() == 1
 
 
@@ -312,7 +351,11 @@ def test_observations_list_ordered_desc(solution_with_route, surveyor):
 def test_observations_list_accessible_to_surveyor(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     client = _client(surveyor)
-    client.post(f"/api/routes/stops/{stops[0].id}/visit/")
+    client.post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"photo": _photo()},
+        format="multipart",
+    )
     response = client.get(f"/api/datasets/trees/{stops[0].tree.id}/observations/")
     assert response.status_code == 200
     assert len(response.data) == 1

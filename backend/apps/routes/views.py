@@ -148,6 +148,13 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
 
 ORDER_ERROR = "Debes visitar los árboles anteriores primero."
 
+# A visit that asserts the tree was seen must carry the evidence. `not_found` is exempt
+# because there is no tree to photograph, and `other`/`unknown` assert nothing about it.
+PHOTO_REQUIRED_STATUSES = frozenset(
+    {TreeObservation.Status.ALIVE, TreeObservation.Status.REMOVED}
+)
+PHOTO_ERROR = "La fotografía es obligatoria para registrar este estado del árbol."
+
 
 def _locked_stop(stop_id, user):
     return get_object_or_404(
@@ -166,6 +173,7 @@ class RouteStopVisitView(APIView):
         observation = TreeObservationInputSerializer(data=request.data)
         observation.is_valid(raise_exception=True)
         data: Any = observation.validated_data
+        status = data.get("status", TreeObservation.Status.ALIVE)
         location = None
         lat = data.get("lat")
         lon = data.get("lon")
@@ -175,13 +183,17 @@ class RouteStopVisitView(APIView):
             stop = _locked_stop(stop_id, request.user)
             if stop.status != RouteStop.Status.PENDING:
                 return Response(RouteStopSerializer(stop).data)
+            # After the ownership lookup, so a caller who does not own the stop keeps
+            # getting a 404 instead of a hint that the stop exists.
+            if status in PHOTO_REQUIRED_STATUSES and not data.get("photo"):
+                return Response({"detail": PHOTO_ERROR}, status=400)
             if stop.has_pending_predecessor():
                 return Response({"detail": ORDER_ERROR}, status=400)
             stop.mark_visited(location=location, notes=data.get("notes"))
             TreeObservation.objects.create(
                 tree=stop.tree,
                 route_stop=stop,
-                status=data.get("status", TreeObservation.Status.ALIVE),
+                status=status,
                 photo=data.get("photo"),
                 notes=data.get("notes", ""),
                 created_by=request.user,

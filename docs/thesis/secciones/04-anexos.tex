@@ -30,6 +30,12 @@ Las respuestas geográficas siguen el formato \textit{GeoJSON}
 (\textit{FeatureCollection}), con coordenadas en el orden \texttt{[lon, lat]} que
 exige el estándar.
 
+El inventario se reparte en cuatro tablas según el recurso:
+autenticación y usuarios (Tabla~\ref{tab:anexo_api_auth}), \textit{datasets} e
+importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
+(Tabla~\ref{tab:anexo_api_optimization}) y rutas y captura en terreno
+(Tabla~\ref{tab:anexo_api_routes}).
+
 \begin{table}[H]
   \centering
   \caption{Endpoints de autenticación y administración de usuarios.}
@@ -129,8 +135,9 @@ bases legadas. La generación es determinista: fijada la semilla
 (\texttt{--seed}, $42$ por defecto), el mismo comando produce siempre el mismo
 conjunto de puntos.
 
-Se ejecuta dentro del contenedor \textit{backend}, que es donde residen las
-dependencias geográficas (GDAL) y la conexión a PostGIS:
+La Tabla~\ref{tab:anexo_seed_demo} detalla sus parámetros. Se ejecuta dentro del
+contenedor \textit{backend}, que es donde residen las dependencias geográficas (GDAL)
+y la conexión a PostGIS:
 
 \begin{verbatim}
 docker compose exec backend python manage.py seed_demo --profile light
@@ -147,7 +154,7 @@ docker compose exec backend python manage.py seed_demo \
     \toprule
     Parámetro & Efecto \\
     \midrule
-    \texttt{--profile \{light, medium, heavy\}} & Perfiles predefinidos de carga: $15$, $50$ y $200$ árboles. \texttt{light} solo siembra datos; \texttt{medium} y \texttt{heavy} además resuelven el problema de ruteo. \\
+    \texttt{--profile \{light, medium, heavy\}} & Perfiles predefinidos de carga: $15$, $70$ y $200$ árboles. \texttt{light} solo siembra datos; \texttt{medium} y \texttt{heavy} además resuelven el problema de ruteo. \\
     \texttt{--trees N}                          & Número de árboles cuando no se usa un perfil (por defecto $40$; mínimo $2$). \\
     \texttt{--distribution \{uniform, clustered, multizone\}} & Distribución espacial de los puntos. \texttt{uniform} muestrea el rectángulo completo; \texttt{clustered} genera nubes gaussianas de $250$\,m de dispersión en torno a centros aleatorios; \texttt{multizone} reparte los árboles entre tres zonas fijas de radios y pesos distintos, imitando la densidad desigual de un censo real. \\
     \texttt{--clusters K}                       & Número de centros de la distribución \texttt{clustered} (por defecto $4$). \\
@@ -162,7 +169,7 @@ docker compose exec backend python manage.py seed_demo \
 El comando crea un \texttt{Dataset} y sus \texttt{Tree} (un \texttt{PointField} por
 árbol, SRID 4326) y, cuando el perfil o el \textit{flag} lo indican, crea además la
 \texttt{RoutingConfig} con los parámetros por defecto ($T_{\min} = 7\,200$\,s,
-$T_{\max} = 10\,800$\,s, tiempo de servicio $300$\,s), el \texttt{OptimizationJob}
+$T_{\max} = 10\,800$\,s, tiempo de servicio $180$\,s), el \texttt{OptimizationJob}
 correspondiente y ejecuta el \textit{pipeline} de forma síncrona ---sin pasar por
 Celery---, lo que persiste la \texttt{RoutingSolution} con sus \texttt{Route} y
 \texttt{RouteStop}. La ejecución síncrona es deliberada: permite reproducir una
@@ -182,6 +189,7 @@ tiempos de servicio, cotas $T_{\max}$ y repeticiones sobre un mismo \textit{data
 y emite una fila de CSV por corrida con las métricas de calidad de ruta y los tiempos
 por fase del \textit{pipeline}. Cada ejecución escribe además un informe en
 \texttt{docs\slash experiments\slash }, con su comando, sus parámetros y sus métricas.
+La Tabla~\ref{tab:anexo_baseline_sweep} detalla sus parámetros.
 
 \begin{table}[H]
   \centering

@@ -6,7 +6,7 @@ from apps.routes.models import Route, RouteStop, TreeObservation
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
-from tests.factories import CustomUserFactory
+from tests.factories import CustomUserFactory, observation_photo
 
 pytestmark = pytest.mark.django_db
 
@@ -48,12 +48,18 @@ def test_visit_rolls_back_stop_when_observation_fails(stops, surveyor):
     client = _client(surveyor)
     url = f"/api/routes/stops/{stops[0].id}/visit/"
     with _failing_observation_create(), pytest.raises(RuntimeError):
-        client.post(url, {"notes": "primer intento"}, format="json")
+        client.post(
+            url,
+            {"notes": "primer intento", "photo": observation_photo()},
+            format="multipart",
+        )
     stops[0].refresh_from_db()
     assert stops[0].status == RouteStop.Status.PENDING
     assert TreeObservation.objects.count() == 0
 
-    response = client.post(url, {"notes": "reintento"}, format="json")
+    response = client.post(
+        url, {"notes": "reintento", "photo": observation_photo()}, format="multipart"
+    )
     assert response.status_code == 200
     stops[0].refresh_from_db()
     assert stops[0].status == RouteStop.Status.VISITED
@@ -82,8 +88,12 @@ def test_skip_rolls_back_stop_when_observation_fails(stops, surveyor):
 def test_repeated_visit_is_idempotent(stops, surveyor):
     client = _client(surveyor)
     url = f"/api/routes/stops/{stops[0].id}/visit/"
-    first = client.post(url, {"notes": "sano"}, format="json")
-    second = client.post(url, {"notes": "sano"}, format="json")
+    first = client.post(
+        url, {"notes": "sano", "photo": observation_photo()}, format="multipart"
+    )
+    second = client.post(
+        url, {"notes": "sano", "photo": observation_photo()}, format="multipart"
+    )
     assert [first.status_code, second.status_code] == [200, 200]
     assert first.data == second.data
     assert TreeObservation.objects.filter(route_stop=stops[0]).count() == 1
@@ -105,7 +115,9 @@ def test_repeated_skip_is_idempotent(stops, surveyor):
 
 def test_visit_out_of_order_still_rejected(stops, surveyor):
     response = _client(surveyor).post(
-        f"/api/routes/stops/{stops[1].id}/visit/", format="json"
+        f"/api/routes/stops/{stops[1].id}/visit/",
+        {"photo": observation_photo()},
+        format="multipart",
     )
     assert response.status_code == 400
     stops[1].refresh_from_db()
@@ -127,7 +139,10 @@ def test_skip_out_of_order_still_rejected(stops, surveyor):
 
 @pytest.mark.parametrize(
     ("action", "payload"),
-    [("visit", {}), ("skip", {"reason": "Acceso bloqueado"})],
+    [
+        ("visit", {"status": "not_found"}),
+        ("skip", {"reason": "Acceso bloqueado"}),
+    ],
 )
 def test_stop_is_locked_before_the_status_check(stops, surveyor, action, payload):
     with CaptureQueriesContext(connection) as queries:
