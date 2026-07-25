@@ -48,6 +48,16 @@ export function deselectKeys({ manualKeys, excludedKeys }, keys, coveredKeys) {
   return { manualKeys: manual, excludedKeys: excluded };
 }
 
+// An exclusion only means "unchecked while a shape covered it". Once no shape
+// covers the key it must be dropped, or a later shape would silently skip it.
+export function pruneExclusions(state, coveredKeys) {
+  const excluded = new Set(
+    [...state.excludedKeys].filter((key) => coveredKeys.has(key)),
+  );
+  if (excluded.size === state.excludedKeys.size) return state;
+  return { ...state, excludedKeys: excluded };
+}
+
 export function toggleKeys(state, keys, selectedKeys, coveredKeys) {
   if (keys.length === 0) return state;
   const allSelected = keys.every((key) => selectedKeys.has(key));

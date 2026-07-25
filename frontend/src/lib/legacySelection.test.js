@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   deselectKeys,
   keysInRing,
+  pruneExclusions,
   resolveSelection,
   selectKeys,
   selectableKeys,
@@ -80,6 +81,25 @@ describe("deselectKeys", () => {
     const state = deselectKeys(manual, ["legacy_app:96905"], new Set());
     expect(state.manualKeys.size).toBe(0);
     expect(state.excludedKeys.size).toBe(0);
+  });
+});
+
+describe("pruneExclusions", () => {
+  it("drops the exclusions no shape covers any more", () => {
+    const state = {
+      manualKeys: new Set(),
+      excludedKeys: new Set(["legacy_api:776", "legacy_api:777"]),
+    };
+    const pruned = pruneExclusions(state, new Set(["legacy_api:777"]));
+    expect(pruned.excludedKeys).toEqual(new Set(["legacy_api:777"]));
+  });
+
+  it("returns the same state when every exclusion is still covered", () => {
+    const state = {
+      manualKeys: new Set(),
+      excludedKeys: new Set(["legacy_api:776"]),
+    };
+    expect(pruneExclusions(state, new Set(["legacy_api:776"]))).toBe(state);
   });
 });
 

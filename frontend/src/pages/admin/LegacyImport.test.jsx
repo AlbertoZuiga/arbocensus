@@ -326,6 +326,19 @@ describe("LegacyImport", () => {
     expect(screen.queryByText(/Quillaja saponaria/)).not.toBeInTheDocument();
   });
 
+  it("forgets a deselection once no shape covers the tree", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("cerrar-poligono"));
+    await user.click(screen.getByText("tree-776"));
+    await user.click(screen.getByLabelText("Borrar polígono 1"));
+    await user.click(screen.getByText("cerrar-poligono"));
+
+    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
+    expect(screen.getByText(/Quillaja saponaria/)).toBeInTheDocument();
+  });
+
   it("clears the shapes together with the selection", async () => {
     const user = userEvent.setup();
     renderPage();

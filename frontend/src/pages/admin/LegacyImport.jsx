@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -10,6 +10,7 @@ import {
 import {
   deselectKeys,
   keysInRing,
+  pruneExclusions,
   resolveSelection,
   selectableKeys,
   selectionPayload,
@@ -97,6 +98,10 @@ export default function LegacyImport() {
     () => new Set(keysByShape.flat()),
     [keysByShape],
   );
+
+  useEffect(() => {
+    setSelection((prev) => pruneExclusions(prev, coveredKeys));
+  }, [coveredKeys]);
 
   const selectedKeys = useMemo(
     () => resolveSelection({ coveredKeys, ...selection }),
