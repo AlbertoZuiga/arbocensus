@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { pointInRing } from "./geometry.js";
+import { midpoint, pointInRing, ringFromCorners } from "./geometry.js";
 
 const SQUARE = [
   [-33.5, -70.7],
@@ -42,5 +42,29 @@ describe("pointInRing", () => {
         [-33.4, -70.6],
       ]),
     ).toBe(false);
+  });
+});
+
+describe("ringFromCorners", () => {
+  it("builds a four vertex ring from opposite corners", () => {
+    expect(ringFromCorners([-33.4, -70.6], [-33.5, -70.7])).toEqual(SQUARE);
+  });
+
+  it("normalises the corner order", () => {
+    expect(ringFromCorners([-33.5, -70.6], [-33.4, -70.7])).toEqual(SQUARE);
+  });
+
+  it("covers the same points as the equivalent bounds", () => {
+    const ring = ringFromCorners([-33.5, -70.7], [-33.4, -70.6]);
+    expect(pointInRing([-33.45, -70.65], ring)).toBe(true);
+    expect(pointInRing([-33.45, -70.55], ring)).toBe(false);
+  });
+});
+
+describe("midpoint", () => {
+  it("averages both coordinates", () => {
+    const [lat, lon] = midpoint([-33.5, -70.7], [-33.4, -70.6]);
+    expect(lat).toBeCloseTo(-33.45, 9);
+    expect(lon).toBeCloseTo(-70.65, 9);
   });
 });
