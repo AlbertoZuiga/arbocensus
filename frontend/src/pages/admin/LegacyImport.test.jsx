@@ -24,19 +24,41 @@ const POLYGON_RING = [
   [-33.44, -70.58],
 ];
 
+const OVERLAPPING_RING = [
+  [-33.455, -70.555],
+  [-33.455, -70.52],
+  [-33.4, -70.52],
+  [-33.4, -70.555],
+];
+
+const SHRUNK_RING = [
+  [-33.455, -70.58],
+  [-33.455, -70.54],
+  [-33.44, -70.54],
+  [-33.44, -70.58],
+];
+
 vi.mock("@/components/map/LegacySelectionMap.jsx", () => ({
   default: ({
     trees,
     areas,
+    shapes,
     selectionMode,
     onToggleTree,
     onToggleArea,
-    onPolygonSelect,
+    onShapeCreate,
+    onShapeChange,
   }) => (
     <div>
       <span>mode-{selectionMode ?? "none"}</span>
-      <button onClick={() => onPolygonSelect(POLYGON_RING)}>
+      <button onClick={() => onShapeCreate(POLYGON_RING)}>
         cerrar-poligono
+      </button>
+      <button onClick={() => onShapeCreate(OVERLAPPING_RING)}>
+        cerrar-poligono-2
+      </button>
+      <button onClick={() => onShapeChange(shapes[0].id, SHRUNK_RING)}>
+        mover-vertice
       </button>
       {areas.map((area) => (
         <button key={area.id} onClick={() => onToggleArea(area)}>
@@ -218,6 +240,18 @@ describe("LegacyImport", () => {
     expect(screen.getByText("mode-none")).toBeInTheDocument();
   });
 
+  it("leaves the drawing mode once the shape is closed", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Selección por polígono/ }),
+    );
+    await user.click(screen.getByText("cerrar-poligono"));
+
+    expect(screen.getByText("mode-none")).toBeInTheDocument();
+  });
+
   it("ignores clicks on individual trees while drawing a polygon", async () => {
     const user = userEvent.setup();
     renderPage();
@@ -228,6 +262,79 @@ describe("LegacyImport", () => {
     await user.click(screen.getByText("tree-96905"));
 
     expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
+  });
+
+  it("lists the drawn shape with its tree count", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("cerrar-poligono"));
+
+    expect(screen.getByText("Polígono 1 — 2 árboles")).toBeInTheDocument();
+  });
+
+  it("deselects the trees of a shape when the shape is deleted", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("cerrar-poligono"));
+    await user.click(screen.getByLabelText("Borrar polígono 1"));
+
+    expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
+    expect(screen.queryByText(/Quillaja saponaria/)).not.toBeInTheDocument();
+  });
+
+  it("keeps a tree another shape still covers after deleting one", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("cerrar-poligono"));
+    await user.click(screen.getByText("cerrar-poligono-2"));
+    expect(screen.getByText("3 seleccionados")).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("Borrar polígono 1"));
+
+    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
+    expect(screen.getByText(/Quillaja saponaria/)).toBeInTheDocument();
+    expect(screen.getByText(/#96905/)).toBeInTheDocument();
+    expect(screen.queryByText(/#777/)).not.toBeInTheDocument();
+  });
+
+  it("recomputes the selection when a vertex moves", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("cerrar-poligono"));
+    await user.click(screen.getByText("mover-vertice"));
+
+    expect(screen.getByText("1 seleccionados")).toBeInTheDocument();
+    expect(screen.getByText("Polígono 1 — 1 árboles")).toBeInTheDocument();
+    expect(screen.queryByText(/#777/)).not.toBeInTheDocument();
+  });
+
+  it("keeps a manually deselected tree out of the shape selection", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("cerrar-poligono"));
+    await user.click(screen.getByText("tree-776"));
+    expect(screen.getByText("1 seleccionados")).toBeInTheDocument();
+
+    await user.click(screen.getByText("cerrar-poligono-2"));
+
+    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
+    expect(screen.queryByText(/Quillaja saponaria/)).not.toBeInTheDocument();
+  });
+
+  it("clears the shapes together with the selection", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByText("cerrar-poligono"));
+    await user.click(screen.getByRole("button", { name: "Limpiar" }));
+
+    expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
+    expect(screen.queryByText(/Polígono 1/)).not.toBeInTheDocument();
   });
 
   it("disables the import button when nothing is selected", async () => {

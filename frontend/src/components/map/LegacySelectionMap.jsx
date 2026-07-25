@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { latLngBounds } from "leaflet";
+import { divIcon, latLngBounds } from "leaflet";
 import {
   CircleMarker,
+  Marker,
   Polygon,
   Polyline,
   Rectangle,
@@ -10,6 +11,7 @@ import {
 } from "react-leaflet";
 
 import { treeKey } from "@/lib/legacySelection.js";
+import { midpoint, ringFromCorners } from "@/lib/geometry.js";
 import BaseMap from "./BaseMap.jsx";
 
 const MARKER_STYLES = {
@@ -21,8 +23,24 @@ const MARKER_STYLES = {
 const AREA_STYLE = { color: "#f59e0b", weight: 2, fillOpacity: 0.05 };
 const BBOX_STYLE = { color: "#2563eb", weight: 1, fillOpacity: 0.1 };
 const DRAWING_STYLE = { color: "#2563eb", weight: 2, fillOpacity: 0.1 };
+const SHAPE_STYLE = { color: "#1d4ed8", weight: 2, fillOpacity: 0.08 };
 const VERTEX_STYLE = { color: "#1d4ed8", fillColor: "#fff", fillOpacity: 1, weight: 2 };
 const CLOSE_TOLERANCE_PX = 12;
+const MIN_RING_VERTICES = 3;
+
+const vertexIcon = divIcon({
+  className: "",
+  html: '<span class="block h-3 w-3 rounded-full border-2 border-blue-700 bg-white shadow"></span>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
+const midpointIcon = divIcon({
+  className: "",
+  html: '<span class="block h-2.5 w-2.5 rounded-full border border-blue-700 bg-white opacity-60"></span>',
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
+});
 
 const TreeMarker = memo(function TreeMarker({
   tree,
@@ -46,6 +64,57 @@ const TreeMarker = memo(function TreeMarker({
     />
   );
 });
+
+function EditableShape({ shape, editable, onChange }) {
+  const ring = shape.ring;
+  return (
+    <>
+      <Polygon positions={ring} pathOptions={SHAPE_STYLE} interactive={false} />
+      {editable &&
+        ring.map((vertex, index) => (
+          <Marker
+            key={`vertex-${index}`}
+            position={vertex}
+            icon={vertexIcon}
+            draggable
+            eventHandlers={{
+              // Recomputing on drag would run the point-in-ring test over every
+              // legacy tree on each animation frame.
+              dragend: (event) => {
+                const { lat, lng } = event.target.getLatLng();
+                onChange(
+                  ring.map((point, i) => (i === index ? [lat, lng] : point)),
+                );
+              },
+              contextmenu: () => {
+                if (ring.length > MIN_RING_VERTICES) {
+                  onChange(ring.filter((_, i) => i !== index));
+                }
+              },
+            }}
+          />
+        ))}
+      {editable &&
+        ring.map((vertex, index) => {
+          const inserted = midpoint(vertex, ring[(index + 1) % ring.length]);
+          return (
+            <Marker
+              key={`midpoint-${index}`}
+              position={inserted}
+              icon={midpointIcon}
+              eventHandlers={{
+                click: () => {
+                  const next = [...ring];
+                  next.splice(index + 1, 0, inserted);
+                  onChange(next);
+                },
+              }}
+            />
+          );
+        })}
+    </>
+  );
+}
 
 function useDrawingInteractions(map, active) {
   useEffect(() => {
@@ -78,7 +147,12 @@ function BboxSelector({ active, onSelect }) {
   useEffect(() => {
     if (!start) return undefined;
     const finish = () => {
-      onSelect(latLngBounds(start, current));
+      const dragged = start.lat !== current.lat || start.lng !== current.lng;
+      if (dragged) {
+        onSelect(
+          ringFromCorners([start.lat, start.lng], [current.lat, current.lng]),
+        );
+      }
       setStart(null);
       setCurrent(null);
     };
@@ -111,25 +185,21 @@ function BboxSelector({ active, onSelect }) {
 
 function PolygonSelector({ active, onSelect }) {
   const [points, setPoints] = useState([]);
-  const [closedRing, setClosedRing] = useState(null);
 
   const map = useMapEvents({
     click(event) {
       if (!active) return;
       const closes =
-        points.length >= 3 &&
+        points.length >= MIN_RING_VERTICES &&
         map
           .latLngToContainerPoint(event.latlng)
           .distanceTo(map.latLngToContainerPoint(points[0])) <=
           CLOSE_TOLERANCE_PX;
       if (closes) {
-        const ring = points.map((point) => [point.lat, point.lng]);
+        onSelect(points.map((point) => [point.lat, point.lng]));
         setPoints([]);
-        setClosedRing(ring);
-        onSelect(ring);
         return;
       }
-      setClosedRing(null);
       setPoints((prev) => [...prev, event.latlng]);
     },
   });
@@ -137,17 +207,11 @@ function PolygonSelector({ active, onSelect }) {
   useDrawingInteractions(map, active);
 
   useEffect(() => {
-    if (!active) {
-      setPoints([]);
-      setClosedRing(null);
-    }
+    if (!active) setPoints([]);
   }, [active]);
 
   return (
     <>
-      {closedRing && (
-        <Polygon positions={closedRing} pathOptions={DRAWING_STYLE} />
-      )}
       {points.length > 1 && (
         <Polyline positions={points} pathOptions={DRAWING_STYLE} />
       )}
@@ -171,11 +235,12 @@ export default function LegacySelectionMap({
   trees,
   areas,
   selectedKeys,
+  shapes,
   selectionMode,
   onToggleTree,
   onToggleArea,
-  onBboxSelect,
-  onPolygonSelect,
+  onShapeCreate,
+  onShapeChange,
 }) {
   const bounds = useMemo(
     () => trees.map((tree) => [tree.lat, tree.lon]),
@@ -211,10 +276,18 @@ export default function LegacySelectionMap({
           onToggle={onToggleTree}
         />
       ))}
-      <BboxSelector active={selectionMode === "bbox"} onSelect={onBboxSelect} />
+      {shapes.map((shape) => (
+        <EditableShape
+          key={shape.id}
+          shape={shape}
+          editable={!drawing}
+          onChange={(ring) => onShapeChange(shape.id, ring)}
+        />
+      ))}
+      <BboxSelector active={selectionMode === "bbox"} onSelect={onShapeCreate} />
       <PolygonSelector
         active={selectionMode === "polygon"}
-        onSelect={onPolygonSelect}
+        onSelect={onShapeCreate}
       />
     </BaseMap>
   );
