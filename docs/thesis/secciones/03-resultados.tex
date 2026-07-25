@@ -646,6 +646,56 @@ a partir del CSV del barrido): el código de los \textit{overrides} queda en el 
 selector, extensión que se documenta como trabajo futuro en la
 Sección~\ref{sec:posibles-mejoras}.
 
+\subsubsection*{Auditoría de robustez metodológica}
+
+La serie experimental descrita registra dieciséis ciclos de evaluación cerrados durante
+julio de 2026. El análisis retrospectivo de esa evidencia identificó cuatro defectos de
+instrumentación en los ciclos iniciales. Primero, el manejo de semillas en las corridas
+iniciales (\#194 a \#217) no propagaba la semilla al \textit{solver}: las nominales tres
+réplicas por celda eran la misma corrida, de modo que la dispersión reportada
+($\sigma \approx 0{,}03\,\%$) es artefacto de replicación idéntica y no describe la
+convergencia del algoritmo. Una corrida de recalibración (\#221) propagó semillas reales
+al \textit{solver}, con lo que la dispersión subió a $\sigma \approx 2{,}4\,\%$ y catorce
+de veintiocho veredictos de ese ciclo debieron re-juzgarse. Segundo, la métrica de relleno
+en esos mismos ciclos usaba como cota inferior el producto $n \times \bar{n}$, que viola la
+restricción de grado de los caminos y por tanto resulta inalcanzable. La métrica corregida
+usa el bosque generador mínimo $\text{MSF}_k$, que es una cota válida y alcanzable.
+
+Tercero, la métrica de auto-cruces se calcula sobre cuerdas rectas entre paradas
+consecutivas (Sección~\ref{sec:posibles-mejoras}), una geometría que no coincide ni con
+la red que el \textit{solver} optimiza ni con la polilínea real que se dibuja al censista.
+Una validación posterior (\#240 y \#241) midió la correlación entre cuerdas y trazado real
+de calles: $\rho$ de Spearman global de 0{,}527, propia de un indicador indirecto parcial,
+e invertida en el \textit{dataset} de evaluación principal ($\rho = -0{,}575$). La prueba
+decisiva es que el aumento de auto-cruces atribuido al 2-opt intra-ruta, que sobre cuerdas
+se multiplicaba por 2{,}9 a 5{,}3 veces, se convierte sobre la geometría real de calles en
+una reducción o un empate en 104 de 108 filas comparadas, con aumento en solo cuatro.
+La métrica de cuerdas conserva, no obstante, su valor comparativo: dentro de cada ciclo
+todos los brazos se contrastaron con la misma vara, de modo que las diferencias relativas
+permanecen válidas aunque el nivel absoluto quede acotado por esta limitación.
+
+Cuarto, el criterio de rutas degeneradas mezcla dos fenómenos: un aislamiento geográfico
+que captura el conteo de paradas (menos de cinco) y un perjuicio operativo real que captura
+la duración (menos de 1\,800 segundos). Una ruta con tres paradas y 10\,485\,s de duración
+ocupa el 97\,\% del presupuesto diario y constituye una jornada completa, aunque viole el
+conteo. La revisión del criterio descartó la cláusula de paradas por indirecta, con lo que
+cuarenta y cinco de las ciento seis filas re-juzgables quedan absueltas y sesenta y una
+persisten por duración.
+
+Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones:
+de los dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el
+instrumento corregido sin que cambiara el descarte final y los demás descansan en criterios
+—tiempo de viaje, relleno, balance— ajenos a los defectos detectados. El caso de mayor
+alcance es el 2-opt intra-ruta, rechazado en \#196 por empeorar los auto-cruces medidos en
+cuerdas: la validación de \#240 y \#241 mostró que ese empeoramiento era artefacto de la
+métrica y que el algoritmo limpia la geometría real. Sobre esa base, el ciclo \#245 lo
+incorporó a la configuración de producción, con reducción simultánea de tiempo de viaje y
+de auto-cruces sobre calle en las doce instancias de prueba y sin degradar el balance ni el
+número de rutas. Es el único cambio de configuración por defecto de toda la serie, y no
+proviene de barrer términos de la función objetivo sino de corregir el instrumento de
+medición. El análisis completo se documenta en
+\texttt{docs/experiments/evidence-audit-20260724.md}.
+
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 \label{sec:perfil-rendimiento}
 
