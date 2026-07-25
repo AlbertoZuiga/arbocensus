@@ -13,3 +13,20 @@ export function pointInRing([lat, lon], ring) {
   }
   return inside;
 }
+
+export function ringFromCorners([latA, lonA], [latB, lonB]) {
+  const south = Math.min(latA, latB);
+  const north = Math.max(latA, latB);
+  const west = Math.min(lonA, lonB);
+  const east = Math.max(lonA, lonB);
+  return [
+    [south, west],
+    [south, east],
+    [north, east],
+    [north, west],
+  ];
+}
+
+export function midpoint([latA, lonA], [latB, lonB]) {
+  return [(latA + latB) / 2, (lonA + lonB) / 2];
+}
