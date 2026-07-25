@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  areaShapes,
   deselectKeys,
   keysInRing,
   pruneExclusions,
@@ -152,6 +153,50 @@ describe("toggleKeys (area selection)", () => {
     expect(state.manualKeys).toEqual(
       new Set(["legacy_api:776", "legacy_api:777"]),
     );
+  });
+});
+
+describe("areaShapes", () => {
+  const polygon = (ring) => ({
+    type: "Polygon",
+    coordinates: [ring.map(([lat, lon]) => [lon, lat])],
+  });
+  const BIG = [
+    [-33.6, -70.8],
+    [-33.6, -70.5],
+    [-33.3, -70.5],
+    [-33.3, -70.8],
+  ];
+  const SMALL = [
+    [-33.5, -70.7],
+    [-33.5, -70.65],
+    [-33.45, -70.65],
+    [-33.45, -70.7],
+  ];
+
+  it("turns the GeoJSON ring into leaflet [lat, lon] pairs", () => {
+    const [shape] = areaShapes([{ id: 1, polygon: polygon(SMALL) }]);
+    expect(shape.ring).toEqual(SMALL);
+  });
+
+  it("skips the areas without a polygon", () => {
+    expect(areaShapes([{ id: 1, polygon: null }])).toEqual([]);
+  });
+
+  it("keeps only the first area of every repeated polygon", () => {
+    const shapes = areaShapes([
+      { id: 1, polygon: polygon(SMALL) },
+      { id: 2, polygon: polygon(SMALL) },
+    ]);
+    expect(shapes.map(({ area }) => area.id)).toEqual([1]);
+  });
+
+  it("orders the areas from the largest to the smallest", () => {
+    const shapes = areaShapes([
+      { id: 1, polygon: polygon(SMALL) },
+      { id: 2, polygon: polygon(BIG) },
+    ]);
+    expect(shapes.map(({ area }) => area.id)).toEqual([2, 1]);
   });
 });
 

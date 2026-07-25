@@ -10,7 +10,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 
-import { treeKey } from "@/lib/legacySelection.js";
+import { areaShapes, treeKey } from "@/lib/legacySelection.js";
 import { midpoint, ringFromCorners } from "@/lib/geometry.js";
 import BaseMap from "./BaseMap.jsx";
 
@@ -59,7 +59,7 @@ const TreeMarker = memo(function TreeMarker({
       center={[tree.lat, tree.lon]}
       radius={selected ? 6 : 5}
       pathOptions={style}
-      interactive={clickable}
+      interactive={!tree.already_imported}
       eventHandlers={clickable ? { click: () => onToggle(tree) } : undefined}
     />
   );
@@ -227,10 +227,6 @@ function PolygonSelector({ active, onSelect }) {
   );
 }
 
-function toLeafletRing(polygon) {
-  return polygon.coordinates[0].map(([lon, lat]) => [lat, lon]);
-}
-
 export default function LegacySelectionMap({
   trees,
   areas,
@@ -247,26 +243,24 @@ export default function LegacySelectionMap({
     [trees],
   );
   const drawing = selectionMode !== null;
+  const shapesByArea = useMemo(() => areaShapes(areas), [areas]);
 
   return (
     <BaseMap bounds={bounds} preferCanvas>
-      {areas
-        .filter((area) => area.polygon)
-        .map((area) => (
-          <Polygon
-            key={area.id}
-            positions={toLeafletRing(area.polygon)}
-            pathOptions={AREA_STYLE}
-            interactive={!drawing}
-            eventHandlers={
-              drawing ? undefined : { click: () => onToggleArea(area) }
-            }
-          >
-            <Tooltip sticky>
-              {area.campaign} — {area.name} ({area.tree_count} árboles)
-            </Tooltip>
-          </Polygon>
-        ))}
+      {shapesByArea.map(({ area, ring }) => (
+        <Polygon
+          key={area.id}
+          positions={ring}
+          pathOptions={AREA_STYLE}
+          eventHandlers={
+            drawing ? undefined : { click: () => onToggleArea(area) }
+          }
+        >
+          <Tooltip sticky>
+            {area.campaign} — {area.name} ({area.tree_count} árboles)
+          </Tooltip>
+        </Polygon>
+      ))}
       {trees.map((tree) => (
         <TreeMarker
           key={treeKey(tree)}

@@ -14,6 +14,16 @@ export function pointInRing([lat, lon], ring) {
   return inside;
 }
 
+export function ringArea(ring) {
+  let sum = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [latI, lonI] = ring[i];
+    const [latJ, lonJ] = ring[j];
+    sum += lonJ * latI - lonI * latJ;
+  }
+  return Math.abs(sum) / 2;
+}
+
 export function ringFromCorners([latA, lonA], [latB, lonB]) {
   const south = Math.min(latA, latB);
   const north = Math.max(latA, latB);

@@ -38,8 +38,15 @@ vi.mock("react-leaflet", () => ({
       }
     />
   ),
-  Polygon: ({ positions }) => (
-    <div data-testid="polygon" data-positions={JSON.stringify(positions)} />
+  Polygon: ({ positions, eventHandlers, children }) => (
+    <div
+      data-testid="polygon"
+      data-positions={JSON.stringify(positions)}
+      data-clickable={eventHandlers?.click ? "yes" : "no"}
+      onClick={() => eventHandlers?.click?.()}
+    >
+      {children}
+    </div>
   ),
   Polyline: ({ positions }) => (
     <div data-testid="polyline" data-count={positions.length} />
@@ -200,6 +207,50 @@ describe("LegacySelectionMap rectangle drawing", () => {
     drag({ lat: -33.4, lng: -70.6 }, { lat: -33.4, lng: -70.6 });
 
     expect(onShapeCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("LegacySelectionMap areas", () => {
+  const polygonOf = (ring) => ({
+    type: "Polygon",
+    coordinates: [ring.map(([lat, lon]) => [lon, lat])],
+  });
+  const INNER = [
+    [-33.49, -70.69],
+    [-33.49, -70.68],
+    [-33.48, -70.68],
+    [-33.48, -70.69],
+  ];
+  const areas = [
+    { id: 7, name: "Area 7", campaign: "C1", tree_count: 3, polygon: polygonOf(INNER) },
+    { id: 8, name: "Area 8", campaign: "C2", tree_count: 3, polygon: polygonOf(INNER) },
+    { id: 9, name: "Area 9", campaign: "C2", tree_count: 9, polygon: polygonOf(SQUARE) },
+  ];
+
+  it("draws the enclosing area first so the smallest one takes the click", () => {
+    renderMap({ areas, selectionMode: null });
+
+    const positions = screen
+      .getAllByTestId("polygon")
+      .map((node) => JSON.parse(node.getAttribute("data-positions")));
+    expect(positions).toEqual([SQUARE, INNER]);
+  });
+
+  it("toggles the area the click landed on", () => {
+    const onToggleArea = vi.fn();
+    renderMap({ areas, selectionMode: null, onToggleArea });
+
+    fireEvent.click(screen.getAllByTestId("polygon")[1]);
+
+    expect(onToggleArea).toHaveBeenCalledWith(areas[0]);
+  });
+
+  it("ignores the areas while a drawing mode is active", () => {
+    renderMap({ areas, selectionMode: "bbox" });
+
+    for (const node of screen.getAllByTestId("polygon")) {
+      expect(node).toHaveAttribute("data-clickable", "no");
+    }
   });
 });
 
