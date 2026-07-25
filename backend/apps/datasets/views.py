@@ -27,6 +27,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
             "destroy",
             "legacy_areas",
             "legacy_trees",
+            "legacy_tree_observations",
             "import_legacy",
             "from_legacy_selection",
         ):
@@ -60,6 +61,19 @@ class DatasetViewSet(viewsets.ModelViewSet):
     def legacy_trees(self, request):
         try:
             return Response(legacy.list_trees())
+        except LegacyDatabaseNotConfiguredError as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path=r"legacy/trees/(?P<source>[^/]+)/(?P<external_id>\d+)/observations",
+    )
+    def legacy_tree_observations(self, request, source=None, external_id=None):
+        try:
+            return Response(legacy.tree_observations(source, int(external_id)))
         except LegacyDatabaseNotConfiguredError as exc:
             return Response(
                 {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE

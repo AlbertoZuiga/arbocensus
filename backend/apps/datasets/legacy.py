@@ -196,6 +196,43 @@ def _load_app_observations(external_ids: list[int]) -> list[LegacyObservationRow
     ]
 
 
+def _observation_status(observation: LegacyObservationRow) -> str:
+    return (
+        TreeObservation.Status.ALIVE
+        if observation.completed
+        else TreeObservation.Status.UNKNOWN
+    )
+
+
+def tree_observations(source: str, external_id: int) -> list[dict]:
+    """Legacy history of a single tree, shaped like TreeObservationSerializer.
+
+    Read live instead of from TreeObservation because datasets loaded from frozen
+    instance CSVs never got the import-time snapshot.
+    """
+    loaders = {SOURCE_API: _load_api_observations, SOURCE_APP: _load_app_observations}
+    loader = loaders.get(source)
+    if loader is None:
+        return []
+    rows = sorted(loader([external_id]), key=lambda row: row.observed_at, reverse=True)
+    return [
+        {
+            "id": f"{source}:{external_id}:{index}",
+            "tree": None,
+            "route_stop": None,
+            "status": _observation_status(row),
+            "source": row.source,
+            "photo": None,
+            "photo_url": row.photo_url,
+            "notes": "",
+            "created_by": None,
+            "created_by_username": None,
+            "observed_at": row.observed_at,
+        }
+        for index, row in enumerate(rows)
+    ]
+
+
 def _api_tree_rows() -> list[LegacyTreeRow]:
     areas, trees = _load_api()
     polygons = [
@@ -465,11 +502,7 @@ def create_dataset(name: str, rows: list[LegacyTreeRow]) -> Dataset:
         TreeObservation.objects.bulk_create(
             TreeObservation(
                 tree=tree,
-                status=(
-                    TreeObservation.Status.ALIVE
-                    if observation.completed
-                    else TreeObservation.Status.UNKNOWN
-                ),
+                status=_observation_status(observation),
                 source=observation.source,
                 photo_url=observation.photo_url,
                 observed_at=observation.observed_at,

@@ -2,13 +2,13 @@ from typing import Any
 
 from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
-from apps.datasets.models import Dataset
+from apps.datasets import legacy
+from apps.datasets.models import Dataset, Tree
 from django.contrib.gis.geos import Point
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -240,13 +240,34 @@ class RouteStopSkipView(APIView):
         return Response(RouteStopSerializer(stop).data)
 
 
-class TreeObservationListView(ListAPIView):
-    serializer_class = TreeObservationSerializer
+class TreeObservationListView(APIView):
     permission_classes = [IsAuthenticated]
-    pagination_class = None
-    queryset = TreeObservation.objects.none()
 
-    def get_queryset(self) -> Any:
-        return TreeObservation.objects.filter(
-            tree_id=self.kwargs["tree_id"]
-        ).select_related("created_by")
+    @staticmethod
+    def _legacy_history(tree):
+        if tree.source not in legacy.SOURCES or tree.external_id is None:
+            return []
+        try:
+            return legacy.tree_observations(tree.source, tree.external_id)
+        except legacy.LegacyDatabaseNotConfiguredError:
+            return None
+
+    def get(self, request, tree_id):
+        tree = get_object_or_404(Tree, id=tree_id)
+        # The legacy history is read live: datasets loaded from frozen instance
+        # CSVs never received the import-time TreeObservation snapshot, and the
+        # same legacy tree lives in as many Tree rows as datasets hold it. Only
+        # when the legacy database is unavailable does the snapshot stand in.
+        live = self._legacy_history(tree)
+        stored = TreeObservation.objects.filter(tree_id=tree_id).select_related(
+            "created_by"
+        )
+        if live is not None:
+            stored = stored.exclude(source__in=legacy.SOURCES)
+        entries = [
+            (observation.observed_at, TreeObservationSerializer(observation).data)
+            for observation in stored
+        ]
+        entries += [(row["observed_at"], row) for row in live or []]
+        entries.sort(key=lambda entry: entry[0], reverse=True)
+        return Response([data for _, data in entries])
