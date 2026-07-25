@@ -4,10 +4,6 @@ import userEvent from "@testing-library/user-event";
 import RouteSelector from "./RouteSelector.jsx";
 import { routeOptionLabel } from "../../utils/routes.js";
 
-window.HTMLElement.prototype.hasPointerCapture ??= () => false;
-window.HTMLElement.prototype.releasePointerCapture ??= () => {};
-window.HTMLElement.prototype.scrollIntoView ??= () => {};
-
 const routes = [
   { id: "r1", total_trees: 30, visited_count: 30, skipped_count: 0 },
   { id: "r2", total_trees: 40, visited_count: 10, skipped_count: 4 },
