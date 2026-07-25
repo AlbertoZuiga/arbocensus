@@ -152,6 +152,7 @@ export default function LegacyImport() {
   const handleClear = () => {
     setShapes([]);
     setSelection(EMPTY_SELECTION);
+    setSelectionMode(null);
   };
 
   const createDataset = useMutation({

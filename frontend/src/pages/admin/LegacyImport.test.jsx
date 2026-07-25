@@ -339,15 +339,19 @@ describe("LegacyImport", () => {
     expect(screen.getByText(/Quillaja saponaria/)).toBeInTheDocument();
   });
 
-  it("clears the shapes together with the selection", async () => {
+  it("clears the shapes, the selection and the drawing mode", async () => {
     const user = userEvent.setup();
     renderPage();
 
     await user.click(await screen.findByText("cerrar-poligono"));
+    await user.click(
+      screen.getByRole("button", { name: /Selección por polígono/ }),
+    );
     await user.click(screen.getByRole("button", { name: "Limpiar" }));
 
     expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
     expect(screen.queryByText(/Polígono 1/)).not.toBeInTheDocument();
+    expect(screen.getByText("mode-none")).toBeInTheDocument();
   });
 
   it("disables the import button when nothing is selected", async () => {
