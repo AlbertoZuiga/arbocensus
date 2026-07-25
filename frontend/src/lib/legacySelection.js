@@ -1,4 +1,4 @@
-import { pointInRing } from "./geometry.js";
+import { pointInRing, ringArea } from "./geometry.js";
 
 export function treeKey(tree) {
   return `${tree.source}:${tree.external_id}`;
@@ -17,6 +17,24 @@ export function keysInRing(trees, ring) {
     .filter(isSelectable)
     .filter((tree) => pointInRing([tree.lat, tree.lon], ring))
     .map(treeKey);
+}
+
+// Leaflet gives a click to the last drawn shape that contains it, so nested and
+// repeated legacy areas need an explicit order: the campaigns store the same
+// polygon several times, and only the first copy is the one the backend hands
+// the trees to (it assigns area_id by first containing polygon).
+export function areaShapes(areas) {
+  const seen = new Set();
+  const shapes = [];
+  for (const area of areas) {
+    if (!area.polygon) continue;
+    const ring = area.polygon.coordinates[0].map(([lon, lat]) => [lat, lon]);
+    const signature = ring.join(";");
+    if (seen.has(signature)) continue;
+    seen.add(signature);
+    shapes.push({ area, ring });
+  }
+  return shapes.sort((a, b) => ringArea(b.ring) - ringArea(a.ring));
 }
 
 export function resolveSelection({ coveredKeys, manualKeys, excludedKeys }) {
@@ -58,9 +76,13 @@ export function pruneExclusions(state, coveredKeys) {
   return { ...state, excludedKeys: excluded };
 }
 
-export function toggleKeys(state, keys, selectedKeys, coveredKeys) {
+// Derives the current selection from the state it is given instead of taking it
+// as an argument: React re-runs a state updater with the same previous state, so
+// reading the selection from outside would flip the toggle on the second run.
+export function toggleKeys(state, keys, coveredKeys) {
   if (keys.length === 0) return state;
-  const allSelected = keys.every((key) => selectedKeys.has(key));
+  const selected = resolveSelection({ coveredKeys, ...state });
+  const allSelected = keys.every((key) => selected.has(key));
   return allSelected
     ? deselectKeys(state, keys, coveredKeys)
     : selectKeys(state, keys);

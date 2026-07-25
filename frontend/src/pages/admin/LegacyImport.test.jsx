@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -38,6 +39,9 @@ const SHRUNK_RING = [
   [-33.44, -70.58],
 ];
 
+// The map resolves the area geometrically and hands over the keys it covers.
+const AREA_KEYS = { 26: ["legacy_api:776", "legacy_api:777"] };
+
 vi.mock("@/components/map/LegacySelectionMap.jsx", () => ({
   default: ({
     trees,
@@ -61,7 +65,7 @@ vi.mock("@/components/map/LegacySelectionMap.jsx", () => ({
         mover-vertice
       </button>
       {areas.map((area) => (
-        <button key={area.id} onClick={() => onToggleArea(area)}>
+        <button key={area.id} onClick={() => onToggleArea(AREA_KEYS[area.id])}>
           area-{area.id}
         </button>
       ))}
@@ -117,11 +121,11 @@ const AREAS = [
   },
 ];
 
-function renderPage() {
+function renderPage({ strict = false } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const tree = (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={["/admin/datasets/legacy-import"]}>
         <Routes>
@@ -133,8 +137,9 @@ function renderPage() {
         </Routes>
         <Toaster />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  return render(strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 beforeEach(() => {
@@ -152,6 +157,22 @@ describe("LegacyImport", () => {
 
     expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
     expect(screen.getByText(/Quillaja saponaria/)).toBeInTheDocument();
+  });
+
+  // StrictMode runs the state updater twice; a toggle that read the selection
+  // from outside the updater flipped its decision on the second run and the
+  // click ended up doing nothing.
+  it("selects the area again after deselecting it", async () => {
+    const user = userEvent.setup();
+    renderPage({ strict: true });
+
+    await user.click(await screen.findByText("area-26"));
+    await user.click(screen.getByText("area-26"));
+    expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
+
+    await user.click(screen.getByText("area-26"));
+
+    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
   });
 
   it("deselects an individual tree after selecting its area", async () => {

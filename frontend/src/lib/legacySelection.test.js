@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  areaShapes,
   deselectKeys,
   keysInRing,
   pruneExclusions,
@@ -120,7 +121,7 @@ describe("toggleKeys (area selection)", () => {
   const keys = selectableKeys(AREA_TREES);
 
   it("selects every selectable tree of the area", () => {
-    const state = toggleKeys(EMPTY, keys, new Set(), new Set());
+    const state = toggleKeys(EMPTY, keys, new Set());
     expect(state.manualKeys).toEqual(
       new Set(["legacy_api:776", "legacy_api:777"]),
     );
@@ -135,23 +136,82 @@ describe("toggleKeys (area selection)", () => {
     const state = toggleKeys(
       { manualKeys: selected, excludedKeys: new Set() },
       keys,
-      selected,
       new Set(),
     );
     expect(state.manualKeys).toEqual(new Set(["other:1"]));
   });
 
   it("completes a partially selected area instead of clearing it", () => {
-    const selected = new Set(["legacy_api:776"]);
     const state = toggleKeys(
-      { manualKeys: selected, excludedKeys: new Set() },
+      { manualKeys: new Set(["legacy_api:776"]), excludedKeys: new Set() },
       keys,
-      selected,
       new Set(),
     );
     expect(state.manualKeys).toEqual(
       new Set(["legacy_api:776", "legacy_api:777"]),
     );
+  });
+
+  it("counts the keys a shape covers as selected", () => {
+    const covered = new Set(["legacy_api:776", "legacy_api:777"]);
+    const state = toggleKeys(EMPTY, keys, covered);
+    expect(resolveSelection({ coveredKeys: covered, ...state })).toEqual(
+      new Set(),
+    );
+  });
+
+  // React re-runs a state updater with the same previous state; a second run
+  // that flipped the toggle back would leave the click with no visible effect.
+  it("gives the same result when run twice on the same state", () => {
+    const first = toggleKeys(EMPTY, keys, new Set());
+    expect(toggleKeys(EMPTY, keys, new Set())).toEqual(first);
+
+    const back = toggleKeys(first, keys, new Set());
+    expect(toggleKeys(first, keys, new Set())).toEqual(back);
+  });
+});
+
+describe("areaShapes", () => {
+  const polygon = (ring) => ({
+    type: "Polygon",
+    coordinates: [ring.map(([lat, lon]) => [lon, lat])],
+  });
+  const BIG = [
+    [-33.6, -70.8],
+    [-33.6, -70.5],
+    [-33.3, -70.5],
+    [-33.3, -70.8],
+  ];
+  const SMALL = [
+    [-33.5, -70.7],
+    [-33.5, -70.65],
+    [-33.45, -70.65],
+    [-33.45, -70.7],
+  ];
+
+  it("turns the GeoJSON ring into leaflet [lat, lon] pairs", () => {
+    const [shape] = areaShapes([{ id: 1, polygon: polygon(SMALL) }]);
+    expect(shape.ring).toEqual(SMALL);
+  });
+
+  it("skips the areas without a polygon", () => {
+    expect(areaShapes([{ id: 1, polygon: null }])).toEqual([]);
+  });
+
+  it("keeps only the first area of every repeated polygon", () => {
+    const shapes = areaShapes([
+      { id: 1, polygon: polygon(SMALL) },
+      { id: 2, polygon: polygon(SMALL) },
+    ]);
+    expect(shapes.map(({ area }) => area.id)).toEqual([1]);
+  });
+
+  it("orders the areas from the largest to the smallest", () => {
+    const shapes = areaShapes([
+      { id: 1, polygon: polygon(SMALL) },
+      { id: 2, polygon: polygon(BIG) },
+    ]);
+    expect(shapes.map(({ area }) => area.id)).toEqual([2, 1]);
   });
 });
 

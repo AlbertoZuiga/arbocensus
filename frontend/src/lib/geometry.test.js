@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 
-import { midpoint, pointInRing, ringFromCorners } from "./geometry.js";
+import {
+  midpoint,
+  pointInRing,
+  ringArea,
+  ringFromCorners,
+} from "./geometry.js";
 
 const SQUARE = [
   [-33.5, -70.7],
@@ -58,6 +63,27 @@ describe("ringFromCorners", () => {
     const ring = ringFromCorners([-33.5, -70.7], [-33.4, -70.6]);
     expect(pointInRing([-33.45, -70.65], ring)).toBe(true);
     expect(pointInRing([-33.45, -70.55], ring)).toBe(false);
+  });
+});
+
+describe("ringArea", () => {
+  it("measures the ring regardless of the winding order", () => {
+    expect(ringArea(SQUARE)).toBeCloseTo(0.01, 9);
+    expect(ringArea([...SQUARE].reverse())).toBeCloseTo(0.01, 9);
+  });
+
+  it("ranks a contained ring below the one containing it", () => {
+    expect(ringArea(L_SHAPE)).toBeLessThan(ringArea(SQUARE));
+  });
+
+  it("is zero for a degenerate ring", () => {
+    expect(ringArea([])).toBe(0);
+    expect(
+      ringArea([
+        [-33.5, -70.7],
+        [-33.4, -70.6],
+      ]),
+    ).toBe(0);
   });
 });
 
