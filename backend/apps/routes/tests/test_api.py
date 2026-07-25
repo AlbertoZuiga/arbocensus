@@ -5,7 +5,7 @@ import pytest
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.routes.models import Route, RouteStop
 from rest_framework.test import APIClient
-from tests.factories import CustomUserFactory
+from tests.factories import CustomUserFactory, observation_photo
 
 pytestmark = pytest.mark.django_db
 
@@ -179,7 +179,11 @@ def test_geojson_without_solution_id_returns_400(solution_with_route):
 
 def test_visit_marks_stop_visited(solution_with_route, surveyor):
     _, _, stops = solution_with_route
-    response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"photo": observation_photo()},
+        format="multipart",
+    )
     assert response.status_code == 200
     assert response.data["status"] == RouteStop.Status.VISITED
     stops[0].refresh_from_db()
@@ -189,9 +193,17 @@ def test_visit_marks_stop_visited(solution_with_route, surveyor):
 
 def test_visit_next_pending_stop_in_order_succeeds(solution_with_route, surveyor):
     _, _, stops = solution_with_route
-    first = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    first = _client(surveyor).post(
+        f"/api/routes/stops/{stops[0].id}/visit/",
+        {"photo": observation_photo()},
+        format="multipart",
+    )
     assert first.status_code == 200
-    second = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
+    second = _client(surveyor).post(
+        f"/api/routes/stops/{stops[1].id}/visit/",
+        {"photo": observation_photo()},
+        format="multipart",
+    )
     assert second.status_code == 200
     stops[1].refresh_from_db()
     assert stops[1].status == RouteStop.Status.VISITED
@@ -199,7 +211,11 @@ def test_visit_next_pending_stop_in_order_succeeds(solution_with_route, surveyor
 
 def test_visit_out_of_order_returns_400(solution_with_route, surveyor):
     _, _, stops = solution_with_route
-    response = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
+    response = _client(surveyor).post(
+        f"/api/routes/stops/{stops[1].id}/visit/",
+        {"photo": observation_photo()},
+        format="multipart",
+    )
     assert response.status_code == 400
     assert response.data["detail"] == "Debes visitar los árboles anteriores primero."
     stops[1].refresh_from_db()
@@ -208,10 +224,15 @@ def test_visit_out_of_order_returns_400(solution_with_route, surveyor):
 
 def test_revisiting_visited_stop_is_idempotent(solution_with_route, surveyor):
     _, _, stops = solution_with_route
-    _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    visit_url = f"/api/routes/stops/{stops[0].id}/visit/"
+    _client(surveyor).post(
+        visit_url, {"photo": observation_photo()}, format="multipart"
+    )
     stops[0].refresh_from_db()
     first_visited_at = stops[0].visited_at
-    response = _client(surveyor).post(f"/api/routes/stops/{stops[0].id}/visit/")
+    response = _client(surveyor).post(
+        visit_url, {"photo": observation_photo()}, format="multipart"
+    )
     assert response.status_code == 200
     assert response.data["status"] == RouteStop.Status.VISITED
     stops[0].refresh_from_db()
@@ -222,8 +243,8 @@ def test_visit_stores_visit_location_as_point(solution_with_route, surveyor):
     _, _, stops = solution_with_route
     response = _client(surveyor).post(
         f"/api/routes/stops/{stops[0].id}/visit/",
-        {"lat": -33.45, "lon": -70.65},
-        format="json",
+        {"lat": -33.45, "lon": -70.65, "photo": observation_photo()},
+        format="multipart",
     )
     assert response.status_code == 200
     stops[0].refresh_from_db()
@@ -263,7 +284,11 @@ def test_skip_unblocks_next_stop(solution_with_route, surveyor):
         format="json",
     )
     assert skip.status_code == 200
-    visit = _client(surveyor).post(f"/api/routes/stops/{stops[1].id}/visit/")
+    visit = _client(surveyor).post(
+        f"/api/routes/stops/{stops[1].id}/visit/",
+        {"photo": observation_photo()},
+        format="multipart",
+    )
     assert visit.status_code == 200
     stops[1].refresh_from_db()
     assert stops[1].status == RouteStop.Status.VISITED
