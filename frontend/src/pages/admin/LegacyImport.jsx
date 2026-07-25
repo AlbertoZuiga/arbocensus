@@ -16,6 +16,7 @@ import {
   treeKey,
 } from "@/lib/legacySelection.js";
 import LegacySelectionMap from "@/components/map/LegacySelectionMap.jsx";
+import { pointInRing } from "@/lib/geometry.js";
 import { getErrorMessage } from "@/lib/errors";
 import { toast } from "@/store/toastStore.js";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -43,12 +44,15 @@ export default function LegacyImport() {
   const queryClient = useQueryClient();
 
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
-  const [bboxMode, setBboxMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [datasetName, setDatasetName] = useState("");
 
-  const bboxModeRef = useRef(bboxMode);
-  bboxModeRef.current = bboxMode;
+  const selectionModeRef = useRef(selectionMode);
+  selectionModeRef.current = selectionMode;
+
+  const toggleSelectionMode = (mode) =>
+    setSelectionMode((current) => (current === mode ? null : mode));
 
   const {
     data: trees,
@@ -82,13 +86,13 @@ export default function LegacyImport() {
   );
 
   const handleToggleTree = useCallback((tree) => {
-    if (bboxModeRef.current) return;
+    if (selectionModeRef.current) return;
     setSelectedKeys((prev) => toggleTree(prev, tree));
   }, []);
 
   const handleToggleArea = useCallback(
     (area) => {
-      if (bboxModeRef.current) return;
+      if (selectionModeRef.current) return;
       const areaTrees = treesByArea.get(area.id) ?? [];
       setSelectedKeys((prev) => toggleTrees(prev, areaTrees));
     },
@@ -99,6 +103,16 @@ export default function LegacyImport() {
     (bounds) => {
       const inside = (trees ?? []).filter((tree) =>
         bounds.contains([tree.lat, tree.lon]),
+      );
+      setSelectedKeys((prev) => addTrees(prev, inside));
+    },
+    [trees],
+  );
+
+  const handlePolygonSelect = useCallback(
+    (ring) => {
+      const inside = (trees ?? []).filter((tree) =>
+        pointInRing([tree.lat, tree.lon], ring),
       );
       setSelectedKeys((prev) => addTrees(prev, inside));
     },
@@ -138,12 +152,19 @@ export default function LegacyImport() {
         </Button>
         <h1 className="text-2xl font-semibold">Importar desde Arbocensus</h1>
         <Button
-          variant={bboxMode ? "secondary" : "outline"}
+          variant={selectionMode === "bbox" ? "secondary" : "outline"}
           size="sm"
           className="ml-auto"
-          onClick={() => setBboxMode((mode) => !mode)}
+          onClick={() => toggleSelectionMode("bbox")}
         >
           ▭ Selección por rectángulo
+        </Button>
+        <Button
+          variant={selectionMode === "polygon" ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => toggleSelectionMode("polygon")}
+        >
+          ⬠ Selección por polígono
         </Button>
         <Button
           size="sm"
@@ -174,10 +195,11 @@ export default function LegacyImport() {
               trees={trees}
               areas={areas ?? []}
               selectedKeys={selectedKeys}
-              bboxMode={bboxMode}
+              selectionMode={selectionMode}
               onToggleTree={handleToggleTree}
               onToggleArea={handleToggleArea}
               onBboxSelect={handleBboxSelect}
+              onPolygonSelect={handlePolygonSelect}
             />
           )}
           <div className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-md backdrop-blur">
@@ -191,9 +213,11 @@ export default function LegacyImport() {
               <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya importado
             </span>
           </div>
-          {bboxMode && (
+          {selectionMode && (
             <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md border bg-background/90 px-3 py-1.5 text-sm shadow-md backdrop-blur">
-              Arrastra un rectángulo para seleccionar
+              {selectionMode === "bbox"
+                ? "Arrastra un rectángulo para seleccionar"
+                : "Haz clic para marcar vértices y cierra sobre el primero"}
             </div>
           )}
         </div>
@@ -216,8 +240,8 @@ export default function LegacyImport() {
           <ul className="flex-1 overflow-y-auto p-2">
             {selectedList.length === 0 && (
               <li className="px-1 py-2 text-sm text-muted-foreground">
-                Haz clic en árboles, áreas o usa el rectángulo para
-                seleccionar.
+                Haz clic en árboles, áreas o usa el rectángulo o el polígono
+                para seleccionar.
               </li>
             )}
             {selectedList.map((key) => {

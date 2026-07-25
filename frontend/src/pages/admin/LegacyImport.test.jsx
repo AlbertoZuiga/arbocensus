@@ -17,9 +17,27 @@ vi.mock("@/api/datasets.js", () => ({
   createDatasetFromLegacySelection: vi.fn(),
 }));
 
+const POLYGON_RING = [
+  [-33.47, -70.58],
+  [-33.47, -70.54],
+  [-33.44, -70.54],
+  [-33.44, -70.58],
+];
+
 vi.mock("@/components/map/LegacySelectionMap.jsx", () => ({
-  default: ({ trees, areas, onToggleTree, onToggleArea }) => (
+  default: ({
+    trees,
+    areas,
+    selectionMode,
+    onToggleTree,
+    onToggleArea,
+    onPolygonSelect,
+  }) => (
     <div>
+      <span>mode-{selectionMode ?? "none"}</span>
+      <button onClick={() => onPolygonSelect(POLYGON_RING)}>
+        cerrar-poligono
+      </button>
       {areas.map((area) => (
         <button key={area.id} onClick={() => onToggleArea(area)}>
           area-{area.id}
@@ -163,6 +181,53 @@ describe("LegacyImport", () => {
     });
     expect(await screen.findByText("detalle dataset")).toBeInTheDocument();
     expect(screen.getByText(/creado con 2 árboles/)).toBeInTheDocument();
+  });
+
+  it("selects the trees inside a free-drawn polygon", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Selección por polígono/ }),
+    );
+    await user.click(screen.getByText("cerrar-poligono"));
+
+    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
+    expect(screen.getByText(/Quillaja saponaria/)).toBeInTheDocument();
+    expect(screen.getByText(/#777/)).toBeInTheDocument();
+    expect(screen.queryByText(/#96905/)).not.toBeInTheDocument();
+  });
+
+  it("keeps one drawing mode active at a time", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Selección por polígono/ }),
+    );
+    expect(screen.getByText("mode-polygon")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /Selección por rectángulo/ }),
+    );
+    expect(screen.getByText("mode-bbox")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: /Selección por rectángulo/ }),
+    );
+    expect(screen.getByText("mode-none")).toBeInTheDocument();
+  });
+
+  it("ignores clicks on individual trees while drawing a polygon", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("button", { name: /Selección por polígono/ }),
+    );
+    await user.click(screen.getByText("tree-96905"));
+
+    expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
   });
 
   it("disables the import button when nothing is selected", async () => {
