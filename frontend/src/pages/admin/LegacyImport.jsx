@@ -108,15 +108,12 @@ export default function LegacyImport() {
     [coveredKeys, selection],
   );
 
-  const selectedKeysRef = useRef(selectedKeys);
-  selectedKeysRef.current = selectedKeys;
   const coveredKeysRef = useRef(coveredKeys);
   coveredKeysRef.current = coveredKeys;
 
   const toggle = useCallback((keys) => {
-    setSelection((prev) =>
-      toggleKeys(prev, keys, selectedKeysRef.current, coveredKeysRef.current),
-    );
+    const coveredKeysNow = coveredKeysRef.current;
+    setSelection((prev) => toggleKeys(prev, keys, coveredKeysNow));
   }, []);
 
   const handleToggleTree = useCallback(

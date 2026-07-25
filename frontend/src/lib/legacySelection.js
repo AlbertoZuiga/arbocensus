@@ -76,9 +76,13 @@ export function pruneExclusions(state, coveredKeys) {
   return { ...state, excludedKeys: excluded };
 }
 
-export function toggleKeys(state, keys, selectedKeys, coveredKeys) {
+// Derives the current selection from the state it is given instead of taking it
+// as an argument: React re-runs a state updater with the same previous state, so
+// reading the selection from outside would flip the toggle on the second run.
+export function toggleKeys(state, keys, coveredKeys) {
   if (keys.length === 0) return state;
-  const allSelected = keys.every((key) => selectedKeys.has(key));
+  const selected = resolveSelection({ coveredKeys, ...state });
+  const allSelected = keys.every((key) => selected.has(key));
   return allSelected
     ? deselectKeys(state, keys, coveredKeys)
     : selectKeys(state, keys);

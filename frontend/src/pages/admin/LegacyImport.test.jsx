@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -117,11 +118,11 @@ const AREAS = [
   },
 ];
 
-function renderPage() {
+function renderPage({ strict = false } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const tree = (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={["/admin/datasets/legacy-import"]}>
         <Routes>
@@ -133,8 +134,9 @@ function renderPage() {
         </Routes>
         <Toaster />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  return render(strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 beforeEach(() => {
@@ -152,6 +154,22 @@ describe("LegacyImport", () => {
 
     expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
     expect(screen.getByText(/Quillaja saponaria/)).toBeInTheDocument();
+  });
+
+  // StrictMode runs the state updater twice; a toggle that read the selection
+  // from outside the updater flipped its decision on the second run and the
+  // click ended up doing nothing.
+  it("selects the area again after deselecting it", async () => {
+    const user = userEvent.setup();
+    renderPage({ strict: true });
+
+    await user.click(await screen.findByText("area-26"));
+    await user.click(screen.getByText("area-26"));
+    expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
+
+    await user.click(screen.getByText("area-26"));
+
+    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
   });
 
   it("deselects an individual tree after selecting its area", async () => {
