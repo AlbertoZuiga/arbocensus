@@ -10,8 +10,8 @@ import {
   useMapEvents,
 } from "react-leaflet";
 
-import { areaShapes, treeKey } from "@/lib/legacySelection.js";
-import { midpoint, ringFromCorners } from "@/lib/geometry.js";
+import { areaShapes, selectableKeys, treeKey } from "@/lib/legacySelection.js";
+import { midpoint, pointInRing, ringFromCorners } from "@/lib/geometry.js";
 import BaseMap from "./BaseMap.jsx";
 
 const MARKER_STYLES = {
@@ -243,21 +243,33 @@ export default function LegacySelectionMap({
     [trees],
   );
   const drawing = selectionMode !== null;
-  const shapesByArea = useMemo(() => areaShapes(areas), [areas]);
+  // The legacy area_id only covers the trees of one source and points at the
+  // first containing polygon, never the nested one the click landed on, so the
+  // area resolves its trees geometrically like a drawn shape does.
+  const areaSelections = useMemo(
+    () =>
+      areaShapes(areas).map(({ area, ring }) => {
+        const inside = trees.filter((tree) =>
+          pointInRing([tree.lat, tree.lon], ring),
+        );
+        return { area, ring, count: inside.length, keys: selectableKeys(inside) };
+      }),
+    [areas, trees],
+  );
 
   return (
     <BaseMap bounds={bounds} preferCanvas>
-      {shapesByArea.map(({ area, ring }) => (
+      {areaSelections.map(({ area, ring, count, keys }) => (
         <Polygon
           key={area.id}
           positions={ring}
           pathOptions={AREA_STYLE}
           eventHandlers={
-            drawing ? undefined : { click: () => onToggleArea(area) }
+            drawing ? undefined : { click: () => onToggleArea(keys) }
           }
         >
           <Tooltip sticky>
-            {area.campaign} — {area.name} ({area.tree_count} árboles)
+            {area.campaign} — {area.name} ({count} árboles)
           </Tooltip>
         </Polygon>
       ))}

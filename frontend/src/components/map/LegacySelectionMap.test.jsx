@@ -222,9 +222,20 @@ describe("LegacySelectionMap areas", () => {
     [-33.48, -70.69],
   ];
   const areas = [
-    { id: 7, name: "Area 7", campaign: "C1", tree_count: 3, polygon: polygonOf(INNER) },
-    { id: 8, name: "Area 8", campaign: "C2", tree_count: 3, polygon: polygonOf(INNER) },
-    { id: 9, name: "Area 9", campaign: "C2", tree_count: 9, polygon: polygonOf(SQUARE) },
+    { id: 7, name: "Area 7", campaign: "C1", tree_count: 0, polygon: polygonOf(INNER) },
+    { id: 8, name: "Area 8", campaign: "C2", tree_count: 0, polygon: polygonOf(INNER) },
+    { id: 9, name: "Area 9", campaign: "C2", tree_count: 0, polygon: polygonOf(SQUARE) },
+  ];
+  const areaTrees = [
+    { source: "legacy_app", external_id: 1, lat: -33.485, lon: -70.685 },
+    {
+      source: "legacy_app",
+      external_id: 2,
+      lat: -33.484,
+      lon: -70.684,
+      already_imported: true,
+    },
+    { source: "legacy_api", external_id: 3, lat: -33.45, lon: -70.65 },
   ];
 
   it("draws the enclosing area first so the smallest one takes the click", () => {
@@ -236,13 +247,20 @@ describe("LegacySelectionMap areas", () => {
     expect(positions).toEqual([SQUARE, INNER]);
   });
 
-  it("toggles the area the click landed on", () => {
+  it("toggles the trees inside the area the click landed on", () => {
     const onToggleArea = vi.fn();
-    renderMap({ areas, selectionMode: null, onToggleArea });
+    renderMap({ areas, trees: areaTrees, selectionMode: null, onToggleArea });
 
     fireEvent.click(screen.getAllByTestId("polygon")[1]);
 
-    expect(onToggleArea).toHaveBeenCalledWith(areas[0]);
+    expect(onToggleArea).toHaveBeenCalledWith(["legacy_app:1"]);
+  });
+
+  it("counts the trees inside the ring instead of the legacy tree_count", () => {
+    renderMap({ areas, trees: areaTrees, selectionMode: null });
+
+    expect(screen.getByText("C2 — Area 9 (3 árboles)")).toBeInTheDocument();
+    expect(screen.getByText("C1 — Area 7 (2 árboles)")).toBeInTheDocument();
   });
 
   it("ignores the areas while a drawing mode is active", () => {

@@ -74,16 +74,6 @@ export default function LegacyImport() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const treesByArea = useMemo(() => {
-    const byArea = new Map();
-    for (const tree of trees ?? []) {
-      if (tree.area_id === null) continue;
-      if (!byArea.has(tree.area_id)) byArea.set(tree.area_id, []);
-      byArea.get(tree.area_id).push(tree);
-    }
-    return byArea;
-  }, [trees]);
-
   const treesByKey = useMemo(
     () => new Map((trees ?? []).map((tree) => [treeKey(tree), tree])),
     [trees],
@@ -125,11 +115,11 @@ export default function LegacyImport() {
   );
 
   const handleToggleArea = useCallback(
-    (area) => {
+    (keys) => {
       if (selectionModeRef.current) return;
-      toggle(selectableKeys(treesByArea.get(area.id) ?? []));
+      toggle(keys);
     },
-    [toggle, treesByArea],
+    [toggle],
   );
 
   const handleShapeCreate = useCallback((ring) => {

@@ -39,6 +39,9 @@ const SHRUNK_RING = [
   [-33.44, -70.58],
 ];
 
+// The map resolves the area geometrically and hands over the keys it covers.
+const AREA_KEYS = { 26: ["legacy_api:776", "legacy_api:777"] };
+
 vi.mock("@/components/map/LegacySelectionMap.jsx", () => ({
   default: ({
     trees,
@@ -62,7 +65,7 @@ vi.mock("@/components/map/LegacySelectionMap.jsx", () => ({
         mover-vertice
       </button>
       {areas.map((area) => (
-        <button key={area.id} onClick={() => onToggleArea(area)}>
+        <button key={area.id} onClick={() => onToggleArea(AREA_KEYS[area.id])}>
           area-{area.id}
         </button>
       ))}
