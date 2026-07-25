@@ -30,6 +30,12 @@ Las respuestas geográficas siguen el formato \textit{GeoJSON}
 (\textit{FeatureCollection}), con coordenadas en el orden \texttt{[lon, lat]} que
 exige el estándar.
 
+El inventario se reparte en cuatro tablas según el recurso:
+autenticación y usuarios (Tabla~\ref{tab:anexo_api_auth}), \textit{datasets} e
+importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
+(Tabla~\ref{tab:anexo_api_optimization}) y rutas y captura en terreno
+(Tabla~\ref{tab:anexo_api_routes}).
+
 \begin{table}[H]
   \centering
   \caption{Endpoints de autenticación y administración de usuarios.}
@@ -129,8 +135,9 @@ bases legadas. La generación es determinista: fijada la semilla
 (\texttt{--seed}, $42$ por defecto), el mismo comando produce siempre el mismo
 conjunto de puntos.
 
-Se ejecuta dentro del contenedor \textit{backend}, que es donde residen las
-dependencias geográficas (GDAL) y la conexión a PostGIS:
+La Tabla~\ref{tab:anexo_seed_demo} detalla sus parámetros. Se ejecuta dentro del
+contenedor \textit{backend}, que es donde residen las dependencias geográficas (GDAL)
+y la conexión a PostGIS:
 
 \begin{verbatim}
 docker compose exec backend python manage.py seed_demo --profile light
@@ -182,6 +189,7 @@ tiempos de servicio, cotas $T_{\max}$ y repeticiones sobre un mismo \textit{data
 y emite una fila de CSV por corrida con las métricas de calidad de ruta y los tiempos
 por fase del \textit{pipeline}. Cada ejecución escribe además un informe en
 \texttt{docs\slash experiments\slash }, con su comando, sus parámetros y sus métricas.
+La Tabla~\ref{tab:anexo_baseline_sweep} detalla sus parámetros.
 
 \begin{table}[H]
   \centering

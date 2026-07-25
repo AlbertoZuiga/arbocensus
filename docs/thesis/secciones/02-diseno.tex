@@ -1011,8 +1011,9 @@ perdería o multiplicaría su tamaño.
 \section{VERIFICACIÓN Y VALIDACIÓN}
 \label{sec:verificacion}
 
-El comportamiento descrito en este capítulo se sostiene sobre una suite de pruebas
-automatizadas que se ejecuta en cada integración de cambios. La
+El comportamiento descrito en este capítulo ---y con él los requisitos funcionales
+comprometidos en la Sección~\ref{sec:requisitos-funcionales}--- se sostiene sobre una
+suite de pruebas automatizadas que se ejecuta en cada integración de cambios. La
 Tabla~\ref{tab:verificacion} resume su volumen y las comprobaciones que la
 acompañan.
 
@@ -1051,7 +1052,8 @@ clave de caché de la matriz sea independiente del orden de consulta y que ningu
 ruta exceda $T_{\max}$ en la aritmética entera del \textit{solver}.
 
 Corresponde acotar el alcance de esta verificación, en línea con lo declarado en la
-Sección~\ref{sec:alcance}. No existen pruebas automatizadas de extremo a extremo: los
+Sección~\ref{sec:alcance} y con los atributos de calidad de la
+Sección~\ref{sec:atributos-calidad}. No existen pruebas automatizadas de extremo a extremo: los
 flujos completos de administrador y de censador se comprueban por partes, nunca
 encadenados sobre el sistema en pie. La cobertura de código está configurada en el
 proyecto pero no se ejecuta como parte de la integración continua, de modo que esta
