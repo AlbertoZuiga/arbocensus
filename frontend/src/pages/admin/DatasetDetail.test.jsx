@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DatasetDetail from "./DatasetDetail.jsx";
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
 import { fetchJobs } from "@/api/optimization";
+import { fetchRoutesGeojson } from "@/api/routes.js";
 
 vi.mock("@/api/datasets.js", () => ({
   fetchDataset: vi.fn(),
@@ -63,11 +65,27 @@ function renderDetail() {
   );
 }
 
+const JOBS = [
+  {
+    id: "j2",
+    status: "completed",
+    started_at: "2026-07-20T14:00:00Z",
+    solution_ids: { global: "s2" },
+  },
+  {
+    id: "j1",
+    status: "completed",
+    started_at: "2026-07-18T09:00:00Z",
+    solution_ids: { global: "s1" },
+  },
+];
+
 beforeEach(() => {
   fetchDataset.mockReset();
   fetchDatasetTrees.mockReset();
   fetchJobs.mockReset();
   fetchJobs.mockResolvedValue([]);
+  fetchRoutesGeojson.mockClear();
 });
 
 describe("DatasetDetail", () => {
@@ -111,6 +129,31 @@ describe("DatasetDetail", () => {
     expect(
       await screen.findByText("Historial de trabajos"),
     ).toBeInTheDocument();
+  });
+
+  it("renders the most recent optimization by default", async () => {
+    fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    fetchJobs.mockResolvedValue(JOBS);
+    renderDetail();
+
+    await waitFor(() => expect(fetchRoutesGeojson).toHaveBeenCalledWith("s2"));
+    expect(fetchRoutesGeojson).not.toHaveBeenCalledWith("s1");
+  });
+
+  it("switches the map to the solution of an older optimization", async () => {
+    const user = userEvent.setup();
+    fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    fetchJobs.mockResolvedValue(JOBS);
+    renderDetail();
+
+    await user.click(await screen.findByRole("combobox", { name: "Optimización" }));
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(2);
+    await user.click(options[1]);
+
+    await waitFor(() => expect(fetchRoutesGeojson).toHaveBeenCalledWith("s1"));
   });
 
   it("shows an error alert when trees fail to load", async () => {

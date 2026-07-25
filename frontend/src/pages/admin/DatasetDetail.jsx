@@ -7,6 +7,7 @@ import { useOptimizationJobs } from "@/hooks/useOptimizationJobs";
 import { getErrorMessage } from "@/lib/errors";
 import DatasetMap from "@/components/map/DatasetMap.jsx";
 import StrategyTabs from "@/components/map/StrategyTabs.jsx";
+import JobSelector from "@/components/map/JobSelector.jsx";
 import PublishButton from "@/components/optimization/PublishButton.jsx";
 import RouteAssignmentPanel from "@/components/routes/RouteAssignmentPanel.jsx";
 import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
@@ -36,6 +37,7 @@ function toLeafletPositions(featureCollection) {
 export default function DatasetDetail() {
   const { id } = useParams();
   const [strategy, setStrategy] = useState(null);
+  const [jobId, setJobId] = useState(null);
   const [openPanel, setOpenPanel] = useState(null);
 
   const togglePanel = (panel) =>
@@ -58,16 +60,16 @@ export default function DatasetDetail() {
   const markers = useMemo(() => toLeafletPositions(trees), [trees]);
 
   const { data: jobs = [] } = useOptimizationJobs(id);
-  const latestJob = jobs[0];
+  const selectedJob = jobs.find((job) => job.id === jobId) ?? jobs[0];
 
   const strategies = useMemo(() => {
-    if (latestJob?.status !== "completed") return [];
-    const ids = latestJob.solution_ids ?? {};
+    if (selectedJob?.status !== "completed") return [];
+    const ids = selectedJob.solution_ids ?? {};
     return STRATEGY_LABELS.filter((s) => ids[s.key]).map((s) => ({
       ...s,
       solutionId: ids[s.key],
     }));
-  }, [latestJob]);
+  }, [selectedJob]);
 
   const activeStrategy =
     strategies.find((s) => s.key === strategy)?.key ??
@@ -129,6 +131,7 @@ export default function DatasetDetail() {
         {trees && <DatasetMap markers={markers} solutionId={solutionId} />}
 
         <div className="absolute left-3 top-3 z-[1000] flex flex-col gap-2">
+          <JobSelector jobs={jobs} value={selectedJob?.id} onChange={setJobId} />
           {strategies.length > 0 ? (
             <>
               <StrategyTabs

@@ -26,6 +26,10 @@ Object.defineProperty(globalThis, "localStorage", {
 URL.createObjectURL ??= () => "blob:mock";
 URL.revokeObjectURL ??= () => {};
 
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.scrollIntoView ??= () => {};
+
 afterEach(() => {
   cleanup();
   globalThis.localStorage.clear();
