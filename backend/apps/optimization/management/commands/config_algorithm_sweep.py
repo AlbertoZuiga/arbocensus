@@ -361,6 +361,15 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--post-resequence",
+            action="store_true",
+            help=(
+                "Force the 2-opt post-pass on every cell of the run. The pipeline "
+                "applies it unconditionally, so without this a sweep measures a "
+                "configuration production no longer runs"
+            ),
+        )
+        parser.add_argument(
             "--spatial-span-coef",
             type=int,
             default=SPATIAL_SPAN_COEF,
@@ -431,6 +440,11 @@ class Command(BaseCommand):
             cells = [c for c in cells if c[1].label == options["only_cell"]]
             if not cells:
                 raise CommandError(f"unknown cell '{options['only_cell']}'")
+
+        if options["post_resequence"]:
+            cells = [
+                (axis, cell._replace(post_resequence=True)) for axis, cell in cells
+            ]
 
         spatial_span_coef = options["spatial_span_coef"]
         stops_penalty = options["stops_penalty"]
