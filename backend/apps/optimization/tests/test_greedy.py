@@ -24,6 +24,11 @@ def uniform_matrix(n, travel=60.0):
     return m
 
 
+def line_matrix(positions):
+    arr = np.asarray(positions, dtype=float)
+    return np.abs(arr[:, None] - arr[None, :])
+
+
 def route_estimated_time(matrix, route, service_time_sec):
     travel = sum(matrix[a][b] for a, b in zip(route[:-1], route[1:], strict=True))
     return math.ceil(travel + len(route) * service_time_sec)
@@ -138,6 +143,35 @@ class TestGreedyBaselineCommand:
 
         assert lines[header + 1] == "1,5,2400,3000"
         assert lines[header + 2] == "2,1,0,120"
+
+    def test_postpass_shortens_the_greedy_sequence(
+        self, tmp_path, requests_mock, dataset, settings
+    ):
+        settings.EXPERIMENTS_DIR = tmp_path / "experiments"
+        # On this line the nearest neighbour walks away from node 1 and has to come
+        # back for it, which is exactly what an open-path 2-opt undoes.
+        matrix = line_matrix([500.0, 0.0, 600.0, 1300.0, 1400.0, 2000.0])
+        requests_mock.get(ANY, json={"durations": matrix.tolist()})
+
+        travel = {}
+        for postpass in (False, True):
+            csv_path = tmp_path / f"greedy-{postpass}.csv"
+            call_command(
+                "greedy_baseline",
+                dataset=str(dataset.id),
+                service_time=2,
+                t_max=3,
+                postpass=postpass,
+                csv=str(csv_path),
+                stdout=StringIO(),
+            )
+            with csv_path.open() as handle:
+                row = next(csv.DictReader(handle))
+            assert row["postpass"] == str(postpass)
+            travel[postpass] = int(row["total_travel_time_sec"])
+
+        assert travel[False] == 2700
+        assert travel[True] == 2500
 
     def test_missing_dataset_rejected(self, tmp_path):
         with pytest.raises(CommandError, match="not found"):

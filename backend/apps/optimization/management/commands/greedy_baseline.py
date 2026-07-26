@@ -9,6 +9,7 @@ from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.experiment_log import record_experiment
 from apps.optimization.greedy import solve_greedy
 from apps.optimization.route_metrics import aggregate_metrics, routes_from_points
+from apps.optimization.route_resequencer import resequence_routes
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
@@ -18,6 +19,7 @@ CSV_COLUMNS = [
     "n_trees",
     "service_time_min",
     "t_max_h",
+    "postpass",
     "k",
     "balance",
     "total_travel_time_sec",
@@ -46,6 +48,14 @@ class Command(BaseCommand):
         parser.add_argument("--service-time", type=float, default=2)
         parser.add_argument("--t-max", type=float, default=3)
         parser.add_argument("--csv", type=str, default=None)
+        parser.add_argument(
+            "--postpass",
+            action="store_true",
+            help=(
+                "Apply the same open-path 2-opt the pipeline runs on the solver "
+                "output, so both baselines get the same refinement"
+            ),
+        )
 
     def handle(self, *args, **options):
         try:
@@ -70,6 +80,8 @@ class Command(BaseCommand):
             max_route_time_sec=max_route_time_sec,
             service_time_sec=service_time_sec,
         )
+        if options["postpass"]:
+            routes = resequence_routes(routes, matrix)
         solve_time_sec = round(time.perf_counter() - solve_start, 3)
 
         travel_times = [self._travel_time(matrix, route) for route in routes]
@@ -84,6 +96,7 @@ class Command(BaseCommand):
             "n_trees": len(trees),
             "service_time_min": options["service_time"],
             "t_max_h": options["t_max"],
+            "postpass": options["postpass"],
             "k": len(routes),
             "balance": round(min(estimated_times) / max(estimated_times), 3),
             "total_travel_time_sec": round(sum(travel_times)),
@@ -119,6 +132,7 @@ class Command(BaseCommand):
                 "dataset": str(dataset.id),
                 "service_time_min": options["service_time"],
                 "t_max_h": options["t_max"],
+                "postpass": options["postpass"],
                 "csv": str(csv_path),
             },
             metrics={

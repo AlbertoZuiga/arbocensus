@@ -1,0 +1,2 @@
+target,n_trees,service_time_min,t_max_h,postpass,k,balance,total_travel_time_sec,route_time_mean_sec,route_time_std_sec,routes_over_t_max,dropped_trees,sum_max_radius_m,interleave_total,interleave_per_route,worst_pair_iou
+areas-26-27-29-n272,272,2,3,False,5,0.011,9856,8500,4193,0,0,3526,153,30.6,0.2
