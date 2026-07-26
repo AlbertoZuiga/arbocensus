@@ -107,4 +107,95 @@ greedy que recibe el mismo refinamiento.
 
 ## Resultados
 
-Pendiente: se completa tras correr los tres brazos.
+Corridos los tres brazos el 2026-07-26 sobre la instancia congelada recién cargada
+(dataset `8c827643-dfa8-5f4a-8d57-25766d005fbd`, 1 607 árboles). CSV crudos:
+`greedy-postpass-20260726-ortools.csv`, `-greedy-raw.csv`, `-greedy-postpass.csv`.
+
+| métrica | OR-Tools (3 semillas) | greedy crudo | greedy + 2-opt |
+| --- | --- | --- | --- |
+| `k` | 25 | 24 | 24 |
+| travel total (s) | **58 327** (σ entre semillas 1 538) | 63 073 | **61 234** |
+| balance (mín/máx duración) | 0,835 | 0,930 | 0,908 |
+| σ de la duración por ruta (s) | 559 (muestral) | 196 (poblacional) | 235 (poblacional) |
+| saturación **media** | 93,0 % | 98,7 % | 98,0 % |
+| saturación **máxima** | 99,4 % | 99,8 % | 99,8 % |
+| rutas sobre T_max | 0 | 0 | 0 |
+| drops | 0 | 0 | 0 |
+| rutas degeneradas por duración (< 1 800 s) | 0 | 0 | 0 |
+| ruta más pequeña (paradas / travel) | 6–12 / 7 798–8 666 s | 5 / 9 466 s | 5 / 9 466 s |
+| tiempo de cómputo | 120 s (presupuesto) | 0,007 s | 0,09 s |
+
+Travel por semilla de OR-Tools: 59 649 s (42), 56 640 s (43), 58 693 s (44). Las tres
+difieren, así que **las semillas sí llegaron al solver**; y reproducen la corrida del
+2026-07-24 (59 690 / 56 707 / 58 696) dentro de decenas de segundos.
+
+### Veredicto según el criterio pre-registrado
+
+**OR-Tools gana en travel.** Margen contra `greedy-postpass`: 2 907 s (**−4,75 %**), mayor
+que `sigma_seeds` = 1 538 s. No es empate técnico.
+
+Pero el margen **se estrecha**, y la cifra publicada estaba inflada por dos vías distintas
+que se compensan en parte:
+
+- Contra el greedy **crudo del mismo ciclo**, el ahorro es de 4 746 s (−7,52 %), *mayor*
+  que el −6,7 % publicado. Es decir: la comparación cruzada de ciclos subestimaba el
+  ahorro, no lo inflaba. El greedy sobre esta instancia congelada cuesta 63 073 s, no los
+  62 585 s del CSV del 2026-07-13 — 488 s de diferencia por el orden de nodos que induce
+  el UUID, tal como se anticipó.
+- Darle al greedy el **mismo** post-pass 2-opt le quita 1 839 s (−2,92 %) y baja el ahorro
+  de OR-Tools a −4,75 %. Ése es el efecto real de la asimetría de refinamiento: **el
+  −6,7 % publicado se reduce a −4,75 %**, y algo más de un tercio del ahorro atribuido al
+  solver era, en realidad, el post-pass que solo un lado recibía.
+
+### Dos afirmaciones de la tesis que esta corrida refuta
+
+No sobreviven al brazo nuevo, y hay que corregirlas en el texto:
+
+1. **«Ninguna ruta de OR-Tools presenta esa patología».** Falso en las tres semillas. La
+   ruta más pequeña de OR-Tools tiene 6–12 paradas con 7 798–8 666 s de desplazamiento;
+   la del greedy tiene 5 paradas con 9 466 s. Es la misma patología, más suave: el solver
+   la atenúa, no la elimina. Concuerda con el hallazgo del ciclo de clusters, donde el
+   aislamiento de esos árboles resultó ser del territorio y no del solver.
+2. **La holgura solo existe en la media.** OR-Tools promedia 93,0 % de T_max contra 98,0 %
+   del greedy refinado, pero su **ruta más larga** llega al 99,4 % contra 99,8 %. En el
+   peor caso —el que decide si un imprevisto de terreno rompe el plan— no hay ventaja
+   apreciable. La holgura de OR-Tools es una propiedad del conjunto de rutas, no una
+   garantía por ruta.
+
+### Dimensiones donde el greedy no queda atrás
+
+Tampoco se sostiene el reflejo de reorientar el argumento al balance:
+
+- **Balance:** el greedy gana (0,930 crudo y 0,908 refinado, contra 0,835). Por la misma
+  razón que le da menor σ: saturar toda ruta hasta el borde de T_max iguala duraciones.
+  Saturación e igualdad de duraciones no se distinguen con esta métrica.
+- **Rutas degeneradas por duración:** ninguna, en ningún brazo. Con la configuración
+  censal esta puerta no separa a los métodos; la degeneración del greedy es **por
+  paradas** (una ruta de 5 árboles), no por duración.
+
+Lo que sí queda en pie a favor de OR-Tools, y es lo que la tesis puede afirmar: −4,75 % de
+desplazamiento contra un competidor igualmente refinado, 93,0 % de saturación media contra
+98,0 % (holgura agregada), y una ruta residual claramente menos patológica. El precio son
+120 s de cómputo contra 0,09 s, y una ruta más (25 contra 24).
+
+### Nota de metrología
+
+Las σ de la tabla **no son comparables tal cual**: `baseline_postpass` usa
+`statistics.stdev` (muestral) y `greedy_baseline` usa `statistics.pstdev` (poblacional).
+Con k = 25 y k = 24 el factor es √(k/(k−1)) ≈ 1,02, así que la brecha 559 contra 235 no se
+explica por ahí: es real.
+
+`crossings` (45/63/58 en las semillas de OR-Tools) e `interleave_per_route` (166,5 en el
+greedy) quedan registrados en los CSV como contexto. No entran en el veredicto, según lo
+pre-registrado.
+
+Las cifras **por ruta** de la columna de OR-Tools —saturación máxima (99,4 %) y ruta más
+pequeña (6–12 paradas, 7 798–8 666 s)— **no quedan en el CSV**. `baseline_postpass`
+calcula las filas por ruta con `audit_solution`
+(`backend/apps/optimization/management/commands/baseline_postpass.py:55`) pero solo
+persiste una fila agregada por semilla, así que re-derivarlas exige volver a correr la
+instancia con `route_audit`, que sí emite una fila por ruta. Los dos rangos son sobre las
+tres semillas y **no están emparejados**: la ruta más pequeña es una distinta en cada
+semilla, de modo que el mínimo de paradas y el mínimo de desplazamiento no provienen
+necesariamente de la misma ruta. El brazo greedy no tiene este problema:
+`greedy_baseline` imprime `route,trees,travel_time_sec,estimated_time_sec` por ruta.
