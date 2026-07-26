@@ -7,11 +7,15 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from . import legacy
+from . import legacy, partition
 from .importers import import_file
 from .legacy import LegacyDatabaseNotConfiguredError
 from .models import Dataset
-from .serializers import DatasetSerializer, LegacySelectionSerializer
+from .serializers import (
+    DatasetSerializer,
+    LegacyPartitionSerializer,
+    LegacySelectionSerializer,
+)
 
 
 class DatasetViewSet(viewsets.ModelViewSet):
@@ -30,6 +34,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
             "legacy_tree_observations",
             "import_legacy",
             "from_legacy_selection",
+            "partition_legacy_selection",
         ):
             return [IsAdminRole()]
         return [IsAuthenticated()]
@@ -100,6 +105,34 @@ class DatasetViewSet(viewsets.ModelViewSet):
         dataset = legacy.create_dataset(serializer.validated_data["name"], rows)
         return Response(
             self.get_serializer(dataset).data, status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=False, methods=["post"], url_path="partition-legacy-selection")
+    def partition_legacy_selection(self, request):
+        serializer = LegacyPartitionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        selection = list(
+            dict.fromkeys(
+                (tree["source"], tree["external_id"]) for tree in data["trees"]
+            )
+        )
+        try:
+            rows = legacy.load_selection(selection)
+        except LegacyDatabaseNotConfiguredError as exc:
+            return Response(
+                {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except ValueError as exc:
+            raise ValidationError({"trees": str(exc)}) from exc
+        try:
+            partitions = partition.by_kmeans(data["name"], rows, data["k"])
+        except ValueError as exc:
+            raise ValidationError({"k": str(exc)}) from exc
+        datasets = legacy.create_datasets(partitions)
+        return Response(
+            self.get_serializer(datasets, many=True).data,
+            status=status.HTTP_201_CREATED,
         )
 
     @action(detail=False, methods=["post"], url_path="import-legacy")
