@@ -1,0 +1,4 @@
+instance,n,strategy,seed,k,drops,travel_sec,balance,crossings,worst_iou,interleave_per_route,walk_ratio,saturation_mean,route_time_mean_sec,route_time_std_sec,routes_over_t_max
+areas-26-27-29-n272,272,spatial_term,42,5,0,8381.3,0.8332157850545759,7,0.03,6.4,0.204,0.76,8204,672,0
+areas-26-27-29-n272,272,spatial_term,43,5,0,7963.599999999999,0.8616917676367343,4,0.11,3.4,0.196,0.752,8121,565,0
+areas-26-27-29-n272,272,spatial_term,44,5,0,12039.699999999997,0.9923905160390515,4,0.52,75.4,0.27,0.827,8936,25,0
