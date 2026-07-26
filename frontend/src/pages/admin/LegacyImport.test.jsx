@@ -10,12 +10,14 @@ import {
   createDatasetFromLegacySelection,
   fetchLegacyAreas,
   fetchLegacyTrees,
+  partitionLegacySelection,
 } from "@/api/datasets.js";
 
 vi.mock("@/api/datasets.js", () => ({
   fetchLegacyAreas: vi.fn(),
   fetchLegacyTrees: vi.fn(),
   createDatasetFromLegacySelection: vi.fn(),
+  partitionLegacySelection: vi.fn(),
 }));
 
 const POLYGON_RING = [
@@ -133,6 +135,7 @@ function renderPage({ strict = false } = {}) {
             path="/admin/datasets/legacy-import"
             element={<LegacyImport />}
           />
+          <Route path="/admin/datasets" element={<p>lista datasets</p>} />
           <Route path="/admin/datasets/:id" element={<p>detalle dataset</p>} />
         </Routes>
         <Toaster />
@@ -146,7 +149,37 @@ beforeEach(() => {
   fetchLegacyAreas.mockReset().mockResolvedValue(AREAS);
   fetchLegacyTrees.mockReset().mockResolvedValue(TREES);
   createDatasetFromLegacySelection.mockReset();
+  partitionLegacySelection.mockReset();
 });
+
+async function openImportDialog(user) {
+  await user.click(await screen.findByText("area-26"));
+  await user.click(screen.getByText("tree-96905"));
+  await user.click(screen.getByRole("button", { name: /Importar \(3\)/ }));
+  await user.type(screen.getByLabelText("Nombre del dataset"), "Mi selección");
+}
+
+// A dataset must hold at least one shift of work, so k is only offered on a
+// selection big enough to be split into groups of MIN_TREES_PER_DATASET.
+const MANY_TREES = Array.from({ length: 100 }, (_, index) => ({
+  source: "legacy_api",
+  external_id: 1000 + index,
+  lat: -33.45,
+  lon: -70.57 + index * 0.0001,
+  species: "",
+  area_id: null,
+  already_imported: false,
+}));
+
+async function openPartitionDialog(user) {
+  fetchLegacyTrees.mockResolvedValue(MANY_TREES);
+  renderPage();
+
+  await user.click(await screen.findByText("cerrar-poligono"));
+  await user.click(screen.getByRole("button", { name: /Importar \(100\)/ }));
+  await user.type(screen.getByLabelText("Nombre del dataset"), "Mi selección");
+  await user.click(screen.getByLabelText("Dividir en k grupos por cercanía"));
+}
 
 describe("LegacyImport", () => {
   it("selects all trees of an area when the area is clicked", async () => {
@@ -373,6 +406,76 @@ describe("LegacyImport", () => {
     expect(screen.getByText("0 seleccionados")).toBeInTheDocument();
     expect(screen.queryByText(/Polígono 1/)).not.toBeInTheDocument();
     expect(screen.getByText("mode-none")).toBeInTheDocument();
+  });
+
+  it("partitions the selection into k datasets", async () => {
+    const user = userEvent.setup();
+    partitionLegacySelection.mockResolvedValue([
+      { id: "d1", name: "Mi selección — 1", total_trees: 60 },
+      { id: "d2", name: "Mi selección — 2", total_trees: 40 },
+    ]);
+
+    await openPartitionDialog(user);
+    await user.clear(screen.getByLabelText("Cantidad de grupos (k)"));
+    await user.type(screen.getByLabelText("Cantidad de grupos (k)"), "2");
+    await user.click(screen.getByRole("button", { name: "Crear datasets" }));
+
+    expect(partitionLegacySelection.mock.calls[0][0]).toEqual({
+      name: "Mi selección",
+      k: 2,
+      trees: MANY_TREES.map(({ source, external_id }) => ({
+        source,
+        external_id,
+      })),
+    });
+    expect(await screen.findByText("lista datasets")).toBeInTheDocument();
+    expect(
+      screen.getByText("2 datasets creados con 100 árboles en total"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the resulting group size", async () => {
+    const user = userEvent.setup();
+
+    await openPartitionDialog(user);
+
+    expect(screen.getByText("≈ 50 árboles por grupo.")).toBeInTheDocument();
+  });
+
+  it("blocks a k that leaves the datasets below one shift of work", async () => {
+    const user = userEvent.setup();
+
+    await openPartitionDialog(user);
+    await user.clear(screen.getByLabelText("Cantidad de grupos (k)"));
+    await user.type(screen.getByLabelText("Cantidad de grupos (k)"), "3");
+
+    expect(
+      screen.getByRole("button", { name: "Crear datasets" }),
+    ).toBeDisabled();
+    expect(partitionLegacySelection).not.toHaveBeenCalled();
+  });
+
+  it("offers no split when the selection is smaller than two datasets", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await openImportDialog(user);
+
+    expect(
+      screen.getByLabelText("Dividir en k grupos por cercanía"),
+    ).toBeDisabled();
+    expect(screen.getByText(/al menos 80 árboles/)).toBeInTheDocument();
+  });
+
+  it("reopens the dialog on a single dataset after the split was chosen", async () => {
+    const user = userEvent.setup();
+
+    await openPartitionDialog(user);
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await user.click(screen.getByRole("button", { name: /Importar \(100\)/ }));
+
+    expect(screen.getByLabelText("Un solo dataset")).toBeChecked();
+    expect(screen.queryByLabelText("Cantidad de grupos (k)")).toBeNull();
   });
 
   it("disables the import button when nothing is selected", async () => {

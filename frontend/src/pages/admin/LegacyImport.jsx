@@ -6,6 +6,7 @@ import {
   createDatasetFromLegacySelection,
   fetchLegacyAreas,
   fetchLegacyTrees,
+  partitionLegacySelection,
 } from "@/api/datasets.js";
 import {
   deselectKeys,
@@ -35,6 +36,9 @@ import { Label } from "@/components/ui/label";
 
 const SOURCE_LABELS = { legacy_api: "API", legacy_app: "App" };
 const EMPTY_SELECTION = { manualKeys: new Set(), excludedKeys: new Set() };
+const NO_AREAS = [];
+// Mirrors MIN_TREES_PER_DATASET in apps/datasets/partition.py, which validates it.
+const MIN_TREES_PER_DATASET = 40;
 
 function treeLabel(tree) {
   const species = tree.species?.trim();
@@ -50,6 +54,8 @@ export default function LegacyImport() {
   const [selectionMode, setSelectionMode] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [datasetName, setDatasetName] = useState("");
+  const [partitionBy, setPartitionBy] = useState("single");
+  const [clusterCount, setClusterCount] = useState("2");
 
   const nextShapeId = useRef(1);
   const selectionModeRef = useRef(selectionMode);
@@ -84,10 +90,7 @@ export default function LegacyImport() {
     [trees, shapes],
   );
 
-  const coveredKeys = useMemo(
-    () => new Set(keysByShape.flat()),
-    [keysByShape],
-  );
+  const coveredKeys = useMemo(() => new Set(keysByShape.flat()), [keysByShape]);
 
   useEffect(() => {
     setSelection((prev) => pruneExclusions(prev, coveredKeys));
@@ -157,11 +160,41 @@ export default function LegacyImport() {
     },
   });
 
+  const partitionDatasets = useMutation({
+    mutationFn: partitionLegacySelection,
+    onSuccess: (datasets) => {
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      queryClient.invalidateQueries({ queryKey: ["legacy-trees"] });
+      const total = datasets.reduce(
+        (sum, dataset) => sum + dataset.total_trees,
+        0,
+      );
+      toast.success(
+        `${datasets.length} datasets creados con ${total} árboles en total`,
+      );
+      navigate("/admin/datasets");
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, "No se pudieron crear los datasets"));
+    },
+  });
+
+  const k = Number(clusterCount);
+  const maxK = Math.floor(selectedKeys.size / MIN_TREES_PER_DATASET);
+  const invalidK =
+    partitionBy === "kmeans" && (!Number.isInteger(k) || k < 2 || k > maxK);
+  const pending = createDataset.isPending || partitionDatasets.isPending;
+
   const handleConfirm = (event) => {
     event.preventDefault();
     const name = datasetName.trim();
-    if (!name || selectedKeys.size === 0) return;
-    createDataset.mutate({ name, trees: selectionPayload(selectedKeys) });
+    if (!name || selectedKeys.size === 0 || invalidK) return;
+    const trees = selectionPayload(selectedKeys);
+    if (partitionBy === "single") {
+      createDataset.mutate({ name, trees });
+      return;
+    }
+    partitionDatasets.mutate({ name, trees, k });
   };
 
   const error = treesError ?? areasError;
@@ -191,8 +224,11 @@ export default function LegacyImport() {
         </Button>
         <Button
           size="sm"
-          disabled={selectedKeys.size === 0 || createDataset.isPending}
-          onClick={() => setDialogOpen(true)}
+          disabled={selectedKeys.size === 0 || pending}
+          onClick={() => {
+            setPartitionBy("single");
+            setDialogOpen(true);
+          }}
         >
           Importar {selectedKeys.size > 0 ? `(${selectedKeys.size})` : ""}
         </Button>
@@ -201,7 +237,10 @@ export default function LegacyImport() {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>
-            {getErrorMessage(error, "No se pudieron cargar los árboles legacy.")}
+            {getErrorMessage(
+              error,
+              "No se pudieron cargar los árboles legacy.",
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -216,7 +255,7 @@ export default function LegacyImport() {
           {trees && (
             <LegacySelectionMap
               trees={trees}
-              areas={areas ?? []}
+              areas={areas ?? NO_AREAS}
               selectedKeys={selectedKeys}
               shapes={shapes}
               selectionMode={selectionMode}
@@ -234,7 +273,8 @@ export default function LegacyImport() {
               <span className="h-3 w-3 rounded-full bg-blue-600" /> Seleccionado
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya importado
+              <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya
+              importado
             </span>
           </div>
           {(selectionMode || shapes.length > 0) && (
@@ -322,7 +362,9 @@ export default function LegacyImport() {
         <DialogContent>
           <form onSubmit={handleConfirm} className="grid gap-4">
             <DialogHeader>
-              <DialogTitle>Crear dataset</DialogTitle>
+              <DialogTitle>
+                {partitionBy === "single" ? "Crear dataset" : "Crear datasets"}
+              </DialogTitle>
             </DialogHeader>
             <div className="grid gap-2">
               <Label htmlFor="dataset-name">Nombre del dataset</Label>
@@ -334,6 +376,60 @@ export default function LegacyImport() {
                 autoFocus
               />
             </div>
+            <fieldset className="grid gap-2">
+              <legend className="mb-2 text-sm font-medium">Partición</legend>
+              {[
+                ["single", "Un solo dataset"],
+                ["kmeans", "Dividir en k grupos por cercanía"],
+              ].map(([value, label]) => (
+                <Label
+                  key={value}
+                  htmlFor={`partition-${value}`}
+                  className="flex items-center gap-2 font-normal"
+                >
+                  <input
+                    id={`partition-${value}`}
+                    type="radio"
+                    name="partition-by"
+                    value={value}
+                    checked={partitionBy === value}
+                    disabled={value === "kmeans" && maxK < 2}
+                    onChange={() => setPartitionBy(value)}
+                  />
+                  {label}
+                </Label>
+              ))}
+              {maxK < 2 && (
+                <p className="text-sm text-muted-foreground">
+                  La selección necesita al menos {MIN_TREES_PER_DATASET * 2}{" "}
+                  árboles para dividirse: cada dataset debe alcanzar para una
+                  jornada completa.
+                </p>
+              )}
+            </fieldset>
+            {partitionBy === "kmeans" && (
+              <div className="grid gap-2">
+                <Label htmlFor="cluster-count">Cantidad de grupos (k)</Label>
+                <Input
+                  id="cluster-count"
+                  type="number"
+                  min={2}
+                  max={maxK}
+                  value={clusterCount}
+                  onChange={(event) => setClusterCount(event.target.value)}
+                />
+                {invalidK ? (
+                  <p className="text-sm text-destructive">
+                    k debe ser un entero entre 2 y {maxK}: cada dataset necesita
+                    al menos {MIN_TREES_PER_DATASET} árboles.
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    ≈ {Math.round(selectedKeys.size / k)} árboles por grupo.
+                  </p>
+                )}
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">
               Se importarán {selectedKeys.size} árboles.
             </p>
@@ -347,9 +443,13 @@ export default function LegacyImport() {
               </Button>
               <Button
                 type="submit"
-                disabled={!datasetName.trim() || createDataset.isPending}
+                disabled={!datasetName.trim() || invalidK || pending}
               >
-                {createDataset.isPending ? "Creando…" : "Crear dataset"}
+                {pending
+                  ? "Creando…"
+                  : partitionBy === "single"
+                    ? "Crear dataset"
+                    : "Crear datasets"}
               </Button>
             </DialogFooter>
           </form>

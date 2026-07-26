@@ -236,7 +236,9 @@ function PolygonSelector({ active, onSelect }) {
   );
 }
 
-export default function LegacySelectionMap({
+// Memoized: the page re-renders on every dialog keystroke, and re-creating one
+// element per legacy tree costs hundreds of ms at full selection.
+export default memo(function LegacySelectionMap({
   trees,
   areas,
   selectedKeys,
@@ -330,4 +332,4 @@ export default function LegacySelectionMap({
       />
     </BaseMap>
   );
-}
+});
