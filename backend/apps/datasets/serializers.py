@@ -14,6 +14,10 @@ class LegacySelectionSerializer(serializers.Serializer):
     trees = LegacyTreeRefSerializer(many=True, allow_empty=False)
 
 
+class LegacyPartitionSerializer(LegacySelectionSerializer):
+    k = serializers.IntegerField(min_value=2)
+
+
 class DatasetSerializer(serializers.ModelSerializer):
     file = serializers.FileField(write_only=True)
 

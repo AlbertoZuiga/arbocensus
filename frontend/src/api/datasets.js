@@ -45,6 +45,15 @@ export async function createDatasetFromLegacySelection({ name, trees }) {
   return data;
 }
 
+export async function partitionLegacySelection({ name, trees, k }) {
+  const { data } = await client.post("/datasets/partition-legacy-selection/", {
+    name,
+    trees,
+    k,
+  });
+  return data;
+}
+
 export async function uploadDataset(file) {
   const name = file.name.replace(/\.[^.]+$/, "");
   const form = new FormData();
