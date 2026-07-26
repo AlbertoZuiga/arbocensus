@@ -161,7 +161,7 @@ async function openImportDialog(user) {
 
 // A dataset must hold at least one shift of work, so k is only offered on a
 // selection big enough to be split into groups of MIN_TREES_PER_DATASET.
-const MANY_TREES = Array.from({ length: 100 }, (_, index) => ({
+const MANY_TREES = Array.from({ length: 120 }, (_, index) => ({
   source: "legacy_api",
   external_id: 1000 + index,
   lat: -33.45,
@@ -176,7 +176,7 @@ async function openPartitionDialog(user) {
   renderPage();
 
   await user.click(await screen.findByText("cerrar-poligono"));
-  await user.click(screen.getByRole("button", { name: /Importar \(100\)/ }));
+  await user.click(screen.getByRole("button", { name: /Importar \(120\)/ }));
   await user.type(screen.getByLabelText("Nombre del dataset"), "Mi selección");
   await user.click(screen.getByLabelText("Dividir en k grupos por cercanía"));
 }
@@ -411,8 +411,8 @@ describe("LegacyImport", () => {
   it("partitions the selection into k datasets", async () => {
     const user = userEvent.setup();
     partitionLegacySelection.mockResolvedValue([
-      { id: "d1", name: "Mi selección — 1", total_trees: 60 },
-      { id: "d2", name: "Mi selección — 2", total_trees: 40 },
+      { id: "d1", name: "Mi selección — 1", total_trees: 70 },
+      { id: "d2", name: "Mi selección — 2", total_trees: 50 },
     ]);
 
     await openPartitionDialog(user);
@@ -430,7 +430,7 @@ describe("LegacyImport", () => {
     });
     expect(await screen.findByText("lista datasets")).toBeInTheDocument();
     expect(
-      screen.getByText("2 datasets creados con 100 árboles en total"),
+      screen.getByText("2 datasets creados con 120 árboles en total"),
     ).toBeInTheDocument();
   });
 
@@ -439,7 +439,7 @@ describe("LegacyImport", () => {
 
     await openPartitionDialog(user);
 
-    expect(screen.getByText("≈ 50 árboles por grupo.")).toBeInTheDocument();
+    expect(screen.getByText("≈ 60 árboles por grupo.")).toBeInTheDocument();
   });
 
   it("blocks a k that leaves the datasets below one shift of work", async () => {
@@ -464,7 +464,7 @@ describe("LegacyImport", () => {
     expect(
       screen.getByLabelText("Dividir en k grupos por cercanía"),
     ).toBeDisabled();
-    expect(screen.getByText(/al menos 80 árboles/)).toBeInTheDocument();
+    expect(screen.getByText(/al menos 102 árboles/)).toBeInTheDocument();
   });
 
   it("reopens the dialog on a single dataset after the split was chosen", async () => {
@@ -472,7 +472,7 @@ describe("LegacyImport", () => {
 
     await openPartitionDialog(user);
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
-    await user.click(screen.getByRole("button", { name: /Importar \(100\)/ }));
+    await user.click(screen.getByRole("button", { name: /Importar \(120\)/ }));
 
     expect(screen.getByLabelText("Un solo dataset")).toBeChecked();
     expect(screen.queryByLabelText("Cantidad de grupos (k)")).toBeNull();

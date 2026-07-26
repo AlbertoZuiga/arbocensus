@@ -38,7 +38,7 @@ const SOURCE_LABELS = { legacy_api: "API", legacy_app: "App" };
 const EMPTY_SELECTION = { manualKeys: new Set(), excludedKeys: new Set() };
 const NO_AREAS = [];
 // Mirrors MIN_TREES_PER_DATASET in apps/datasets/partition.py, which validates it.
-const MIN_TREES_PER_DATASET = 40;
+const MIN_TREES_PER_DATASET = 51;
 
 function treeLabel(tree) {
   const species = tree.species?.trim();

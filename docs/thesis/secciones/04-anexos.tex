@@ -169,7 +169,7 @@ docker compose exec backend python manage.py seed_demo \
 El comando crea un \texttt{Dataset} y sus \texttt{Tree} (un \texttt{PointField} por
 árbol, SRID 4326) y, cuando el perfil o el \textit{flag} lo indican, crea además la
 \texttt{RoutingConfig} con los parámetros por defecto ($T_{\min} = 7\,200$\,s,
-$T_{\max} = 10\,800$\,s, tiempo de servicio $180$\,s), el \texttt{OptimizationJob}
+$T_{\max} = 10\,800$\,s, tiempo de servicio $120$\,s), el \texttt{OptimizationJob}
 correspondiente y ejecuta el \textit{pipeline} de forma síncrona ---sin pasar por
 Celery---, lo que persiste la \texttt{RoutingSolution} con sus \texttt{Route} y
 \texttt{RouteStop}. La ejecución síncrona es deliberada: permite reproducir una
