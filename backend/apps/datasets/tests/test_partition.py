@@ -15,7 +15,7 @@ def _row(external_id, lat, lon):
 
 def _cloud(first_id, lon):
     return [
-        _row(first_id + i, -33.45 + i * 0.0001, lon + i * 0.0001) for i in range(60)
+        _row(first_id + i, -33.45 + i * 0.0001, lon + i * 0.0001) for i in range(80)
     ]
 
 

@@ -4,10 +4,10 @@ from .legacy import LegacyAreaImport, LegacyTreeRow
 
 # A dataset smaller than one shift cannot produce a usable route: one shift is
 # DEFAULT_MAX_ROUTE_TIME_SEC (10800) over the per-tree work, DEFAULT_SERVICE_TIME_SEC
-# (180) plus ~90 s of walk to the next tree. k-means does not balance its clusters, so
+# (120) plus ~90 s of walk to the next tree. k-means does not balance its clusters, so
 # this bounds the AVERAGE dataset, not the smallest one — past that bound every split
 # is starved by construction.
-MIN_TREES_PER_DATASET = 40
+MIN_TREES_PER_DATASET = 51
 
 
 def by_kmeans(name: str, rows: list[LegacyTreeRow], k: int) -> list[LegacyAreaImport]:
