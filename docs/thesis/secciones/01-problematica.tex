@@ -86,11 +86,13 @@ asignar manualmente árboles a censadores con apenas factores espaciales rudimen
 restricciones de jornada.
 
 Las soluciones \textit{greedy} (vecino más cercano, \textit{clustering} geométrico) generan resultados
-subóptimos: viajes innecesariamente largos, desbalance severo en cargas de trabajo
-o incapacidad para cumplir restricciones temporales por jornada laboral. La comparación
-del Capítulo~\ref{cap:resultados} ilustra estas deficiencias sobre el censo real: el
-heurístico del vecino más cercano produce rutas saturadas al borde de la jornada y
-rutas degeneradas de caminata desproporcionada.
+subóptimos: viajes innecesariamente largos, desbalance severo en el número de árboles
+asignado a cada censista o incapacidad para cumplir restricciones temporales por jornada
+laboral. La comparación del Capítulo~\ref{cap:resultados} ilustra las dos primeras
+deficiencias sobre el censo real: el heurístico del vecino más cercano acumula más
+desplazamiento total que el modelo de optimización y produce una ruta degenerada que
+dedica más de dos horas y media de caminata a cinco árboles, además de saturar cada
+jornada al borde de su cota, sin holgura ante imprevistos de terreno.
 
 El problema de ruteo de censos se relaciona con variantes conocidas de la investigación
 operativa: el \textit{Multiple Travelling Salesman Problem} (mTSP) \citep{bektas2006multiple},

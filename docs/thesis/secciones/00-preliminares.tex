@@ -67,9 +67,11 @@ Sobre el censo real consolidado de 1\,607 árboles, Arbocensus genera 25 rutas e
 120\,s de cómputo, con una desviación estándar de las duraciones equivalente al
 5{,}6\,\% del promedio (el criterio de aceptación es 15\,\%), cobertura total y ninguna
 ruta que exceda la jornada máxima. Frente a un heurístico \textit{greedy} de vecino
-más cercano, la solución reduce el tiempo total de desplazamiento en un 6{,}7\,\%
----cerca de 70 minutos por campaña--- y elimina las rutas degeneradas que dicho
-heurístico produce. El Capítulo~\ref{cap:resultados} detalla estos resultados.
+más cercano que recibe el mismo refinamiento local que la solución del
+\textit{solver}, reduce el tiempo total de desplazamiento en un 4{,}8\,\% ---cerca de
+48 minutos por campaña---, deja las jornadas al 93\,\% de su cota en lugar del 98\,\%
+y atenúa las rutas degeneradas que dicho heurístico produce. El
+Capítulo~\ref{cap:resultados} detalla estos resultados.
 
 Se concluye que la formulación \textit{Open mTSP} con ventanas temporales globales
 por ruta, combinada con distancias peatonales reales, resuelve censos urbanos a
