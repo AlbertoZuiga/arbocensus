@@ -302,3 +302,297 @@ las dos σ **no es una diferencia**.
   `max_vehicles` estimado, balance excluyente, conteo de rutas con < 5 paradas).
 - No adopta `crossings_road` como criterio oficial de la serie: lo usa como salida primaria de
   este ciclo, con la justificación de §2.4.
+
+---
+
+## 7. Resultados
+
+Corrida completa: **165 filas** = 4 celdas × 12 instancias × 3 semillas (144) + `exempt-none` sobre
+3 instancias × 3 semillas (9) + `exempt-lower-last` sobre 4 instancias × 3 semillas (12). Datos en
+`asymmetric-fleet-20260725.csv`; secuencias de paradas en el `.sequences.jsonl` contiguo. Medias ±
+σ **poblacional** entre las 3 semillas. Cero `drops` en las 165 filas.
+
+**Desviaciones respecto del pre-registro:** dos, ambas declaradas abajo en el punto donde ocurren.
+(1) La forma literal de C2 ("fila idéntica al control cuando el vehículo queda inactivo") resultó
+inaplicable, y el motivo es un hallazgo del ciclo, no una excusa (§7.3). (2) Se agregó una corrida
+de **replicación del control** que el pre-registro no contemplaba, forzada por el resultado de C1
+(§7.2). Nada más se movió: ni celdas, ni instancias, ni métricas, ni el criterio.
+
+### 7.1 Semillas: llegaron al solver
+
+σ(`travel_sec`) > 0 en **50 de los 55** grupos (celda × instancia) con más de una semilla. Los 5
+grupos con σ = 0 son instancias donde el brazo converge a la misma partición desde los tres órdenes
+de entrada (`exempt-lower`/`area-29`, `exempt-upper`/`battery-n50`, `exempt-both`/`battery-n50`,
+`area-27`, `area-29`) — todas de `k ≤ 2`, donde el espacio de particiones es diminuto. No son
+copias del mismo cómputo: el resto de la tabla tiene dispersión, y en `reference-n1607` la σ de
+travel es ~1 200–1 450 s.
+
+### 7.2 C1 — `exempt-none` contra `control`: PASA, y de paso mide el piso de ruido
+
+| instancia | semillas idénticas al segundo |
+| --- | --- |
+| `area-26-n157` | **3 de 3** |
+| `battery-n100` | **3 de 3** |
+| `reference-n1607` | **1 de 3** |
+
+Siete de nueve filas reproducen el control **exactamente** (fila completa, incluida la secuencia de
+paradas). Las dos de `reference-n1607` que no lo hacen difieren en travel **−0,02 %** y **+0,17 %**,
+con `k` = 25 y `balance` idénticos en ambas.
+
+Eso no basta para declarar el instrumento sano, así que se corrió la comprobación que decide:
+**re-correr el `control` contra sí mismo**, misma celda, mismas semillas, mismo código, en
+`reference-n1607` (`asymmetric-fleet-20260725-replication.csv`).
+
+| semilla | travel corrida A | travel corrida B | Δ | `crossings_road` A → B | `k` | `balance` A → B |
+| ---: | ---: | ---: | ---: | :-: | :-: | :-: |
+| 1 | 58 666 | 58 622 | **−0,08 %** | 31 → 30 | 25 | 0,824 → 0,824 |
+| 2 | 60 609 | 60 715 | **+0,17 %** | 42 → 42 | 25 | 0,846 → 0,846 |
+| 3 | 57 690 | 57 159 | **−0,92 %** | 31 → 30 | 25 | 0,848 → 0,838 |
+
+**El control no se reproduce a sí mismo en `reference-n1607`.** El GLS se corta por reloj de pared
+(`time_limit.FromSeconds`, 120 s), no por número de iteraciones, así que dos corridas del mismo
+modelo devuelven incumbentes distintos según dónde caiga el deadline. A `n` = 1 607 eso vale hasta
+**0,92 %** de travel y ±1 auto-cruce; en instancias chicas la búsqueda converge antes del corte y
+la reproducción es exacta, que es justamente lo que muestran `area-26` y `battery-n100`.
+
+Conclusión del instrumento: `exempt-none` **pasa**. Su desviación máxima (0,17 %) es menor que la
+del control contra sí mismo (0,92 %), y el modelo es idéntico por construcción del código —
+`exempt_vehicles()` devuelve `(None, None)` y `vehicle_bounds` reproduce las tuplas del brazo
+`actual` para todo `vehicle_id`, verificado por test unitario sin solver.
+
+**Consecuencia que gobierna toda lectura de `reference-n1607` en este reporte:** el piso de ruido
+de re-ejecución es **≈1 % de travel y ±1 auto-cruce**. Cualquier diferencia menor que eso no es una
+diferencia. Se declara antes de leer las celdas, no después.
+
+### 7.3 C2 — la trampa del vehículo inactivo: la explicación candidata queda REFUTADA
+
+El pre-registro predijo que `exempt-lower-last` sería inerte porque el vehículo `max_vehicles − 1`
+quedaría vacío, y que eso explicaría el nulo del descarte histórico. **Lo medido es lo contrario:**
+
+| instancia | vehículo exento | flota | inactivo en |
+| --- | :-: | :-: | :-: |
+| `reference-n1607` | v35 | 36 | **0 de 3** |
+| `battery-n1000` | v23 | 24 | **0 de 3** |
+| `battery-n400` | v12 | 13 | **0 de 3** |
+| `area-26-n157` | v7 | 8 | **0 de 3** |
+
+**12 de 12 filas: el último vehículo está ACTIVO.** La explicación candidata del nulo previo —
+"la exención cayó en un vehículo que el solver nunca usa" — **no se sostiene**, y queda descartada
+dentro de este ciclo, como el pre-registro exigía. El nulo de `exempt-last` hay que atribuirlo a
+otra cosa, y la §7.6 dice a qué.
+
+Desviación declarada: la forma literal de C2 ("si el vehículo queda inactivo, la fila es idéntica
+al control") **nunca pudo evaluarse**, porque su antecedente es falso en las 12 filas. Y de haberlo
+sido, tampoco habría sido válida: ya en el humo de `area-29` una exención sobre un vehículo
+inactivo dio travel 1 069 contra 997 del control. Una exención inerte **en el objetivo** no es
+inerte **en la búsqueda**: cambia el precio de las soluciones vecinas que sí usarían ese vehículo,
+y con ello la trayectoria del GLS. La comprobación estaba mal formulada en el pre-registro y se
+reporta así en vez de reescribirla.
+
+Lo que sí queda medido, y es el diagnóstico de verdad, es **cuándo el solver usa el sumidero**:
+
+| celda | exenciones que cayeron en vehículo inactivo |
+| --- | ---: |
+| `exempt-lower` | **21 de 36** |
+| `exempt-upper` | **14 de 36** |
+| `exempt-both` | **35 de 72** |
+| `exempt-lower-last` | **0 de 12** |
+
+Y el reparto no es aleatorio. Cruzando con la duración mínima de ruta del control (media entre las
+tres semillas):
+
+| régimen del control | instancias | `exempt-lower` inactivo |
+| --- | --- | :-: |
+| `dur_min` **sobre** `T_min` (el piso no cobra) | `area-26`, `battery-n100/200/800/1000`, `n1607` | **3/3 en todas** |
+| `dur_min` **sobre** `T_min`, pero mezclado | `battery-n400`, `sparse-n500` | 2/3 y **1/3** |
+| `dur_min` **bajo** `T_min` (el piso cobra) | `area-27`, `area-29`, `battery-n50`, `sparse-n250` | **0/3 en todas** |
+
+La dirección se sostiene, pero **no es 12 de 12**: de las 24 filas del régimen "el piso no cobra",
+**21** dejan el vehículo exento ocioso; de las 12 filas del régimen "el piso cobra", **las 12** lo
+usan. Leído fila a fila —`dur_min` del control de *esa* semilla contra el uso del sumidero en *esa*
+semilla— la correspondencia es **31 de 36**, con cinco excepciones en ambas direcciones:
+`area-26`/s2 (`dur_min` 6 974 s, bajo el piso, y aun así ocioso), `battery-n100`/s2 (7 196 s,
+ídem), `battery-n400`/s3 (9 034 s, sobre el piso y sin embargo usado) y `sparse-n500`/s1 y s2
+(9 079 y 8 861 s, ídem). Por instancia, **10 de 12** son limpias (0/3 o 3/3) y 2 quedan mezcladas.
+
+Donde ninguna ruta cae bajo el piso, el piso no está cobrando nada, así que no hay déficit que
+perdonar y el solver **tiende a** dejar el vehículo exento vacío: la palanca no tiene de dónde
+agarrar. Donde sí cobra, el solver usa el sumidero en las tres semillas, sin excepción. Es la
+regularidad más fuerte del ciclo y **su resultado principal**, más que cualquier celda — pero es
+una tendencia, no una ley, y las cinco filas discordantes se publican en vez de redondearse.
+
+### 7.4 Salida primaria — `crossings_road` (media ± σ, Δ vs control re-corrido)
+
+| instancia | `control` | `exempt-lower` | `exempt-upper` | `exempt-both` |
+| --- | --- | --- | --- | --- |
+| `battery-n50` | 1,3 ± 0,9 | 0,7 ± 0,5 (−50 %) | 1,0 ± 0,0 (−25 %) | 1,0 ± 0,0 (−25 %) |
+| `battery-n100` | 3,7 ± 0,5 | 3,7 ± 0,5 (+0 %) | 3,3 ± 0,5 (−9 %) | 3,3 ± 0,5 (−9 %) |
+| `battery-n200` | 11,7 ± 2,1 | 11,3 ± 1,7 (−3 %) | 11,7 ± 2,1 (+0 %) | 11,7 ± 2,1 (+0 %) |
+| `battery-n400` | 15,3 ± 1,9 | 15,7 ± 2,4 (+2 %) | 16,3 ± 0,5 (+7 %) | 16,3 ± 2,1 (+7 %) |
+| `battery-n800` | 22,3 ± 7,1 | 20,3 ± 6,2 (−9 %) | 22,7 ± 9,1 (+2 %) | 32,3 ± 1,7 (**+45 %**) |
+| `battery-n1000` | 46,3 ± 0,9 | 44,7 ± 3,4 (−4 %) | 46,7 ± 1,2 (+1 %) | 42,3 ± 4,5 (−9 %) |
+| `battery-sparse-n250` | 4,0 ± 1,4 | 3,3 ± 0,5 (−17 %) | 3,7 ± 0,5 (−8 %) | 4,7 ± 0,5 (+17 %) |
+| `battery-sparse-n500` | 4,3 ± 1,7 | 5,0 ± 2,2 (+15 %) | 5,7 ± 1,7 (+31 %) | 6,0 ± 1,6 (+38 %) |
+| `area-26-n157` | 4,7 ± 0,5 | 4,7 ± 0,5 (+0 %) | 4,7 ± 0,5 (+0 %) | 4,7 ± 0,5 (+0 %) |
+| `area-27-n72` | 4,0 ± 0,8 | **0,0 ± 0,0 (−100 %)** | 2,3 ± 1,9 (−42 %) | 1,0 ± 0,0 (−75 %) |
+| `area-29-n43` | 1,3 ± 0,5 | 1,0 ± 0,0 (−25 %) | 2,0 ± 0,0 (+50 %) | 1,0 ± 0,0 (−25 %) |
+| **`reference-n1607`** | **34,7 ± 5,2** | **34,3 ± 5,4 (−1,0 %)** | **34,3 ± 4,7 (−1,0 %)** | **34,3 ± 5,4 (−1,0 %)** |
+
+En la instancia del criterio las tres celdas dan **−1,0 %** contra un umbral de −30 %, y ese −1,0 %
+(34,7 → 34,3, o sea **un solo cruce sobre la media de tres semillas**) está **por debajo del piso
+de ruido de §7.2**, donde re-correr el control ya movía los cruces en ±1. No es un efecto pequeño:
+es indistinguible de no hacer nada. La σ de la propia celda (±5,2) es cinco veces el efecto.
+
+### 7.5 Las demás métricas en las instancias del criterio
+
+`reference-n1607`:
+
+| celda | travel | `k` | `balance` | `balance_excl_min` | degeneradas | `dur_min` | `dur_median` | `dur_max` | exención ociosa |
+| --- | --- | :-: | :-: | :-: | :-: | ---: | ---: | ---: | :-: |
+| `control` | 58 988 ± 1 213 | 25,0 | 0,839 | 0,850 | 0 | 9 018 | 10 184 | 10 743 | — |
+| `exempt-lower` | 58 868 (−0,2 %) | 25,0 | 0,838 | 0,846 | 0 | 9 016 | 10 184 | 10 762 | **3/3** |
+| `exempt-upper` | 58 956 (−0,1 %) | 25,0 | 0,839 | 0,849 | 0 | 9 018 | 10 184 | 10 752 | **3/3** |
+| `exempt-both` | 58 792 (−0,3 %) | 25,0 | 0,838 | 0,846 | 0 | 9 016 | 10 184 | 10 762 | **6/6** |
+| `exempt-lower-last` | 58 824 (−0,3 %) | 25,0 | 0,836 | 0,840 | 0 | 8 996 | 10 184 | 10 762 | 0/3 |
+
+`relleno_msf` en las tres áreas:
+
+| instancia | `control` | `exempt-lower` | `exempt-upper` | `exempt-both` |
+| --- | ---: | ---: | ---: | ---: |
+| `area-26-n157` | 1 233 ± 278 | 1 233 (**+0,0 %**) | 1 233 (**+0,0 %**) | 1 233 (**+0,0 %**) |
+| `area-27-n72` | 1 580 ± 212 | 409 (−74,1 %) | 525 (−66,8 %) | 153 (−90,3 %) |
+| `area-29-n43` | 244 ± 29 | 167 (−31,5 %) | 257 (+5,3 %) | 167 (−31,5 %) |
+
+`area-26` es **exactamente cero** en las tres celdas y las tres semillas — no "casi cero": las
+filas son idénticas al control byte a byte, porque su `dur_min` medio (7 283 s) está sobre el piso
+—solo la semilla 2 cae debajo, a 6 974 s, y aun así la exención queda ociosa— y las exenciones
+quedan ociosas 3/3.
+
+Agregado sobre las 12 instancias (suma de relleno, de auto-cruces de calle y de travel; media y
+mínimo de balance):
+
+| celda | Σ relleno | Σ `crossings_road` | Σ travel | balance medio | balance mínimo | degeneradas |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `control` | 74 286 | 153,7 | 179 112 | **0,888** | **0,828** | **0** |
+| `exempt-lower` | **71 657** | **144,7** | **176 344** | 0,753 | **0,014** | **1** |
+| `exempt-upper` | 73 372 | 154,3 | 179 311 | 0,886 | 0,808 | 0 |
+| `exempt-both` | 75 287 | 158,7 | 180 836 | 0,820 | 0,564 | 0 |
+
+### 7.6 Veredicto por celda — TODAS fallan el criterio
+
+| celda | cláusula que falla | detalle |
+| --- | --- | --- |
+| **`exempt-lower`** | cruces n1607, relleno `area-26`, balance, degeneradas | −1,0 % de cruces; `area-26` +0,0 %; **balance 0,014** en `battery-n50`; **1 ruta degenerada** (3/3 semillas) |
+| **`exempt-upper`** | cruces n1607, relleno áreas, cruces `area-29` | −1,0 %; `area-26` +0,0 % y `area-29` **+5,3 %**; cruces `area-29` 1,3 → 2,0 |
+| **`exempt-both`** | cruces n1607, relleno `area-26`, balance | −1,0 %; `area-26` +0,0 %; **balance 0,564** en `battery-sparse-n500` |
+| **`exempt-lower-last`** | cruces n1607, relleno y cruces `area-26`, balance | +0,0 %; `area-26` −16,6 % y cruces 4,7 → 5,0; **balance 0,576** en `battery-n1000` |
+| `exempt-none` (instrumento) | — | no es candidata: es el control por construcción |
+
+Ninguna celda cumple. `drops` = 0 y `k` ≤ 26 se cumplen en todas, pero una celda que cumple parte
+del criterio y falla otra parte **falla el criterio**.
+
+**Sobre las dos lecturas del balance.** `exempt-lower` pasa de 0,014 a **1,000** en `battery-n50`,
+de 0,376 a **1,000** en `area-27` y de 0,552 a **0,880** en `sparse-n250` si se excluye la ruta más
+corta. Con la lectura excluyente, su única falla de balance desaparecería. **El criterio se juzga
+con la lectura no excluyente**, declarada así en el pre-registro §2.4 antes de medir, y la celda
+falla. Cambiar de lectura ahora sería elegir la regla después de ver el resultado: precisamente lo
+que el brazo histórico hacía y lo que este ciclo se comprometió a no heredar. Se publican las dos y
+se juzga con la conservadora.
+
+**Sobre `exempt-lower` como la celda "más cerca".** Es la única que mejora los tres agregados a la
+vez (relleno −3,5 %, cruces −5,9 %, travel −1,5 %). No es una ganadora parcial: es una ganadora que
+falla el criterio. Lo que compra lo compra en **tres de las cuatro instancias de piso activo**
+(`battery-n50` −83,0 %, `area-27` −74,1 %, `area-29` −31,5 % de relleno); en la cuarta,
+`sparse-n250`, el relleno **empeora** +4,4 %. Y lo paga con una ruta de **120 s** en `battery-n50`
+(contra `dur_max` 8 295 s en la misma solución), que es exactamente la ruta-stub que la compuerta
+de degeneración existe para vetar.
+
+### 7.7 Cuadro de predicciones
+
+| # | predicción del §3 | resultado | veredicto |
+| --- | --- | --- | --- |
+| 1 | C1: `exempt-none` reproduce `control` al segundo, 9/9 | 7/9 exactas; las 2 restantes ≤ 0,17 % contra un piso de ruido de 0,92 % del propio control | **pasa, con la salvedad medida** |
+| 2 | C2: el vehículo del último índice queda inactivo y explica el nulo histórico | **activo 12/12**; la explicación candidata queda **refutada** | **falsada** |
+| 3 | `exempt-upper` deja `k` igual o menor y baja cruces; `exempt-lower` baja relleno sin subir `k` | en n1607 `k` = 25 en las tres celdas y los cruces se mueven −1 % (dentro del ruido); el relleno de áreas baja solo donde el piso ya cobraba | **falsada en el régimen del criterio** |
+| 4 | riesgo: `exempt-upper` degenera en una ruta gigante (travel > +3 % o balance < 0,60) | **no ocurrió**: travel −0,1 %, balance 0,839, 0 degeneradas en n1607. El riesgo se materializó en la celda **contraria**: `exempt-lower` produjo la ruta de 120 s | **no se materializó (en esa celda)** |
+| 5 | resultado más probable: plano o negativo | plano en el régimen operativo, negativo bajo el criterio | **acertada** |
+
+---
+
+## 8. Veredicto
+
+**La flota asimétrica NO cumple el criterio de aceptación en ninguna de sus cuatro celdas. No se
+cambia ningún default de producción: el brazo `actual` queda intacto y las exenciones quedan como
+brazos opt-in del driver de barrido.**
+
+En `reference-n1607` las tres celdas dan **−1,0 % de auto-cruces de calle** contra un umbral de
+−30 %, y ese −1,0 % **está por debajo del ruido de re-ejecución del propio control** (hasta 0,92 %
+de travel y ±1 cruce, §7.2). En las áreas, `area-26` es **exactamente +0,0 %** en las tres celdas.
+Y donde alguna celda sí mueve la aguja, lo paga con balance: 0,014 en `battery-n50` para
+`exempt-lower`, 0,564 en `sparse-n500` para `exempt-both`.
+
+**Por qué, con los números del propio ciclo.** El régimen operativo no tiene margen para ninguno de
+los dos sumideros:
+
+- **El sumidero del piso no tiene déficit que absorber.** En `reference-n1607` la ruta más corta del
+  control dura **9 018 s**, muy por encima de `T_min` = 7 200. El piso no está cobrando, así que
+  perdonárselo a un vehículo no libera nada — y el solver lo confirma dejando ese vehículo vacío en
+  **3 de 3** semillas. La correspondencia se sostiene en **31 de las 36** filas (§7.3): piso activo
+  ⟹ sumidero usado en las 12 filas de ese régimen; piso inactivo ⟹ sumidero ocioso en 21 de 24.
+- **El sumidero del techo choca contra la capacidad dura.** La ruta más larga del control dura
+  **10 743 s** en media (máximo por semilla 10 766 s) contra `T_max` = **10 800 s**, que la dimensión `Time` impone como capacidad dura y
+  que ninguna exención del techo **blando** toca. La ruta eximida tiene ~57 s de holgura antes del
+  muro. El sumidero existe y su capacidad es prácticamente cero.
+
+Las rutas de `reference-n1607` viven **entre el punto medio y `T_max`**, es decir en el tramo donde
+el precio marginal es +501/s y el binding es la capacidad dura, no las cotas blandas. Eximir de una
+cota blanda a un vehículo es, en ese régimen, una operación sobre un término que no está activo.
+
+**Sobre el mecanismo del §1.** La descomposición aritmética del objetivo es correcta —el subsidio
+44:1 a partir rutas existe y está bien calculado— y **otra vez** no predijo el comportamiento del
+solver, igual que le pasó al predicado de régimen del ciclo anterior. La aritmética dice qué es
+barato para el modelo; no dice si la restricción está activa en el punto donde el modelo opera. En
+`reference-n1607` no lo está. Se registra como el segundo fallo consecutivo de una predicción
+derivada de esta misma estructura de precios.
+
+### Lo que sí queda establecido
+
+1. **El nulo de `exempt-last` no se debía a un vehículo inactivo.** El último índice está **activo
+   en 12 de 12 filas** medidas. La hipótesis que este ciclo debía confirmar o descartar queda
+   **descartada con dato**. El nulo se debe a que en las instancias grandes el piso no cobra, no a
+   dónde apuntaba la exención.
+2. **`exempt-lower` = `exempt-last` re-medido con el criterio de hoy sigue fallando, pero por otra
+   cláusula.** El descarte histórico se apoyaba en balance ≥ 0,80 y en la métrica de cuerdas, ambos
+   obsoletos. Re-medido con balance ≥ 0,60, `crossings_road` y semillas reales, **falla igual**:
+   por relleno de `area-26` (+0,0 %), por balance (0,014) y por una ruta degenerada. La reapertura
+   estaba justificada y el resultado es el mismo por razones distintas — que es información nueva,
+   no una confirmación del razonamiento viejo.
+3. **Un predicado que sí correlaciona con el uso del sumidero.** "¿La ruta más corta del control
+   cae bajo `T_min`?" acierta si el solver usará la exención del piso en **31 de 36** filas — 10 de
+   12 instancias limpias, 2 mezcladas (§7.3). No es un predicado de qué configuración gana —eso ya
+   se falsó— sino de si una palanca concreta tiene de dónde agarrar, y no es determinista: hay
+   filas ociosas con el piso cobrando y filas usadas con el piso inerte. Se publica como
+   observación verificada, no como regla adoptada: `dur_min` del control es **post-solver**, así
+   que su versión utilizable de verdad habría que construirla y validarla en su propio ciclo.
+4. **El piso de ruido de `reference-n1607` es ≈1 % de travel y ±1 auto-cruce**, medido re-corriendo
+   el control contra sí mismo con las mismas semillas. Cualquier ciclo futuro que reporte efectos
+   de esa magnitud en esta instancia está reportando ruido. La causa es que el GLS se corta por
+   reloj de pared y no por iteraciones.
+
+### Lo que queda descartado
+
+- **La flota asimétrica como palanca de geometría en el régimen operativo**: falsada. Las cuatro
+  celdas fallan el criterio y el efecto en `n1607` no supera el ruido de re-ejecución. No reabrir
+  sin dato nuevo.
+- **"La exención cayó en un vehículo inactivo" como explicación del nulo de `exempt-last`**:
+  refutada, 12/12 filas con el vehículo activo.
+- **Eximir del techo blando como forma de aliviar rutas saturadas**: no funciona mientras `T_max`
+  siga siendo capacidad dura a ~57 s de la ruta más larga. Lo que ata a esas rutas es la capacidad
+  dura, no el techo blando. Un ciclo que quiera atacar eso tiene que mover `T_max`, que es una
+  decisión de producto (jornada del censista), no de solver.
+
+Queda **abierto**, sin estatus de propuesta: en tres de las cuatro instancias de piso activo la
+exención del piso produce caídas grandes de relleno (−83 % en `battery-n50`, −74 % en `area-27`,
+−32 % en `area-29`; en `sparse-n250` sube +4,4 %) al precio de una ruta residual corta. Si alguna vez el objetivo admitiera explícitamente una ruta parcial —
+una decisión operativa, no de configuración— esa sería la celda a re-examinar, con su propio
+pre-registro y con la compuerta de degeneración redefinida **antes** de medir, no después.
