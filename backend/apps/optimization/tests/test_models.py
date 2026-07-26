@@ -16,9 +16,9 @@ def test_duration_fields_must_be_positive(field):
         config.full_clean()
 
 
-def test_service_time_defaults_to_three_minutes():
+def test_service_time_defaults_to_two_minutes():
     config = RoutingConfig(dataset=DatasetFactory())
-    assert config.service_time_sec == 180
+    assert config.service_time_sec == 120
 
 
 def test_max_route_time_must_not_be_below_min():
