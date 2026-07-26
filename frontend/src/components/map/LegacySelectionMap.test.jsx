@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import LegacySelectionMap from "./LegacySelectionMap.jsx";
+import {
+  fetchLegacyTreeObservations,
+  fetchTreeObservations,
+} from "@/api/datasets.js";
 
 let mapHandlers = {};
 let dragTarget = { lat: 0, lng: 0 };
@@ -23,9 +29,19 @@ const fakeMap = {
   latLngToContainerPoint: containerPoint,
 };
 
+vi.mock("@/api/datasets.js", () => ({
+  fetchTreeObservations: vi.fn().mockResolvedValue([]),
+  fetchLegacyTreeObservations: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("react-leaflet", () => ({
-  CircleMarker: ({ center }) => (
-    <div data-testid="vertex" data-center={JSON.stringify(center)} />
+  CircleMarker: ({ center, interactive, eventHandlers }) => (
+    <button
+      data-testid="circle-marker"
+      data-center={JSON.stringify(center)}
+      disabled={interactive === false}
+      onClick={() => eventHandlers?.click?.()}
+    />
   ),
   Marker: ({ position, draggable, eventHandlers }) => (
     <button
@@ -50,6 +66,11 @@ vi.mock("react-leaflet", () => ({
   ),
   Polyline: ({ positions }) => (
     <div data-testid="polyline" data-count={positions.length} />
+  ),
+  Popup: ({ position, children }) => (
+    <div data-testid="popup" data-position={JSON.stringify(position)}>
+      {children}
+    </div>
   ),
   Rectangle: () => <div data-testid="rectangle" />,
   Tooltip: ({ children }) => <span>{children}</span>,
@@ -76,8 +97,27 @@ const TRIANGLE = [
   [-33.4, -70.6],
 ];
 
-function renderMap(props) {
-  return render(
+const TREES = [
+  {
+    source: "legacy_api",
+    external_id: 776,
+    lat: -33.45,
+    lon: -70.65,
+    already_imported: true,
+    tree_id: "t1",
+  },
+  {
+    source: "legacy_app",
+    external_id: 96905,
+    lat: -33.41,
+    lon: -70.53,
+    already_imported: false,
+    tree_id: null,
+  },
+];
+
+function mapElement(props) {
+  return (
     <LegacySelectionMap
       trees={[]}
       areas={[]}
@@ -89,8 +129,19 @@ function renderMap(props) {
       onShapeCreate={() => {}}
       onShapeChange={() => {}}
       {...props}
-    />,
+    />
   );
+}
+
+function renderMap(props) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const wrap = (element) => (
+    <QueryClientProvider client={queryClient}>{element}</QueryClientProvider>
+  );
+  const view = render(wrap(mapElement(props)));
+  return { ...view, rerender: (next) => view.rerender(wrap(mapElement(next))) };
 }
 
 const click = (lat, lng) =>
@@ -140,22 +191,10 @@ describe("LegacySelectionMap polygon drawing", () => {
     click(-33.45, -70.6);
     expect(screen.getByTestId("polyline")).toBeInTheDocument();
 
-    rerender(
-      <LegacySelectionMap
-        trees={[]}
-        areas={[]}
-        selectedKeys={new Set()}
-        shapes={[]}
-        selectionMode={null}
-        onToggleTree={() => {}}
-        onToggleArea={() => {}}
-        onShapeCreate={() => {}}
-        onShapeChange={() => {}}
-      />,
-    );
+    rerender({ selectionMode: null });
 
     expect(screen.queryByTestId("polyline")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("vertex")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("circle-marker")).not.toBeInTheDocument();
   });
 
   it("keeps panning available and suppresses the double click zoom", () => {
@@ -346,5 +385,65 @@ describe("LegacySelectionMap shape editing", () => {
     fireEvent.contextMenu(screen.getAllByTestId("shape-vertex")[0]);
 
     expect(onShapeChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("LegacySelectionMap tree history", () => {
+  it("opens the history of an already imported tree without selecting it", async () => {
+    const onToggleTree = vi.fn();
+    renderMap({ trees: TREES, selectionMode: null, onToggleTree });
+
+    expect(screen.queryByTestId("popup")).not.toBeInTheDocument();
+    expect(fetchTreeObservations).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getAllByTestId("circle-marker")[0]);
+
+    expect(fetchTreeObservations).toHaveBeenCalledExactlyOnceWith("t1");
+    expect(screen.getByTestId("popup")).toHaveAttribute(
+      "data-position",
+      JSON.stringify([-33.45, -70.65]),
+    );
+    expect(onToggleTree).toHaveBeenCalledWith(TREES[0]);
+  });
+
+  it("opens the legacy history of a tree that was never imported", async () => {
+    const onToggleTree = vi.fn();
+    renderMap({ trees: TREES, selectionMode: null, onToggleTree });
+
+    await userEvent.click(screen.getAllByTestId("circle-marker")[1]);
+
+    expect(onToggleTree).toHaveBeenCalledWith(TREES[1]);
+    expect(fetchTreeObservations).not.toHaveBeenCalled();
+    expect(fetchLegacyTreeObservations).toHaveBeenCalledExactlyOnceWith(
+      "legacy_app",
+      96905,
+    );
+    expect(screen.getByTestId("popup")).toHaveAttribute(
+      "data-position",
+      JSON.stringify([-33.41, -70.53]),
+    );
+  });
+
+  it("reopens the history of the same tree after the popup is closed", async () => {
+    renderMap({ trees: TREES, selectionMode: null });
+
+    await userEvent.click(screen.getAllByTestId("circle-marker")[0]);
+    expect(screen.getByTestId("popup")).toBeInTheDocument();
+
+    act(() => {
+      mapHandlers.popupclose();
+    });
+    expect(screen.queryByTestId("popup")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByTestId("circle-marker")[0]);
+    expect(screen.getByTestId("popup")).toBeInTheDocument();
+  });
+
+  it("keeps the markers inert while a shape is being drawn", () => {
+    renderMap({ trees: TREES });
+
+    for (const marker of screen.getAllByTestId("circle-marker")) {
+      expect(marker).toBeDisabled();
+    }
   });
 });

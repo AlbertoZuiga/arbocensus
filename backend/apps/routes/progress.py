@@ -110,6 +110,7 @@ def census_progress_geojson(dataset_id):
             "sequence",
             "status",
             "skip_reason",
+            "tree__id",
             "tree__location",
             "route__route_number",
             "route__surveyor__username",
@@ -125,6 +126,7 @@ def census_progress_geojson(dataset_id):
                 "coordinates": [stop.tree.location.x, stop.tree.location.y],
             },
             "properties": {
+                "tree_id": str(stop.tree.id),
                 "route_number": stop.route.route_number,
                 "sequence": stop.sequence,
                 "status": stop.status,

@@ -196,6 +196,43 @@ def _load_app_observations(external_ids: list[int]) -> list[LegacyObservationRow
     ]
 
 
+def _observation_status(observation: LegacyObservationRow) -> str:
+    return (
+        TreeObservation.Status.ALIVE
+        if observation.completed
+        else TreeObservation.Status.UNKNOWN
+    )
+
+
+def tree_observations(source: str, external_id: int) -> list[dict]:
+    """Legacy history of a single tree, shaped like TreeObservationSerializer.
+
+    Read live instead of from TreeObservation because datasets loaded from frozen
+    instance CSVs never got the import-time snapshot.
+    """
+    loaders = {SOURCE_API: _load_api_observations, SOURCE_APP: _load_app_observations}
+    loader = loaders.get(source)
+    if loader is None:
+        return []
+    rows = sorted(loader([external_id]), key=lambda row: row.observed_at, reverse=True)
+    return [
+        {
+            "id": f"{source}:{external_id}:{index}",
+            "tree": None,
+            "route_stop": None,
+            "status": _observation_status(row),
+            "source": row.source,
+            "photo": None,
+            "photo_url": row.photo_url,
+            "notes": "",
+            "created_by": None,
+            "created_by_username": None,
+            "observed_at": row.observed_at,
+        }
+        for index, row in enumerate(rows)
+    ]
+
+
 def _api_tree_rows() -> list[LegacyTreeRow]:
     areas, trees = _load_api()
     polygons = [
@@ -328,11 +365,16 @@ def list_trees() -> list[dict]:
     api_rows = loaded.get(SOURCE_API, [])
     app_rows = loaded.get(SOURCE_APP, [])
     rows = api_rows + _dedup_app_against_api(api_rows, app_rows)
-    imported = set(
-        Tree.objects.filter(source__in=SOURCES, external_id__isnull=False).values_list(
-            "source", "external_id"
+    # Uniqueness is per dataset, so the same legacy tree can be imported more
+    # than once; the newest dataset wins because it holds the newest history.
+    imported = {
+        (source, external_id): str(tree_id)
+        for tree_id, source, external_id in Tree.objects.filter(
+            source__in=SOURCES, external_id__isnull=False
         )
-    )
+        .order_by("dataset__imported_at")
+        .values_list("id", "source", "external_id")
+    }
     return [
         {
             "source": row.source,
@@ -342,6 +384,7 @@ def list_trees() -> list[dict]:
             "species": row.species,
             "area_id": row.area_id,
             "already_imported": (row.source, row.external_id) in imported,
+            "tree_id": imported.get((row.source, row.external_id)),
         }
         for row in rows
     ]
@@ -459,11 +502,7 @@ def create_dataset(name: str, rows: list[LegacyTreeRow]) -> Dataset:
         TreeObservation.objects.bulk_create(
             TreeObservation(
                 tree=tree,
-                status=(
-                    TreeObservation.Status.ALIVE
-                    if observation.completed
-                    else TreeObservation.Status.UNKNOWN
-                ),
+                status=_observation_status(observation),
                 source=observation.source,
                 photo_url=observation.photo_url,
                 observed_at=observation.observed_at,

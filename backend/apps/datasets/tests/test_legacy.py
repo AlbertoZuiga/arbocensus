@@ -4,6 +4,7 @@ import pytest
 from apps.datasets import legacy
 from apps.datasets.models import Dataset, Tree
 from apps.routes.models import TreeObservation
+from django.contrib.gis.geos import Point
 from rest_framework.test import APIClient
 from tests.factories import CustomUserFactory
 
@@ -192,10 +193,29 @@ def test_list_trees_assigns_area_id_by_polygon_containment(legacy_db):
 
 @pytest.mark.django_db
 def test_list_trees_flags_already_imported(legacy_db):
-    legacy.create_dataset("Existing", [APP_TREES[0]])
+    dataset = legacy.create_dataset("Existing", [APP_TREES[0]])
     trees = legacy.list_trees()
     flagged = {(t["source"], t["external_id"]) for t in trees if t["already_imported"]}
     assert flagged == {(legacy.SOURCE_APP, 96905)}
+
+    by_key = {(t["source"], t["external_id"]): t["tree_id"] for t in trees}
+    imported_tree = Tree.objects.get(dataset=dataset)
+    assert by_key[(legacy.SOURCE_APP, 96905)] == str(imported_tree.id)
+    assert by_key[(legacy.SOURCE_API, 776)] is None
+
+
+@pytest.mark.django_db
+def test_list_trees_points_a_twice_imported_tree_at_the_newest_dataset(legacy_db):
+    legacy.create_dataset("Old", [APP_TREES[0]])
+    newest = legacy.create_dataset("New", [APP_TREES[0]])
+
+    by_key = {
+        (t["source"], t["external_id"]): t["tree_id"] for t in legacy.list_trees()
+    }
+
+    assert by_key[(legacy.SOURCE_APP, 96905)] == str(
+        Tree.objects.get(dataset=newest).id
+    )
 
 
 @pytest.mark.django_db
@@ -341,6 +361,7 @@ def test_legacy_trees_endpoint_returns_both_sources(legacy_db):
         "species": "Quillaja saponaria",
         "area_id": 26,
         "already_imported": False,
+        "tree_id": None,
     }
 
 
@@ -502,3 +523,102 @@ def test_import_legacy_returns_503_when_not_configured(settings):
         "/api/datasets/import-legacy/", {"area_id": 26}, format="json"
     )
     assert response.status_code == 503
+
+
+@pytest.mark.django_db
+def test_legacy_tree_observations_endpoint_returns_history_newest_first(legacy_db):
+    response = _client("admin").get(
+        f"/api/datasets/legacy/trees/{legacy.SOURCE_API}/776/observations/"
+    )
+    assert response.status_code == 200
+    assert [(entry["status"], entry["photo_url"]) for entry in response.data] == [
+        (TreeObservation.Status.UNKNOWN, ""),
+        (TreeObservation.Status.ALIVE, LONG_PHOTO_URL),
+    ]
+    assert response.data[0]["source"] == legacy.SOURCE_API
+    assert len({entry["id"] for entry in response.data}) == 2
+
+
+@pytest.mark.django_db
+def test_legacy_tree_observations_endpoint_returns_empty_for_tree_without_history(
+    legacy_db,
+):
+    response = _client("admin").get(
+        f"/api/datasets/legacy/trees/{legacy.SOURCE_API}/777/observations/"
+    )
+    assert response.status_code == 200
+    assert response.data == []
+
+
+@pytest.mark.django_db
+def test_legacy_tree_observations_endpoint_forbidden_for_surveyor(legacy_db):
+    response = _client("surveyor").get(
+        f"/api/datasets/legacy/trees/{legacy.SOURCE_API}/776/observations/"
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_legacy_tree_observations_returns_503_when_not_configured(settings):
+    settings.LEGACY_API_DB_URL = ""
+    response = _client("admin").get(
+        f"/api/datasets/legacy/trees/{legacy.SOURCE_API}/776/observations/"
+    )
+    assert response.status_code == 503
+
+
+@pytest.mark.django_db
+def test_tree_observations_reads_legacy_history_without_snapshot(legacy_db):
+    dataset = Dataset.objects.create(name="Instancia congelada", total_trees=1)
+    tree = Tree.objects.create(
+        dataset=dataset,
+        location=Point(-70.55, -33.45),
+        source=legacy.SOURCE_API,
+        external_id=776,
+    )
+    assert not tree.observations.exists()
+    response = _client("admin").get(f"/api/datasets/trees/{tree.id}/observations/")
+    assert response.status_code == 200
+    assert [entry["status"] for entry in response.data] == [
+        TreeObservation.Status.UNKNOWN,
+        TreeObservation.Status.ALIVE,
+    ]
+
+
+@pytest.mark.django_db
+def test_tree_observations_falls_back_to_the_snapshot_when_legacy_is_unavailable(
+    legacy_db, monkeypatch
+):
+    dataset = legacy.create_dataset("Con historial", legacy.import_area(26).trees)
+    tree = Tree.objects.get(dataset=dataset, external_id=776)
+
+    def unavailable(external_ids):
+        raise legacy.LegacyDatabaseNotConfiguredError("not configured")
+
+    monkeypatch.setattr(legacy, "_load_api_observations", unavailable)
+
+    response = _client("admin").get(f"/api/datasets/trees/{tree.id}/observations/")
+
+    assert response.status_code == 200
+    assert [entry["status"] for entry in response.data] == [
+        TreeObservation.Status.UNKNOWN,
+        TreeObservation.Status.ALIVE,
+    ]
+
+
+@pytest.mark.django_db
+def test_tree_observations_does_not_duplicate_the_import_snapshot(legacy_db):
+    dataset = legacy.create_dataset("Con historial", legacy.import_area(26).trees)
+    tree = Tree.objects.get(dataset=dataset, external_id=776)
+    TreeObservation.objects.create(
+        tree=tree,
+        status=TreeObservation.Status.REMOVED,
+        observed_at=datetime(2025, 1, 1, tzinfo=UTC),
+    )
+    response = _client("admin").get(f"/api/datasets/trees/{tree.id}/observations/")
+    assert response.status_code == 200
+    assert [entry["status"] for entry in response.data] == [
+        TreeObservation.Status.REMOVED,
+        TreeObservation.Status.UNKNOWN,
+        TreeObservation.Status.ALIVE,
+    ]

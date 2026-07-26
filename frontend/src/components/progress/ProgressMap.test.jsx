@@ -1,9 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import ProgressMap from "./ProgressMap.jsx";
 import { STATUS_COLORS } from "@/lib/progress.js";
+import { fetchTreeObservations } from "@/api/datasets.js";
+
+vi.mock("@/api/datasets.js", () => ({
+  fetchTreeObservations: vi.fn().mockResolvedValue([]),
+}));
 
 vi.mock("@/components/map/BaseMap.jsx", () => ({
   default: ({ children, bounds, fitKey }) => (
@@ -18,12 +24,15 @@ vi.mock("@/components/map/BaseMap.jsx", () => ({
 }));
 
 vi.mock("react-leaflet", () => ({
-  CircleMarker: ({ center, pathOptions }) => (
+  CircleMarker: ({ center, pathOptions, eventHandlers, children }) => (
     <div
       data-testid="stop-marker"
       data-center={JSON.stringify(center)}
       data-color={pathOptions.fillColor}
-    />
+    >
+      <button onClick={() => eventHandlers?.popupopen?.()}>abrir</button>
+      {children}
+    </div>
   ),
   Polyline: ({ positions }) => (
     <div data-testid="route-line" data-positions={JSON.stringify(positions)} />
@@ -39,6 +48,7 @@ const stops = {
       id: "stop-1",
       geometry: { type: "Point", coordinates: [-70.65, -33.45] },
       properties: {
+        tree_id: "t1",
         route_number: 1,
         sequence: 0,
         status: "visited",
@@ -98,7 +108,30 @@ const routeLines = {
   ],
 };
 
+beforeEach(() => {
+  fetchTreeObservations.mockClear();
+});
+
 describe("ProgressMap", () => {
+  it("loads the tree history only when a stop popup is opened", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProgressMap stops={stops} />
+      </QueryClientProvider>,
+    );
+
+    expect(fetchTreeObservations).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getAllByRole("button", { name: "abrir" })[0]);
+
+    expect(fetchTreeObservations).toHaveBeenCalledTimes(1);
+    expect(fetchTreeObservations).toHaveBeenCalledWith("t1");
+    expect(await screen.findByText("Historial")).toBeInTheDocument();
+  });
+
   it("renders stops as [lat, lon] colored by status", () => {
     render(<ProgressMap stops={stops} />);
 

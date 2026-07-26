@@ -4,6 +4,7 @@ import { CircleMarker, Polyline, Popup } from "react-leaflet";
 import { STATUS_COLORS, STATUS_LABELS, STATUS_ORDER } from "@/lib/progress.js";
 import { cn } from "@/lib/utils";
 import BaseMap from "@/components/map/BaseMap.jsx";
+import TreeHistoryPopup from "@/components/map/TreeHistoryPopup.jsx";
 import { geojsonToRoutes } from "@/components/map/routeGeojson.js";
 
 function toStops(featureCollection) {
@@ -29,6 +30,7 @@ export default function ProgressMap({
   onToggleRoutes,
 }) {
   const [hidden, setHidden] = useState([]);
+  const [openStopId, setOpenStopId] = useState(null);
 
   const allStops = useMemo(
     () => toStops(featureCollection),
@@ -83,8 +85,13 @@ export default function ProgressMap({
               fillColor: STATUS_COLORS[stop.status],
               fillOpacity: 0.9,
             }}
+            eventHandlers={{
+              popupopen: () => setOpenStopId(stop.id),
+              popupclose: () =>
+                setOpenStopId((id) => (id === stop.id ? null : id)),
+            }}
           >
-            <Popup>
+            <Popup minWidth={248} maxWidth={280} keepInView>
               <span className="font-medium">
                 Ruta {stop.route_number} · Parada {stop.sequence + 1}
               </span>
@@ -93,6 +100,11 @@ export default function ProgressMap({
               {stop.skip_reason && ` · ${stop.skip_reason}`}
               <br />
               {stop.surveyor_name ?? "Sin asignar"}
+              {openStopId === stop.id && (
+                <div className="mt-2 border-t pt-2">
+                  <TreeHistoryPopup treeId={stop.tree_id} />
+                </div>
+              )}
             </Popup>
           </CircleMarker>
         ))}

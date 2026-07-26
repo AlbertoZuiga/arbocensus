@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchTreeObservations } from "@/api/datasets.js";
+import {
+  fetchLegacyTreeObservations,
+  fetchTreeObservations,
+} from "@/api/datasets.js";
 import { Badge } from "@/components/ui/badge";
 import { getErrorMessage } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -161,10 +164,18 @@ function EntrySkeleton() {
   );
 }
 
-export default function TreeHistoryPopup({ treeId }) {
+export default function TreeHistoryPopup({ treeId, legacyTree }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["tree-observations", treeId],
-    queryFn: () => fetchTreeObservations(treeId),
+    queryKey: treeId
+      ? ["tree-observations", treeId]
+      : ["legacy-tree-observations", legacyTree.source, legacyTree.external_id],
+    queryFn: () =>
+      treeId
+        ? fetchTreeObservations(treeId)
+        : fetchLegacyTreeObservations(
+            legacyTree.source,
+            legacyTree.external_id,
+          ),
   });
 
   return (
