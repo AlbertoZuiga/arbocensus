@@ -70,9 +70,10 @@ Sobre el número de rutas conviene ser explícito: $k=25$ es la flota que el
 se calcula ninguna cota inferior sobre $k$, y de hecho el \textit{baseline}
 \textit{greedy} de la Sección~\ref{sec:comparacion-greedy} resuelve el mismo problema
 con 24 rutas. Esa diferencia no indica una solución mejor sino un régimen de
-operación distinto: el heurístico satura cada ruta hasta el $98{,}5$\,\% de
-$T_{\max}$, mientras que las penalizaciones blandas del modelo empujan las
-duraciones hacia el punto medio del intervalo y dejan holgura operacional. La
+operación distinto: el heurístico satura cada ruta hasta un promedio del
+$98{,}0$\,\% de $T_{\max}$, mientras que las penalizaciones blandas del modelo
+empujan las duraciones hacia el punto medio del intervalo y dejan holgura
+operacional en promedio, aunque no en la ruta más larga. La
 discusión completa de ese compromiso se encuentra en la
 Sección~\ref{sec:comparacion-greedy}.
 
@@ -183,76 +184,166 @@ encadenando en cada paso el árbol no visitado más cercano y la cierra cuando e
 siguiente salto haría exceder el presupuesto temporal de la ruta; entonces abre
 una ruta nueva con el primer árbol que quede sin visitar. No hay optimización
 global, ni balance de carga, ni reasignación posterior de árboles entre rutas.
-La Tabla~\ref{tab:comparativa} contrasta ambos enfoques.
+
+El \textit{baseline} se evalúa en dos variantes, porque la solución de
+\textit{OR-Tools} recibe desde 2026-07-24 un post-pass de 2-opt intra-ruta
+habilitado por defecto: contrastar el método propio con refinamiento contra un
+competidor sin refinamiento mediría el post-pass y no el \textit{solver}. La
+segunda variante aplica al \textit{greedy} exactamente el mismo post-pass, de
+modo que ambos lados reciban el mismo trato. La Tabla~\ref{tab:comparativa}
+contrasta los tres enfoques sobre una única corrida de este ciclo: la solución de
+\textit{OR-Tools} se volvió a ejecutar aquí en lugar de citar la de la Sección
+anterior, y las dos variantes del \textit{greedy} operan sobre el mismo
+\textit{dataset} congelado, con lo que las tres columnas comparten el conjunto de
+árboles, sus identificadores y la matriz de costos. El orden interno de los nodos
+no es común a las tres: el heurístico recorre los árboles ordenados por
+identificador, mientras que cada semilla de \textit{OR-Tools} aplica una
+permutación distinta de ese orden, que es el mecanismo de réplica descrito en la
+Sección anterior. Esa reejecución con las mismas tres semillas reprodujo el
+resultado de aquella Sección ---las medias difieren en 37\,s sobre un total de
+58\,000, y ninguna semilla se aparta más de 67\,s de su valor previo---, lo que
+descarta que las diferencias de la tabla provengan de la variabilidad entre
+corridas discutida más arriba.
 
 \begin{table}[H]
   \centering
-  \caption{Comparación entre la solución de \textit{OR-Tools} y el \textit{baseline} \textit{greedy} ($N=1\,607$, servicio 2\,min, $T_{\max}=3$\,h).}
+  \caption{Comparación entre la solución de \textit{OR-Tools} y el \textit{baseline} \textit{greedy}, sin y con el mismo post-pass 2-opt ($N=1\,607$, servicio 2\,min, $T_{\max}=3$\,h).}
   \label{tab:comparativa}
-  \begin{tabularx}{\textwidth}{lXX}
+  \begin{tabularx}{\textwidth}{lXXX}
     \toprule
-    Métrica & \textit{OR-Tools} (VRP) & \textit{Greedy} (vecino más cercano) \\
+    Métrica & \textit{OR-Tools} (VRP) & \textit{Greedy} crudo & \textit{Greedy} + 2-opt \\
     \midrule
-    Número de rutas $k$ & 25 & 24 \\
-    Tiempo total de desplazamiento & 58\,364\,s$^*$ ($\approx$ 16\,h 13\,min) & 62\,585\,s ($\approx$ 17\,h 23\,min) \\
-    Desviación estándar de $T_r$ & 559\,s & 213\,s \\
-    Rutas que exceden $T_{\max}$ & 0 & 0 \\
+    Número de rutas $k$ & 25 & 24 & 24 \\
+    Tiempo total de desplazamiento & 58\,327\,s$^*$ & 63\,073\,s & 61\,234\,s \\
+    \phantom{Tiempo total} (equivalente) & 16\,h 12\,min & 17\,h 31\,min & 17\,h 01\,min \\
+    Balance ($\min_r T_r / \max_r T_r$) & 0,835 & 0,930 & 0,908 \\
+    Desviación estándar de $T_r$ & 559\,s$^\dagger$ & 196\,s$^\dagger$ & 235\,s$^\dagger$ \\
+    Saturación media ($\overline{T_r}/T_{\max}$) & 93,0\,\% & 98,7\,\% & 98,0\,\% \\
+    Saturación máxima ($\max_r T_r/T_{\max}$) & 99,4\,\% & 99,8\,\% & 99,8\,\% \\
+    Rutas que exceden $T_{\max}$ & 0 & 0 & 0 \\
+    Árboles no asignados & 0 & 0 & 0 \\
+    Rutas degeneradas por duración ($T_r < 1\,800$\,s) & 0 & 0 & 0 \\
+    Paradas de la ruta más pequeña & 6--12$^\ddagger$ & 5 & 5 \\
+    Desplazamiento de esa ruta & 7\,798--8\,666\,s$^\ddagger$ & 9\,466\,s & 9\,466\,s \\
+    Tiempo de cómputo & 120\,s (presupuesto) & 0,007\,s & 0,09\,s \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-{\footnotesize$^*$ Cifra con post-pass 2-opt habilitado por defecto desde 2026-07-24.
-El ahorro contra \textit{greedy} es
-4\,221\,s ($-6{,}7$\,\%), aproximadamente 70 minutos de caminata.}
+{\footnotesize$^*$ Media de tres semillas (59\,649\,s, 56\,640\,s y 58\,693\,s), con
+post-pass 2-opt habilitado por defecto desde 2026-07-24; la desviación estándar entre
+semillas es de 1\,538\,s. Toda la columna de \textit{OR-Tools} promedia las tres
+semillas, salvo las dos filas marcadas con $\ddagger$. El ahorro contra el
+\textit{greedy} crudo es de 4\,746\,s
+($-7{,}5$\,\%), pero contra el \textit{greedy} que recibe el mismo post-pass se reduce a
+2\,907\,s ($-4{,}8$\,\%), aproximadamente 48 minutos de caminata. Ese segundo margen es el
+comparable, y sigue superando la dispersión entre semillas.
+$^\dagger$ La cifra de \textit{OR-Tools} es el promedio de tres desviaciones estándar
+muestrales y las dos del
+\textit{greedy} son poblacionales, porque provienen de comandos distintos; con
+$k \approx 25$ el factor entre ambas convenciones es de $1{,}02$ y no explica la brecha.
+$^\ddagger$ Rango sobre las tres semillas, no intervalo de confianza. La ruta más pequeña
+es una distinta en cada semilla, de modo que las dos filas no se leen emparejadas: el
+mínimo de paradas y el mínimo de desplazamiento no provienen necesariamente de la misma
+ruta.}
 
 En la métrica que el modelo efectivamente minimiza ---el tiempo total de
-desplazamiento--- \textit{OR-Tools} supera al \textit{baseline}. Las otras dos filas de la tabla favorecen aparentemente al
-\textit{greedy} y requieren lectura cuidadosa, porque ambas son consecuencia de
-un mismo comportamiento: la heurística voraz llena cada ruta hasta el borde de
-la cota dura. Su duración media por ruta es de 10\,643\,s, un 98{,}5\,\% de
-$T_{\max}$, mientras que la de \textit{OR-Tools} es de 10\,048\,s (93{,}0\,\% de
-$T_{\max}$), porque el modelo empuja las duraciones hacia el punto medio del
-intervalo $[T_{\min}, T_{\max}]$ mediante la penalización blanda superior. De
-ahí que el \textit{greedy} necesite una ruta menos (24 frente a 25) y que la
-desviación estándar de sus duraciones sea menor: no es balance de carga, es
-saturación. Un plan cuyas rutas ocupan el 98{,}5\,\% de la jornada no deja holgura
-alguna ante cualquier imprevisto de terreno, y el número de rutas no es un
-objetivo del problema una vez que todas caben dentro de la jornada.
+desplazamiento--- \textit{OR-Tools} supera a las dos variantes del
+\textit{baseline}, pero la magnitud del margen depende por completo de si el
+competidor recibe el mismo refinamiento. El post-pass de 2-opt le quita al
+\textit{greedy} 1\,839\,s ($-2{,}9$\,\%) sin cambiar ni la asignación de árboles a
+rutas ni el número de rutas: reordena las paradas dentro de cada ruta y nada
+más. Con eso, algo más de un tercio del ahorro que se atribuiría al
+\textit{solver} resulta ser atribuible al post-pass que solo un lado recibía. La
+comparación honesta es la tercera columna, y es de $-4{,}8$\,\%.
 
-La tabla tampoco alcanza a mostrar un defecto estructural del \textit{baseline}:
-la ausencia de reasignación produce rutas degeneradas. Su última ruta visita 4
-árboles con 9\,267\,s de desplazamiento
----más de dos horas y media de caminata para censar cuatro árboles---, porque
-son los árboles aislados que las cadenas de proximidad anteriores fueron
-dejando atrás. Ninguna ruta de la solución de \textit{OR-Tools} presenta esa patología:
-las disyunciones penalizadas y la minimización global permiten repartir esos
-árboles entre rutas vecinas.
+Las filas de balance y desviación estándar favorecen al \textit{greedy}, y
+requieren lectura cuidadosa, porque ambas son consecuencia de un mismo
+comportamiento: la heurística voraz llena cada ruta hasta el borde de la cota
+dura. Su duración media por ruta es un 98{,}0\,\% de $T_{\max}$ en la variante
+refinada, mientras que la de \textit{OR-Tools} es de 93{,}0\,\%, porque el modelo
+empuja las duraciones hacia el punto medio del intervalo
+$[T_{\min}, T_{\max}]$ mediante la penalización blanda superior. De ahí que el
+\textit{greedy} necesite una ruta menos (24 frente a 25) y que tanto su balance
+como la desviación estándar de sus duraciones sean mejores: no es balance de
+carga, es saturación. El indicador $\min_r T_r / \max_r T_r$ no distingue una
+cosa de la otra, lo que limita su valor como criterio de calidad. Un plan cuyas
+rutas ocupan el 98\,\% de la jornada no deja holgura alguna ante cualquier
+imprevisto de terreno, y el número de rutas no es un objetivo del problema una
+vez que todas caben dentro de la jornada.
 
-El costo de esa calidad es tiempo de cómputo: el \textit{greedy} resuelve en
-0{,}008\,s sobre la matriz ya cacheada, frente a los 120\,s de presupuesto del
-metaheurístico de \textit{OR-Tools}. Para una planificación que se ejecuta una vez por
-campaña de censo, 120\,s de cómputo a cambio de un $6{,}7$\,\% menos de caminata y
-de rutas sin degenerar es un intercambio favorable.
+Esa holgura, sin embargo, es una propiedad del conjunto de rutas y no una
+garantía por ruta. La ruta más larga de \textit{OR-Tools} alcanza el 99{,}4\,\% de
+$T_{\max}$ frente al 99{,}8\,\% del \textit{greedy}: en el peor caso ---el que
+decide si un imprevisto rompe el plan--- la ventaja es despreciable. Lo que
+\textit{OR-Tools} ofrece es un conjunto de rutas con holgura media, no un techo
+por ruta más bajo.
+
+El defecto estructural del \textit{baseline} que la tabla sí alcanza a mostrar es
+otro: la ausencia de reasignación produce una ruta degenerada por número de
+paradas. Su última ruta visita 5 árboles con 9\,466\,s de desplazamiento ---más de
+dos horas y media de caminata para censar cinco árboles---, porque son los
+árboles aislados que las cadenas de proximidad anteriores fueron dejando atrás,
+y el post-pass no la mejora en absoluto: reordenar cinco paradas ya contiguas no
+tiene margen. \textit{OR-Tools} atenúa esa patología pero no la elimina: la ruta
+más pequeña de sus soluciones visita entre 6 y 12 árboles con 7\,798 a 8\,666\,s
+de desplazamiento, según la semilla. Las disyunciones penalizadas y la
+minimización global reparten mejor esos árboles entre rutas vecinas, aunque el
+aislamiento geográfico de un puñado de ellos es una propiedad del territorio que
+ninguna de las dos formulaciones puede deshacer. Ninguna ruta de ninguno de los
+tres enfoques resulta degenerada por duración: con esta configuración, todas
+superan holgadamente los 1\,800\,s.
+
+El costo de la calidad restante es tiempo de cómputo: el \textit{greedy} resuelve
+en 0{,}09\,s sobre la matriz ya cacheada, frente a los 120\,s de presupuesto del
+metaheurístico de \textit{OR-Tools}. Para una planificación que se ejecuta una vez
+por campaña de censo, 120\,s de cómputo a cambio de un $4{,}8$\,\% menos de
+caminata, de un 93\,\% de ocupación media en lugar de un 98\,\% y de una ruta
+residual menos patológica es un intercambio favorable, aunque el margen es más
+estrecho de lo que sugiere la comparación contra un \textit{baseline} sin
+refinar.
 
 Comando reproducible (entorno \texttt{docker-compose.prod.yml}, sobre el mismo
 \textit{dataset} de la Sección anterior):
 
 \begin{verbatim}
 docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py baseline_postpass \
+    --dataset reference-n1607 \
+    --strategy spatial_term --seeds 42,43,44 \
+    --csv /results/greedy-postpass-20260726-ortools.csv
+
+docker compose -f docker-compose.prod.yml run --rm backend \
   python manage.py greedy_baseline \
-    --dataset 222fd8ff-44a4-43ed-8f3e-8f5b61ff6110 \
+    --dataset 8c827643-dfa8-5f4a-8d57-25766d005fbd \
     --service-time 2 --t-max 3 \
-    --csv /results/20260713-greedy-baseline.csv
+    --csv /results/greedy-postpass-20260726-greedy-raw.csv
+
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py greedy_baseline \
+    --dataset 8c827643-dfa8-5f4a-8d57-25766d005fbd \
+    --service-time 2 --t-max 3 --postpass \
+    --csv /results/greedy-postpass-20260726-greedy-postpass.csv
 \end{verbatim}
 
 \begin{sloppypar}
-Los datos crudos del \textit{baseline} se conservan en el repositorio como
-\texttt{docs/experiments/20260713-greedy-baseline.csv}; las cifras por ruta que
-se citan en los párrafos anteriores ---el desglose de árboles y desplazamiento
-de cada ruta, y el tiempo de cómputo del heurístico--- las imprime el mismo
-comando junto con las métricas agregadas. El heurístico es determinista ---no
-consume aleatoriedad---, por lo que se ejecuta una sola vez y no requiere
-repeticiones con semillas distintas.
+Los datos crudos de las tres columnas se conservan en el repositorio como
+\texttt{docs/experiments/greedy-postpass-20260726-ortools.csv},
+\texttt{-greedy-raw.csv} y \texttt{-greedy-postpass.csv}, y el análisis completo
+del ciclo ---con el criterio de comparación fijado antes de ejecutar los tres
+brazos--- en \texttt{docs/experiments/greedy-postpass-20260726.md}. Los tres CSV
+contienen las métricas agregadas de cada brazo. Las cifras por ruta de las dos
+columnas del \textit{greedy} ---el desglose de árboles y desplazamiento de cada
+ruta, y el tiempo de cómputo del heurístico--- las imprime \texttt{greedy\_baseline}
+junto con esas métricas; las de la columna de \textit{OR-Tools} ---saturación
+máxima y ruta más pequeña--- no quedan en el CSV, que consolida una fila por
+semilla, y re-derivarlas exige volver a correr la instancia con
+\texttt{route\_audit}, que sí emite una fila por ruta. El heurístico es
+determinista ---no consume aleatoriedad---, por lo que cada variante se ejecuta
+una sola vez y no requiere repeticiones con semillas distintas; el
+\textit{dataset} es la instancia congelada de
+\texttt{docs/experiments/instances/}, cuyos identificadores son función pura del
+archivo y por lo tanto reproducibles en cualquier máquina.
 \end{sloppypar}
 
 % ---- 3.1.3 -----------------------------------------------------
@@ -869,11 +960,12 @@ visualmente?» tiene respuesta en la geometría: la configuración de producció
 rutas sin auto-cruces en áreas de extensión real ($\leq 1{,}32$\,km), y cuando los auto-cruces
 aparecen responden a la función objetivo, no a una limitación del tiempo de cómputo.
 La pregunta «¿por qué el \textit{baseline} greedy se acerca en desplazamiento total?»
-tiene respuesta en la saturación: el heurístico llena cada ruta hasta el $98{,}5$\,\%
+tiene respuesta en la saturación: el heurístico llena cada ruta hasta un $98$\,\%
 de $T_{\max}$ ---sin dejar holgura operacional--- de modo que su reducción de caminata
-proviene de la cota, no de la calidad del ordenamiento. La diferencia de $6{,}7$\,\%
-de desplazamiento a favor del \textit{solver} y la ausencia de rutas degeneradas en la
-solución de \textit{OR-Tools} son las dos dimensiones que el tiempo total de
+proviene de la cota, no de la calidad del ordenamiento. La diferencia de $4{,}8$\,\%
+de desplazamiento a favor del \textit{solver} ---medida contra un \textit{baseline}
+que recibe el mismo post-pass de 2-opt--- y la menor severidad de su ruta residual son
+las dimensiones que el tiempo total de
 desplazamiento no captura de forma aislada (Sección~\ref{sec:comparacion-estrategias}).
 
 La unidad operativa del motor es el área de censo individual, no el arbolado
@@ -1271,20 +1363,24 @@ prácticamente toda la mejora alcanzable con presupuestos mayores, y el desglose
 fases, que sitúa el $98{,}1$\,\% del tiempo en la metaheurística y no en la
 infraestructura que la rodea.
 
-La mejora sobre la alternativa trivial (CA-06) se cumple con la reserva más seria de
-este capítulo. El ahorro medido es de $4\,221$\,s, un $6{,}7$\,\% del desplazamiento
-total del \textit{baseline}, pero las dos cifras que se restan provienen de corridas
-distintas sobre reconstrucciones del mismo conjunto de árboles, y el heurístico es
-sensible al orden interno de los nodos, que difiere entre ellas. A eso se añade una
-asimetría de tratamiento: la solución del \textit{solver} recibe el post-proceso de
-resecuenciación de la Sección~\ref{sec:postpass} y el \textit{baseline} no recibe
-refinamiento local alguno. La magnitud exacta del margen queda, por tanto, sin
-establecer, y cerrarla exige re-correr el heurístico sobre la misma instancia y
-dotarlo del mismo post-proceso. Lo que no depende de ese margen, y sí está
-establecido, es la diferencia cualitativa: el \textit{baseline} produce una ruta
-degenerada de cuatro árboles con $9\,267$\,s de caminata y satura las jornadas al
-$98{,}5$\,\% de $T_{\max}$, mientras que la solución del modelo no presenta ninguna de
-las dos patologías.
+La mejora sobre la alternativa trivial (CA-06) se cumple con un margen menor que el
+que se reportó en una primera medición. Aquella restaba cifras de corridas distintas
+sobre reconstrucciones del mismo conjunto de árboles ---y el heurístico es sensible al
+orden interno de los nodos, que difería entre ellas--- y comparaba la solución del
+\textit{solver}, que recibe el post-proceso de resecuenciación de la
+Sección~\ref{sec:postpass}, contra un \textit{baseline} sin refinamiento local alguno.
+Repetido el experimento con las tres columnas sobre la misma instancia congelada y con
+el heurístico dotado del mismo post-proceso (Tabla~\ref{tab:comparativa}), el ahorro
+resulta ser de $2\,907$\,s, un $4{,}8$\,\% del desplazamiento total del
+\textit{baseline} refinado, en lugar del $6{,}7$\,\% inicial: alrededor de un tercio de
+aquel margen era atribuible al post-proceso que solo un lado recibía. El margen
+subsistente supera la dispersión entre semillas del \textit{solver} ($1\,538$\,s), de
+modo que el criterio se cumple. Junto a él subsiste una diferencia cualitativa: el
+\textit{baseline} produce una ruta degenerada de cinco árboles con $9\,466$\,s de
+caminata y satura las jornadas a un promedio del $98$\,\% de $T_{\max}$, mientras que
+la solución del modelo opera al $93$\,\% en promedio y su ruta más pequeña visita entre
+seis y doce árboles. La atenuación de esa patología es de grado y no de naturaleza: el
+modelo no la elimina.
 
 \subsection{Lo que los resultados muestran sobre el problema}
 
@@ -1543,12 +1639,17 @@ iteración de Arbocensus.
   aunque el nivel absoluto quede sujeto a esta reserva.
 
   \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el ahorro de
-  \textit{OR-Tools} frente al heurístico del vecino más cercano es de solo un
-  $6{,}7$\,\% del desplazamiento total (Tabla~\ref{tab:comparativa}). Esta proximidad es un artefacto
-  de saturación: el \textit{greedy} llena cada ruta hasta el $98{,}5$\,\% de $T_{\max}$,
-  de modo que su reducción de caminata proviene de la cota temporal, no de la calidad del
-  ordenamiento. La diferencia entre ambos enfoques se manifiesta en el balance de carga y
-  en la ausencia de rutas degeneradas en la solución de \textit{OR-Tools}.
+  \textit{OR-Tools} frente al heurístico del vecino más cercano, cuando este recibe el
+  mismo post-proceso de resecuenciación, es de solo un $4{,}8$\,\% del desplazamiento
+  total (Tabla~\ref{tab:comparativa}). Esta proximidad es un artefacto de saturación: el
+  \textit{greedy} llena cada ruta hasta un $98$\,\% de $T_{\max}$, de modo que su
+  reducción de caminata proviene de la cota temporal, no de la calidad del ordenamiento.
+  Por la misma razón, el índice de balance favorece al \textit{greedy} ($0{,}908$ frente
+  a $0{,}835$): saturar toda ruta hasta el borde de la cota iguala duraciones, y el
+  cociente $\min_r T_r / \max_r T_r$ no distingue esa igualación de un reparto
+  deliberado, lo que acota su valor como criterio de calidad. La diferencia entre ambos
+  enfoques se manifiesta en la holgura media de la jornada y en la menor severidad de la
+  ruta residual de \textit{OR-Tools}, no en el balance.
 
   \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre el
   coeficiente de la penalización inferior ($10\,000\,\text{s}^{-1}$) y el de la superior
