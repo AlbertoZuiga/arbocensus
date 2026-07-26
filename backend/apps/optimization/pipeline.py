@@ -67,6 +67,7 @@ class OptimizationPipeline:
         node_seeds=None,
         cluster_neighbors=None,
         warm_start=None,
+        debug_sink=None,
     ):
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
@@ -155,11 +156,21 @@ class OptimizationPipeline:
             }
             if len(seeds) > 1:
                 result = solve_multistart(
-                    s.value, matrix, node_seeds=seeds, timer=timer, **solve_kwargs
+                    s.value,
+                    matrix,
+                    node_seeds=seeds,
+                    timer=timer,
+                    debug_sink=debug_sink,
+                    **solve_kwargs,
                 )
             else:
                 result = solve_by_strategy(
-                    s.value, matrix, node_seed=seeds[0], timer=timer, **solve_kwargs
+                    s.value,
+                    matrix,
+                    node_seed=seeds[0],
+                    timer=timer,
+                    debug_sink=debug_sink,
+                    **solve_kwargs,
                 )
             if result is None:
                 raise ValueError(

@@ -21,7 +21,9 @@ def start_time_limit_sec(time_limit_sec, starts, budget):
     return time_limit_sec
 
 
-def solve_multistart(strategy, matrix, *, node_seeds, timer=None, **solver_kwargs):
+def solve_multistart(
+    strategy, matrix, *, node_seeds, timer=None, debug_sink=None, **solver_kwargs
+):
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
         raise ValueError(
             "multistart is undefined for cluster_first: it solves one model per cluster"
@@ -40,7 +42,9 @@ def solve_multistart(strategy, matrix, *, node_seeds, timer=None, **solver_kwarg
         # select on the acceptance criterion and contaminate the verdict.
         objective = debug["objective_ortools"]
         if best is None or objective < best[0]:
-            best = (objective, routes, dropped)
+            best = (objective, routes, dropped, debug)
     if best is None:
         return None
+    if debug_sink is not None:
+        debug_sink.append(best[3])
     return best[1], best[2]

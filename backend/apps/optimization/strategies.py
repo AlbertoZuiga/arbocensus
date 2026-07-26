@@ -44,6 +44,7 @@ def solve_by_strategy(
     allowed_vehicles=None,
     warm_start_routes=None,
     timer=None,
+    debug_sink=None,
 ):
     if strategy == RoutingSolution.Strategy.CLUSTER_FIRST.value:
         return solve_cluster_first(
@@ -80,7 +81,14 @@ def solve_by_strategy(
         allowed_vehicles=allowed_vehicles,
         warm_start_routes=warm_start_routes,
     )
-    return solver.solve(timer=timer)
+    if debug_sink is None:
+        return solver.solve(timer=timer)
+    result = solver.solve_and_debug(timer=timer)
+    if result is None:
+        return None
+    routes, dropped, debug = result
+    debug_sink.append(debug)
+    return routes, dropped
 
 
 def build_strategy_solver(

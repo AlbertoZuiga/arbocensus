@@ -8,6 +8,11 @@ from apps.optimization.solver import (
     BALANCE_ARM_COMBINED_B095_STOPS5,
     BALANCE_ARM_COMBINED_B095_STOPS10,
     BALANCE_ARM_COMBINED_B095_STOPS15,
+    BALANCE_ARM_EXEMPT_BOTH,
+    BALANCE_ARM_EXEMPT_LOWER,
+    BALANCE_ARM_EXEMPT_LOWER_LAST,
+    BALANCE_ARM_EXEMPT_NONE,
+    BALANCE_ARM_EXEMPT_UPPER,
     BALANCE_ARM_FEASIBLE_FLOOR_B060,
     BALANCE_ARM_FEASIBLE_FLOOR_B070,
     BALANCE_ARM_FEASIBLE_FLOOR_B085,
@@ -22,6 +27,8 @@ from apps.optimization.solver import (
     BALANCE_ARM_TMIN_SCALED,
     BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST,
     BALANCE_ARM_UPPER_TMAX_TMIN9000,
+    EXEMPT_LOWER_VEHICLE,
+    EXEMPT_UPPER_VEHICLE,
     SOFT_LOWER_PENALTY,
     SOFT_UPPER_PENALTY,
     STOPS_FLOOR_PENALTY,
@@ -48,21 +55,21 @@ def uniform_matrix(n, travel=60.0):
 
 
 def test_actual_arm_matches_production_bounds():
-    lower, upper = PenaltyConfig().vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = PenaltyConfig().vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     assert lower == (7200, SOFT_LOWER_PENALTY)
     assert upper == (9000, SOFT_UPPER_PENALTY)
 
 
 def test_upper_tmax_arm_anchors_tmin_and_tmax():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_UPPER_TMAX_TMIN9000)
-    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     assert lower == (TIGHT_TMIN_SEC, SOFT_LOWER_PENALTY)
     assert upper == (10800, SOFT_UPPER_PENALTY)
 
 
 def test_tmin_scaled_arm_lowers_floor_to_available_service():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_TMIN_SCALED)
-    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     # total_service 6000 / 4 vehicles = 1500 < T_min, so the floor scales down.
     assert lower == (1500, SOFT_LOWER_PENALTY)
     assert upper == ((1500 + 10800) // 2, SOFT_UPPER_PENALTY)
@@ -71,7 +78,7 @@ def test_tmin_scaled_arm_lowers_floor_to_available_service():
 def test_tmin_scaled_arm_never_raises_floor_above_tmin():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_TMIN_SCALED)
     lower, _ = config.vehicle_bounds(
-        is_last=False,
+        vehicle_id=0,
         min_route_time_sec=7200,
         max_route_time_sec=10800,
         total_service_sec=999_999,
@@ -82,14 +89,14 @@ def test_tmin_scaled_arm_never_raises_floor_above_tmin():
 
 def test_service_floor_arm_drops_lower_bound():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_SERVICE_FLOOR)
-    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     assert lower is None
     assert upper == (9000, SOFT_UPPER_PENALTY)
 
 
 def test_no_floor_arm_drops_lower_and_pins_upper_at_tmax():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_NO_FLOOR)
-    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     assert lower is None
     assert upper == (10800, SOFT_UPPER_PENALTY)
 
@@ -104,7 +111,7 @@ def test_no_floor_arm_drops_lower_and_pins_upper_at_tmax():
 )
 def test_stops_arms_declare_a_stop_floor_and_no_time_floor(arm, expected_stops):
     config = PenaltyConfig(balance_arm=arm)
-    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     assert config.min_stops() == expected_stops
     assert lower is None
     assert upper == (10800, SOFT_UPPER_PENALTY)
@@ -119,7 +126,7 @@ def test_stops_arms_declare_a_stop_floor_and_no_time_floor(arm, expected_stops):
 )
 def test_lowfloor_arms_use_an_absolute_time_floor(arm, expected_floor):
     config = PenaltyConfig(balance_arm=arm)
-    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     assert config.min_stops() is None
     assert lower == (expected_floor, SOFT_LOWER_PENALTY)
     assert upper == (10800, SOFT_UPPER_PENALTY)
@@ -146,9 +153,9 @@ def test_arms_without_stop_floor_declare_no_min_stops():
 )
 def test_combined_arm_carries_both_floors(combined, plain, expected_stops):
     config = PenaltyConfig(balance_arm=combined)
-    lower, upper = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
+    lower, upper = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
     plain_lower, _ = PenaltyConfig(balance_arm=plain).vehicle_bounds(
-        is_last=False, **BOUNDS_KW
+        vehicle_id=0, **BOUNDS_KW
     )
     assert config.min_stops() == expected_stops
     assert lower == plain_lower
@@ -185,10 +192,60 @@ def test_combined_arm_scales_its_floor_like_the_plain_beta_arm(combined, plain):
 
 def test_exempt_last_arm_only_exempts_residual_vehicle():
     config = PenaltyConfig(balance_arm=BALANCE_ARM_TMIN_SCALED_EXEMPT_LAST)
-    non_last_lower, _ = config.vehicle_bounds(is_last=False, **BOUNDS_KW)
-    last_lower, _ = config.vehicle_bounds(is_last=True, **BOUNDS_KW)
+    non_last_lower, _ = config.vehicle_bounds(vehicle_id=0, **BOUNDS_KW)
+    last_lower, _ = config.vehicle_bounds(vehicle_id=3, **BOUNDS_KW)
     assert non_last_lower == (1500, SOFT_LOWER_PENALTY)
     assert last_lower is None
+
+
+def test_exempt_none_arm_reproduces_actual_on_every_vehicle():
+    actual = PenaltyConfig()
+    exempt_none = PenaltyConfig(balance_arm=BALANCE_ARM_EXEMPT_NONE)
+    for vehicle_id in range(BOUNDS_KW["max_vehicles"]):
+        assert exempt_none.vehicle_bounds(
+            vehicle_id=vehicle_id, **BOUNDS_KW
+        ) == actual.vehicle_bounds(vehicle_id=vehicle_id, **BOUNDS_KW)
+    assert exempt_none.exempt_vehicles(BOUNDS_KW["max_vehicles"]) == (None, None)
+
+
+@pytest.mark.parametrize(
+    ("arm", "expected_lower", "expected_upper"),
+    [
+        (BALANCE_ARM_EXEMPT_LOWER, EXEMPT_LOWER_VEHICLE, None),
+        (BALANCE_ARM_EXEMPT_UPPER, None, EXEMPT_UPPER_VEHICLE),
+        (BALANCE_ARM_EXEMPT_BOTH, EXEMPT_LOWER_VEHICLE, EXEMPT_UPPER_VEHICLE),
+        (BALANCE_ARM_EXEMPT_LOWER_LAST, BOUNDS_KW["max_vehicles"] - 1, None),
+    ],
+)
+def test_exemption_arms_free_only_their_target_vehicle(
+    arm, expected_lower, expected_upper
+):
+    config = PenaltyConfig(balance_arm=arm)
+    actual = PenaltyConfig()
+    assert config.exempt_vehicles(BOUNDS_KW["max_vehicles"]) == (
+        expected_lower,
+        expected_upper,
+    )
+    for vehicle_id in range(BOUNDS_KW["max_vehicles"]):
+        lower, upper = config.vehicle_bounds(vehicle_id=vehicle_id, **BOUNDS_KW)
+        actual_lower, actual_upper = actual.vehicle_bounds(
+            vehicle_id=vehicle_id, **BOUNDS_KW
+        )
+        assert lower == (None if vehicle_id == expected_lower else actual_lower)
+        assert upper == (None if vehicle_id == expected_upper else actual_upper)
+
+
+def test_exemption_outside_the_fleet_frees_nobody():
+    config = PenaltyConfig(balance_arm=BALANCE_ARM_EXEMPT_BOTH)
+    assert config.exempt_vehicles(1) == (None, EXEMPT_UPPER_VEHICLE)
+
+
+def test_solver_reports_exempt_targets_and_active_vehicles():
+    routes, _, debug = solve_arm(BALANCE_ARM_EXEMPT_BOTH)
+    assert debug["exempt_lower_vehicle"] == EXEMPT_LOWER_VEHICLE
+    assert debug["exempt_upper_vehicle"] == EXEMPT_UPPER_VEHICLE
+    assert len(debug["active_vehicles"]) == len(routes)
+    assert set(debug["active_vehicles"]) <= set(range(debug["max_vehicles"]))
 
 
 def test_invalid_arm_rejected():

@@ -40,6 +40,11 @@ from apps.optimization.solver import (
     BALANCE_ARM_COMBINED_B095_STOPS5,
     BALANCE_ARM_COMBINED_B095_STOPS10,
     BALANCE_ARM_COMBINED_B095_STOPS15,
+    BALANCE_ARM_EXEMPT_BOTH,
+    BALANCE_ARM_EXEMPT_LOWER,
+    BALANCE_ARM_EXEMPT_LOWER_LAST,
+    BALANCE_ARM_EXEMPT_NONE,
+    BALANCE_ARM_EXEMPT_UPPER,
     BALANCE_ARM_FEASIBLE_FLOOR_B050,
     BALANCE_ARM_FEASIBLE_FLOOR_B060,
     BALANCE_ARM_FEASIBLE_FLOOR_B070,
@@ -220,9 +225,24 @@ ARC_WEIGHT_AXIS = [
     for coef in (1, 3, 10, 30)
 ]
 
+# Asymmetric fleet: one vehicle freed from the soft floor and/or one freed from the
+# soft ceiling, at the production prices. `control` is the production arm re-run
+# inside the cycle rather than compared to published means. `exempt-none` runs the
+# exemption code path with nobody exempted, so it must reproduce `control` exactly;
+# `exempt-lower-last` keeps the historical last-index target, whose vehicle the loose
+# max_vehicles bound is expected to leave empty.
+EXEMPTION_AXIS = [
+    Cell("control", SPATIAL, BALANCE_ARM_ACTUAL),
+    Cell("exempt-lower", SPATIAL, BALANCE_ARM_EXEMPT_LOWER),
+    Cell("exempt-upper", SPATIAL, BALANCE_ARM_EXEMPT_UPPER),
+    Cell("exempt-both", SPATIAL, BALANCE_ARM_EXEMPT_BOTH),
+    Cell("exempt-none", SPATIAL, BALANCE_ARM_EXEMPT_NONE),
+    Cell("exempt-lower-last", SPATIAL, BALANCE_ARM_EXEMPT_LOWER_LAST),
+]
+
 SEEDS = [1, 2, 3]
 
-DEGENERATE_MIN_STOPS = 5
+SHORT_ROUTE_MAX_STOPS = 5
 DEGENERATE_MIN_DURATION_SEC = 1800
 
 COLUMNS = [
@@ -238,6 +258,10 @@ COLUMNS = [
     "spatial_span_coef",
     "stops_floor_penalty",
     "max_vehicles_forced",
+    "max_vehicles",
+    "exempt_lower_vehicle",
+    "exempt_upper_vehicle",
+    "exempt_vehicles_inactive",
     "time_global_span_coef",
     "post_resequence",
     "arc_lambda",
@@ -254,8 +278,10 @@ COLUMNS = [
     "k",
     "drops",
     "degenerate_routes",
+    "short_routes",
     "travel_sec",
     "balance",
+    "balance_excl_min",
     "sigma_t_sec",
     "dur_min_sec",
     "dur_median_sec",
@@ -327,6 +353,14 @@ class Command(BaseCommand):
             help=("Run the linear arc-weight axis instead of the config/algo axes"),
         )
         parser.add_argument(
+            "--exemptions",
+            action="store_true",
+            help=(
+                "Run the asymmetric-fleet exemption axis instead of the config/algo "
+                "axes"
+            ),
+        )
+        parser.add_argument(
             "--spatial-span-coef",
             type=int,
             default=SPATIAL_SPAN_COEF,
@@ -388,6 +422,8 @@ class Command(BaseCommand):
             cells = [("factorial", cell) for cell in FACTORIAL_AXIS]
         elif options["arc_weight"]:
             cells = [("arc-weight", cell) for cell in ARC_WEIGHT_AXIS]
+        elif options["exemptions"]:
+            cells = [("exemptions", cell) for cell in EXEMPTION_AXIS]
         else:
             cells = [("config", cell) for cell in CONFIG_AXIS]
             cells += [("algo", cell) for cell in ALGO_AXIS]
@@ -608,6 +644,7 @@ class Command(BaseCommand):
         dataset = trees[0].dataset
         raw_routes = []
         plan = {}
+        debug_sink = []
         rows = worst = interleave = timing = drops_count = None
         try:
             with transaction.atomic():
@@ -632,6 +669,7 @@ class Command(BaseCommand):
                     node_seeds=start_seeds(seed, starts),
                     cluster_neighbors=cell.cluster_neighbors,
                     warm_start=cell.warm_start,
+                    debug_sink=debug_sink,
                 )
                 solution = RoutingSolution.objects.get(job=job, strategy=strategy)
                 drops_count = len(metrics["dropped_trees"])
@@ -639,6 +677,8 @@ class Command(BaseCommand):
                 plan = {
                     "cluster_count": metrics["cluster_count"],
                     "vehicles_per_cluster": metrics["vehicles_per_cluster"],
+                    "max_vehicles": metrics["max_vehicles"],
+                    **self._exemption_diagnostics(debug_sink),
                 }
 
                 tree_id_to_idx = {tree.id: i for i, tree in enumerate(trees)}
@@ -672,6 +712,21 @@ class Command(BaseCommand):
             )
 
         return rows, worst, interleave, timing, plan, routes
+
+    def _exemption_diagnostics(self, debug_sink):
+        # An exemption granted to a vehicle the solver never activates is inert: an
+        # empty vehicle pays no soft bound. Counting those is what separates "the
+        # lever does nothing" from "the lever was never pulled".
+        debug = debug_sink[0] if debug_sink else {}
+        lower = debug.get("exempt_lower_vehicle")
+        upper = debug.get("exempt_upper_vehicle")
+        active = set(debug.get("active_vehicles", []))
+        exempted = {v for v in (lower, upper) if v is not None}
+        return {
+            "exempt_lower_vehicle": _blank_if_none(lower),
+            "exempt_upper_vehicle": _blank_if_none(upper),
+            "exempt_vehicles_inactive": len(exempted - active),
+        }
 
     def _compute_route_metrics(self, routes, trees, matrix, drops_count):
         rows = []
@@ -807,6 +862,10 @@ class Command(BaseCommand):
             "spatial_span_coef": spatial_span_coef,
             "stops_floor_penalty": stops_penalty,
             "max_vehicles_forced": max_vehicles or "",
+            "max_vehicles": plan.get("max_vehicles", ""),
+            "exempt_lower_vehicle": plan.get("exempt_lower_vehicle", ""),
+            "exempt_upper_vehicle": plan.get("exempt_upper_vehicle", ""),
+            "exempt_vehicles_inactive": plan.get("exempt_vehicles_inactive", ""),
             "time_global_span_coef": cell.time_global_span_coef,
             "post_resequence": cell.post_resequence,
             "arc_lambda": cell.arc_lambda,
@@ -823,8 +882,12 @@ class Command(BaseCommand):
             "k": k,
             "drops": drops,
             "degenerate_routes": self._degenerate_count(rows),
+            "short_routes": sum(
+                1 for r in rows if r["n_trees"] < SHORT_ROUTE_MAX_STOPS
+            ),
             "travel_sec": round(travel_total),
             "balance": balance,
+            "balance_excl_min": self._balance_excluding_shortest(durations),
             "sigma_t_sec": round(pstdev(durations)) if k > 1 else 0,
             "dur_min_sec": round(min(durations)) if durations else 0,
             "dur_median_sec": round(median(durations)) if durations else 0,
@@ -848,16 +911,22 @@ class Command(BaseCommand):
         }
 
     def _degenerate_count(self, rows):
-        # Stub routes no surveyor can be handed: too few stops, or shorter than half
-        # a working morning. Both thresholds are absolute — a threshold relative to
-        # the solution's own median cannot see a uniformly fragmented solution, where
-        # every route is equally tiny.
-        return sum(
-            1
-            for r in rows
-            if r["n_trees"] < DEGENERATE_MIN_STOPS
-            or r["duration_sec"] < DEGENERATE_MIN_DURATION_SEC
-        )
+        # Stub routes no surveyor can be handed: shorter than half a working morning.
+        # The threshold is absolute — one relative to the solution's own median cannot
+        # see a uniformly fragmented solution, where every route is equally tiny. The
+        # stop-count condition that used to sit here was dropped by explicit decision,
+        # so this column is NOT comparable with the one in earlier sweep CSVs; the
+        # stop count is published on its own as `short_routes`.
+        return sum(1 for r in rows if r["duration_sec"] < DEGENERATE_MIN_DURATION_SEC)
+
+    def _balance_excluding_shortest(self, durations):
+        # The reading the exempt-last arm judges itself by: the residual route is the
+        # one an exemption is meant to shrink, so excluding it shows what the rest of
+        # the fleet looks like. Published beside `balance`, never instead of it.
+        if len(durations) <= 2:
+            return 1.0
+        trimmed = sorted(durations)[1:]
+        return round(min(trimmed) / max(trimmed), 3)
 
     def _balance(self, durations, arm):
         if len(durations) <= 1:
