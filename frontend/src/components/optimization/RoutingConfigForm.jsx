@@ -23,7 +23,7 @@ import {
 const DEFAULTS = {
   minRouteTimeMinutes: 120,
   maxRouteTimeMinutes: 180,
-  serviceTimeMinutes: 3,
+  serviceTimeMinutes: 2,
   strategy: "spatial_term",
 };
 

@@ -28,11 +28,11 @@ describe("RoutingConfigForm", () => {
     fetchFleetEstimate.mockResolvedValue(null);
   });
 
-  it("renders editable defaults (120min / 180min / 3min)", () => {
+  it("renders editable defaults (120min / 180min / 2min)", () => {
     renderForm();
     expect(screen.getByLabelText(/Tiempo mínimo por ruta/)).toHaveValue(120);
     expect(screen.getByLabelText(/Tiempo máximo por ruta/)).toHaveValue(180);
-    expect(screen.getByLabelText(/Tiempo de censo por árbol/)).toHaveValue(3);
+    expect(screen.getByLabelText(/Tiempo de censo por árbol/)).toHaveValue(2);
   });
 
   it("submits with minutes converted to seconds", async () => {
@@ -47,7 +47,7 @@ describe("RoutingConfigForm", () => {
         dataset: "d1",
         minRouteTimeSec: 7200,
         maxRouteTimeSec: 10800,
-        serviceTimeSec: 180,
+        serviceTimeSec: 120,
         strategy: "spatial_term",
       })
     );
@@ -119,7 +119,7 @@ describe("RoutingConfigForm", () => {
     renderForm();
 
     await waitFor(() =>
-      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 180)
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 120)
     );
     expect(screen.queryByText(/rutas aprox\./)).not.toBeInTheDocument();
   });
@@ -130,7 +130,7 @@ describe("RoutingConfigForm", () => {
     renderForm();
 
     await waitFor(() =>
-      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 180)
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 120)
     );
 
     const serviceInput = screen.getByLabelText(/Tiempo de censo por árbol/);
