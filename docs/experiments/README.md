@@ -29,7 +29,10 @@ la redacción de la tesis.
   Baseline de vecino más cercano sobre un dataset real (`--dataset <uuid>`,
   `--service-time <min>`, `--t-max <h>`), con las mismas métricas de calidad de
   rutas que `baseline_sweep` para que ambas corridas sean comparables. Es
-  determinista: una sola fila, sin semillas.
+  determinista: una sola fila, sin semillas. `--postpass` aplica el mismo 2-opt
+  intra-ruta que el pipeline corre sobre la salida del solver: sin él, cualquier
+  comparación contra OR-Tools mide el post-pass, que es default de producción, y
+  no el solver.
 - `manage.py config_algorithm_sweep` → CSV con `--csv <ruta>` (una fila por celda).
   Barre configuración × algoritmo × tamaño sobre la suite de instancias congeladas
   (config censal: servicio 2 min, T_max 3 h). Reanudable (salta celdas ya presentes)
