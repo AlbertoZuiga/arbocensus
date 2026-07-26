@@ -49,6 +49,10 @@ la redacción de la tesis.
   piso de paradas (default 10 000), de modo que la **fuerza** del piso sea un eje
   barrible además del umbral. Queda registrado en la columna `stops_floor_penalty`,
   que además entra en la clave de reanudación.
+  `--post-resequence` fuerza el post-pass 2-opt en todas las celdas de la corrida: el
+  pipeline lo aplica sin condición, pero las celdas lo traen apagado por default, así
+  que sin este flag el barrido mide una configuración que producción ya no corre. Queda
+  registrado en la columna `post_resequence`, que ya entra en la clave de reanudación.
 - `manage.py instance_decomposition` → CSV con `--csv <ruta>`. Aritmética estructural
   pura (sin solver) de una o varias instancias (`--instance <slug> ...`): para cada `k`
   la cota inferior `MSF_k` (bosque generador mínimo de `k` componentes), la cota vieja
