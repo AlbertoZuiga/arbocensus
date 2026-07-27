@@ -487,6 +487,8 @@ superponen en la zona más densa del \textit{dataset}: ese par persiste como
 problema de geometría local y no lo resuelve un coeficiente global. La ganancia
 de \texttt{spatial\_term} es, en consecuencia, agregada (menos paradas ajenas
 dentro de cada caja, rutas más compactas) y no la eliminación del peor caso.
+La Ilustración~\ref{fig:peor-par} muestra ese par y la superposición de sus
+cajas envolventes.
 
 Conviene además notar que las métricas de forma son las más sensibles a la
 semilla, pese a que las de coste no lo son: las tres repeticiones de cada
@@ -777,6 +779,7 @@ El segundo contraste enfrenta la unión de las tres áreas contra la suma de
 resolverlas por separado. Se pre-registró que particionar costaría kilómetros,
 por prohibir rutas que crucen el borde entre áreas, y que ganaría tratabilidad.
 La medición sale al revés en el eje de desplazamiento y se reporta igual.
+La Tabla~\ref{tab:precio-particion} enfrenta ambas magnitudes.
 
 \begin{table}[H]
   \centering
@@ -1482,19 +1485,8 @@ robustez de la Sección~\ref{sec:discusion-calidad}, y ninguna de las dos afecta
 criterios de aceptación ---cobertura, jornada, balance, flota y tiempo---, que
 descansan en magnitudes ajenas a ellas.
 
-\section{POSIBLES MEJORAS}
-\label{sec:posibles-mejoras}
-
-Entre las extensiones identificadas para versiones futuras del sistema se encuentran:
-
-\begin{itemize}
-  \item \textbf{Matrices de costos de gran escala}: superar el tope de $2\,000$ árboles que hoy acota la dimensión de la matriz de costos ---impuesto por el crecimiento $O(n^2)$ de su tamaño en disco--- mediante almacenamiento disperso o la segmentación previa del \textit{dataset}, para censos que excedan ese umbral.
-  \item \textbf{Operación offline robusta}: reemplazar la cola offline básica actual (Sección~\ref{sec:ui}) por un \textit{service worker} que gestione el almacenamiento de teselas y la sincronización diferida de forma confiable en condiciones de conectividad intermitente.
-  \item \textbf{Importación de formatos adicionales}: soporte de GeoJSON como formato de entrada de \textit{datasets}, que actualmente se importan desde archivos CSV o JSON, o bien desde las fuentes legadas (Sección~\ref{sec:legacy}).
-  \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos completos de administrador y censador mediante Playwright.
-\end{itemize}
-
-\subsection{Limitaciones del sistema}
+\section{LIMITACIONES DEL SISTEMA}
+\label{sec:limitaciones}
 
 Se documentan a continuación las limitaciones aceptadas en el alcance de esta
 iteración de Arbocensus.
@@ -1675,3 +1667,66 @@ iteración de Arbocensus.
   de mayor valor para el uso operativo de la plataforma.
 \end{itemize}
 
+\section{POSIBLES MEJORAS}
+\label{sec:posibles-mejoras}
+
+Las mejoras enumeradas a continuación se derivan directamente de los resultados
+del capítulo. Las tres primeras tienen anclaje en mediciones propias de esta
+memoria y se ordenan por impacto decreciente sobre las métricas evaluadas; las
+cuatro restantes abordan limitaciones funcionales independientes de la serie
+experimental.
+
+\begin{itemize}
+  \item \textbf{Segmentación previa por área}: la
+  Sección~\ref{sec:discusion-calidad} y la Sección~\ref{sec:areas-reales}
+  establecen que la unidad operativa correcta del motor es el área de censo
+  individual. Procesar cada área como problema independiente eliminaría los
+  auto-cruces del régimen disperso y reduciría la varianza entre repeticiones.
+  El costo está medido sobre las áreas reales: una ruta adicional, tres jornadas
+  por debajo de $T_{\min}$ y el triple de cómputo, sin incremento en el
+  desplazamiento.
+
+  \item \textbf{Compuerta de régimen por saturación}: el barrido de la
+  Sección~\ref{sec:discusion-calidad} muestra que el brazo
+  \texttt{upper-tmax-tmin9000} reduce los auto-cruces en un $92{,}5$\,\% en el
+  régimen denso ($\overline{\text{sat}} = 0{,}94$) sin incremento de
+  desplazamiento, pero los empeora en las áreas individuales donde la saturación
+  es menor ($\overline{\text{sat}} \approx 0{,}67$--$0{,}73$). El umbral que
+  separa ambos regímenes es $\overline{\text{sat}} \gtrsim 0{,}9$, cuantificado
+  sobre los datos del barrido, y el código de los ajustes necesarios ya está en
+  el árbol como opción no activa.
+
+  \item \textbf{Post-proceso de fusión de rutas}: el diagnóstico de
+  \texttt{area-27} en la Sección~\ref{sec:areas-reales} muestra que el
+  \textit{solver} queda atrapado en un óptimo local cuya función objetivo lo
+  penaliza por un factor de $43$ frente a la solución del heurístico. Un
+  post-proceso de fusión de paradas entre rutas, operando sobre la solución ya
+  construida sin volver a resolver el problema completo, atacaría ese valle sin
+  incrementar el presupuesto de cómputo del GLS.
+
+  \item \textbf{Matrices de costos de gran escala}: superar el tope de
+  $2\,000$ árboles que hoy acota la dimensión de la matriz de costos ---impuesto
+  por el crecimiento $O(n^2)$ de su tamaño en disco--- mediante almacenamiento
+  disperso o la segmentación previa del \textit{dataset}, para censos que
+  excedan ese umbral.
+
+  \item \textbf{Operación \textit{offline} robusta}: reemplazar la cola
+  \textit{offline} básica actual (Sección~\ref{sec:ui}) por un \textit{service
+  worker} que gestione el almacenamiento de teselas y la sincronización diferida
+  de forma confiable en condiciones de conectividad intermitente.
+
+  \item \textbf{Importación de formatos adicionales}: soporte de GeoJSON como
+  formato de entrada de \textit{datasets}, que actualmente se importan desde
+  archivos CSV o JSON, o bien desde las fuentes legadas
+  (Sección~\ref{sec:legacy}).
+
+  \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos
+  completos de administrador y censador mediante Playwright.
+\end{itemize}
+
+De todas las extensiones enumeradas, la de mayor valor para el proyecto es la
+validación en terreno de la plataforma en una jornada real de censo. Las
+conclusiones de este capítulo verifican que el producto hace lo que su diseño
+declara, pero no que resuelva en operación el problema logístico que lo motivó.
+Esa comprobación queda pendiente y ninguna mejora de la función objetivo la
+sustituye.
