@@ -100,50 +100,6 @@ de la de escritorio; la pantalla se mantiene encendida durante el recorrido para
 obligar al censador a desbloquear el dispositivo en cada árbol; y el registro de una
 visita debe sobrevivir a una pérdida momentánea de red en lugar de perderse.
 
-\section{ALCANCE DEL PROYECTO}
-\label{sec:alcance}
-
-El alcance de esta iteración se delimita de forma explícita para separar lo que el
-trabajo compromete de lo que deja fuera de manera deliberada. Queda incluido en el
-alcance:
-
-\begin{enumerate}
-  \item El motor de optimización de rutas de censo, con determinación automática del
-        número de rutas, rutas abiertas, jornada acotada por ruta y distancias
-        peatonales sobre red vial real.
-  \item La importación de arbolado desde archivos CSV o JSON y desde las dos bases de
-        datos legadas del proyecto, con selección cartográfica previa.
-  \item El ciclo de publicación de un plan de rutas y su asignación a censadores.
-  \item El portal móvil del censador, con orden secuencial de paradas y registro de
-        observaciones con fotografía.
-  \item El historial de observaciones por árbol, que incluye las campañas anteriores
-        importadas de las fuentes legadas.
-  \item El tablero de avance del censo para el administrador.
-  \item La instrumentación experimental que sostiene el Capítulo~\ref{cap:resultados}:
-        comandos de barrido reproducibles, suite de instancias congeladas y datos
-        crudos versionados.
-\end{enumerate}
-
-Queda excluido, y se declara como tal antes de presentar resultados:
-
-\begin{enumerate}
-  \item El despliegue productivo del sistema. Todas las mediciones se realizan sobre
-        una réplica local del entorno de producción (Sección~\ref{sec:perfil-rendimiento}).
-  \item La validación con usuarios reales: no se ejecutó una jornada de censo en
-        terreno ni pruebas de usabilidad con censadores.
-  \item La segmentación automática del \textit{dataset} por área de censo. La
-        delimitación territorial del problema es una decisión explícita del
-        administrador. El Capítulo~\ref{cap:resultados} muestra que automatizar esta
-        delimitación es la extensión de mayor impacto identificada, y su costo queda
-        medido en la Sección~\ref{sec:areas-reales}.
-  \item La exportación de rutas a formatos de campo (PDF, GPX).
-  \item La operación \textit{offline} robusta: se implementa una cola de sincronización
-        básica, no un \textit{service worker} con cacheo de teselas.
-  \item Las pruebas automatizadas de extremo a extremo de los flujos completos.
-  \item La evaluación formal de accesibilidad de la interfaz.
-  \item La comercialización del producto (Sección~\ref{sec:modelo-negocio}).
-\end{enumerate}
-
 \section{REQUISITOS FUNCIONALES}
 \label{sec:requisitos-funcionales}
 
