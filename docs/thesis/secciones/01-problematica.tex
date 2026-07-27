@@ -70,6 +70,42 @@ desplazamiento total que el modelo de optimización y produce una ruta degenerad
 dedica más de dos horas y media de caminata a cinco árboles, además de saturar cada
 jornada al borde de su cota, sin holgura ante imprevistos de terreno.
 
+\section{ALCANCE}
+\label{sec:alcance-desarrollo}
+
+La plataforma de censado se construyó en iteraciones sucesivas desde 2021: una
+primera versión web orientada a dispositivos móviles que permitió tomar muestras de
+árboles ---mediante lectura de códigos QR y captura de GPS--- organizadas en
+campañas, zonas y equipos; un rediseño que incorporó elementos de ludificación
+---puntos, logros, desafíos y tablas de posiciones--- para incentivar la
+participación \citep{binder-cortes2023}; y una tercera iteración que integró el
+procesamiento de imágenes del Sistema de Análisis de Imágenes de Árboles (SAIdA) y
+un modelo de estimación de cobertura del censo \citep{pizarro2024}.
+% Historia verificada contra los repositorios de código del proyecto (jul 2026):
+%   - github.com/mrecabarren/arbocensus: commit inicial 2021-10-01 (Matías Recabarren,
+%     profesor guía). Django + templates HTML/JS, escaneo de QR con cámara, Google auth,
+%     despliegue en Heroku, modelos Sampling/{sample,question,answer,step,results}.
+%     = primera versión: app web de censado orientada a móviles. Fija el inicio en 2021.
+%   - github.com/Arbocensus/ArbocensusGamification: primer commit de código 2023-03-17
+%     (Julio Cortés), repo de la organización creado 2023-10-25. fastAPI + alembic,
+%     modelos badge/campaign/challenge/achievement/score/ranking = capa de ludificación.
+%     => la ludificación de Binder y Cortés se desarrolló en 2023; la memoria se cita como
+%     2022, pero se asume que es un error debido a las fechas de los commits.
+% ASUMIDO (no confirmable con las fuentes disponibles):
+%   - Autoría de la primera versión: Binder y Cortés la atribuyen a un trabajo de título
+%     anterior (Castro y Díaz), pero el historial git muestra como autores a Recabarren,
+%     "Richard Le May" y "Track-tor", no esos nombres. No se afirma autoría en el texto.
+%   - Discrepancia de año de inicio entre fuentes (Binder/Cortés: 2022; Pizarro:
+%     2021) queda resuelta a 2021 por el commit inicial del repositorio original.
+
+Ninguna de esas iteraciones abordó la planificación de rutas: la asignación de
+árboles a censadores y el orden de visita se decidieron manualmente en cada campaña.
+Esta iteración agrega esa pieza faltante: un motor de optimización que determina
+automáticamente el número de equipos necesarios, asigna los árboles entre ellos y
+ordena las visitas sobre la red vial real, además del ciclo operacional que lo rodea
+---importación del arbolado, publicación del plan, portal móvil del censador y
+seguimiento del avance---, que el Capítulo~\ref{cap:solucion} detalla.
+
 \section{SOLUCIÓN PLANTEADA}
 \label{sec:solucion}
 
