@@ -567,6 +567,47 @@ solapamiento de $75{,}2$ frente a $77{,}3$) provienen del corte por reloj de
 pared del GLS y acotan la precisión con que deben leerse todas las comparaciones
 de esta subsección.
 
+La Ilustración~\ref{fig:grilla-spatial-k} resume el compromiso entre flota y balance
+para las seis variantes de la grilla.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      width=0.82\textwidth,
+      height=6.5cm,
+      xlabel={Tiempo de servicio [min]},
+      ylabel={Número de rutas $k$},
+      xtick={1,2,3},
+      xmin=0.5, xmax=3.5,
+      ymin=8, ymax=58,
+      legend pos=north west,
+      grid=major,
+      grid style={dotted,gray!50},
+    ]
+      \addplot[mark=*,thick,solid] coordinates {
+        (1,23) (2,36) (3,49)
+      };
+      \addlegendentry{$T_{\max}=2$\,h}
+
+      \addplot[mark=square*,thick,dashed] coordinates {
+        (1,16) (2,25) (3,34)
+      };
+      \addlegendentry{$T_{\max}=3$\,h}
+
+      \node[above=2pt] at (axis cs:1,23) {\scriptsize $b=0{,}996$};
+      \node[above=2pt] at (axis cs:2,36) {\scriptsize $b=0{,}998$};
+      \node[above=2pt] at (axis cs:3,49) {\scriptsize $b=0{,}998$};
+
+      \node[below=2pt] at (axis cs:1,16) {\scriptsize $b=0{,}835$};
+      \node[below=2pt] at (axis cs:2,25) {\scriptsize $b=0{,}833$};
+      \node[below=2pt] at (axis cs:3,34) {\scriptsize $b=0{,}836$};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Compromiso entre flota ($k$) y balance según el tiempo de servicio y la cota $T_{\max}$, sobre el \textit{dataset} de $n=1\,607$ árboles (estrategia \texttt{spatial\_term}; media de 3 semillas). El balance anotado en cada punto es la fracción $\min(T_i)/\max(T_i)$ sobre las rutas activas.}
+  \label{fig:grilla-spatial-k}
+\end{figure}
+
 \subsubsection*{Alcance de las comparaciones y decisión}
 
 Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head}
