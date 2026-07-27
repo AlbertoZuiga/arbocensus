@@ -104,55 +104,54 @@ visita debe sobrevivir a una pérdida momentánea de red en lugar de perderse.
 \label{sec:requisitos-funcionales}
 
 La Tabla~\ref{tab:requisitos} enumera los requisitos funcionales que la solución
-compromete, agrupados por el flujo operacional al que pertenecen. La columna de
-trazabilidad remite a la sección del Capítulo~\ref{cap:diseno} donde se documenta su
-realización y, cuando corresponde, al inventario de \textit{endpoints} del Anexo 1.
+compromete, agrupados por el flujo operacional al que pertenecen. El Anexo 5
+traza cada requisito a la sección de diseño que documenta su realización.
 
-\begin{xltabular}{\textwidth}{@{}l X l@{}}
-  \caption{Requisitos funcionales de la solución y su trazabilidad al diseño.}
+\begin{xltabular}{\textwidth}{@{}l X@{}}
+  \caption{Requisitos funcionales de la solución.}
   \label{tab:requisitos} \\
   \toprule
-  ID & Requisito & Trazabilidad \\
+  ID & Requisito \\
   \midrule
   \endfirsthead
   \toprule
-  ID & Requisito & Trazabilidad \\
+  ID & Requisito \\
   \midrule
   \endhead
   \bottomrule
   \endlastfoot
-  \multicolumn{3}{@{}l}{\textit{Constitución del conjunto de árboles}} \\
-  RF-01 & Importar árboles desde un archivo CSV o JSON con detección automática de las columnas de coordenadas. & \S\ref{sec:ui} \\
-  RF-02 & Explorar sobre un mapa el arbolado de ambas bases legadas, con sus áreas de censo y una marca de los árboles ya importados. & \S\ref{sec:legacy} \\
-  RF-03 & Componer una selección territorial combinando área completa, rectángulo y árbol individual, con des-selección manual. & \S\ref{sec:legacy} \\
-  RF-04 & Materializar un \textit{dataset} a partir de la selección confirmada, en una única transacción que incluya el histórico de observaciones. & \S\ref{sec:legacy} \\
-  RF-05 & Exportar los árboles de un \textit{dataset} en formato \textit{GeoJSON}. & Anexo 1 \\
-  \multicolumn{3}{@{}l}{\textit{Optimización}} \\
-  RF-06 & Estimar, antes de optimizar, cuántos censadores requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. & \S\ref{sec:flota} \\
-  RF-07 & Configurar por sesión los parámetros temporales $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol. & \S\ref{sec:solver} \\
-  RF-08 & Seleccionar la estrategia de partición espacial, o ejecutar las tres sobre el mismo conjunto para contrastarlas. & \S\ref{sec:estrategias} \\
-  RF-09 & Ejecutar la optimización de forma asíncrona, sin bloquear la interfaz durante el cómputo. & \S\ref{sec:arquitectura} \\
-  RF-10 & Consultar el estado de un trabajo de optimización hasta que alcance un estado terminal. & \S\ref{sec:ui} \\
-  RF-11 & Determinar el número de rutas $k$ como salida del \textit{solver}, sin que el administrador lo declare. & \S\ref{sec:flota} \\
-  RF-12 & Reportar de forma explícita los árboles que la solución dejó fuera del plan. & \S\ref{sec:disyunciones} \\
-  RF-13 & Exponer las métricas de cada solución: número de rutas, tiempo total de desplazamiento, balance, métricas espaciales y tiempos por fase. & \S\ref{sec:modelo-datos} \\
-  \multicolumn{3}{@{}l}{\textit{Publicación y asignación}} \\
-  RF-14 & Visualizar las rutas resultantes sobre el trazado peatonal real de la red vial. & \S\ref{sec:ui} \\
-  RF-15 & Comparar las soluciones producidas por distintas estrategias sobre un mismo \textit{dataset}. & \S\ref{sec:ui} \\
-  RF-16 & Publicar una solución como plan vigente, con a lo más una solución publicada por \textit{dataset}. & \S\ref{sec:modelo-datos} \\
-  RF-17 & Asignar y desasignar censadores a las rutas de la solución publicada, y solo de esa. & \S\ref{sec:modelo-datos} \\
-  \multicolumn{3}{@{}l}{\textit{Captura en terreno}} \\
-  RF-18 & Entregar al censador únicamente las rutas propias del plan vigente. & \S\ref{sec:ui} \\
-  RF-19 & Presentar las paradas en orden secuencial estricto: una parada solo se cierra cuando las anteriores ya lo están. & \S\ref{sec:ui} \\
-  RF-20 & Calcular la distancia del censador a la parada activa a partir de la geolocalización del navegador. & \S\ref{sec:ui} \\
-  RF-21 & Registrar la visita de una parada con su estado, su fotografía y sus notas, y generar la observación histórica correspondiente. & \S\ref{sec:recenso} \\
-  RF-22 & Registrar la omisión de una parada con un motivo obligatorio, del que se deriva el estado de la observación. & \S\ref{sec:recenso} \\
-  RF-23 & Conservar el historial completo de observaciones de cada árbol, incluidas las importadas de las fuentes legadas. & \S\ref{sec:recenso} \\
-  RF-24 & Permitir el registro de visitas sin conexión a la red. & \S\ref{sec:ui} \\
-  \multicolumn{3}{@{}l}{\textit{Seguimiento y administración}} \\
-  RF-25 & Presentar el avance del censo: proporción de árboles censados, omitidos y pendientes, con su distribución sobre el mapa. & \S\ref{sec:ui} \\
-  RF-26 & Desglosar el avance por ruta y por censador, de modo que el administrador pueda redistribuir la carga. & \S\ref{sec:ui} \\
-  RF-27 & Administrar las cuentas de usuario y sus roles, con desactivación lógica en lugar de borrado. & Anexo 1 \\
+  \multicolumn{2}{@{}l}{\textit{Constitución del conjunto de árboles}} \\
+  RF-01 & Importar árboles desde un archivo CSV o JSON con detección automática de las columnas de coordenadas. \\
+  RF-02 & Explorar sobre un mapa el arbolado de ambas bases legadas, con sus áreas de censo y una marca de los árboles ya importados. \\
+  RF-03 & Componer una selección territorial combinando área completa, rectángulo y árbol individual, con des-selección manual. \\
+  RF-04 & Materializar un \textit{dataset} a partir de la selección confirmada, en una única transacción que incluya el histórico de observaciones. \\
+  RF-05 & Exportar los árboles de un \textit{dataset} en formato \textit{GeoJSON}. \\
+  \multicolumn{2}{@{}l}{\textit{Optimización}} \\
+  RF-06 & Estimar, antes de optimizar, cuántos censadores requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. \\
+  RF-07 & Configurar por sesión los parámetros temporales $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol. \\
+  RF-08 & Seleccionar la estrategia de partición espacial, o ejecutar las tres sobre el mismo conjunto para contrastarlas. \\
+  RF-09 & Ejecutar la optimización de forma asíncrona, sin bloquear la interfaz durante el cómputo. \\
+  RF-10 & Consultar el estado de un trabajo de optimización hasta que alcance un estado terminal. \\
+  RF-11 & Determinar el número de rutas $k$ como salida del \textit{solver}, sin que el administrador lo declare. \\
+  RF-12 & Reportar de forma explícita los árboles que la solución dejó fuera del plan. \\
+  RF-13 & Exponer las métricas de cada solución: número de rutas, tiempo total de desplazamiento, balance, métricas espaciales y tiempos por fase. \\
+  \multicolumn{2}{@{}l}{\textit{Publicación y asignación}} \\
+  RF-14 & Visualizar las rutas resultantes sobre el trazado peatonal real de la red vial. \\
+  RF-15 & Comparar las soluciones producidas por distintas estrategias sobre un mismo \textit{dataset}. \\
+  RF-16 & Publicar una solución como plan vigente, con a lo más una solución publicada por \textit{dataset}. \\
+  RF-17 & Asignar y desasignar censadores a las rutas de la solución publicada, y solo de esa. \\
+  \multicolumn{2}{@{}l}{\textit{Captura en terreno}} \\
+  RF-18 & Entregar al censador únicamente las rutas propias del plan vigente. \\
+  RF-19 & Presentar las paradas en orden secuencial estricto: una parada solo se cierra cuando las anteriores ya lo están. \\
+  RF-20 & Calcular la distancia del censador a la parada activa a partir de la geolocalización del navegador. \\
+  RF-21 & Registrar la visita de una parada con su estado, su fotografía y sus notas, y generar la observación histórica correspondiente. \\
+  RF-22 & Registrar la omisión de una parada con un motivo obligatorio, del que se deriva el estado de la observación. \\
+  RF-23 & Conservar el historial completo de observaciones de cada árbol, incluidas las importadas de las fuentes legadas. \\
+  RF-24 & Permitir el registro de visitas sin conexión a la red. \\
+  \multicolumn{2}{@{}l}{\textit{Seguimiento y administración}} \\
+  RF-25 & Presentar el avance del censo: proporción de árboles censados, omitidos y pendientes, con su distribución sobre el mapa. \\
+  RF-26 & Desglosar el avance por ruta y por censador, de modo que el administrador pueda redistribuir la carga. \\
+  RF-27 & Administrar las cuentas de usuario y sus roles, con desactivación lógica en lugar de borrado. \\
 \end{xltabular}
 
 \section{ATRIBUTOS DE CALIDAD}
