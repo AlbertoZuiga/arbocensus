@@ -49,34 +49,40 @@ georreferenciados, se requiere generar rutas que garanticen la cobertura total,
 minimicen los tiempos de desplazamiento y respeten jornadas laborales acotadas, tarea
 que las iteraciones anteriores del proyecto no abordaron.
 
-El problema se formula como un \textit{Open Multiple Travelling Salesman Problem}
-(\textit{Open mTSP}) con restricciones temporales globales por ruta y se resuelve
+El problema se formula como un problema de ruteo de vehículos de rutas abiertas con
+visitas opcionales penalizadas y restricción de duración por ruta, y se resuelve
 mediante el \textit{solver} de ruteo vehicular de \textit{OR-Tools}. Los tiempos de
 desplazamiento peatonal se calculan sobre la red vial real de \textit{OpenStreetMap}
-mediante el motor OSRM, lo que elimina costos de APIs externas y garantiza la
-reproducibilidad de los resultados. La plataforma web construida sobre este motor
-cubre el ciclo operacional completo: el administrador importa los árboles, configura
-los parámetros, ejecuta la optimización y publica el plan resultante, mientras que el
-censador accede desde su dispositivo móvil a la ruta asignada con navegación asistida.
+mediante el motor de ruteo de código abierto OSRM (\textit{Open Source Routing
+Machine}), lo que elimina costos de APIs externas y garantiza la reproducibilidad
+de los resultados. La plataforma web construida sobre este motor cubre el ciclo
+operacional completo: el administrador importa los árboles, configura los
+parámetros, ejecuta la optimización y publica el plan resultante, mientras que el
+censador accede desde su dispositivo móvil a la ruta asignada, con las paradas en
+secuencia y un enlace de navegación peatonal por parada.
 La formulación aborda restricciones operacionales reales: minimización automática del
 número de rutas necesarias, jornadas acotadas por ruta, balance de carga entre
 equipos, rutas abiertas sin depósito obligatorio y distancias sobre redes viales
 reales.
 
-Sobre el censo real consolidado de 1\,607 árboles, Arbocensus genera 25 rutas en
-120\,s de cómputo, con una desviación estándar de las duraciones equivalente al
-5{,}6\,\% del promedio (el criterio de aceptación es 15\,\%), cobertura total y ninguna
-ruta que exceda la jornada máxima. Frente a un heurístico \textit{greedy} de vecino
-más cercano que recibe el mismo refinamiento local que la solución del
-\textit{solver}, reduce el tiempo total de desplazamiento en un 4{,}8\,\% ---cerca de
-48 minutos por campaña---, deja las jornadas al 93\,\% de su cota en lugar del 98\,\%
-y atenúa las rutas degeneradas que dicho heurístico produce. El
-Capítulo~\ref{cap:resultados} detalla estos resultados.
+Sobre el censo real consolidado de 1\,607 árboles, Arbocensus genera 25 rutas dentro
+de un presupuesto de cómputo de 120\,s que captura prácticamente toda la mejora
+alcanzable con presupuestos mayores, con una desviación estándar de las duraciones
+equivalente al 5{,}6\,\% del promedio (el criterio de aceptación es 15\,\%), cobertura
+total y ninguna ruta que exceda la jornada máxima. Frente a un heurístico
+\textit{greedy} de vecino más cercano que recibe el mismo refinamiento local que la
+solución del \textit{solver}, reduce el tiempo total de desplazamiento en un 4{,}8\,\%
+---cerca de 48 minutos por campaña---, deja las jornadas al 93\,\% de su cota en lugar
+del 98\,\% y reparte mejor los árboles aislados: la ruta más pequeña del heurístico
+visita cinco árboles con dos horas y media de caminata, frente a entre seis y doce
+en la solución del modelo. El Capítulo~\ref{cap:resultados} detalla estos resultados.
 
-Se concluye que la formulación \textit{Open mTSP} con ventanas temporales globales
-por ruta, combinada con distancias peatonales reales, resuelve censos urbanos a
-escala real en tiempos prácticos y con calidad operacional verificable. Arbocensus
-queda disponible como una plataforma reproducible sobre la cual planificar el
-re-censo estructurado y las campañas futuras del proyecto.
+Estas conclusiones descansan en una serie de dieciséis ciclos de evaluación con
+criterio de decisión fijado antes de cada corrida y datos crudos versionados, de los
+cuales doce cerraron con el descarte de la hipótesis que los motivaba.
+Se concluye que esta formulación, combinada con distancias peatonales reales,
+resuelve censos urbanos a escala real en tiempos prácticos y con calidad operacional
+verificable. Arbocensus queda disponible como una plataforma reproducible sobre la
+cual planificar el re-censo estructurado y las campañas futuras del proyecto.
 
 \newpage
