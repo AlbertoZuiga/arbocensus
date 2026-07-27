@@ -2,7 +2,7 @@
 \label{cap:resultados}
 
 \section{RESULTADOS OBTENIDOS}
-\subsection{Métricas de Calidad de Rutas}
+\subsection{Métricas de calidad de rutas}
 \label{sec:metricas-calidad}
 
 La calidad de la solución producida por el motor de optimización se evalúa sobre el
@@ -70,7 +70,7 @@ Sobre el número de rutas conviene ser explícito: $k=25$ es la flota que el
 se calcula ninguna cota inferior sobre $k$, y de hecho el \textit{baseline}
 \textit{greedy} de la Sección~\ref{sec:comparacion-greedy} resuelve el mismo problema
 con 24 rutas. Esa diferencia no indica una solución mejor sino un régimen de
-operación distinto: el heurístico satura cada ruta hasta un promedio del
+operación distinto: el heurístico, incluso con el mismo refinamiento local, satura cada ruta hasta un promedio del
 $98{,}0$\,\% de $T_{\max}$, mientras que las penalizaciones blandas del modelo
 empujan las duraciones hacia el punto medio del intervalo y dejan holgura
 operacional en promedio, aunque no en la ruta más larga. La
@@ -171,7 +171,7 @@ previos al ajuste descrito en la Sección~\ref{sec:comparacion-estrategias}---
 se conservan en \texttt{docs/experiments/20260712-real-case-metrics.csv}.
 
 % ---- 3.1.2 ------------------------------------------------------
-\subsection{Comparación con Solución Greedy}
+\subsection{Comparación con la solución \textit{greedy}}
 \label{sec:comparacion-greedy}
 
 Como referencia de comparación se implementó una solución \textit{greedy} basada
@@ -766,7 +766,7 @@ $10\,209$\,s ---el $94{,}5$\,\% de $T_{\max}$--- con $1\,569$\,s de
 desplazamiento, mientras que el \textit{solver} abre dos rutas de $5\,766$ y
 $5\,597$\,s y gasta $2\,466$\,s, un $57$\,\% más de caminata y dos medias
 jornadas en lugar de una completa. No hay aquí ruta degenerada que reprochar al
-\textit{baseline}: su solución es la que un censista preferiría. Como el criterio
+\textit{baseline}: su solución es la que un censador preferiría. Como el criterio
 exigía las tres áreas, el veredicto global frente al pre-registro es de
 incumplimiento, y así se reporta.
 
@@ -857,7 +857,7 @@ mismo presupuesto por corrida, la instancia monolítica resulta menos estable, y
 no que particionar ahorre caminata. Ese presupuesto por corrida, además, no es
 comparable en total: la partición consumió el triple de cómputo.
 
-El precio medido de particionar es, entonces, una jornada de censista más, tres
+El precio medido de particionar es, entonces, una jornada de censador más, tres
 jornadas por debajo de $T_{\min}$ y el triple de cómputo, a cambio de instancias
 de aproximadamente $1{,}3$\,km que corresponden a una unidad operativa real y de
 una varianza entre repeticiones sustancialmente menor. Los auto-cruces y el
@@ -947,26 +947,16 @@ trazado de calles, instrumentación que el repositorio ya soporta y que este tra
 ejecutó.
 
 El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}.
-El conjunto de evaluación de $n = 1\,607$ árboles reúne el arbolado de múltiples
-áreas de censo de distinta ubicación y abarca aproximadamente $10{,}3$\,km de extensión
-en longitud ---el ancho este--oeste del recuadro que lo contiene, métrica que se usa de
-forma homogénea en toda esta sección--- (Ilustración~\ref{fig:regimen-disperso-vs-real}).
-Medida como diagonal del recuadro, la extensión es de $12{,}5$\,km frente a $1{,}61$\,km
-del área individual mayor, de modo que la razón entre ambos regímenes ---cercana a
-$8\times$--- no depende de cuál de las dos métricas se adopte. Los árboles que lo
-componen son reales y provienen de las dos bases legadas; lo que carece de correlato
-operativo es la agrupación, esto es, tratar esa unión como un único trabajo de ruteo.
-El censo histórico se organizó por área: las 429 filas de \texttt{legacy\_api}
-tienen área asignada por punto en polígono ---la base legada guarda 48 registros de
-área, porque cada campaña recrea los suyos, de los cuales 21 contienen arbolado y se
-reparten en 10 campañas---, mientras que las 1\,178 filas de \texttt{legacy\_app} no
-tienen área ni campaña asignada. En los datos legados, la extensión máxima de un área individual
-de censo es de $1{,}32$\,km, según las instancias versionadas en
-\texttt{docs/experiments/instances/}. En ese régimen de área real, la configuración de
-producción genera rutas sin auto-cruces apreciables; los auto-cruces emergen únicamente al
-procesar un conjunto que reúne arbolado disperso sobre varios kilómetros, situación
-que en operación solo surgiría si se procesaran múltiples áreas de censo como un único
-problema (Ilustración~\ref{fig:ruta-vueltas-r1}).
+El conjunto de evaluación de $n = 1\,607$ árboles agrega arbolado real de múltiples
+áreas de censo dispersas en $\approx 10{,}3$\,km de extensión ($12{,}5$\,km de
+diagonal), frente a $1{,}32$\,km del área individual mayor ---razón cercana a
+$8\times$, según las instancias versionadas en \texttt{docs/experiments/instances/}---.
+Los árboles son reales; lo sin correlato operativo es tratar esa unión de veintiuna
+áreas dispersas como un único trabajo de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}).
+En el régimen de área real la configuración de producción genera rutas sin auto-cruces
+apreciables; estos emergen solo al procesar el conjunto agregado disperso
+(Ilustración~\ref{fig:ruta-vueltas-r1}), situación que en operación solo surgiría si se
+procesaran múltiples áreas de censo como un único problema.
 
 \begin{figure}[H]
   \centering
@@ -1025,7 +1015,7 @@ rutear--- tiene tratamiento propio en la literatura bajo la denominación de dis
 territorial \citep{kalcsics2005towards,rios2009reactive}, cuyos criterios de
 compacidad y de balance coinciden con los dos ejes que esta sección mide.
 
-Para confirmar el origen de los auto-cruces en la función objetivo y explorar si existe
+Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe
 una configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo
 $\times$ tamaño sobre la suite de instancias congeladas
 (\texttt{route-config-algorithm-sweep-20260718.csv}; 96 celdas ---ocho
@@ -1291,7 +1281,7 @@ $T_{\max}$ se respeta estrictamente en la aritmética entera del \textit{solver}
 
 \subsection{Sensibilidad al tamaño del problema y al presupuesto del solver}
 
-Para aislar el efecto del tamaño del problema se repitió la grilla sobre un
+Con el objetivo de aislar el efecto del tamaño del problema se repitió la grilla sobre un
 área reducida del mismo origen legado ($n=157$). La fase que peor escala es la
 consulta a OSRM en frío: de 1,7\,s con $n=157$ a 170,8\,s con $n=1\,607$
 ---un factor de $\approx 100\times$ para $10\times$ el número de nodos,
@@ -1396,11 +1386,10 @@ todo tamaño y toda densidad, y la búsqueda de una ---la hipótesis con que se 
 barrido de configuración por algoritmo--- queda refutada con datos.
 
 El corolario operacional es que la unidad correcta del problema es el área de censo
-individual y no el arbolado metropolitano agregado. El conjunto de evaluación de
-$n=1\,607$ árboles abarca $10{,}3$\,km de extensión, frente a los $1{,}32$\,km del
-área real mayor, y es en ese régimen disperso ---y solo en él--- donde emergen los
-auto-cruces que motivaron buena parte de la experimentación. Sobre un área real, la
-configuración de producción ya genera rutas limpias. Esto convierte la segmentación
+individual y no el arbolado metropolitano agregado: los auto-cruces que motivaron
+buena parte de la experimentación son propios del régimen disperso del conjunto
+agregado (Sección~\ref{sec:discusion-calidad}) y no aparecen sobre un área real, donde
+la configuración de producción ya genera rutas limpias. Esto convierte la segmentación
 previa por área, que la Sección~\ref{sec:posibles-mejoras} documenta como trabajo
 futuro, en la extensión de mayor impacto del sistema: no porque el motor esté mal
 calibrado, sino porque el motor se comporta como corresponde cuando el problema se le
@@ -1615,7 +1604,7 @@ iteración de Arbocensus.
   decir sobre la proyección equirectangular de las coordenadas de las paradas, sin
   intervención de la red vial. Esa geometría no coincide con ninguna de las otras dos
   que participan en el problema: el \textit{solver} optimiza tiempo de red sobre la
-  matriz de duraciones de OSRM, y la aplicación dibuja al censista la polilínea real de
+  matriz de duraciones de OSRM, y la aplicación dibuja al censador la polilínea real de
   calles que OSRM devuelve para la secuencia de paradas. Las tres geometrías ---cuerda
   recta, tiempo de red y trazado de calles--- son distintas, y la correspondencia entre
   ellas no se ha comprobado: no está medido en qué grado un auto-cruce de cuerdas
