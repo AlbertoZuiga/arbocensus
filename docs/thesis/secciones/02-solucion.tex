@@ -236,24 +236,3 @@ estándar ---un estadístico de la solución completa no es expresable como cost
 por arco--- sino que penaliza de forma blanda que la duración de cada ruta se aleje de
 un objetivo, y el efecto de esa penalización se reporta después como dispersión de las
 duraciones. La distinción se desarrolla en la Sección~\ref{sec:formulacion}.
-
-\section{MODELO DE NEGOCIO}
-\label{sec:modelo-negocio}
-
-No aplica. Arbocensus es una herramienta interna del proyecto Fondef ID21110360, cuyo
-destinatario es el propio equipo de censo y las contrapartes municipales del proyecto.
-La comercialización del producto no forma parte del alcance de esta iteración
-(Sección~\ref{sec:alcance}) y no se definió modelo de ingresos, política de precios ni
-estrategia de distribución. El costo de operación relevante para el proyecto ---el de
-los servicios de ruteo--- se aborda por la vía técnica y no por la comercial: OSRM se
-despliega localmente sobre datos abiertos, lo que elimina el gasto recurrente en APIs
-de ruteo de pago que habría supuesto una alternativa comercial.
-
-\section{ACTORES DEL SISTEMA}
-
-La plataforma distingue dos actores, correspondientes a los perfiles caracterizados en
-la Sección~\ref{sec:usuarios}. El Administrador importa \textit{datasets} de
-árboles desde CSV o desde las bases legadas, configura parámetros operacionales,
-ejecuta la optimización y visualiza las rutas resultantes sobre un mapa interactivo.
-El Censador accede desde su dispositivo móvil a la ruta que le fue asignada, con las
-paradas en secuencia y navegación asistida hacia cada árbol.
