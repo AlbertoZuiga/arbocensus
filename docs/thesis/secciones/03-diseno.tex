@@ -85,7 +85,7 @@ La Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada
   \end{tabularx}
 \end{table}
 
-% ---- 2.2 -------------------------------------------------------
+% ---- 3.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
 \label{sec:modelo-datos}
 
@@ -167,10 +167,10 @@ que lo es el censador de una ruta. Todas las entidades usan claves primarias UUI
   \label{fig:er}
 \end{figure}
 
-% ---- 2.3 -------------------------------------------------------
+% ---- 3.3 -------------------------------------------------------
 \section{MOTOR DE OPTIMIZACIÓN}
 
-% ---- 2.3.1 ------------------------------------------------------
+% ---- 3.3.1 ------------------------------------------------------
 \subsection{Formulación del problema}
 \label{sec:formulacion}
 
@@ -371,7 +371,7 @@ $+501$ por encima de $\tau$. Esa asimetría, y no el costo de arco, es el canal
 dominante del objetivo, y explica los resultados de sensibilidad a las
 penalizaciones de la Sección~\ref{sec:discusion-calidad}.
 
-% ---- 2.3.2 ------------------------------------------------------
+% ---- 3.3.2 ------------------------------------------------------
 \subsection{Construcción de la matriz de costos}
 \label{sec:matriz}
 
@@ -417,7 +417,7 @@ construcción de la matriz para \textit{datasets} grandes
 dimensión de la matriz ---cuyo almacenamiento en JSON crece como $O(n^2)$ y es del
 orden de decenas de megabytes a ese tamaño---.
 
-% ---- 2.3.3 ------------------------------------------------------
+% ---- 3.3.3 ------------------------------------------------------
 \subsection{Estimación del número de rutas}
 
 \label{sec:flota}
@@ -475,7 +475,7 @@ costos en caché y no dispara ninguna consulta a OSRM: si el \textit{dataset} a�
 tiene matriz calculada, el sistema responde que la estimación no está disponible en
 lugar de incurrir en el costo de construirla.
 
-% ---- 2.3.4 ------------------------------------------------------
+% ---- 3.3.4 ------------------------------------------------------
 \subsection{\textit{Solver} VRP con \textit{OR-Tools}}
 \label{sec:solver}
 
@@ -521,7 +521,7 @@ un error que reporta el número de árboles y los parámetros de configuración 
 (tiempo de servicio y $T_{\max}$), de modo que el administrador pueda identificar qué
 restricción relajar.
 
-% ---- 2.3.5 ------------------------------------------------------
+% ---- 3.3.5 ------------------------------------------------------
 \subsection{Disyunciones de nodos}
 \label{sec:disyunciones}
 
@@ -580,7 +580,7 @@ mayor tiempo total sino como una menor calidad alcanzable dentro del mismo
 presupuesto. Esa expectativa no se verificó experimentalmente y se asume como
 limitación del trabajo (Sección~\ref{sec:posibles-mejoras}).
 
-% ---- 2.3.6 ------------------------------------------------------
+% ---- 3.3.6 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
 \label{sec:estrategias}
 
@@ -623,7 +623,7 @@ resultados de la comparación (Capítulo~\ref{cap:resultados}).
         de cada ruta por construcción.
 \end{itemize}
 
-% ---- 2.3.7 ------------------------------------------------------
+% ---- 3.3.7 ------------------------------------------------------
 \subsection{Post-proceso de resecuenciación intra-ruta}
 \label{sec:postpass}
 
@@ -681,7 +681,7 @@ trazado real de calles--- permitió establecer que el algoritmo mejora
 simultáneamente el tiempo de viaje y la geometría real. Esa historia, y la medición
 que la cierra, se documentan en la Sección~\ref{sec:discusion-calidad}.
 
-% ---- 2.4 -------------------------------------------------------
+% ---- 3.4 -------------------------------------------------------
 \section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
 \label{sec:legacy}
 
@@ -804,7 +804,7 @@ La Ilustración~\ref{fig:ui_legacy} muestra el mapa de selección con una sesió
 
 El color de cada marcador codifica el estado del árbol en el sistema: verde para disponible, azul para seleccionado en la sesión actual y gris para ya importado en otro \textit{dataset}. El panel lateral lista la selección acumulada ---2\,328 árboles en la sesión de la ilustración--- y permite revisarla árbol por árbol antes de confirmar la creación del \textit{dataset}.
 
-% ---- 2.5 -------------------------------------------------------
+% ---- 3.5 -------------------------------------------------------
 \section{RE-CENSO Y REGISTRO DE OBSERVACIONES}
 \label{sec:recenso}
 
@@ -902,7 +902,7 @@ importación. El identificador de fila es local al \textit{dataset}, de modo que
 consulta del historial entre campañas se resuelve por la clave natural y no por el
 identificador de fila.
 
-% ---- 2.6 -------------------------------------------------------
+% ---- 3.6 -------------------------------------------------------
 \section{API REST}
 \label{sec:api}
 
@@ -941,7 +941,7 @@ el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
   \end{tabularx}
 \end{table}
 
-% ---- 2.7 -------------------------------------------------------
+% ---- 3.7 -------------------------------------------------------
 \section{INTERFAZ DE USUARIO}
 \label{sec:ui}
 
@@ -1035,7 +1035,7 @@ La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censador en disposi
 
 Los marcadores numerados sobre el mapa reflejan el orden de visita derivado de \texttt{RouteStop.sequence}; las paradas posteriores a la activa aparecen bloqueadas hasta que el censador complete la anterior, lo que impone el orden secuencial descrito en la Sección~\ref{sec:ui}. El botón «Registrar de todos modos» habilita el registro cuando la señal GPS no alcanza el radio de proximidad de $30$\,m.
 
-% ---- 2.8 -------------------------------------------------------
+% ---- 3.8 -------------------------------------------------------
 \section{VERIFICACIÓN Y VALIDACIÓN}
 \label{sec:verificacion}
 
