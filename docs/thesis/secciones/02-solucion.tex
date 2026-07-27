@@ -153,27 +153,23 @@ traza cada requisito a la sección de diseño que documenta su realización.
 \section{ATRIBUTOS DE CALIDAD}
 \label{sec:atributos-calidad}
 
-La Tabla~\ref{tab:atributos-calidad} presenta los atributos de calidad considerados en
-la elaboración del producto, cada uno con la métrica con que se evalúa y el valor
-objetivo comprometido. La última columna indica dónde se verifica el cumplimiento.
+La Tabla~\ref{tab:atributos-calidad} presenta los atributos de calidad prioritarios
+para el producto, cada uno con su prioridad, la métrica con que se evalúa y el valor
+objetivo comprometido.
 
 \begin{table}[H]
   \centering
-  \caption{Atributos de calidad, métrica asociada y valor objetivo.}
+  \caption{Atributos de calidad, prioridad, métrica asociada y valor objetivo.}
   \label{tab:atributos-calidad}
   \small
-  \begin{tabularx}{\textwidth}{@{}l X X l@{}}
+  \begin{tabularx}{\textwidth}{@{}l l X X@{}}
     \toprule
-    Atributo & Métrica & Valor objetivo & Verificación \\
+    Atributo & Prioridad & Métrica & Valor objetivo \\
     \midrule
-    Rendimiento del \textit{solver} & Tiempo de cómputo de una optimización con la matriz de costos en caché, sobre el conjunto de evaluación de $n=1\,607$ árboles. & Menos de 5 minutos, con evidencia de que el presupuesto asignado captura la mejora alcanzable (Tabla~\ref{tab:sensibilidad-tl}). & \S\ref{sec:metricas-calidad} \\
-    Rendimiento en frío & Costo de la primera construcción de la matriz, que se paga una única vez por \textit{dataset}. & Amortizable: toda corrida posterior queda acotada por el \textit{solver}. & \S\ref{sec:perfil-rendimiento} \\
-    Seguridad & Proporción de \textit{endpoints} con permiso declarado por rol, y modo de acceso a las bases de datos externas. & Totalidad de los \textit{endpoints} con permiso explícito; acceso de solo lectura a las bases legadas. & Anexo 1, \S\ref{sec:legacy} \\
-    Usabilidad & Decisiones que el censador no debe tomar en terreno. & El orden de visita y el número de equipos son salidas del sistema, no entradas del usuario. & \S\ref{sec:flota}, \S\ref{sec:ui} \\
-    Portabilidad & Número de comandos necesarios para levantar el sistema completo en una máquina nueva. & Un único comando de \textit{Docker Compose}, sin dependencias instaladas en el anfitrión. & \S\ref{sec:arquitectura} \\
-    Reproducibilidad & Proporción de las cifras del Capítulo~\ref{cap:resultados} que un tercero puede regenerar desde un comando publicado y datos versionados. & Toda cifra con su comando publicado y sus datos crudos versionados; las métricas por ruta se re-derivan con \texttt{route\_audit} sobre la misma instancia congelada. & Anexo 3 \\
-    Verificabilidad & Alcance del comportamiento verificado por pruebas automatizadas y su ejecución en integración continua. & Suite de pruebas de \textit{backend} y \textit{frontend} ejecutada en cada integración, junto con análisis estático de estilo y de tipos. & \S\ref{sec:verificacion} \\
-    Accesibilidad & Redundancia no cromática de la información codificada por color en mapas y marcadores. & No comprometido en esta iteración: se declara fuera del alcance (Sección~\ref{sec:alcance}) por no haberse evaluado. & --- \\
+    Rendimiento del \textit{solver} & Alta & Tiempo de cómputo de una optimización con la matriz de costos en caché, sobre el conjunto de evaluación de $n=1\,607$ árboles. & Menos de 5 minutos, con evidencia de que el presupuesto asignado captura la mejora alcanzable (Tabla~\ref{tab:sensibilidad-tl}). \\
+    Usabilidad & Alta & Decisiones que el censador no debe tomar en terreno. & El orden de visita y el número de equipos son salidas del sistema, no entradas del usuario. \\
+    Seguridad & Media & Proporción de \textit{endpoints} con permiso declarado por rol, y modo de acceso a las bases de datos externas. & Totalidad de los \textit{endpoints} con permiso explícito; acceso de solo lectura a las bases legadas. \\
+    Reproducibilidad & Media & Proporción de las cifras del Capítulo~\ref{cap:resultados} que un tercero puede regenerar desde un comando publicado y datos versionados. & Toda cifra con su comando publicado y sus datos crudos versionados; las métricas por ruta se re-derivan con \texttt{route\_audit} sobre la misma instancia congelada. \\
     \bottomrule
   \end{tabularx}
 \end{table}
