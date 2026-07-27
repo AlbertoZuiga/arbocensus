@@ -52,6 +52,7 @@ subutilizan su tiempo, imposibilidad de cubrir todos los árboles en una jornada
 aumento de costos logísticos.
 
 \section{ESTADO ACTUAL DEL PROBLEMA}
+\label{sec:estado-actual}
 
 Ante la ausencia de herramientas especializadas de optimización, la planificación de
 rutas para censos urbanos queda limitada a métodos manuales ---hojas de cálculo o
@@ -68,38 +69,6 @@ deficiencias sobre el censo real: el heurístico del vecino más cercano acumula
 desplazamiento total que el modelo de optimización y produce una ruta degenerada que
 dedica más de dos horas y media de caminata a cinco árboles, además de saturar cada
 jornada al borde de su cota, sin holgura ante imprevistos de terreno.
-
-El problema de ruteo de censos se relaciona con variantes conocidas de la investigación
-operativa: el \textit{Multiple Travelling Salesman Problem} (mTSP) \citep{bektas2006multiple},
-que generaliza el TSP a múltiples agentes; el \textit{Vehicle Routing Problem with Time
-Windows} (VRPTW) \citep{solomon1987algorithms, toth2014vehicle}, que introduce restricciones
-de ventanas horarias en nodos; y el \textit{Guided Local Search} (GLS), una metaheurística
-efectiva para problemas de optimización combinatoria \citep{voudouris1999guided}.
-
-Sin embargo, los problemas de ruteo urbano reales presentan características específicas:
-\begin{enumerate}
-  \item jornadas globales por ruta, no ventanas en nodos individuales;
-  \item rutas abiertas sin depósito obligatorio;
-  \item determinación automática del número de rutas necesarias;
-  \item distancias caminables sobre redes viales reales (\textit{OpenStreetMap}, OSM), no euclidianas.
-\end{enumerate}
-
-Existen herramientas de ruteo de propósito general capaces de resolver variantes del
-problema de ruteo de vehículos ---los módulos de análisis de redes de las suites GIS
-comerciales, entre ellas--- y no sería exacto afirmar que carecen de la capacidad
-algorítmica necesaria. Lo que ninguna de ellas ofrece es la integración con el flujo de
-trabajo específico de este proyecto: partir del catastro que dejaron las iteraciones
-anteriores de Arbocensus, publicar el plan resultante como asignación de trabajo a
-censadores identificados y recoger de vuelta, parada por parada, la observación
-histórica de cada árbol que alimenta el re-censo. Esa cadena ---catastro legado,
-optimización, asignación, captura en terreno e historial--- es lo que el producto
-aporta, y es específica del dominio y no del algoritmo. A ello se añade una
-consideración de costo: la construcción de la matriz para los 1\,607 árboles requiere
-100 solicitudes fragmentadas al servicio de ruteo ---una por bloque de la grilla de
-$10 \times 10$ coordenadas (Sección~\ref{sec:matriz})---; con una API externa de pago
-ese volumen implicaría un gasto recurrente que se renueva en cada campaña, mientras
-que la alternativa adoptada lo elimina al desplegar el servicio localmente sobre datos
-cartográficos abiertos.
 
 \section{SOLUCIÓN PLANTEADA}
 \label{sec:solucion}
