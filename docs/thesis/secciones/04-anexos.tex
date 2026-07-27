@@ -183,13 +183,15 @@ demostración funcional y las pruebas de carga sintéticas.
 \section*{Anexo 3. Comandos reproducibles de los experimentos}
 \addcontentsline{toc}{section}{Anexo 3. Comandos reproducibles de los experimentos}
 
-Los resultados del Capítulo~\ref{cap:resultados} se obtuvieron con el comando de
-gestión \texttt{baseline\_sweep}, que barre el producto cartesiano de estrategias,
-tiempos de servicio, cotas $T_{\max}$ y repeticiones sobre un mismo \textit{dataset},
-y emite una fila de CSV por corrida con las métricas de calidad de ruta y los tiempos
-por fase del \textit{pipeline}. Cada ejecución escribe además un informe en
-\texttt{docs\slash experiments\slash }, con su comando, sus parámetros y sus métricas.
-La Tabla~\ref{tab:anexo_baseline_sweep} detalla sus parámetros.
+Los resultados del Capítulo~\ref{cap:resultados} se obtuvieron con tres comandos de
+gestión: \texttt{baseline\_sweep} (barridos de configuración y perfilado por fases),
+\texttt{baseline\_postpass} (corridas de referencia de \textit{OR-Tools} con
+post-proceso habilitado) y \texttt{greedy\_baseline} (el heurístico de contraste, con
+y sin post-proceso de resecuenciación). Las tablas siguientes detallan los parámetros
+de cada uno. Cada ejecución escribe además un informe en \texttt{docs\slash
+experiments\slash }, con su comando, sus parámetros y sus métricas.
+
+La Tabla~\ref{tab:anexo_baseline_sweep} detalla los parámetros de \texttt{baseline\_sweep}.
 
 \begin{table}[H]
   \centering
@@ -224,8 +226,8 @@ docker compose -f docker-compose.prod.yml run --rm backend \
     --csv /results/profiling-grid-full.csv
 \end{verbatim}
 
-Y la comparación directa de las tres estrategias de partición, bajo una misma
-variante operacional y un mismo presupuesto de \textit{solver}, con:
+La comparación directa de las tres estrategias de partición, bajo una misma
+variante operacional y un mismo presupuesto de \textit{solver}, se reproduce con:
 
 \begin{verbatim}
 docker compose -f docker-compose.prod.yml run --rm backend \
@@ -248,3 +250,166 @@ se documenta, en el directorio \texttt{docs\slash experiments\slash }, en los in
 sustentan el Capítulo~\ref{cap:resultados} provienen de los CSV depositados en ese
 mismo directorio.
 \end{sloppypar}
+
+El comando \texttt{baseline\_postpass} ejecuta la corrida de referencia de
+\textit{OR-Tools} con el post-proceso de resecuenciación habilitado por defecto,
+consolidando múltiples semillas en un CSV. La
+Tabla~\ref{tab:anexo_baseline_postpass} detalla sus parámetros. Se ejecuta dentro
+del contenedor \textit{backend}:
+
+\begin{verbatim}
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py baseline_postpass \
+    --dataset reference-n1607 \
+    --strategy spatial_term \
+    --seeds 42,43,44
+\end{verbatim}
+
+\begin{table}[H]
+  \centering
+  \caption{Parámetros del comando \texttt{baseline\_postpass}.}
+  \label{tab:anexo_baseline_postpass}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} X@{}}
+    \toprule
+    Parámetro & Efecto \\
+    \midrule
+    \texttt{--dataset <nombre>}   & Nombre de la instancia congelada (por defecto \texttt{reference-n1607}). \\
+    \texttt{--strategy <str>}     & Estrategia del \textit{solver}: \texttt{global}, \texttt{spatial\_term} o \texttt{cluster\_first} (por defecto \texttt{spatial\_term}). \\
+    \texttt{--seeds <lista>}      & Lista de semillas separadas por comas (por defecto \texttt{42,43,44}). Cada semilla genera una permutación de nodos que alimenta la heurística de construcción del GLS. \\
+    \texttt{--csv <ruta>}         & Ruta del CSV de salida. Si se omite, el comando escribe en \texttt{docs/experiments/} con marca temporal. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+El comando \texttt{greedy\_baseline} ejecuta el heurístico de vecino más cercano
+sobre un \textit{dataset} real, con o sin post-proceso de resecuenciación 2-opt, y
+emite las mismas métricas de calidad que \texttt{baseline\_sweep} para comparación
+directa. Es determinista: no utiliza semilla aleatoria. La
+Tabla~\ref{tab:anexo_greedy_baseline} detalla sus parámetros.
+
+\begin{verbatim}
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py greedy_baseline \
+    --dataset <uuid> \
+    --service-time 2 --t-max 3 \
+    --postpass
+\end{verbatim}
+
+\begin{table}[H]
+  \centering
+  \caption{Parámetros del comando \texttt{greedy\_baseline}.}
+  \label{tab:anexo_greedy_baseline}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{5.5cm} X@{}}
+    \toprule
+    Parámetro & Efecto \\
+    \midrule
+    \texttt{--dataset <uuid>}     & UUID del \textit{dataset} (obligatorio). \\
+    \texttt{--service-time <min>} & Tiempo de servicio por árbol en minutos (por defecto $2$\,min). \\
+    \texttt{--t-max <h>}          & Cota dura $T_{\max}$ en horas (por defecto $3$\,h). \\
+    \texttt{--postpass}           & Aplica el mismo post-proceso de resecuenciación 2-opt que recibe la solución del \textit{solver}, de modo que ambos enfoques reciben el mismo tratamiento. \\
+    \texttt{--csv <ruta>}         & Ruta del CSV de salida. Si se omite, el comando escribe en \texttt{docs/experiments/} con marca temporal. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\phantomsection
+\section*{Anexo 4. Grilla de variantes y auditoría de robustez}
+\addcontentsline{toc}{section}{Anexo 4. Grilla de variantes y auditoría de robustez}
+\label{anx:grilla-variantes}
+
+Este anexo complementa las Secciones~\ref{sec:variantes-duracion}
+y~\ref{sec:comparacion-estrategias} con el detalle de la grilla de variantes operacionales
+y la descripción completa de los cuatro defectos de instrumentación detectados
+en la serie experimental.
+
+\subsubsection*{Grilla de seis variantes}
+
+La Tabla~\ref{tab:grilla-variantes} reporta las seis combinaciones de tiempo de servicio
+por árbol $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el
+\textit{dataset} real de $n=1\,607$ árboles (429 de \texttt{legacy\_api} y 1\,178 de
+\texttt{legacy\_app}, con posición mediana por código QR). Cada variante se ejecutó con
+semillas 42, 43 y 44 y un límite de \textit{solver} de 180\,s; la tabla reporta medias.
+
+\begin{table}[H]
+  \centering
+  \caption{Grilla de seis variantes sobre el \textit{dataset} real ($n=1\,607$; media de 3 semillas; límite de \textit{solver} de 180\,s). El total del \textit{pipeline} equivale al tiempo de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
+  \label{tab:grilla-variantes}
+  \small
+  \begin{tabularx}{\textwidth}{rrXXXXXXX}
+    \toprule
+    Serv. [min] & $T_{\max}$ [h] & $k$ & Balance & $\bar{T}$ [s] & $\sigma(T)$ [s] & Descart. & Desplaz. [s] & \texttt{solve} [s] ($\pm$\,sd) \\
+    \midrule
+    1 & 2 & 23{,}0 & 0{,}992 & 7\,229  & 14  & 0     & 69\,868 & 92{,}8 $\pm$ 63{,}8 \\
+    1 & 3 & 15{,}0 & 0{,}877 & 10\,417 & 378 & 0     & 59\,843 & 89{,}0 $\pm$ 3{,}6 \\
+    2 & 2 & 36{,}0 & 0{,}996 & 7\,219  & 6   & 0     & 67\,047 & 131{,}6 $\pm$ 34{,}4 \\
+    2 & 3 & 24{,}0 & 0{,}865 & 10\,399 & 391 & 0     & 56\,750 & 126{,}9 $\pm$ 6{,}7 \\
+    3 & 2 & 49{,}0 & 0{,}998 & 7\,213  & 3   & 1{,}0 & 64\,360 & 139{,}2 $\pm$ 14{,}1 \\
+    3 & 3 & 33{,}0 & 0{,}890 & 10\,554 & 284 & 0     & 59\,023 & 49{,}3 $\pm$ 14{,}1 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Los resultados muestran el compromiso central entre balance y costo total. Con
+$T_{\max}=2$\,h el número de rutas $k$ escala fuertemente con el tiempo de servicio
+($23 \rightarrow 36 \rightarrow 49$), pues el trabajo de servicio domina la capacidad de
+cada ruta, y el balance se aproxima a 1 (al coincidir $T_{\min}$ y $T_{\max}$, las rutas
+resultan de duración casi idéntica, con $\sigma(T)$ de 3 a 14\,s). Con $T_{\max}=3$\,h,
+en cambio, el tiempo total de desplazamiento se reduce en torno al 10\,\% y $k$ cae
+alrededor de un 35\,\%, a costa de un balance de $\approx 0{,}87$ con $\sigma(T)$ de 284
+a 391\,s. La única variante que descarta nodos es la más restrictiva (servicio de 3\,min
+con $T_{\max}=2$\,h), que deja un árbol fuera de la solución de forma consistente en las
+tres semillas.
+
+Respecto de las semillas, corresponde precisar su rol: dados los parámetros, el
+\textit{solver} de \textit{OR-Tools} es determinista sobre el \textit{dataset} real, por
+lo que la semilla actúa únicamente como etiqueta de la repetición. La varianza observada
+entre repeticiones (columna sd de \texttt{solve} en la tabla) proviene del corte por tiempo
+de reloj (\textit{wall-clock}) del GLS: en las variantes en que la búsqueda agota el
+presupuesto, las tres repeticiones convergen a soluciones casi idénticas.
+
+\phantomsection
+\subsubsection*{Auditoría de robustez metodológica --- detalle}
+\label{anx:auditoria-robustez}
+
+La Sección~\ref{sec:comparacion-estrategias} resume los cuatro defectos de
+instrumentación detectados en la serie experimental. Este apartado los describe
+con el detalle necesario para reproducir las correcciones.
+
+\textbf{Defecto 1 --- Semillas no propagadas.}
+Las corridas iniciales de la serie no propagaban la semilla al \textit{solver}: las
+nominales tres réplicas por celda eran la misma corrida, de modo que la dispersión
+reportada ($\sigma \approx 0{,}03\,\%$) era un artefacto de replicación idéntica y no
+describía la convergencia del algoritmo. Una corrida de recalibración posterior propagó
+semillas reales al \textit{solver}, con lo que la dispersión subió a $\sigma \approx
+2{,}4\,\%$ y catorce de veintiocho veredictos de ese ciclo debieron re-juzgarse.
+
+\textbf{Defecto 2 --- Cota de relleno inalcanzable.}
+Los ciclos iniciales usaban como piso de la métrica de relleno el producto
+$n \times \bar{n}$ (número de nodos por grado medio de la red), que viola la restricción
+de grado de los caminos y resulta por tanto inalcanzable. La métrica corregida usa el
+bosque generador mínimo $\text{MSF}_k$, que es una cota inferior válida y alcanzable por
+cualquier solución factible.
+
+\textbf{Defecto 3 --- Auto-cruces sobre cuerdas rectas.}
+La métrica de auto-cruces se calcula sobre cuerdas rectas entre paradas consecutivas, una
+geometría que no coincide ni con la red que el \textit{solver} optimiza ni con la
+polilínea real que se dibuja al censador. La correlación de Spearman entre ambas
+geometrías fue de $\rho = 0{,}527$ a nivel global e invertida en el \textit{dataset} de
+evaluación principal ($\rho = -0{,}575$). La prueba decisiva es que el aumento de
+auto-cruces atribuido al 2-opt intra-ruta, que sobre cuerdas se multiplicaba por 2{,}9 a
+5{,}3 veces, se convierte sobre la geometría real de calles en una reducción o un empate
+en 104 de 108 filas comparadas, con aumento en solo cuatro. La métrica de cuerdas conserva
+su valor comparativo dentro de cada ciclo, pues todos los brazos se contrastaron con la
+misma vara; las diferencias relativas permanecen válidas aunque el nivel absoluto quede
+acotado por esta limitación.
+
+\textbf{Defecto 4 --- Criterio de degeneración mixto.}
+El criterio de rutas degeneradas original mezclaba dos fenómenos: un aislamiento
+geográfico que captura el conteo de paradas (menos de cinco) y un perjuicio operativo real
+que captura la duración (menos de 1\,800 segundos). Una ruta con tres paradas y
+10\,485\,s de duración ocupa el 97\,\% del presupuesto diario y constituye una jornada
+completa, aunque viole el conteo. La revisión descartó la cláusula de paradas por
+indirecta, con lo que cuarenta y cinco de las ciento seis filas re-juzgables quedan
+absueltas y sesenta y una persisten por duración.

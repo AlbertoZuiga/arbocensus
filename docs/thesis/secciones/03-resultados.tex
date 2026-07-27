@@ -1044,39 +1044,26 @@ Sección~\ref{sec:posibles-mejoras}.
 
 \subsubsection*{Auditoría de robustez metodológica}
 
-La serie experimental descrita registra dieciséis ciclos de evaluación cerrados durante
-julio de 2026. El análisis retrospectivo de esa evidencia identificó cuatro defectos de
-instrumentación en los ciclos iniciales. Primero, el manejo de semillas en las corridas
-iniciales (\#194 a \#217) no propagaba la semilla al \textit{solver}: las nominales tres
-réplicas por celda eran la misma corrida, de modo que la dispersión reportada
-($\sigma \approx 0{,}03\,\%$) es artefacto de replicación idéntica y no describe la
-convergencia del algoritmo. Una corrida de recalibración (\#221) propagó semillas reales
-al \textit{solver}, con lo que la dispersión subió a $\sigma \approx 2{,}4\,\%$ y catorce
-de veintiocho veredictos de ese ciclo debieron re-juzgarse. Segundo, la métrica de relleno
-en esos mismos ciclos usaba como cota inferior el producto $n \times \bar{n}$, que viola la
-restricción de grado de los caminos y por tanto resulta inalcanzable. La métrica corregida
-usa el bosque generador mínimo $\text{MSF}_k$, que es una cota válida y alcanzable.
-
-Tercero, la métrica de auto-cruces se calcula sobre cuerdas rectas entre paradas
-consecutivas (Sección~\ref{sec:posibles-mejoras}), una geometría que no coincide ni con
-la red que el \textit{solver} optimiza ni con la polilínea real que se dibuja al censista.
-Una validación posterior (\#240 y \#241) midió la correlación entre cuerdas y trazado real
-de calles: $\rho$ de Spearman global de 0{,}527, propia de un indicador indirecto parcial,
-e invertida en el \textit{dataset} de evaluación principal ($\rho = -0{,}575$). La prueba
-decisiva es que el aumento de auto-cruces atribuido al 2-opt intra-ruta, que sobre cuerdas
-se multiplicaba por 2{,}9 a 5{,}3 veces, se convierte sobre la geometría real de calles en
-una reducción o un empate en 104 de 108 filas comparadas, con aumento en solo cuatro.
-La métrica de cuerdas conserva, no obstante, su valor comparativo: dentro de cada ciclo
-todos los brazos se contrastaron con la misma vara, de modo que las diferencias relativas
-permanecen válidas aunque el nivel absoluto quede acotado por esta limitación.
-
-Cuarto, el criterio de rutas degeneradas mezcla dos fenómenos: un aislamiento geográfico
-que captura el conteo de paradas (menos de cinco) y un perjuicio operativo real que captura
-la duración (menos de 1\,800 segundos). Una ruta con tres paradas y 10\,485\,s de duración
-ocupa el 97\,\% del presupuesto diario y constituye una jornada completa, aunque viole el
-conteo. La revisión del criterio descartó la cláusula de paradas por indirecta, con lo que
-cuarenta y cinco de las ciento seis filas re-juzgables quedan absueltas y sesenta y una
-persisten por duración.
+La serie experimental registra dieciséis ciclos de evaluación cerrados durante julio de
+2026. El análisis retrospectivo identificó cuatro defectos de instrumentación en los ciclos
+iniciales. \textbf{(1) Semillas no propagadas:} las réplicas iniciales de la serie eran la misma
+corrida, con lo que la dispersión reportada ($\sigma \approx 0{,}03\,\%$) era un artefacto
+de replicación idéntica; al propagar semillas reales la dispersión subió a
+$\sigma \approx 2{,}4\,\%$ y catorce de veintiocho veredictos debieron re-juzgarse.
+\textbf{(2) Cota de relleno inalcanzable:} los ciclos iniciales usaban $n \times \bar{n}$
+como piso, que viola la restricción de grado de los caminos; la métrica corregida usa el
+bosque generador mínimo $\text{MSF}_k$, cota válida y alcanzable.
+\textbf{(3) Auto-cruces sobre cuerdas:} la métrica de cuerdas rectas presenta una correlación
+con el trazado real de $\rho = 0{,}527$ a nivel global e invertida en el \textit{dataset}
+principal ($\rho = -0{,}575$); el aumento de auto-cruces atribuido al 2-opt intra-ruta
+sobre cuerdas se convierte, sobre la geometría real de calles, en una reducción o empate en
+104 de 108 filas comparadas. Las diferencias relativas entre brazos dentro de cada ciclo
+permanecen válidas, pues todos se contrastaron con la misma vara.
+\textbf{(4) Criterio de degeneración mixto:} la cláusula de paradas (menos de cinco) y la
+de duración (menos de 1\,800 segundos) capturan fenómenos distintos; la primera fue
+descartada por indirecta, con lo que cuarenta y cinco de las ciento seis filas re-juzgables
+quedan absueltas y sesenta y una persisten por duración. El análisis completo de los cuatro
+defectos se documenta en el Anexo~\ref{anx:auditoria-robustez}.
 
 Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones:
 de los dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el
@@ -1234,61 +1221,23 @@ agota o no el presupuesto de tiempo asignado.
 \label{sec:variantes-duracion}
 
 Se evaluaron las seis combinaciones de tiempo de servicio por árbol
-$\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h, con
-$T_{\min} = \min(7\,200\,\text{s}, T_{\max})$, sobre el \textit{dataset} real
-completo de $n=1\,607$ árboles (429 provenientes de la fuente
-\texttt{legacy\_api} y 1\,178 de \texttt{legacy\_app}, estas últimas con
-posición mediana por código QR). Cada variante se ejecutó con 3 semillas y un
-límite de \textit{solver} de 180\,s, que era el tope vigente en producción al momento de
-este perfilamiento ($\min(30 + 1{,}5 \cdot n,\ 180)$ para ese tamaño); el tope
-se bajó a 120\,s justamente a partir del análisis de sensibilidad de la
-Tabla~\ref{tab:sensibilidad-tl}.
-La Tabla~\ref{tab:grilla-variantes} resume las medias por variante.
+$\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el
+\textit{dataset} real completo de $n=1\,607$ árboles, con tres semillas y un
+límite de \textit{solver} de 180\,s vigente al momento del perfilamiento; ese
+tope se bajó a 120\,s a partir del análisis de sensibilidad de la
+Tabla~\ref{tab:sensibilidad-tl}. El compromiso entre balance, flota y costo
+total, junto con el efecto de las semillas, se documenta en el
+Anexo~\ref{anx:grilla-variantes} (\autoref{tab:grilla-variantes}).
+El hallazgo de esta grilla que no depende del régimen es que el GLS agota o no
+el presupuesto según la variante: en las de $T_{\max}=2$\,h la búsqueda
+consume el tiempo asignado de forma consistente, mientras que en la de
+servicio de 3\,min con $T_{\max}=3$\,h termina antes
+(media de 49\,s).
 
-\begin{table}[H]
-  \centering
-  \caption{Grilla de seis variantes sobre el \textit{dataset} real ($n=1\,607$; media de 3 semillas; límite de \textit{solver} de 180\,s). El total del \textit{pipeline} equivale al tiempo de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
-  \label{tab:grilla-variantes}
-  \small
-  \begin{tabularx}{\textwidth}{rrXXXXXXX}
-    \toprule
-    Serv. [min] & $T_{\max}$ [h] & $k$ & Balance & $\bar{T}$ [s] & $\sigma(T)$ [s] & Descart. & Des\-plaz. [s] & \texttt{solve} [s] ($\pm$\,sd) \\
-    \midrule
-    1 & 2 & 23{,}0 & 0{,}992 & 7\,229  & 14  & 0     & 69\,868 & 92{,}8 $\pm$ 63{,}8 \\
-    1 & 3 & 15{,}0 & 0{,}877 & 10\,417 & 378 & 0     & 59\,843 & 89{,}0 $\pm$ 3{,}6 \\
-    2 & 2 & 36{,}0 & 0{,}996 & 7\,219  & 6   & 0     & 67\,047 & 131{,}6 $\pm$ 34{,}4 \\
-    2 & 3 & 24{,}0 & 0{,}865 & 10\,399 & 391 & 0     & 56\,750 & 126{,}9 $\pm$ 6{,}7 \\
-    3 & 2 & 49{,}0 & 0{,}998 & 7\,213  & 3   & 1{,}0 & 64\,360 & 139{,}2 $\pm$ 14{,}1 \\
-    3 & 3 & 33{,}0 & 0{,}890 & 10\,554 & 284 & 0     & 59\,023 & 49{,}3 $\pm$ 14{,}1 \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-Los resultados muestran el compromiso central entre balance y costo total. Con
-$T_{\max}=2$\,h el número de rutas $k$ escala fuertemente con el tiempo de
-servicio ($23 \rightarrow 36 \rightarrow 49$), pues el trabajo de servicio
-domina la capacidad de cada ruta, y el balance se aproxima a 1
-(al coincidir $T_{\min}$ y $T_{\max}$, las rutas resultan de duración casi
-idéntica, con $\sigma(T)$ de 3 a 14\,s). Con $T_{\max}=3$\,h, en cambio, el
-tiempo total de desplazamiento se reduce en torno al 10\,\% y $k$ cae
-alrededor de un 35\,\%, a costa de un balance de $\approx 0{,}87$ con
-$\sigma(T)$ de 284 a 391\,s. La única variante que descarta nodos es la más
-restrictiva (servicio de 3\,min con $T_{\max}=2$\,h), que deja un árbol fuera
-de la solución de forma consistente en las tres semillas.
-
-Respecto de las semillas, corresponde precisar su rol: dados los parámetros,
-el \textit{solver} de \textit{OR-Tools} es determinista, por lo que sobre el \textit{dataset}
-real la semilla actúa únicamente como etiqueta de la repetición. La varianza
-observada entre repeticiones (columna sd de \texttt{solve} en la
-Tabla~\ref{tab:grilla-variantes}) proviene del corte por tiempo de reloj
-(\textit{wall-clock}) del GLS: en las variantes en que la búsqueda agota el
-presupuesto, las tres repeticiones convergen a soluciones casi idénticas.
-
-Finalmente, la grilla registra rutas cuyo tiempo estimado excede $T_{\max}$
-en la configuración de 2\,h (por ejemplo, la práctica totalidad de las rutas
-en las variantes con servicio de 2 y 3\,min). Este exceso no constituye una
-infactibilidad del \textit{solver}, sino un artefacto de redondeo: el \textit{callback}
-de tránsito trunca cada arco a aritmética entera
+La grilla registra, además, rutas cuyo tiempo estimado excede $T_{\max}$
+en las configuraciones de 2\,h. Este exceso no constituye una infactibilidad
+del \textit{solver}, sino un artefacto de redondeo: el \textit{callback} de
+tránsito trunca cada arco a aritmética entera
 (\texttt{int(travel + service)}), mientras que la métrica de duración estimada
 suma los mismos términos en punto flotante; con 30 a 70 arcos por ruta, el
 truncamiento acumula una discrepancia de 10 a 70\,s por ruta. La cota dura
