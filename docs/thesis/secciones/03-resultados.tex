@@ -917,7 +917,8 @@ CSV sin propagarla al \textit{solver}. Las cifras son, por tanto, una medición 
 celda y no la media de tres repeticiones, y la reducción no lleva barra de error.
 
 La segunda es de instrumento. La métrica de auto-cruces se calcula sobre cuerdas
-rectas entre paradas consecutivas, y la validación posterior de \#240 y \#241 midió su
+rectas entre paradas consecutivas, y la auditoría de instrumento de julio de 2026
+(\texttt{docs/experiments/evidence-audit-20260724.md}) midió su
 correlación con el trazado real de calles: un $\rho$ de Spearman global de $0{,}527$,
 propio de un indicador indirecto parcial, e \textit{invertido} en el
 \textit{dataset} de evaluación agregado ($\rho = -0{,}575$), que es precisamente la
@@ -938,7 +939,7 @@ responde a la configuración de la función objetivo y no al corte por tiempo de
 Dos observaciones independientes apuntan en la misma dirección y refuerzan esa
 lectura: el análisis de sensibilidad al presupuesto del \textit{solver}
 (Tabla~\ref{tab:sensibilidad-tl}), que muestra que duplicar el tiempo de cómputo no
-altera la solución, y la re-medición de \#242 sobre \texttt{crossings\_road}, que
+altera la solución, y la re-medición posterior sobre \texttt{crossings\_road}, que
 sobre la geometría real invierte el signo del efecto de este mismo brazo. Establecer
 la afirmación en su forma fuerte exigiría re-correr el experimento con semillas
 efectivamente propagadas al \textit{solver} y reportar los auto-cruces sobre el
@@ -1110,10 +1111,11 @@ Estas correcciones se originaron dentro de la propia serie y no invalidan sus co
 de los dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el
 instrumento corregido sin que cambiara el descarte final y los demás descansan en criterios
 —tiempo de viaje, relleno, balance— ajenos a los defectos detectados. El caso de mayor
-alcance es el 2-opt intra-ruta, rechazado en \#196 por empeorar los auto-cruces medidos en
-cuerdas: la validación de \#240 y \#241 mostró que ese empeoramiento era artefacto de la
-métrica y que el algoritmo limpia la geometría real. Sobre esa base, el ciclo \#245 lo
-incorporó a la configuración de producción, con reducción simultánea de tiempo de viaje y
+alcance es el 2-opt intra-ruta, rechazado en un ciclo de evaluación anterior por empeorar
+los auto-cruces medidos en cuerdas: la auditoría de instrumento mostró que ese
+empeoramiento era artefacto de la métrica y que el algoritmo limpia la geometría real.
+Sobre esa base, el ciclo de validación posterior lo incorporó a la configuración de
+producción, con reducción simultánea de tiempo de viaje y
 de auto-cruces sobre calle en las doce instancias de prueba y sin degradar el balance ni el
 número de rutas. Es el único cambio de configuración por defecto de toda la serie, y no
 proviene de barrer términos de la función objetivo sino de corregir el instrumento de
