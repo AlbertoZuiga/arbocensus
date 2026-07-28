@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+vi.mock("@/api/datasets.js", () => ({
+  fetchTreeObservations: vi.fn().mockResolvedValue([]),
+  fetchLegacyTreeObservations: vi.fn(),
+}));
+
 import ProximityPanel from "./ProximityPanel.jsx";
 
 vi.mock("./CameraCapture.jsx", () => ({
@@ -18,16 +25,21 @@ vi.mock("./CameraCapture.jsx", () => ({
 const stop = { id: "s1", sequence: 2, lat: -33.45, lon: -70.65, status: "pending" };
 
 function renderPanel(props = {}) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <ProximityPanel
-      stop={stop}
-      distance={5}
-      inRange
-      locked={false}
-      onVisit={vi.fn()}
-      onSkip={vi.fn()}
-      {...props}
-    />
+    <QueryClientProvider client={client}>
+      <ProximityPanel
+        stop={stop}
+        distance={5}
+        inRange
+        locked={false}
+        onVisit={vi.fn()}
+        onSkip={vi.fn()}
+        {...props}
+      />
+    </QueryClientProvider>
   );
 }
 
@@ -170,14 +182,16 @@ describe("ProximityPanel", () => {
     ).toBeInTheDocument();
 
     rerender(
-      <ProximityPanel
-        stop={{ ...stop, id: "s2", sequence: 3 }}
-        distance={5}
-        inRange
-        locked={false}
-        onVisit={vi.fn()}
-        onSkip={vi.fn()}
-      />
+      <QueryClientProvider client={new QueryClient()}>
+        <ProximityPanel
+          stop={{ ...stop, id: "s2", sequence: 3 }}
+          distance={5}
+          inRange
+          locked={false}
+          onVisit={vi.fn()}
+          onSkip={vi.fn()}
+        />
+      </QueryClientProvider>
     );
     expect(
       screen.queryByRole("button", { name: "Confirmar registro" })

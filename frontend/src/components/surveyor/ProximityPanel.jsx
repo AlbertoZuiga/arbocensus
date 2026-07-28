@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import CameraCapture from "./CameraCapture.jsx";
-import PreviousCensusCard from "./PreviousCensusCard.jsx";
+import TreePhotoGallery from "./TreePhotoGallery.jsx";
+import useTreePhotos from "@/hooks/useTreePhotos.js";
 import { PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
 const REGISTER_OPTIONS = [
@@ -194,9 +195,12 @@ export default function ProximityPanel({
   skipError,
 }) {
   const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const photos = useTreePhotos(stop?.tree_id);
 
   useEffect(() => {
     setRegisterSheetOpen(false);
+    setGalleryOpen(false);
   }, [stop?.id]);
 
   if (!stop) return null;
@@ -217,38 +221,59 @@ export default function ProximityPanel({
   };
 
   const errorMessage = networkErrorMessage(visitError ?? skipError);
+  const treeLabel = `${locked ? "Árbol" : "Próximo árbol"} ${stop.sequence}`;
+
+  const summary = (
+    <>
+      <span className="block text-base font-bold text-slate-900">{treeLabel}</span>
+      {skipped ? (
+        <span className="block text-sm font-medium text-slate-500">
+          Omitido{stop.skip_reason ? ` — ${stop.skip_reason}` : ""}
+        </span>
+      ) : locked ? (
+        <span className="block text-sm font-semibold text-amber-700">
+          Visita los árboles anteriores primero
+        </span>
+      ) : distance == null ? (
+        <span className="block text-sm text-muted-foreground">
+          Esperando ubicación GPS…
+        </span>
+      ) : (
+        <span
+          className={cn(
+            "block text-sm font-bold",
+            inRange ? "text-primary" : "text-amber-700",
+          )}
+        >
+          {inRange
+            ? `A ${Math.round(distance)} m — en rango`
+            : `A ${Math.round(distance)} m — fuera del rango de ${PROXIMITY_THRESHOLD_M} m`}
+        </span>
+      )}
+    </>
+  );
 
   return (
     <div className="relative shrink-0">
       <div className="flex flex-col gap-3 border-t bg-white px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-bold text-slate-900">
-              {locked ? "Árbol" : "Próximo árbol"} {stop.sequence}
-            </p>
-            {skipped ? (
-              <p className="text-sm font-medium text-slate-500">
-                Omitido{stop.skip_reason ? ` — ${stop.skip_reason}` : ""}
-              </p>
-            ) : locked ? (
-              <p className="text-sm font-semibold text-amber-700">
-                Visita los árboles anteriores primero
-              </p>
-            ) : distance == null ? (
-              <p className="text-sm text-muted-foreground">Esperando ubicación GPS…</p>
-            ) : (
-              <p
-                className={cn(
-                  "text-sm font-bold",
-                  inRange ? "text-primary" : "text-amber-700",
-                )}
-              >
-                {inRange
-                  ? `A ${Math.round(distance)} m — en rango`
-                  : `A ${Math.round(distance)} m — fuera del rango de ${PROXIMITY_THRESHOLD_M} m`}
-              </p>
-            )}
-          </div>
+          {photos.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setGalleryOpen(true)}
+              aria-label={`Ver fotos de ${treeLabel}`}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            >
+              <img
+                src={photos[0]}
+                alt=""
+                className="h-12 w-12 shrink-0 rounded-md border object-cover"
+              />
+              <span className="min-w-0 flex-1">{summary}</span>
+            </button>
+          ) : (
+            <div className="min-w-0 flex-1">{summary}</div>
+          )}
 
           {skipped ? (
             <Badge variant="secondary" className="bg-slate-200 text-slate-600">
@@ -271,8 +296,6 @@ export default function ProximityPanel({
           )}
         </div>
 
-        {!resolved && stop.tree_id && <PreviousCensusCard treeId={stop.tree_id} />}
-
         {!resolved && errorMessage && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
             {errorMessage}
@@ -294,6 +317,13 @@ export default function ProximityPanel({
           </Button>
         )}
       </div>
+
+      <TreePhotoGallery
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        title={treeLabel}
+        photos={photos}
+      />
 
       {registerSheetOpen && (
         <RegisterSheet

@@ -7,11 +7,6 @@ import {
 } from "@/api/datasets.js";
 import { Badge } from "@/components/ui/badge";
 import { getErrorMessage } from "@/lib/errors";
-import {
-  STATUS_LABELS,
-  STATUS_STYLES,
-  dateFormatter,
-} from "@/lib/observations";
 import { cn } from "@/lib/utils";
 
 const SOURCE_LABELS = {
@@ -19,6 +14,28 @@ const SOURCE_LABELS = {
   legacy_app: "App",
   "": "Campo",
 };
+
+const STATUS_LABELS = {
+  alive: "Vivo",
+  removed: "Removido",
+  not_found: "No encontrado",
+  other: "Otro",
+  unknown: "Desconocido",
+};
+
+const STATUS_STYLES = {
+  alive: "border-green-600/30 bg-green-600/10 text-green-700",
+  removed: "border-destructive/30 bg-destructive/10 text-destructive",
+  not_found: "border-amber-600/30 bg-amber-600/10 text-amber-700",
+  other: "border-muted-foreground/30 bg-muted text-muted-foreground",
+  unknown: "border-muted-foreground/30 bg-muted text-muted-foreground",
+};
+
+const dateFormatter = new Intl.DateTimeFormat("es-CL", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
 
 const timeFormatter = new Intl.DateTimeFormat("es-CL", {
   hour: "2-digit",
@@ -147,11 +164,7 @@ function EntrySkeleton() {
   );
 }
 
-export default function TreeHistoryPopup({
-  treeId,
-  legacyTree,
-  className = "w-60",
-}) {
+export default function TreeHistoryPopup({ treeId, legacyTree }) {
   const { data, isLoading, error } = useQuery({
     queryKey: treeId
       ? ["tree-observations", treeId]
@@ -166,7 +179,7 @@ export default function TreeHistoryPopup({
   });
 
   return (
-    <section className={cn("space-y-2", className)}>
+    <section className="w-60 space-y-2">
       <header className="flex items-baseline justify-between gap-2 border-b pb-1.5">
         <h3 className="text-sm font-semibold leading-none">Historial</h3>
         {data && data.length > 0 && (
