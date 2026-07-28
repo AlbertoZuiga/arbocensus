@@ -252,8 +252,14 @@ class TreeObservationListView(APIView):
         except legacy.LegacyDatabaseNotConfiguredError:
             return None
 
+    @staticmethod
+    def _visible_trees(user):
+        if user.role == CustomUser.Role.ADMIN:
+            return Tree.objects.all()
+        return Tree.objects.filter(routestop__route__surveyor=user).distinct()
+
     def get(self, request, tree_id):
-        tree = get_object_or_404(Tree, id=tree_id)
+        tree = get_object_or_404(self._visible_trees(request.user), id=tree_id)
         # The legacy history is read live: datasets loaded from frozen instance
         # CSVs never received the import-time TreeObservation snapshot, and the
         # same legacy tree lives in as many Tree rows as datasets hold it. Only

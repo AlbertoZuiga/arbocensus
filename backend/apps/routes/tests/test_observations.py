@@ -361,6 +361,22 @@ def test_observations_list_accessible_to_surveyor(solution_with_route, surveyor)
     assert len(response.data) == 1
 
 
+def test_observations_list_hides_unassigned_tree(
+    solution_with_route, make_dataset_with_trees
+):
+    _, trees = make_dataset_with_trees([(-70.67, -33.47)])
+    other = CustomUserFactory(role="surveyor")
+    response = _client(other).get(f"/api/datasets/trees/{trees[0].id}/observations/")
+    assert response.status_code == 404
+
+
+def test_observations_list_visible_to_admin_for_any_tree(make_dataset_with_trees):
+    _, trees = make_dataset_with_trees([(-70.67, -33.47)])
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/datasets/trees/{trees[0].id}/observations/")
+    assert response.status_code == 200
+
+
 def test_observations_list_rejects_anonymous(solution_with_route):
     _, _, stops = solution_with_route
     response = APIClient().get(f"/api/datasets/trees/{stops[0].tree.id}/observations/")
