@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import CameraCapture from "./CameraCapture.jsx";
+import PreviousCensusCard from "./PreviousCensusCard.jsx";
 import { PROXIMITY_THRESHOLD_M } from "../../utils/geo.js";
 
 const REGISTER_OPTIONS = [
@@ -269,6 +270,8 @@ export default function ProximityPanel({
             </Button>
           )}
         </div>
+
+        {!resolved && stop.tree_id && <PreviousCensusCard treeId={stop.tree_id} />}
 
         {!resolved && errorMessage && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
