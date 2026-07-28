@@ -49,6 +49,7 @@ describe("RoutingConfigForm", () => {
         maxRouteTimeSec: 10800,
         serviceTimeSec: 120,
         strategy: "spatial_term",
+        configPreset: "default",
       })
     );
   });

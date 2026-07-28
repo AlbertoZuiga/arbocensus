@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import JobStatusBadge from "./JobStatusBadge";
 import RoutingConfigForm from "./RoutingConfigForm";
+import SolutionsComparisonTable from "./SolutionsComparisonTable";
 
 export default function OptimizationPanel({ datasetId }) {
   const queryClient = useQueryClient();
@@ -70,6 +71,8 @@ export default function OptimizationPanel({ datasetId }) {
           </CardContent>
         </Card>
       )}
+
+      <SolutionsComparisonTable datasetId={datasetId} />
     </div>
   );
 }

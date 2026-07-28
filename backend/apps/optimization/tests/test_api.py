@@ -82,6 +82,47 @@ def test_create_job_rejects_invalid_strategy(make_dataset_with_trees, monkeypatc
     assert not OptimizationJob.objects.exists()
 
 
+def test_create_job_defaults_to_default_config_preset(
+    make_dataset_with_trees, monkeypatch
+):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
+
+    response = _client("admin").post(
+        "/api/optimization/jobs/", _payload(dataset), format="json"
+    )
+
+    assert response.status_code == 201
+    job = OptimizationJob.objects.get(id=response.data["id"])
+    assert job.config_preset == "default"
+
+
+def test_create_job_persists_chosen_config_preset(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
+
+    payload = _payload(dataset)
+    payload["config_preset"] = "arc_linear_30"
+    response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
+
+    assert response.status_code == 201
+    assert response.data["config_preset"] == "arc_linear_30"
+    job = OptimizationJob.objects.get(id=response.data["id"])
+    assert job.config_preset == "arc_linear_30"
+
+
+def test_create_job_rejects_invalid_config_preset(make_dataset_with_trees, monkeypatch):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
+
+    payload = _payload(dataset)
+    payload["config_preset"] = "bogus"
+    response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
+
+    assert response.status_code == 400
+    assert not OptimizationJob.objects.exists()
+
+
 def test_create_job_rejected_for_non_admin(make_dataset_with_trees, monkeypatch):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
     delay = MagicMock()
@@ -122,6 +163,7 @@ def test_get_job_status_shape(make_dataset_with_trees):
     assert set(response.data) == {
         "id",
         "strategy",
+        "config_preset",
         "status",
         "error_message",
         "metrics",
@@ -186,11 +228,15 @@ def test_get_solution_shape(make_dataset_with_trees):
     assert set(response.data) == {
         "id",
         "strategy",
+        "config_preset",
+        "config_preset_label",
         "total_routes",
         "total_travel_time_sec",
         "total_service_time_sec",
         "total_time_sec",
         "balance_score",
+        "dropped_trees",
+        "degenerate_routes",
         "sum_max_radius_m",
         "interleave_total",
         "interleave_per_route",
@@ -198,6 +244,7 @@ def test_get_solution_shape(make_dataset_with_trees):
         "timing",
         "generated_at",
         "published_at",
+        "recommended",
         "job",
         "dataset",
     }
@@ -205,6 +252,85 @@ def test_get_solution_shape(make_dataset_with_trees):
     assert response.data["job"] == str(job.id)
     assert response.data["total_service_time_sec"] == 0
     assert response.data["total_time_sec"] == 120.5
+
+
+def test_list_solutions_filters_by_dataset_and_flags_recommended(
+    make_dataset_with_trees,
+):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    other_dataset, _ = make_dataset_with_trees([(-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    other_config = RoutingConfig.objects.create(dataset=other_dataset)
+    job = OptimizationJob.objects.create(
+        config=config, status=OptimizationJob.Status.COMPLETED
+    )
+    other_job = OptimizationJob.objects.create(
+        config=other_config, status=OptimizationJob.Status.COMPLETED
+    )
+    slow = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=1, total_travel_time_sec=900.0
+    )
+    fast = RoutingSolution.objects.create(
+        job=job,
+        strategy="spatial_term",
+        total_routes=1,
+        total_travel_time_sec=100.0,
+    )
+    RoutingSolution.objects.create(
+        job=other_job,
+        strategy="global",
+        total_routes=1,
+        total_travel_time_sec=1.0,
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/solutions/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    ids = {row["id"] for row in response.data["results"]}
+    assert ids == {str(slow.id), str(fast.id)}
+    recommended = {row["id"]: row["recommended"] for row in response.data["results"]}
+    assert recommended[str(fast.id)] is True
+    assert recommended[str(slow.id)] is False
+
+
+def test_list_solutions_without_dataset_filter_flags_recommended_per_dataset(
+    make_dataset_with_trees,
+):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    other_dataset, _ = make_dataset_with_trees([(-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    other_config = RoutingConfig.objects.create(dataset=other_dataset)
+    job = OptimizationJob.objects.create(
+        config=config, status=OptimizationJob.Status.COMPLETED
+    )
+    other_job = OptimizationJob.objects.create(
+        config=other_config, status=OptimizationJob.Status.COMPLETED
+    )
+    slow = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=1, total_travel_time_sec=900.0
+    )
+    fast = RoutingSolution.objects.create(
+        job=job,
+        strategy="spatial_term",
+        total_routes=1,
+        total_travel_time_sec=100.0,
+    )
+    other_fast = RoutingSolution.objects.create(
+        job=other_job,
+        strategy="global",
+        total_routes=1,
+        total_travel_time_sec=1.0,
+    )
+
+    response = _client("admin").get("/api/optimization/solutions/")
+
+    assert response.status_code == 200
+    recommended = {row["id"]: row["recommended"] for row in response.data["results"]}
+    assert recommended[str(fast.id)] is True
+    assert recommended[str(slow.id)] is False
+    assert recommended[str(other_fast.id)] is True
 
 
 def _solution_with_surveyor_route(make_dataset_with_trees, surveyor):

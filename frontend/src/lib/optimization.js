@@ -7,6 +7,19 @@ export const STRATEGY_LABELS = {
 export const strategyLabel = (strategy) =>
   STRATEGY_LABELS[strategy] ?? strategy;
 
+// Mirrors backend/apps/optimization/config_presets.py — keep both in sync.
+export const CONFIG_PRESET_OPTIONS = [
+  { value: "default", label: "Producción (default)" },
+  {
+    value: "temporal_span_100",
+    label: "Span temporal 100 (rutas más compactas, más caminata)",
+  },
+  {
+    value: "arc_linear_30",
+    label: "Peso de arco lineal 30 (menos cruces donde el travel tiene holgura)",
+  },
+];
+
 const STATUS_SUMMARIES = {
   queued: "En cola",
   running: "Optimizando…",
@@ -86,6 +99,18 @@ export const COMPARISON_METRICS = [
     label: "Balance de carga",
     format: (v) => v.toFixed(2),
     better: "higher",
+  },
+  {
+    key: "dropped_trees",
+    label: "Árboles fuera de ruta",
+    format: (v) => `${v}`,
+    better: "lower",
+  },
+  {
+    key: "degenerate_routes",
+    label: "Rutas degeneradas",
+    format: (v) => `${v}`,
+    better: "lower",
   },
   {
     key: "sum_max_radius_m",

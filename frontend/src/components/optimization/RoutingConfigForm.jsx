@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { createJob, fetchFleetEstimate } from "@/api/optimization";
 import { getErrorMessage } from "@/lib/errors";
+import { CONFIG_PRESET_OPTIONS } from "@/lib/optimization";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +26,7 @@ const DEFAULTS = {
   maxRouteTimeMinutes: 180,
   serviceTimeMinutes: 2,
   strategy: "spatial_term",
+  configPreset: "default",
 };
 
 const STRATEGY_OPTIONS = [
@@ -51,6 +53,7 @@ export default function RoutingConfigForm({
     DEFAULTS.serviceTimeMinutes
   );
   const [strategy, setStrategy] = useState(DEFAULTS.strategy);
+  const [configPreset, setConfigPreset] = useState(DEFAULTS.configPreset);
 
   const hasEmptyField = [
     minRouteTimeMinutes,
@@ -86,6 +89,7 @@ export default function RoutingConfigForm({
         maxRouteTimeSec: minutesToSeconds(maxRouteTimeMinutes),
         serviceTimeSec: minutesToSeconds(serviceTimeMinutes),
         strategy,
+        configPreset,
       }),
     onSuccess: (job) => {
       onJobCreated?.(job);
@@ -166,6 +170,30 @@ export default function RoutingConfigForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="config-preset">Configuración de precios</Label>
+            <Select value={configPreset} onValueChange={setConfigPreset}>
+              <SelectTrigger id="config-preset">
+                <SelectValue>
+                  {
+                    CONFIG_PRESET_OPTIONS.find((o) => o.value === configPreset)
+                      ?.label
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {CONFIG_PRESET_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Perfil de precios del solver. Corre uno a la vez; para comparar
+              varios, lanza un trabajo por configuración.
+            </p>
           </div>
 
           {fleetEstimate != null && (

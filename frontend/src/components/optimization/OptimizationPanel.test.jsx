@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 vi.mock("@/api/optimization", () => ({
   createJob: vi.fn(),
   fetchJobs: vi.fn().mockResolvedValue([]),
+  fetchSolutionsForDataset: vi.fn().mockResolvedValue([]),
 }));
 
 import { createJob, fetchJobs } from "@/api/optimization";

@@ -10,6 +10,7 @@ import {
   fetchJob,
   fetchJobs,
   fetchSolution,
+  fetchSolutionsForDataset,
 } from "./optimization.js";
 
 describe("optimization api", () => {
@@ -26,6 +27,7 @@ describe("optimization api", () => {
       maxRouteTimeSec: 10800,
       serviceTimeSec: 300,
       strategy: "compare",
+      configPreset: "arc_linear_30",
     });
 
     expect(client.post).toHaveBeenCalledWith("/optimization/jobs/", {
@@ -34,6 +36,7 @@ describe("optimization api", () => {
       max_route_time_sec: 10800,
       service_time_sec: 300,
       strategy: "compare",
+      config_preset: "arc_linear_30",
     });
   });
 
@@ -72,5 +75,22 @@ describe("optimization api", () => {
     const result = await fetchSolution("s1");
     expect(client.get).toHaveBeenCalledWith("/optimization/solutions/s1/");
     expect(result).toEqual({ balance: 0.9 });
+  });
+
+  it("fetches all solutions for a dataset as an array", async () => {
+    client.get.mockResolvedValue({
+      data: { results: [{ id: "s2" }, { id: "s1" }] },
+    });
+    const result = await fetchSolutionsForDataset("d1");
+    expect(client.get).toHaveBeenCalledWith("/optimization/solutions/", {
+      params: { dataset: "d1" },
+    });
+    expect(result).toEqual([{ id: "s2" }, { id: "s1" }]);
+  });
+
+  it("returns an empty array when a dataset has no solutions", async () => {
+    client.get.mockResolvedValue({ data: {} });
+    const result = await fetchSolutionsForDataset("d1");
+    expect(result).toEqual([]);
   });
 });

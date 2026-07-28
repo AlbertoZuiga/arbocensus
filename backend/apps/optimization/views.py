@@ -12,6 +12,7 @@ from rest_framework.response import Response
 
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
 from .pipeline import estimate_fleet_from_cache
+from .recommendation import pick_recommended
 from .serializers import (
     OptimizationJobSerializer,
     RoutingConfigSerializer,
@@ -48,7 +49,9 @@ class OptimizationJobViewSet(
         serializer.is_valid(raise_exception=True)
         config = serializer.save()
         job = OptimizationJob.objects.create(
-            config=config, strategy=serializer.validated_data["strategy"]
+            config=config,
+            strategy=serializer.validated_data["strategy"],
+            config_preset=serializer.validated_data["config_preset"],
         )
         try:
             run_optimization.delay(str(job.id))
@@ -60,7 +63,9 @@ class OptimizationJobViewSet(
         )
 
 
-class RoutingSolutionViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class RoutingSolutionViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     serializer_class = RoutingSolutionSerializer
     permission_classes = [IsAuthenticated]
 
@@ -72,8 +77,27 @@ class RoutingSolutionViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
     def get_queryset(self) -> Any:
         user = self.request.user
         if user.role == CustomUser.Role.ADMIN:
-            return RoutingSolution.objects.all()
-        return RoutingSolution.objects.filter(routes__surveyor=user).distinct()
+            queryset = RoutingSolution.objects.all()
+        else:
+            queryset = RoutingSolution.objects.filter(routes__surveyor=user).distinct()
+        dataset = self.request.query_params.get("dataset")
+        if dataset:
+            queryset = queryset.filter(dataset=dataset)
+        return queryset
+
+    def get_serializer_context(self) -> Any:
+        context = super().get_serializer_context()
+        dataset = self.request.query_params.get("dataset")
+        if dataset:
+            context["recommended_solution_id"] = pick_recommended(dataset)
+        elif self.action == "list":
+            context["recommended_by_dataset"] = {
+                dataset_id: pick_recommended(dataset_id)
+                for dataset_id in self.get_queryset()
+                .values_list("dataset_id", flat=True)
+                .distinct()
+            }
+        return context
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):

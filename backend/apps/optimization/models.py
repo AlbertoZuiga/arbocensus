@@ -1,6 +1,10 @@
 import uuid
 
 from apps.datasets.models import Dataset
+from apps.optimization.config_presets import (
+    CONFIG_PRESET_CHOICES,
+    DEFAULT_CONFIG_PRESET,
+)
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import F, Q
@@ -68,6 +72,9 @@ class OptimizationJob(models.Model):
     strategy = models.CharField(
         max_length=20, choices=Strategy.choices, default=Strategy.SPATIAL_TERM
     )
+    config_preset = models.CharField(
+        max_length=30, choices=CONFIG_PRESET_CHOICES, default=DEFAULT_CONFIG_PRESET
+    )
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.QUEUED
     )
@@ -120,6 +127,8 @@ class RoutingSolution(models.Model):
     total_routes = models.IntegerField()
     total_travel_time_sec = models.FloatField(default=0)
     balance_score = models.FloatField(default=0)
+    dropped_trees = models.IntegerField(default=0)
+    degenerate_routes = models.IntegerField(default=0)
     sum_max_radius_m = models.IntegerField(default=0)
     interleave_total = models.IntegerField(default=0)
     interleave_per_route = models.FloatField(default=0)

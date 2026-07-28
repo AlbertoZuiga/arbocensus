@@ -2,6 +2,7 @@ import math
 
 from apps.datasets.models import Tree
 from apps.optimization.cluster_constraints import build_cluster_plan
+from apps.optimization.config_presets import CONFIG_PRESETS
 from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
 from apps.optimization.models import RoutingConfig, RoutingSolution
 from apps.optimization.multistart import solve_multistart
@@ -16,6 +17,9 @@ from apps.routes.models import Route, RouteStop
 from django.db import transaction
 
 SOLVER_TIME_LIMIT_SEC = 120
+
+# Stub routes no surveyor can be handed: under 30 minutes total.
+DEGENERATE_MIN_DURATION_SEC = 1800
 
 
 def default_time_limit_sec(tree_count):
@@ -58,10 +62,10 @@ class OptimizationPipeline:
         time_limit_sec=None,
         penalties=DEFAULT_PENALTIES,
         spatial_span_coef=SPATIAL_SPAN_COEF,
-        time_span_coef=0,
+        time_span_coef=None,
         time_global_span_coef=0,
         convex_arc_lambda=0.0,
-        arc_coef=1,
+        arc_coef=None,
         max_vehicles=None,
         node_seed=0,
         node_seeds=None,
@@ -69,6 +73,12 @@ class OptimizationPipeline:
         warm_start=None,
         debug_sink=None,
     ):
+        preset = CONFIG_PRESETS[self.job.config_preset]
+        if time_span_coef is None:
+            time_span_coef = preset["time_span_coef"]
+        if arc_coef is None:
+            arc_coef = preset["arc_coef"]
+
         trees = sorted(
             Tree.objects.filter(dataset=self.config.dataset, is_active=True),
             key=lambda tree: tree.id,
@@ -136,6 +146,7 @@ class OptimizationPipeline:
         solved = {}
         timers = {}
         dropped_nodes = set()
+        dropped_by_strategy = {}
         for s in strategies_to_run:
             timer = PhaseTimer()
             solve_kwargs = {
@@ -182,6 +193,7 @@ class OptimizationPipeline:
             routes, dropped = result
             solved[s.value] = routes
             timers[s.value] = timer
+            dropped_by_strategy[s.value] = dropped
             dropped_nodes.update(dropped)
 
         results = {}
@@ -195,6 +207,7 @@ class OptimizationPipeline:
                     s_value,
                     cost_matrix_timing,
                     timers[s_value],
+                    len(dropped_by_strategy[s_value]),
                 )
 
         return {
@@ -214,6 +227,7 @@ class OptimizationPipeline:
         strategy,
         cost_matrix_timing,
         timer,
+        dropped_trees=0,
     ):
         routes = resequence_routes(routes, matrix)
         route_times = [self._travel_time(matrix, route) for route in routes]
@@ -221,6 +235,9 @@ class OptimizationPipeline:
             travel + len(route) * self.config.service_time_sec
             for travel, route in zip(route_times, routes, strict=True)
         ]
+        degenerate_routes = sum(
+            1 for t in estimated_times if t < DEGENERATE_MIN_DURATION_SEC
+        )
 
         with timer.phase("metrics"):
             spatial = aggregate_metrics(routes_from_points(routes, trees))
@@ -233,6 +250,8 @@ class OptimizationPipeline:
             total_routes=len(routes),
             total_travel_time_sec=sum(route_times),
             balance_score=self._balance_score(estimated_times),
+            dropped_trees=dropped_trees,
+            degenerate_routes=degenerate_routes,
             sum_max_radius_m=spatial["sum_max_radius_m"],
             interleave_total=spatial["interleave_total"],
             interleave_per_route=spatial["interleave_per_route"],

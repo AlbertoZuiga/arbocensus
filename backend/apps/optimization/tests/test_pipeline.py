@@ -27,6 +27,7 @@ def make_job(
     min_route_time_sec=1800,
     max_route_time_sec=10800,
     service_time_sec=300,
+    config_preset="default",
 ):
     dataset = Dataset.objects.create(name="santiago", total_trees=tree_count)
     for i in range(tree_count):
@@ -40,7 +41,7 @@ def make_job(
         max_route_time_sec=max_route_time_sec,
         service_time_sec=service_time_sec,
     )
-    return OptimizationJob.objects.create(config=config)
+    return OptimizationJob.objects.create(config=config, config_preset=config_preset)
 
 
 def osrm_durations(n, travel=60.0):
@@ -256,3 +257,81 @@ def test_pipeline_resequencing_preserves_stops_per_route(requests_mock):
         assert len(set(stops)) == len(stops)
 
     assert total_stops == tree_count
+
+
+def capture_arc_kwargs(monkeypatch):
+    captured = []
+    real_solve = pipeline.solve_by_strategy
+
+    def spy(strategy, matrix, **kwargs):
+        captured.append(
+            {"time_span_coef": kwargs["time_span_coef"], "arc_coef": kwargs["arc_coef"]}
+        )
+        return real_solve(strategy, matrix, **kwargs)
+
+    monkeypatch.setattr(pipeline, "solve_by_strategy", spy)
+    return captured
+
+
+def test_pipeline_applies_default_config_preset(requests_mock, monkeypatch):
+    job = make_job(10, config_preset="default")
+    requests_mock.get(ANY, json=osrm_durations(10))
+    captured = capture_arc_kwargs(monkeypatch)
+
+    OptimizationPipeline(job).run(strategy="global", time_limit_sec=2)
+
+    assert captured == [{"time_span_coef": 0, "arc_coef": 1}]
+
+
+def test_pipeline_applies_named_config_preset(requests_mock, monkeypatch):
+    job = make_job(10, config_preset="arc_linear_30")
+    requests_mock.get(ANY, json=osrm_durations(10))
+    captured = capture_arc_kwargs(monkeypatch)
+
+    OptimizationPipeline(job).run(strategy="global", time_limit_sec=2)
+
+    assert captured == [{"time_span_coef": 0, "arc_coef": 30}]
+
+
+def test_pipeline_explicit_kwarg_overrides_config_preset(requests_mock, monkeypatch):
+    job = make_job(10, config_preset="arc_linear_30")
+    requests_mock.get(ANY, json=osrm_durations(10))
+    captured = capture_arc_kwargs(monkeypatch)
+
+    OptimizationPipeline(job).run(strategy="global", time_limit_sec=2, arc_coef=1)
+
+    assert captured == [{"time_span_coef": 0, "arc_coef": 1}]
+
+
+def test_pipeline_persists_dropped_trees_per_solution(requests_mock):
+    tree_count = 8
+    job = make_job(tree_count)
+    durations = osrm_durations(tree_count)
+    unreachable_index = 3
+    for i in range(tree_count):
+        durations["durations"][i][unreachable_index] = 9_999_999.0
+        durations["durations"][unreachable_index][i] = 9_999_999.0
+    durations["durations"][unreachable_index][unreachable_index] = 0.0
+    requests_mock.get(ANY, json=durations)
+
+    OptimizationPipeline(job).run(strategy="global")
+
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
+    assert solution.dropped_trees == 1
+
+
+def test_pipeline_persists_degenerate_routes(requests_mock):
+    tree_count = 2
+    job = make_job(
+        tree_count,
+        min_route_time_sec=1,
+        max_route_time_sec=100,
+        service_time_sec=1,
+    )
+    requests_mock.get(ANY, json=osrm_durations(tree_count, travel=1.0))
+
+    OptimizationPipeline(job).run(strategy="global")
+
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
+    assert solution.total_routes >= 1
+    assert solution.degenerate_routes == solution.total_routes
