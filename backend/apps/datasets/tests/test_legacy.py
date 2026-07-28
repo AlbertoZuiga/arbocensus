@@ -42,6 +42,7 @@ APP_TREES = [
 
 
 LONG_PHOTO_URL = f"https://legacy.example/{'x' * 200}/photo-776.jpg"
+SECOND_PHOTO_URL = "https://legacy.example/photo-776-b.jpg"
 
 API_OBSERVATIONS = {
     776: [
@@ -50,7 +51,7 @@ API_OBSERVATIONS = {
             tree_external_id=776,
             observed_at=datetime(2023, 6, 17, 22, 24, tzinfo=UTC),
             completed=True,
-            photo_url=LONG_PHOTO_URL,
+            photo_urls=(LONG_PHOTO_URL, SECOND_PHOTO_URL),
         ),
         legacy.LegacyObservationRow(
             source=legacy.SOURCE_API,
@@ -68,7 +69,7 @@ APP_OBSERVATIONS = {
             tree_external_id=96905,
             observed_at=datetime(2021, 10, 29, 0, 6, tzinfo=UTC),
             completed=True,
-            photo_url="https://legacy.example/photo-96905.jpg",
+            photo_urls=("https://legacy.example/photo-96905.jpg",),
         ),
     ],
 }
@@ -531,9 +532,9 @@ def test_legacy_tree_observations_endpoint_returns_history_newest_first(legacy_d
         f"/api/datasets/legacy/trees/{legacy.SOURCE_API}/776/observations/"
     )
     assert response.status_code == 200
-    assert [(entry["status"], entry["photo_url"]) for entry in response.data] == [
-        (TreeObservation.Status.UNKNOWN, ""),
-        (TreeObservation.Status.ALIVE, LONG_PHOTO_URL),
+    assert [(entry["status"], entry["photo_urls"]) for entry in response.data] == [
+        (TreeObservation.Status.UNKNOWN, []),
+        (TreeObservation.Status.ALIVE, [LONG_PHOTO_URL, SECOND_PHOTO_URL]),
     ]
     assert response.data[0]["source"] == legacy.SOURCE_API
     assert len({entry["id"] for entry in response.data}) == 2

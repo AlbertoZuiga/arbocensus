@@ -64,10 +64,10 @@ _APP_BATTERY_SQL = """
 _API_OBSERVATIONS_SQL = """
     SELECT s.real_tree_id, s.date, s.completed,
            COALESCE(
-               (SELECT a.answer_url FROM arbocensus_api_app_answer a
-                WHERE a.sample_id = s.id AND a.answer_url <> ''
-                ORDER BY a.id LIMIT 1),
-               ''
+               (SELECT array_agg(a.answer_url ORDER BY a.id)
+                FROM arbocensus_api_app_answer a
+                WHERE a.sample_id = s.id AND a.answer_url LIKE 'http%%'),
+               ARRAY[]::text[]
            )
     FROM arbocensus_api_app_sample s
     WHERE s.real_tree_id = ANY(%s)
@@ -77,10 +77,10 @@ _API_OBSERVATIONS_SQL = """
 _APP_OBSERVATIONS_SQL = """
     SELECT s.qr::bigint, s.date, s.complete,
            COALESCE(
-               (SELECT a.answer_url FROM arbocensus_app_answer a
-                WHERE a.sample_id = s.id AND a.answer_url LIKE 'http%%'
-                ORDER BY a.id LIMIT 1),
-               ''
+               (SELECT array_agg(a.answer_url ORDER BY a.id)
+                FROM arbocensus_app_answer a
+                WHERE a.sample_id = s.id AND a.answer_url LIKE 'http%%'),
+               ARRAY[]::text[]
            )
     FROM arbocensus_app_sample s
     WHERE s.qr = ANY(%s)
@@ -111,7 +111,11 @@ class LegacyObservationRow:
     tree_external_id: int
     observed_at: datetime
     completed: bool
-    photo_url: str = ""
+    photo_urls: tuple[str, ...] = ()
+
+    @property
+    def photo_url(self) -> str:
+        return self.photo_urls[0] if self.photo_urls else ""
 
 
 def _fetch(
@@ -172,9 +176,9 @@ def _load_api_observations(external_ids: list[int]) -> list[LegacyObservationRow
             tree_external_id=tree_id,
             observed_at=observed_at,
             completed=completed,
-            photo_url=photo_url,
+            photo_urls=tuple(photo_urls),
         )
-        for tree_id, observed_at, completed, photo_url in rows
+        for tree_id, observed_at, completed, photo_urls in rows
     ]
 
 
@@ -190,9 +194,9 @@ def _load_app_observations(external_ids: list[int]) -> list[LegacyObservationRow
             tree_external_id=tree_id,
             observed_at=observed_at,
             completed=completed,
-            photo_url=photo_url,
+            photo_urls=tuple(photo_urls),
         )
-        for tree_id, observed_at, completed, photo_url in rows
+        for tree_id, observed_at, completed, photo_urls in rows
     ]
 
 
@@ -224,6 +228,7 @@ def tree_observations(source: str, external_id: int) -> list[dict]:
             "source": row.source,
             "photo": None,
             "photo_url": row.photo_url,
+            "photo_urls": list(row.photo_urls),
             "notes": "",
             "created_by": None,
             "created_by_username": None,
