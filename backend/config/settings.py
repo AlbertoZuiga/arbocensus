@@ -111,6 +111,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_FILTER_BACKENDS": ["rest_framework.filters.SearchFilter"],
+    "DEFAULT_THROTTLE_RATES": {
+        "token_obtain": env("TOKEN_OBTAIN_THROTTLE_RATE", default="5/min"),
+    },
 }
 
 SIMPLE_JWT = {
