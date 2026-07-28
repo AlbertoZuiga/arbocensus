@@ -1652,10 +1652,9 @@ iteración de Arbocensus.
 \label{sec:posibles-mejoras}
 
 Las mejoras enumeradas a continuación se derivan directamente de los resultados
-del capítulo. Las tres primeras tienen anclaje en mediciones propias de esta
-memoria y se ordenan por impacto decreciente sobre las métricas evaluadas; las
-cuatro restantes abordan limitaciones funcionales independientes de la serie
-experimental.
+del capítulo. Las dos primeras tienen anclaje en mediciones propias de esta
+memoria; las cuatro restantes abordan limitaciones funcionales independientes de
+la serie experimental.
 
 \begin{itemize}
   \item \textbf{Segmentación previa por área}: la
@@ -1666,16 +1665,6 @@ experimental.
   El costo está medido sobre las áreas reales: una ruta adicional, tres jornadas
   por debajo de $T_{\min}$ y el triple de cómputo, sin incremento en el
   desplazamiento.
-
-  \item \textbf{Compuerta de régimen por saturación}: el barrido de la
-  Sección~\ref{sec:discusion-calidad} muestra que el brazo
-  \texttt{upper-tmax-tmin9000} reduce los auto-cruces en un $92{,}5$\,\% en el
-  régimen denso ($\overline{\text{sat}} = 0{,}94$) sin incremento de
-  desplazamiento, pero los empeora en las áreas individuales donde la saturación
-  es menor ($\overline{\text{sat}} \approx 0{,}67$--$0{,}73$). El umbral que
-  separa ambos regímenes es $\overline{\text{sat}} \gtrsim 0{,}9$, cuantificado
-  sobre los datos del barrido, y el código de los ajustes necesarios ya está en
-  el árbol como opción no activa.
 
   \item \textbf{Post-proceso de fusión de rutas}: el diagnóstico de
   \texttt{area-27} en la Sección~\ref{sec:areas-reales} muestra que el
@@ -1704,6 +1693,23 @@ experimental.
   \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos
   completos de administrador y censador mediante Playwright.
 \end{itemize}
+
+Una séptima extensión se evaluó y quedó descartada por la propia medición, lo
+que justifica dejarla registrada. La compuerta de régimen por saturación
+consistía en activar el brazo \texttt{upper-tmax-tmin9000} por encima de un
+umbral $\overline{\text{sat}} \gtrsim 0{,}9$, ya que el barrido de la
+Sección~\ref{sec:discusion-calidad} le atribuye una reducción de auto-cruces del
+$92{,}5$\,\% en el régimen denso sin incremento de desplazamiento. Esa reducción
+está medida sobre la métrica de cuerdas, a la que aplica la reserva de
+instrumento de esa misma sección, y la re-medición del brazo sobre
+\texttt{crossings\_road} invierte el signo del efecto precisamente en el régimen
+que la compuerta habilitaría: la mediana de auto-cruces sobre el trazado de
+calles sube de $43$ a $69$ en \texttt{reference-n1607}
+($\overline{\text{sat}} = 0{,}94$), de $46$ a $75$ en \texttt{battery-n1000}
+($0{,}91$) y de $26$ a $59$ en \texttt{battery-n800} ($0{,}89$). Sobre la
+geometría real el brazo empeora aquello que pretendía corregir, de modo que la
+compuerta no se propone para activación y su código permanece en el árbol como
+opción no activa de uso experimental.
 
 De todas las extensiones enumeradas, la de mayor valor para el proyecto es la
 validación en terreno de la plataforma en una jornada real de censo. Las
