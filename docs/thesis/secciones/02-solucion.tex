@@ -84,10 +84,10 @@ Capítulo~\ref{cap:diseno}.
         mismo fenómeno que degradaba las lecturas de GPS de la aplicación de censado
         anterior (Sección~\ref{sec:legacy})--- y con la batería del dispositivo como
         recurso limitado. Su número no es un dato de entrada sino una salida del
-        sistema: en la grilla de configuraciones evaluada en el
-        Capítulo~\ref{cap:resultados} varía entre 16 y 49 censadores para el conjunto
-        de evaluación completo, y es de una a tres personas sobre un área individual
-        (Sección~\ref{sec:areas-reales}).
+        sistema: según el tiempo de servicio y la jornada máxima que se configuren,
+        varía entre 16 y 49 censadores para el conjunto de evaluación completo
+        (Capítulo~\ref{cap:resultados}), y es de una a tres personas sobre un área
+        individual (Sección~\ref{sec:areas-reales}).
 \end{itemize}
 
 De ese contraste se derivan tres exigencias concretas: la interfaz de terreno se
@@ -153,26 +153,64 @@ traza cada requisito a la sección de diseño que documenta su realización.
 \section{ATRIBUTOS DE CALIDAD}
 \label{sec:atributos-calidad}
 
-La Tabla~\ref{tab:atributos-calidad} presenta los atributos de calidad prioritarios
-para el producto, cada uno con su prioridad, la métrica con que se evalúa y el valor
-objetivo comprometido.
+Los atributos de calidad expresan qué tan bien opera el sistema, en una escala
+sobre la que se puede medir. Bajo ese criterio se comprometen tres
+atributos. La Tabla~\ref{tab:atributos-calidad} los resume.
 
 \begin{table}[H]
   \centering
   \caption{Atributos de calidad, prioridad, métrica asociada y valor objetivo.}
   \label{tab:atributos-calidad}
   \small
-  \begin{tabularx}{\textwidth}{@{}l l X X@{}}
+  \begin{tabularx}{\textwidth}{@{}p{2.7cm} l X X@{}}
     \toprule
     Atributo & Prioridad & Métrica & Valor objetivo \\
     \midrule
-    Rendimiento del \textit{solver} & Alta & Tiempo de cómputo de una optimización con la matriz de costos en caché, sobre el conjunto de evaluación de $n=1\,607$ árboles. & Menos de 5 minutos, con evidencia de que el presupuesto asignado captura la mejora alcanzable (Tabla~\ref{tab:sensibilidad-tl}). \\
-    Usabilidad & Alta & Decisiones que el censador no debe tomar en terreno. & El orden de visita y el número de equipos son salidas del sistema, no entradas del usuario. \\
-    Seguridad & Media & Proporción de \textit{endpoints} con permiso declarado por rol, y modo de acceso a las bases de datos externas. & Totalidad de los \textit{endpoints} con permiso explícito; acceso de solo lectura a las bases legadas. \\
-    Reproducibilidad & Media & Proporción de las cifras del Capítulo~\ref{cap:resultados} que un tercero puede regenerar desde un comando publicado y datos versionados. & Toda cifra con su comando publicado y sus datos crudos versionados; las métricas por ruta se re-derivan con \texttt{route\_audit} sobre la misma instancia congelada. \\
+    {\raggedright Robustez del plan\par}  & Alta & Proporción de las combinaciones de tiempo de servicio por árbol y jornada máxima con que se configura una campaña en que el plan cubre la totalidad de los árboles del \textit{dataset} y mantiene el índice de balance de carga en al menos $0{,}80$. & La totalidad de las combinaciones cuya carga de servicio cabe dentro de la capacidad de la flota bajo la jornada configurada; fuera de ese régimen, todo árbol que la solución deje fuera del plan se reporta de forma explícita en lugar de omitirse en silencio. \\
+    {\raggedright Eficiencia de cómputo\par}  & Media & Tiempo de cómputo de una planificación sobre un conjunto de $1\,607$ árboles reales, con la matriz de costos en caché, y variación de la solución al ampliar el presupuesto de tiempo del \textit{solver}. & Menos de cinco minutos bajo cualquier configuración censal, y ninguna mejora apreciable de la solución al duplicar el presupuesto de tiempo. \\
+    {\raggedright Calidad geográfica de las rutas\par}  & Media & Auto-cruces por ruta sobre el trazado real de calles (\texttt{crossings\_road}), medidos con el post-proceso de resecuenciación de la Sección~\ref{sec:postpass} activo, frente a la misma solución sin ese post-proceso. & Ninguna degradación de \texttt{crossings\_road} frente al \textit{baseline} sin post-proceso, en la totalidad de las instancias de prueba. \\
     \bottomrule
   \end{tabularx}
 \end{table}
+
+La elección de cada métrica responde a una razón. La robustez se mide sobre un
+conjunto de configuraciones y no sobre una sola porque los dos parámetros que el
+administrador fija en cada campaña ---el tiempo de servicio por árbol y la jornada
+máxima--- desplazan el problema entre regímenes de trabajo distintos: al acortar la
+jornada o alargar el servicio, el trabajo por árbol domina la capacidad de cada ruta
+y el reparto cambia de naturaleza, de modo que un plan correcto bajo una combinación
+no garantiza nada bajo otra. Sus dos componentes son los que un censo no puede
+sacrificar: ningún árbol fuera del plan y ninguna cuadrilla con una carga
+desproporcionada respecto de las demás. El índice de balance de carga es el cociente
+entre la duración de la ruta más corta y la de la más larga, de modo que el umbral de
+$0{,}80$ exige que ningún censador trabaje menos de un $80$\,\% de lo que trabaja el
+más cargado: holgura razonable para una cuadrilla a pie y exigente frente al reparto
+manual que la práctica actual produce. Esta es la única definición de balance que
+emplea esta memoria, tanto en los criterios de aceptación como en las mediciones, y
+es también la que el sistema almacena junto a cada solución.
+
+La eficiencia de cómputo aparece con prioridad media y no alta porque la optimización
+se ejecuta de forma asíncrona: el administrador despacha el trabajo y consulta su
+estado después, sin que la interfaz quede bloqueada durante el cómputo. La magnitud
+relevante no es entonces la latencia percibida sino el costo de una planificación, y
+su cota de cinco minutos se justifica por el uso previsto ---la preparación de una
+campaña, no una consulta interactiva--- acompañada de la sensibilidad al presupuesto,
+que demuestra que el límite asignado captura la mejora alcanzable en lugar de
+truncarla.
+
+La calidad geográfica se mide sobre \texttt{crossings\_road} y no sobre la métrica de
+cuerdas rectas entre paradas consecutivas, porque la auditoría de instrumento de julio
+de 2026 (Sección~\ref{sec:discusion-calidad}) encontró que esta última correlaciona
+débilmente con el trazado real ($\rho$ de Spearman global de $0{,}527$) y de forma
+invertida en el \textit{dataset} de evaluación agregado ($\rho = -0{,}575$): una
+mejora en cuerdas no garantiza una mejora en calle, y viceversa. El único componente
+del \textit{pipeline} que se compromete contra esta métrica es el post-proceso de
+resecuenciación, porque es el único cuyo efecto sobre \texttt{crossings\_road} se
+verificó directamente, con mejora simultánea de tiempo de viaje y de geometría en las
+doce instancias de prueba (Sección~\ref{sec:discusion-calidad}). El resto de los
+componentes de la función objetivo actúa sobre la geometría de forma indirecta, sin
+evidencia equivalente sobre calle real, de modo que este atributo no se extiende a
+ellos.
 
 \section{RESTRICCIONES}
 \label{sec:restricciones}
@@ -222,7 +260,7 @@ Sección~\ref{sec:conclusiones} cierra ese contraste.
     \midrule
     CA-01 & Cobertura del censo bajo la configuración censal de referencia. & Ningún árbol descartado del plan. \\
     CA-02 & Respeto de la jornada máxima. & Ninguna ruta que exceda $T_{\max}$. \\
-    CA-03 & Balance de carga entre equipos, medido como la desviación estándar de las duraciones de ruta. & Menos del 15\,\% del promedio. \\
+    CA-03 & Balance de carga entre equipos, medido como el índice de balance definido en la Sección~\ref{sec:atributos-calidad}. & Índice de al menos $0{,}80$. \\
     CA-04 & Determinación de la flota. & El número de rutas $k$ es una salida del \textit{solver} y no un dato que el administrador declare. \\
     CA-05 & Costo de cómputo de una planificación, con la matriz de costos en caché. & Menos de 5 minutos. \\
     CA-06 & Mejora frente a la alternativa trivial. & Reducción medible del tiempo total de desplazamiento respecto de un heurístico de vecino más cercano sobre el mismo problema. \\
@@ -231,8 +269,17 @@ Sección~\ref{sec:conclusiones} cierra ese contraste.
 \end{table}
 
 El criterio CA-03 merece una precisión, porque el mecanismo que lo persigue y la
-métrica que lo evalúa no son la misma cosa: el modelo no minimiza una desviación
-estándar ---un estadístico de la solución completa no es expresable como costo aditivo
-por arco--- sino que penaliza de forma blanda que la duración de cada ruta se aleje de
-un objetivo, y el efecto de esa penalización se reporta después como dispersión de las
-duraciones. La distinción se desarrolla en la Sección~\ref{sec:formulacion}.
+métrica que lo evalúa no son la misma cosa: el modelo no minimiza el cociente entre la
+ruta más corta y la más larga ---una razón entre extremos de la solución completa no es
+expresable como costo aditivo por arco--- sino que penaliza de forma blanda que la
+duración de cada ruta se aleje de un objetivo, y el efecto de esa penalización se
+observa después sobre el índice. La distinción se desarrolla en la
+Sección~\ref{sec:formulacion}.
+
+Corresponde además fijar el estatus del índice: es un umbral mínimo y no una medida
+de mérito comparativo. El cociente entre extremos no distingue un reparto equitativo
+de una flota saturada, de modo que un heurístico que llena cada ruta hasta el borde
+de $T_{\max}$ obtiene un índice más alto sin repartir mejor la carga, como muestra la
+Sección~\ref{sec:comparacion-greedy}. CA-03 se lee entonces junto con CA-02 y con la
+holgura de jornada que esa sección reporta, y no como la métrica que ordena
+soluciones entre sí.

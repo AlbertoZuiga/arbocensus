@@ -16,13 +16,15 @@ $T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol y los
 ---que agrega al objetivo un término de dispersión geográfica, véase la
 Sección~\ref{sec:estrategias}--- y un tiempo límite de \textit{solver} de 120\,s, que es
 el valor que produce la heurística $\min(30 + 1{,}5\,n,\ 120)$ para cualquier
-\textit{dataset} de este tamaño. Se reportan siete indicadores: el número de
+\textit{dataset} de este tamaño. Se reportan ocho indicadores: el número de
 rutas $k$ generado de forma automática por el \textit{solver}, el tiempo promedio por
-ruta $\bar{T}$, la desviación estándar de los tiempos de ruta ---cuyo criterio
-de aceptación es que no supere el 15\,\% del promedio, en línea con el objetivo
-de balance de carga (CA-03)---, el número de rutas que exceden la cota dura
-$T_{\max}$ ---que debe ser cero por construcción--- y el número de rutas que
-quedan por debajo de la cota blanda $T_{\min}$ ---que no tiene criterio asociado,
+ruta $\bar{T}$, el índice de balance de carga ---cociente entre la duración de la
+ruta más corta y la de la más larga, cuyo criterio de aceptación es que alcance al
+menos $0{,}80$ (CA-03)---, la desviación estándar de los tiempos de ruta, que
+describe la dispersión de las duraciones sin criterio asociado, el número de rutas
+que exceden la cota dura $T_{\max}$ ---que debe ser cero por construcción--- y el
+número de rutas que quedan por debajo de la cota blanda $T_{\min}$ ---que no tiene
+criterio asociado,
 por tratarse de un objetivo penalizado y no de una restricción---. A ellos se suman
 el número de árboles descartados ---el modelo admite descartes mediante disyunciones
 penalizadas, de modo que la cobertura total no está garantizada a priori--- y el
@@ -41,7 +43,8 @@ Sección~\ref{sec:criterios-aceptacion}.
     \midrule
     Número de rutas $k$ & 25 & salida del \textit{solver}, no dato de entrada (CA-04) \\
     Tiempo promedio por ruta & 10\,048\,s ($\approx$ 2\,h 47\,min) & $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
-    Desviación estándar & 559\,s (5{,}6\,\% del promedio) & $< 15\,\%$ del promedio (CA-03) \\
+    Índice de balance de carga & 0{,}829--0{,}837 según la repetición & $\geq 0{,}80$ (CA-03) \\
+    Desviación estándar & 559\,s (5{,}6\,\% del promedio) & sin criterio: descriptiva \\
     Rutas que exceden $T_{\max}$ & 0 & $= 0$ (CA-02) \\
     Rutas por debajo de $T_{\min}$ & 3$^{\dagger}$ & sin criterio: cota blanda \\
     Árboles descartados & 0 (cobertura 1\,607/1\,607) & $= 0$ (CA-01) \\
@@ -1328,8 +1331,9 @@ de la flota bajo $T_{\max}=2$\,h, y esa frontera está caracterizada en la
 Tabla~\ref{tab:grilla-spatial}. La jornada máxima (CA-02) se respeta sin excepción:
 la cota es dura por construcción del modelo, y la corrección del redondeo del tránsito
 eliminó el artefacto de medición que antes producía excesos aparentes. El balance de
-carga (CA-03) queda holgadamente dentro del criterio, con una desviación estándar de
-$559$\,s equivalente al $5{,}6$\,\% del promedio frente al $15$\,\% exigido. La flota
+carga (CA-03) queda dentro del criterio, con un índice de $0{,}829$ a $0{,}837$ según
+la repetición frente al $0{,}80$ exigido, acompañado de una desviación estándar de
+$559$\,s equivalente al $5{,}6$\,\% del promedio. La flota
 (CA-04) es en efecto una salida del sistema: el administrador declara la duración de
 la jornada y el tiempo de servicio, y el número de censadores necesarios se deriva de
 ellos, lo que constituye la diferencia funcional más nítida respecto de la
