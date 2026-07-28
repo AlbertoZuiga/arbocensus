@@ -1,4 +1,5 @@
 \chapter{PROBLEMÁTICA}
+\label{cap:problematica}
 
 \section{DESCRIPCIÓN DE LA PROBLEMÁTICA}
 
@@ -8,47 +9,24 @@ verde de la ciudad, evaluar su cobertura y planificar intervenciones de mantenim
 Esta información es esencial para mitigar riesgos ambientales, prevenir accidentes
 por caídas de árboles y optimizar recursos municipales.
 
-El proyecto Arbocensus, desarrollado en la Universidad de los Andes en el marco del
-proyecto Fondef ID21110360, tiene por objetivo censar el arbolado urbano mediante
-visión artificial y participación ciudadana \citep{binder-cortes2023,pizarro-zumaeta2024}.
-La plataforma de censado se construyó en iteraciones sucesivas de trabajos de
-titulación desde 2021: una primera versión web orientada a dispositivos móviles, que
-permitió a los participantes tomar muestras de árboles ---mediante lectura de códigos
-QR y captura de GPS--- organizadas en campañas, zonas y equipos; un
-rediseño que incorporó elementos de ludificación ---puntos, logros, desafíos y tablas de
-posiciones--- para incentivar la participación \citep{binder-cortes2023}; y una tercera
-iteración que integró el procesamiento de imágenes del Sistema de Análisis de Imágenes
-de Árboles (SAIdA) y un modelo de estimación de cobertura del censo
-\citep{pizarro-zumaeta2024}. Las campañas de censado ejecutadas durante esas iteraciones
-produjeron el catastro de árboles georreferenciados que esta iteración utiliza como
-punto de partida.
-% Historia verificada contra los repositorios de código del proyecto (jul 2026):
-%   - github.com/mrecabarren/arbocensus: commit inicial 2021-10-01 (Matías Recabarren,
-%     profesor guía). Django + templates HTML/JS, escaneo de QR con cámara, Google auth,
-%     despliegue en Heroku, modelos Sampling/{sample,question,answer,step,results}.
-%     = primera versión: app web de censado orientada a móviles. Fija el inicio en 2021.
-%   - github.com/Arbocensus/ArbocensusGamification: primer commit de código 2023-03-17
-%     (Julio Cortés), repo de la organización creado 2023-10-25. fastAPI + alembic,
-%     modelos badge/campaign/challenge/achievement/score/ranking = capa de ludificación.
-%     => la ludificación de Binder y Cortés se desarrolló en 2023; la memoria se cita como
-%     2022, pero se asume que es un error debido a las fechas de los commits.
-% ASUMIDO (no confirmable con las fuentes disponibles):
-%   - Autoría de la primera versión: Binder y Cortés la atribuyen a un trabajo de título
-%     anterior (Castro y Díaz), pero el historial git muestra como autores a Recabarren,
-%     "Richard Le May" y "Track-tor", no esos nombres. No se afirma autoría en el texto.
-%   - Discrepancia de año de inicio entre fuentes (Binder/Cortés: 2022; Pizarro/Zumaeta:
-%     2021) queda resuelta a 2021 por el commit inicial del repositorio original.
+Arbocensus, desarrollado en la Universidad de los Andes en el marco del proyecto
+Fondef ID21110360, censa el arbolado urbano mediante visión artificial y
+participación ciudadana \citep{binder-cortes2023,pizarro2024}. Las campañas
+ejecutadas hasta ahora produjeron el catastro de árboles georreferenciados que esta
+iteración utiliza como punto de partida (la Sección~\ref{sec:alcance-desarrollo}
+detalla las iteraciones que lo produjeron); ese catastro es, sin embargo, una fotografía
+única de cada árbol.
 
-Sin embargo, para mejorar la calidad de los datos en futuras campañas de monitoreo, así
-como para entrenar modelos de inteligencia artificial, surge una necesidad crítica:
-realizar un re-censo estructurado que permita construir un historial de observaciones
-por árbol ---objetivo declarado del proyecto \citep{pizarro-zumaeta2024}--- y provea
-datos etiquetados para la clasificación automática de árboles por niveles de riesgo
-(riesgoso/no-riesgoso). Con este fin, es fundamental optimizar la asignación de árboles
-a equipos de trabajo mediante una planificación eficiente de rutas de desplazamiento.
+Para mejorar la calidad de los datos en futuras campañas de monitoreo, así como
+para entrenar modelos de inteligencia artificial, surge una necesidad crítica:
+realizar un re-censo estructurado que permita construir un historial de
+observaciones por árbol ---objetivo declarado del proyecto \citep{pizarro2024}---
+y provea datos etiquetados que permitan clasificar los árboles por nivel de riesgo
+(riesgoso/no-riesgoso). Con este fin resulta necesario repartir el arbolado entre
+los equipos de trabajo mediante rutas eficientes de desplazamiento.
 
 La escala real del problema se evidencia en las dos bases de datos que dejaron las
-iteraciones anteriores del proyecto \citep{binder-cortes2023,pizarro-zumaeta2024}. La
+iteraciones anteriores del proyecto \citep{binder-cortes2023,pizarro2024}. La
 más antigua, la base \texttt{legacy\_app} de la aplicación de censado previa desplegada
 en Heroku, registra 17\,208 muestras de censo asociadas por código QR, que corresponden a
 13\,081 árboles distintos. De ellos, los validados por el canal de medición automática
@@ -74,6 +52,7 @@ subutilizan su tiempo, imposibilidad de cubrir todos los árboles en una jornada
 aumento de costos logísticos.
 
 \section{ESTADO ACTUAL DEL PROBLEMA}
+\label{sec:estado-actual}
 
 Ante la ausencia de herramientas especializadas de optimización, la planificación de
 rutas para censos urbanos queda limitada a métodos manuales ---hojas de cálculo o
@@ -91,315 +70,38 @@ desplazamiento total que el modelo de optimización y produce una ruta degenerad
 dedica más de dos horas y media de caminata a cinco árboles, además de saturar cada
 jornada al borde de su cota, sin holgura ante imprevistos de terreno.
 
-El problema de ruteo de censos se relaciona con variantes conocidas de la investigación
-operativa: el \textit{Multiple Travelling Salesman Problem} (mTSP) \citep{bektas2006multiple},
-que generaliza el TSP a múltiples agentes; el \textit{Vehicle Routing Problem with Time
-Windows} (VRPTW) \citep{solomon1987algorithms, toth2014vehicle}, que introduce restricciones
-de ventanas horarias en nodos; y el \textit{Guided Local Search} (GLS), una metaheurística
-efectiva para problemas de optimización combinatoria \citep{voudouris1999guided}.
+\section{ALCANCE}
+\label{sec:alcance-desarrollo}
 
-Sin embargo, los problemas de ruteo urbano reales presentan características específicas:
-\begin{enumerate}
-  \item jornadas globales por ruta, no ventanas en nodos individuales;
-  \item rutas abiertas sin depósito obligatorio;
-  \item determinación automática del número de rutas necesarias;
-  \item distancias caminables sobre redes viales reales (\textit{OpenStreetMap}, OSM), no euclidianas.
-\end{enumerate}
+La plataforma de censado se construyó en iteraciones sucesivas desde 2021: una
+primera versión web orientada a dispositivos móviles que permitió tomar muestras de
+árboles ---mediante lectura de códigos QR y captura de GPS--- organizadas en
+campañas, zonas y equipos; un rediseño que incorporó elementos de ludificación
+---puntos, logros, desafíos y tablas de posiciones--- para incentivar la
+participación \citep{binder-cortes2023}; y una tercera iteración que integró el
+procesamiento de imágenes del Sistema de Análisis de Imágenes de Árboles (SAIdA) y
+un modelo de estimación de cobertura del censo \citep{pizarro2024}.
+% Historia verificada contra los repositorios de código del proyecto (jul 2026):
+%   - github.com/mrecabarren/arbocensus: commit inicial 2021-10-01 (Matías Recabarren,
+%     profesor guía). Django + templates HTML/JS, escaneo de QR con cámara, Google auth,
+%     despliegue en Heroku, modelos Sampling/{sample,question,answer,step,results}.
+%     = primera versión: app web de censado orientada a móviles. Fija el inicio en 2021.
+%   - github.com/Arbocensus/ArbocensusGamification: primer commit de código 2023-03-17
+%     (Julio Cortés), repo de la organización creado 2023-10-25. fastAPI + alembic,
+%     modelos badge/campaign/challenge/achievement/score/ranking = capa de ludificación.
+%     => la ludificación de Binder y Cortés se desarrolló en 2023; la memoria se cita como
+%     2022, pero se asume que es un error debido a las fechas de los commits.
+% ASUMIDO (no confirmable con las fuentes disponibles):
+%   - Autoría de la primera versión: Binder y Cortés la atribuyen a un trabajo de título
+%     anterior (Castro y Díaz), pero el historial git muestra como autores a Recabarren,
+%     "Richard Le May" y "Track-tor", no esos nombres. No se afirma autoría en el texto.
+%   - Discrepancia de año de inicio entre fuentes (Binder/Cortés: 2022; Pizarro:
+%     2021) queda resuelta a 2021 por el commit inicial del repositorio original.
 
-Existen herramientas de ruteo de propósito general capaces de resolver variantes del
-problema de ruteo de vehículos ---los módulos de análisis de redes de las suites GIS
-comerciales, entre ellas--- y no sería exacto afirmar que carecen de la capacidad
-algorítmica necesaria. Lo que ninguna de ellas ofrece es la integración con el flujo de
-trabajo específico de este proyecto: partir del catastro que dejaron las iteraciones
-anteriores de Arbocensus, publicar el plan resultante como asignación de trabajo a
-censadores identificados y recoger de vuelta, parada por parada, la observación
-histórica de cada árbol que alimenta el re-censo. Esa cadena ---catastro legado,
-optimización, asignación, captura en terreno e historial--- es lo que el producto
-aporta, y es específica del dominio y no del algoritmo. A ello se añade una
-consideración de costo: la construcción de la matriz para los 1\,607 árboles requiere
-100 solicitudes fragmentadas al servicio de ruteo ---una por bloque de la grilla de
-$10 \times 10$ coordenadas (Sección~\ref{sec:matriz})---; con una API externa de pago
-ese volumen implicaría un gasto recurrente que se renueva en cada campaña, mientras
-que la alternativa adoptada lo elimina al desplegar el servicio localmente sobre datos
-cartográficos abiertos.
-
-\section{SOLUCIÓN PLANTEADA}
-\label{sec:solucion}
-
-\subsection{Descripción de la solución}
-
-Se propone el desarrollo de una plataforma web que formula el problema de ruteo de
-censo como un problema de ruteo de vehículos de rutas abiertas con visitas opcionales
-penalizadas y restricción de duración por ruta ---la taxonomía precisa se detalla en la
-Sección~\ref{sec:formulacion}--- y lo resuelve mediante el \textit{solver} de ruteo
-vehicular de \textit{OR-Tools}, basado en programación con restricciones
-\citep{ortools}. La plataforma cubre las cuatro carencias que las herramientas
-genéricas no abordan:
-\begin{enumerate}
-  \item determina automáticamente el número de rutas necesarias $k$ dado el conjunto
-        de árboles $P = \{p_1, \ldots, p_n\}$ y los parámetros $T_{\min}$,
-        $T_{\max}$, $s$ (tiempo de servicio por árbol), sin intervención manual;
-  \item respeta restricciones de jornada global por ruta, no solo ventanas en nodos;
-  \item genera rutas abiertas, adecuadas para operaciones en terreno;
-  \item atiende simultáneamente el número de rutas, el tiempo total de desplazamiento
-        y el desbalance de carga entre equipos.
-\end{enumerate}
-
-Las distancias de desplazamiento se calculan sobre la red vial peatonal real
-(\textit{OpenStreetMap}), procesada localmente mediante OSRM \citep{osrm}, lo que
-elimina la dependencia de APIs externas de pago y garantiza la reproducibilidad de
-los resultados sin conexión a internet. El sistema no se agota en el motor de
-optimización: cubre el ciclo operacional
-completo de una campaña, desde la constitución del conjunto de árboles a censar hasta
-el seguimiento del avance en terreno. El administrador importa el arbolado ---desde
-archivos o desde las dos bases de datos que dejaron las iteraciones anteriores del
-proyecto---, configura los parámetros de jornada, ejecuta la optimización, publica el
-plan resultante y asigna cada ruta a un censador. El censador recorre su ruta desde el
-navegador de su teléfono y registra, parada por parada, el estado en que encontró cada
-árbol. Cada uno de esos registros se convierte en una observación histórica, que es lo
-que convierte al sistema en una herramienta de re-censo y no de censo inicial.
-
-\subsection{Usuarios objetivo}
-\label{sec:usuarios}
-
-La plataforma se dirige a dos perfiles de usuario con contextos de uso muy distintos,
-y esa diferencia gobierna buena parte de las decisiones de diseño del
-Capítulo~\ref{cap:diseno}.
-
-\begin{itemize}
-  \item \textbf{Administrador de campaña}. Coordina el censo dentro del proyecto
-        Arbocensus. Su formación es ambiental o de gestión y no incluye optimización
-        combinatoria: no debe tener que declarar cuántos equipos necesita ni ajustar
-        coeficientes del \textit{solver}. Trabaja desde un computador de escritorio,
-        con conexión estable, en sesiones de planificación previas a la jornada de
-        terreno. Se espera un único administrador activo por campaña.
-  \item \textbf{Censador}. Participa en la jornada de terreno recorriendo a pie la
-        ruta que le fue asignada. Utiliza su propio teléfono con datos móviles, en la
-        vía pública, durante una jornada acotada de dos a tres horas, con una
-        conectividad que se degrada de forma intermitente bajo copa arbórea ---el
-        mismo fenómeno que degradaba las lecturas de GPS de la aplicación de censado
-        anterior (Sección~\ref{sec:legacy})--- y con la batería del dispositivo como
-        recurso limitado. Su número no es un dato de entrada sino una salida del
-        sistema: en la grilla de configuraciones evaluada en el
-        Capítulo~\ref{cap:resultados} varía entre 16 y 49 censadores para el conjunto
-        de evaluación completo, y es de una a tres personas sobre un área individual
-        (Sección~\ref{sec:areas-reales}).
-\end{itemize}
-
-De ese contraste se derivan tres exigencias concretas: la interfaz de terreno se
-diseña primero para pantalla de teléfono (\textit{mobile-first}) y no como adaptación
-de la de escritorio; la pantalla se mantiene encendida durante el recorrido para no
-obligar al censador a desbloquear el dispositivo en cada árbol; y el registro de una
-visita debe sobrevivir a una pérdida momentánea de red en lugar de perderse.
-
-\subsection{Alcance del proyecto}
-\label{sec:alcance}
-
-El alcance de esta iteración se delimita de forma explícita para separar lo que el
-trabajo compromete de lo que deja fuera de manera deliberada. Queda incluido en el
-alcance:
-
-\begin{enumerate}
-  \item El motor de optimización de rutas de censo, con determinación automática del
-        número de rutas, rutas abiertas, jornada acotada por ruta y distancias
-        peatonales sobre red vial real.
-  \item La importación de arbolado desde archivos CSV o JSON y desde las dos bases de
-        datos legadas del proyecto, con selección cartográfica previa.
-  \item El ciclo de publicación de un plan de rutas y su asignación a censadores.
-  \item El portal móvil del censador, con orden secuencial de paradas y registro de
-        observaciones con fotografía.
-  \item El historial de observaciones por árbol, que incluye las campañas anteriores
-        importadas de las fuentes legadas.
-  \item El tablero de avance del censo para el administrador.
-  \item La instrumentación experimental que sostiene el Capítulo~\ref{cap:resultados}:
-        comandos de barrido reproducibles, suite de instancias congeladas y datos
-        crudos versionados.
-\end{enumerate}
-
-Queda excluido, y se declara como tal antes de presentar resultados:
-
-\begin{enumerate}
-  \item El despliegue productivo del sistema. Todas las mediciones se realizan sobre
-        una réplica local del entorno de producción (Sección~\ref{sec:perfil-rendimiento}).
-  \item La validación con usuarios reales: no se ejecutó una jornada de censo en
-        terreno ni pruebas de usabilidad con censadores.
-  \item La segmentación automática del \textit{dataset} por área de censo. La
-        delimitación territorial del problema es una decisión explícita del
-        administrador. El Capítulo~\ref{cap:resultados} muestra que automatizar esta
-        delimitación es la extensión de mayor impacto identificada, y su costo queda
-        medido en la Sección~\ref{sec:areas-reales}.
-  \item La exportación de rutas a formatos de campo (PDF, GPX).
-  \item La operación \textit{offline} robusta: se implementa una cola de sincronización
-        básica, no un \textit{service worker} con cacheo de teselas.
-  \item Las pruebas automatizadas de extremo a extremo de los flujos completos.
-  \item La evaluación formal de accesibilidad de la interfaz.
-  \item La comercialización del producto (Sección~\ref{sec:modelo-negocio}).
-\end{enumerate}
-
-\subsection{Requisitos funcionales}
-\label{sec:requisitos-funcionales}
-
-La Tabla~\ref{tab:requisitos} enumera los requisitos funcionales que la solución
-compromete, agrupados por el flujo operacional al que pertenecen. La columna de
-trazabilidad remite a la sección del Capítulo~\ref{cap:diseno} donde se documenta su
-realización y, cuando corresponde, al inventario de \textit{endpoints} del Anexo 1.
-
-\begin{xltabular}{\textwidth}{@{}l X l@{}}
-  \caption{Requisitos funcionales de la solución y su trazabilidad al diseño.}
-  \label{tab:requisitos} \\
-  \toprule
-  ID & Requisito & Trazabilidad \\
-  \midrule
-  \endfirsthead
-  \toprule
-  ID & Requisito & Trazabilidad \\
-  \midrule
-  \endhead
-  \bottomrule
-  \endlastfoot
-  \multicolumn{3}{@{}l}{\textit{Constitución del conjunto de árboles}} \\
-  RF-01 & Importar árboles desde un archivo CSV o JSON con detección automática de las columnas de coordenadas. & Anexo 1 \\
-  RF-02 & Explorar sobre un mapa el arbolado de ambas bases legadas, con sus áreas de censo y una marca de los árboles ya importados. & \S\ref{sec:legacy} \\
-  RF-03 & Componer una selección territorial combinando área completa, rectángulo y árbol individual, con des-selección manual. & \S\ref{sec:legacy} \\
-  RF-04 & Materializar un \textit{dataset} a partir de la selección confirmada, en una única transacción que incluya el histórico de observaciones. & \S\ref{sec:legacy} \\
-  RF-05 & Exportar los árboles de un \textit{dataset} en formato \textit{GeoJSON}. & Anexo 1 \\
-  \multicolumn{3}{@{}l}{\textit{Optimización}} \\
-  RF-06 & Estimar, antes de optimizar, cuántos censadores requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. & \S\ref{sec:flota} \\
-  RF-07 & Configurar por sesión los parámetros temporales $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol. & \S\ref{sec:solver} \\
-  RF-08 & Seleccionar la estrategia de partición espacial, o ejecutar las tres sobre el mismo conjunto para contrastarlas. & \S\ref{sec:estrategias} \\
-  RF-09 & Ejecutar la optimización de forma asíncrona, sin bloquear la interfaz durante el cómputo. & \S\ref{sec:arquitectura} \\
-  RF-10 & Consultar el estado de un trabajo de optimización hasta que alcance un estado terminal. & \S\ref{sec:ui} \\
-  RF-11 & Determinar el número de rutas $k$ como salida del \textit{solver}, sin que el administrador lo declare. & \S\ref{sec:flota} \\
-  RF-12 & Reportar de forma explícita los árboles que la solución dejó fuera del plan. & \S\ref{sec:disyunciones} \\
-  RF-13 & Exponer las métricas de cada solución: número de rutas, tiempo total de desplazamiento, balance, métricas espaciales y tiempos por fase. & \S\ref{sec:modelo-datos} \\
-  \multicolumn{3}{@{}l}{\textit{Publicación y asignación}} \\
-  RF-14 & Visualizar las rutas resultantes sobre el trazado peatonal real de la red vial. & \S\ref{sec:ui} \\
-  RF-15 & Comparar las soluciones producidas por distintas estrategias sobre un mismo \textit{dataset}. & \S\ref{sec:ui} \\
-  RF-16 & Publicar una solución como plan vigente, con a lo más una solución publicada por \textit{dataset}. & \S\ref{sec:modelo-datos} \\
-  RF-17 & Asignar y desasignar censadores a las rutas de la solución publicada, y solo de esa. & \S\ref{sec:modelo-datos} \\
-  \multicolumn{3}{@{}l}{\textit{Captura en terreno}} \\
-  RF-18 & Entregar al censador únicamente las rutas propias del plan vigente. & \S\ref{sec:ui} \\
-  RF-19 & Presentar las paradas en orden secuencial estricto: una parada solo se cierra cuando las anteriores ya lo están. & \S\ref{sec:ui} \\
-  RF-20 & Calcular la distancia del censador a la parada activa a partir de la geolocalización del navegador. & \S\ref{sec:ui} \\
-  RF-21 & Registrar la visita de una parada con su estado, su fotografía y sus notas, y generar la observación histórica correspondiente. & \S\ref{sec:recenso} \\
-  RF-22 & Registrar la omisión de una parada con un motivo obligatorio, del que se deriva el estado de la observación. & \S\ref{sec:recenso} \\
-  RF-23 & Conservar el historial completo de observaciones de cada árbol, incluidas las importadas de las fuentes legadas. & \S\ref{sec:recenso} \\
-  RF-24 & Preservar los registros efectuados sin conexión y sincronizarlos al recuperar la red. & \S\ref{sec:ui} \\
-  \multicolumn{3}{@{}l}{\textit{Seguimiento y administración}} \\
-  RF-25 & Presentar el avance del censo: proporción de árboles censados, omitidos y pendientes, con su distribución sobre el mapa. & \S\ref{sec:ui} \\
-  RF-26 & Desglosar el avance por ruta y por censador, de modo que el administrador pueda redistribuir la carga. & \S\ref{sec:ui} \\
-  RF-27 & Administrar las cuentas de usuario y sus roles, con desactivación lógica en lugar de borrado. & Anexo 1 \\
-  RF-28 & Autenticar por \textit{token} y autorizar cada \textit{endpoint} según el rol del usuario. & \S\ref{sec:api} \\
-\end{xltabular}
-
-\subsection{Atributos de calidad}
-\label{sec:atributos-calidad}
-
-La Tabla~\ref{tab:atributos-calidad} presenta los atributos de calidad considerados en
-la elaboración del producto, cada uno con la métrica con que se evalúa y el valor
-objetivo comprometido. La última columna indica dónde se verifica el cumplimiento.
-
-\begin{table}[H]
-  \centering
-  \caption{Atributos de calidad, métrica asociada y valor objetivo.}
-  \label{tab:atributos-calidad}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l X X l@{}}
-    \toprule
-    Atributo & Métrica & Valor objetivo & Verificación \\
-    \midrule
-    Rendimiento del \textit{solver} & Tiempo de cómputo de una optimización con la matriz de costos en caché, sobre el conjunto de evaluación de $n=1\,607$ árboles. & Menos de 5 minutos, con evidencia de que el presupuesto asignado captura la mejora alcanzable (Tabla~\ref{tab:sensibilidad-tl}). & \S\ref{sec:metricas-calidad} \\
-    Rendimiento en frío & Costo de la primera construcción de la matriz, que se paga una única vez por \textit{dataset}. & Amortizable: toda corrida posterior queda acotada por el \textit{solver}. & \S\ref{sec:perfil-rendimiento} \\
-    Seguridad & Proporción de \textit{endpoints} con permiso declarado por rol, y modo de acceso a las bases de datos externas. & Totalidad de los \textit{endpoints} con permiso explícito; acceso de solo lectura a las bases legadas. & Anexo 1, \S\ref{sec:legacy} \\
-    Usabilidad & Decisiones que el censador no debe tomar en terreno. & El orden de visita y el número de equipos son salidas del sistema, no entradas del usuario. & \S\ref{sec:flota}, \S\ref{sec:ui} \\
-    Portabilidad & Número de comandos necesarios para levantar el sistema completo en una máquina nueva. & Un único comando de \textit{Docker Compose}, sin dependencias instaladas en el anfitrión. & \S\ref{sec:arquitectura} \\
-    Reproducibilidad & Proporción de las cifras del Capítulo~\ref{cap:resultados} que un tercero puede regenerar desde un comando publicado y datos versionados. & Toda cifra con su comando publicado y sus datos crudos versionados; las métricas por ruta se re-derivan con \texttt{route\_audit} sobre la misma instancia congelada. & Anexo 3 \\
-    Verificabilidad & Alcance del comportamiento verificado por pruebas automatizadas y su ejecución en integración continua. & Suite de pruebas de \textit{backend} y \textit{frontend} ejecutada en cada integración, junto con análisis estático de estilo y de tipos. & \S\ref{sec:verificacion} \\
-    Accesibilidad & Redundancia no cromática de la información codificada por color en mapas y marcadores. & No comprometido en esta iteración: se declara fuera del alcance (Sección~\ref{sec:alcance}) por no haberse evaluado. & --- \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-\subsection{Restricciones}
-\label{sec:restricciones}
-
-La Tabla~\ref{tab:restricciones} enumera las restricciones bajo las que se elaboró el
-producto. Son condiciones del entorno o de las herramientas empleadas, no decisiones
-de diseño: el diseño responde a ellas, pero no puede levantarlas.
-
-\begin{table}[H]
-  \centering
-  \caption{Restricciones consideradas en la elaboración del producto.}
-  \label{tab:restricciones}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l X@{}}
-    \toprule
-    ID & Restricción \\
-    \midrule
-    RE-01 & El servicio \texttt{/table} de OSRM codifica cada coordenada en la ruta de la petición, de modo que la solicitud falla por longitud de URL antes de alcanzar el límite de tabla del servidor. El sistema fija un tope de $350$ coordenadas por solicitud y fragmenta la matriz en bloques (Sección~\ref{sec:matriz}). \\
-    RE-02 & El tamaño en disco de la matriz de costos crece como $O(n^2)$, lo que impone un tope de $2\,000$ árboles sobre su dimensión (Sección~\ref{sec:matriz}). \\
-    RE-03 & Las bases de datos legadas pertenecen a sistemas ajenos al alcance de esta iteración y se acceden estrictamente en modo de solo lectura (Sección~\ref{sec:legacy}). \\
-    RE-04 & Las fotografías históricas de la fuente legada residen en un almacenamiento externo cuyo plan de facturación fue cerrado y resultan inaccesibles: solo se conserva su referencia, no el archivo (Sección~\ref{sec:recenso}). \\
-    RE-05 & La búsqueda local del \textit{solver} se corta por reloj de pared y no por convergencia demostrada, de modo que la calidad de la solución depende del presupuesto de tiempo asignado (Sección~\ref{sec:solver}). \\
-    RE-06 & \textit{OR-Tools} no expone una semilla de generador pseudoaleatorio, por lo que las réplicas de un experimento deben construirse permutando el orden de entrada de los nodos (Sección~\ref{sec:metricas-calidad}). \\
-    RE-07 & La conectividad en terreno es intermitente, de modo que el portal del censador no puede suponer red disponible en el instante del registro (Sección~\ref{sec:ui}). \\
-    RE-08 & El único entorno de medición disponible es hardware de desarrollo, con los contenedores de base de datos y de ruteo emulados sobre otra arquitectura, lo que impide extrapolar las cifras absolutas de tiempo a un servidor de producción (Sección~\ref{sec:perfil-rendimiento}). \\
-    RE-09 & El sistema no cuenta con un despliegue productivo dentro del alcance, de modo que toda medición se realiza sobre una réplica local del entorno de producción (Sección~\ref{sec:perfil-rendimiento}). \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-\subsection{Criterios de aceptación}
-\label{sec:criterios-aceptacion}
-
-Los criterios con que se juzga si la solución cumple su propósito se fijan aquí, antes
-de presentar resultado alguno. La Tabla~\ref{tab:criterios} los enumera junto con su
-valor exigido; el Capítulo~\ref{cap:resultados} los contrasta contra lo medido y la
-Sección~\ref{sec:conclusiones} cierra ese contraste.
-
-\begin{table}[H]
-  \centering
-  \caption{Criterios de aceptación comprometidos para la solución.}
-  \label{tab:criterios}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l X X@{}}
-    \toprule
-    ID & Criterio & Valor exigido \\
-    \midrule
-    CA-01 & Cobertura del censo bajo la configuración censal de referencia. & Ningún árbol descartado del plan. \\
-    CA-02 & Respeto de la jornada máxima. & Ninguna ruta que exceda $T_{\max}$. \\
-    CA-03 & Balance de carga entre equipos, medido como la desviación estándar de las duraciones de ruta. & Menos del 15\,\% del promedio. \\
-    CA-04 & Determinación de la flota. & El número de rutas $k$ es una salida del \textit{solver} y no un dato que el administrador declare. \\
-    CA-05 & Costo de cómputo de una planificación, con la matriz de costos en caché. & Menos de 5 minutos. \\
-    CA-06 & Mejora frente a la alternativa trivial. & Reducción medible del tiempo total de desplazamiento respecto de un heurístico de vecino más cercano sobre el mismo problema. \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-El criterio CA-03 merece una precisión, porque el mecanismo que lo persigue y la
-métrica que lo evalúa no son la misma cosa: el modelo no minimiza una desviación
-estándar ---un estadístico de la solución completa no es expresable como costo aditivo
-por arco--- sino que penaliza de forma blanda que la duración de cada ruta se aleje de
-un objetivo, y el efecto de esa penalización se reporta después como dispersión de las
-duraciones. La distinción se desarrolla en la Sección~\ref{sec:formulacion}.
-
-\subsection{Modelo de negocio}
-\label{sec:modelo-negocio}
-
-No aplica. Arbocensus es una herramienta interna del proyecto Fondef ID21110360, cuyo
-destinatario es el propio equipo de censo y las contrapartes municipales del proyecto.
-La comercialización del producto no forma parte del alcance de esta iteración
-(Sección~\ref{sec:alcance}) y no se definió modelo de ingresos, política de precios ni
-estrategia de distribución. El costo de operación relevante para el proyecto ---el de
-los servicios de ruteo--- se aborda por la vía técnica y no por la comercial: OSRM se
-despliega localmente sobre datos abiertos, lo que elimina el gasto recurrente en APIs
-de ruteo de pago que habría supuesto una alternativa comercial.
-
-\subsection{Actores del sistema}
-
-La plataforma distingue dos actores, correspondientes a los perfiles caracterizados en
-la Sección~\ref{sec:usuarios}. El Administrador importa \textit{datasets} de
-árboles desde CSV o desde las bases legadas, configura parámetros operacionales,
-ejecuta la optimización y visualiza las rutas resultantes sobre un mapa interactivo.
-El Censador accede desde su dispositivo móvil a la ruta que le fue asignada, con las
-paradas en secuencia y navegación asistida hacia cada árbol.
+Ninguna de esas iteraciones abordó la planificación de rutas: la asignación de
+árboles a censadores y el orden de visita se decidieron manualmente en cada campaña.
+Esta iteración agrega esa pieza faltante: un motor de optimización que determina
+automáticamente el número de equipos necesarios, asigna los árboles entre ellos y
+ordena las visitas sobre la red vial real, además del ciclo operacional que lo rodea
+---importación del arbolado, publicación del plan, portal móvil del censador y
+seguimiento del avance---, que el Capítulo~\ref{cap:solucion} detalla.
