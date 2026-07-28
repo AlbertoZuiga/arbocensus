@@ -206,7 +206,7 @@ La Tabla~\ref{tab:anexo_baseline_sweep} detalla los parámetros de \texttt{basel
     \texttt{--strategies}           & Lista separada por comas: \texttt{global}, \texttt{spatial\_term}, \texttt{cluster\_first}. \\
     \texttt{--service-time}         & Lista de tiempos de servicio por árbol, en minutos. \\
     \texttt{--t-max}                & Lista de duraciones máximas de ruta, en horas. \\
-    \texttt{--seeds N} / \texttt{--base-seed} & Número de repeticiones y semilla inicial. Sobre un \textit{dataset} real la semilla solo etiqueta la repetición: el \textit{solver} es determinista dados sus parámetros y la varianza observable proviene del corte por tiempo de reloj de la búsqueda local. \\
+    \texttt{--seeds N} / \texttt{--base-seed} & Número de repeticiones y semilla inicial. En \texttt{baseline\_sweep} la semilla no llega al \textit{solver}: sobre un \textit{dataset} real solo etiqueta la repetición, y la varianza observable proviene del corte por tiempo de reloj de la búsqueda local (sobre \textit{datasets} sintéticos, además genera instancias distintas por semilla). \\
     \texttt{--time-limit <s>}       & Fija el límite de tiempo del \textit{solver}, en lugar de la heurística del \textit{pipeline} ($\min(30 + 1{,}5\,n,\;120)$ segundos). \\
     \texttt{--csv <ruta>}           & Ruta del CSV de salida. \\
     \bottomrule
@@ -362,12 +362,15 @@ a 391\,s. La única variante que descarta nodos es la más restrictiva (servicio
 con $T_{\max}=2$\,h), que deja un árbol fuera de la solución de forma consistente en las
 tres semillas.
 
-Respecto de las semillas, corresponde precisar su rol: dados los parámetros, el
-\textit{solver} de \textit{OR-Tools} es determinista sobre el \textit{dataset} real, por
-lo que la semilla actúa únicamente como etiqueta de la repetición. La varianza observada
-entre repeticiones (columna sd de \texttt{solve} en la tabla) proviene del corte por tiempo
-de reloj (\textit{wall-clock}) del GLS: en las variantes en que la búsqueda agota el
-presupuesto, las tres repeticiones convergen a soluciones casi idénticas.
+Respecto de las semillas, corresponde precisar su rol: a diferencia de
+\texttt{baseline\_sweep} (Anexo 3), donde la semilla
+solo etiqueta la repetición, \texttt{config\_algorithm\_sweep} sí la propaga al
+\textit{solver}, que la usa para construir la permutación del orden de entrada de los
+nodos y que por tanto altera la trayectoria del GLS. La varianza observada entre
+repeticiones (columna sd de \texttt{solve} en la tabla) combina ese efecto con el corte
+por tiempo de reloj (\textit{wall-clock}) de la búsqueda local: en las variantes en que
+la búsqueda agota el presupuesto, las tres repeticiones convergen a soluciones casi
+idénticas y la dispersión restante es de origen temporal más que algorítmico.
 
 \phantomsection
 \subsubsection*{Auditoría de robustez metodológica --- detalle}
@@ -389,8 +392,31 @@ semillas reales al \textit{solver}, con lo que la dispersión subió a $\sigma \
 Los ciclos iniciales usaban como piso de la métrica de relleno el producto
 $n \times \bar{n}$ (número de nodos por grado medio de la red), que viola la restricción
 de grado de los caminos y resulta por tanto inalcanzable. La métrica corregida usa el
-bosque generador mínimo $\text{MSF}_k$, que es una cota inferior válida y alcanzable por
-cualquier solución factible.
+bosque generador mínimo de $k$ componentes ($\text{MSF}_k$) \citep{kruskal1956shortest}
+sobre la matriz simetrizada $\min(d_{ij},\,d_{ji})$: $k$ recorridos abiertos no vacíos
+que cubren $n$ nodos constituyen un bosque generador de $k$ componentes, y simetrizar
+hacia abajo solo puede subestimar el costo dirigido de cada arco, de modo que toda
+solución factible satisface $\text{viaje} \geq \text{MSF}_k$. Es, sin embargo, una
+relajación ---un bosque generador no está sujeto a la restricción de grado máximo $2$
+que todo recorrido sí satisface--- y por tanto sobreestima el relleno evitable; sirve
+como cota de referencia, no como objetivo alcanzable.
+
+La distancia entre esa cota y lo que un recorrido concreto alcanza está medida. Un
+experimento posterior construyó, para cada instancia, un ancla alcanzable
+$\text{UB}_k$ ---los $k$ recorridos abiertos que resultan de partir un recorrido
+\textit{TSP} sobre los mismos $n$ nodos por sus $k-1$ tramos más caros--- y la
+contrastó contra $\text{MSF}_k$: ese recorrido queda entre un $13$\,\% y un $29$\,\%
+por encima de la cota en las instancias reales, con $13{,}3$\,\% en
+\texttt{area-27-n72}, $18{,}6$\,\% en \texttt{area-26-n157}, $21{,}1$\,\% en
+\texttt{area-29-n43} y a lo sumo $28{,}8$\,\% en \texttt{reference-n1607}
+(\texttt{docs/experiments/tsp-achievable-anchor-20260722.md}). Dado que $\text{UB}_k$
+es un recorrido construido y no óptimo, un ancla más ajustada solo podría estrechar
+esa distancia, nunca ampliarla; las cifras son, por tanto, cotas superiores de la
+incertidumbre del criterio. El mismo experimento advierte que el ancla no respeta
+$T_{\max}$ donde $k$ es restrictivo, de modo que no constituye una solución factible
+del VRP y su papel es acotar la flojedad de la cota, no sustituirla como referencia
+operacional. Re-juzgadas contra el ancla, ninguna de las doce celdas de área de los
+dos ciclos más recientes cambia de veredicto.
 
 \textbf{Defecto 3 --- Auto-cruces sobre cuerdas rectas.}
 La métrica de auto-cruces se calcula sobre cuerdas rectas entre paradas consecutivas, una
@@ -419,9 +445,10 @@ absueltas y sesenta y una persisten por duración.
 \addcontentsline{toc}{section}{Anexo 5. Trazabilidad de requisitos al diseño}
 \label{anx:trazabilidad}
 
-Este anexo remite cada requisito funcional de la Sección~\ref{sec:requisitos-funcionales}
-a la sección del Capítulo~\ref{cap:diseno} donde se documenta su realización y, cuando
-corresponde, al inventario de \textit{endpoints} del Anexo 1.
+La Tabla~\ref{tab:trazabilidad} remite cada requisito funcional de la
+Sección~\ref{sec:requisitos-funcionales} a la sección del Capítulo~\ref{cap:diseno}
+donde se documenta su realización y, cuando corresponde, al inventario de
+\textit{endpoints} del Anexo 1.
 
 \begin{xltabular}{\textwidth}{@{}l X@{}}
   \caption{Trazabilidad de los requisitos funcionales al diseño.}
@@ -440,7 +467,7 @@ corresponde, al inventario de \textit{endpoints} del Anexo 1.
   RF-02 & \S\ref{sec:legacy} \\
   RF-03 & \S\ref{sec:legacy} \\
   RF-04 & \S\ref{sec:legacy} \\
-  RF-05 & Anexo 1 \\
+  RF-05 & \S\ref{sec:api} \\
   RF-06 & \S\ref{sec:flota} \\
   RF-07 & \S\ref{sec:solver} \\
   RF-08 & \S\ref{sec:estrategias} \\
@@ -462,5 +489,5 @@ corresponde, al inventario de \textit{endpoints} del Anexo 1.
   RF-24 & \S\ref{sec:ui} \\
   RF-25 & \S\ref{sec:ui} \\
   RF-26 & \S\ref{sec:ui} \\
-  RF-27 & Anexo 1 \\
+  RF-27 & \S\ref{sec:api} \\
 \end{xltabular}
