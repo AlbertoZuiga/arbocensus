@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 vi.mock("@/api/optimization", () => ({
   createJob: vi.fn(),
   fetchJobs: vi.fn().mockResolvedValue([]),
+  fetchSolutionsForDataset: vi.fn().mockResolvedValue([]),
 }));
 
 import { createJob, fetchJobs } from "@/api/optimization";
@@ -34,74 +35,61 @@ describe("OptimizationPanel", () => {
     fetchJobs.mockResolvedValue([]);
   });
 
-  it("renders the config form and no job cards initially", () => {
+  it("renders the config form and no sweep status initially", () => {
     renderPanel();
     expect(screen.getByText("Configuración de rutas")).toBeInTheDocument();
-    expect(screen.queryByText("Última optimización")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Optimizando…/)).not.toBeInTheDocument();
   });
 
-  it("restores the dataset's latest job on mount without creating one", async () => {
+  it("shows how many of the sweep's jobs have finished", async () => {
+    fetchJobs.mockResolvedValue([
+      { id: "j2", config: "c1", status: "running", solution_ids: {} },
+      { id: "j1", config: "c1", status: "completed", solution_ids: {} },
+    ]);
+    renderPanel();
+
+    expect(
+      await screen.findByText("Optimizando… 1 de 2 configuraciones listas."),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the sweep status once every job in it is completed", async () => {
+    fetchJobs.mockResolvedValue([
+      { id: "j1", config: "c1", status: "completed", solution_ids: {} },
+    ]);
+    renderPanel();
+
+    await screen.findByText("Configuración de rutas");
+    expect(screen.queryByText(/Optimizando…/)).not.toBeInTheDocument();
+  });
+
+  it("flags a failed job in the sweep", async () => {
     fetchJobs.mockResolvedValue([
       {
         id: "j1",
-        status: "completed",
-        solution_ids: { global: "s1" },
-        started_at: "2026-06-30T10:00:00Z",
-      },
-    ]);
-    renderPanel();
-
-    expect(await screen.findByText("Última optimización")).toBeInTheDocument();
-    expect(createJob).not.toHaveBeenCalled();
-  });
-
-  it("shows the status badge of the latest job", async () => {
-    fetchJobs.mockResolvedValue([
-      { id: "j1", status: "running", solution_ids: {}, started_at: null },
-    ]);
-    renderPanel();
-
-    expect((await screen.findAllByText("Ejecutando")).length).toBeGreaterThan(0);
-  });
-
-  it("links the latest job to the job detail page", async () => {
-    fetchJobs.mockResolvedValue([
-      {
-        id: "j2",
-        status: "completed",
-        solution_ids: { global: "s1" },
-        started_at: "2026-06-30T10:00:00Z",
-      },
-    ]);
-    renderPanel();
-
-    const detailLink = await screen.findByRole("link", { name: "Ver detalle" });
-    expect(detailLink).toHaveAttribute("href", "/admin/datasets/d1/jobs/j2");
-  });
-
-  it("shows the error message when the latest job fails", async () => {
-    fetchJobs.mockResolvedValue([
-      {
-        id: "j1",
+        config: "c1",
         status: "failed",
-        solution_ids: {},
         error_message: "OSRM table request timed out",
-        started_at: "2026-06-30T10:00:00Z",
+        solution_ids: {},
       },
     ]);
     renderPanel();
 
     expect(
-      await screen.findByText("OSRM table request timed out"),
+      await screen.findByText(
+        "Una de las configuraciones falló; puede faltar una solución.",
+      ),
     ).toBeInTheDocument();
   });
 
   it("submits the config form to create a job", async () => {
-    createJob.mockResolvedValue({ id: "j1", status: "queued" });
+    createJob.mockResolvedValue([{ id: "j1", status: "queued" }]);
     const user = userEvent.setup();
     renderPanel();
 
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
+    await user.click(
+      screen.getByRole("button", { name: "Generar y comparar rutas" }),
+    );
 
     expect(createJob).toHaveBeenCalledTimes(1);
   });

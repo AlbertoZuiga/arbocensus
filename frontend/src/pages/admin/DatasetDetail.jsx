@@ -3,24 +3,16 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
-import { useOptimizationJobs } from "@/hooks/useOptimizationJobs";
+import { useDatasetSolutions } from "@/hooks/useDatasetSolutions";
+import { strategyLabel } from "@/lib/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import DatasetMap from "@/components/map/DatasetMap.jsx";
-import StrategyTabs from "@/components/map/StrategyTabs.jsx";
-import JobSelector from "@/components/map/JobSelector.jsx";
-import PublishButton from "@/components/optimization/PublishButton.jsx";
 import RouteAssignmentPanel from "@/components/routes/RouteAssignmentPanel.jsx";
 import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
-import JobHistoryCard from "@/components/optimization/JobHistoryCard.jsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const STRATEGY_LABELS = [
-  { key: "global", label: "Global" },
-  { key: "spatial_term", label: "Término espacial" },
-  { key: "cluster_first", label: "Cluster first" },
-];
 
 function toLeafletPositions(featureCollection) {
   const features = featureCollection?.features ?? [];
@@ -36,8 +28,7 @@ function toLeafletPositions(featureCollection) {
 
 export default function DatasetDetail() {
   const { id } = useParams();
-  const [strategy, setStrategy] = useState(null);
-  const [jobId, setJobId] = useState(null);
+  const [selectedSolutionId, setSelectedSolutionId] = useState(null);
   const [openPanel, setOpenPanel] = useState(null);
 
   const togglePanel = (panel) =>
@@ -59,33 +50,25 @@ export default function DatasetDetail() {
 
   const markers = useMemo(() => toLeafletPositions(trees), [trees]);
 
-  const { data: jobs = [] } = useOptimizationJobs(id);
-  const selectedJob = jobs.find((job) => job.id === jobId) ?? jobs[0];
-
-  const strategies = useMemo(() => {
-    if (selectedJob?.status !== "completed") return [];
-    const ids = selectedJob.solution_ids ?? {};
-    return STRATEGY_LABELS.filter((s) => ids[s.key]).map((s) => ({
-      ...s,
-      solutionId: ids[s.key],
-    }));
-  }, [selectedJob]);
-
-  const activeStrategy =
-    strategies.find((s) => s.key === strategy)?.key ??
-    strategies[0]?.key ??
+  // The API orders best-first across every sweep of the dataset, but the
+  // recommendation is scoped to the latest one — so the map defaults to the
+  // recommended solution, not to the globally cheapest of some older sweep.
+  const { data: solutions = [] } = useDatasetSolutions(id);
+  const displaySolution =
+    solutions.find((s) => s.id === selectedSolutionId) ??
+    solutions.find((s) => s.recommended) ??
+    solutions[0] ??
     null;
-  const solutionId =
-    strategies.find((s) => s.key === activeStrategy)?.solutionId ?? null;
-  const datasetSolutionIds = useMemo(() => {
-    const ids = new Set();
-    for (const job of jobs) {
-      for (const id of Object.values(job.solution_ids ?? {})) {
-        if (id) ids.add(id);
-      }
-    }
-    return [...ids];
-  }, [jobs]);
+  const solutionId = displaySolution?.id ?? null;
+  const datasetSolutionIds = useMemo(
+    () => solutions.map((s) => s.id),
+    [solutions],
+  );
+
+  const handleViewSolution = (solution) => {
+    setSelectedSolutionId(solution.id);
+    setOpenPanel(null);
+  };
 
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col gap-4">
@@ -131,19 +114,19 @@ export default function DatasetDetail() {
         {trees && <DatasetMap markers={markers} solutionId={solutionId} />}
 
         <div className="absolute left-3 top-3 z-[1000] flex flex-col gap-2">
-          <JobSelector jobs={jobs} value={selectedJob?.id} onChange={setJobId} />
-          {strategies.length > 0 ? (
-            <>
-              <StrategyTabs
-                strategies={strategies}
-                value={activeStrategy}
-                onChange={setStrategy}
-              />
-              <PublishButton
-                solutionId={solutionId}
-                datasetSolutionIds={datasetSolutionIds}
-              />
-            </>
+          {displaySolution ? (
+            <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-background/90 px-3 py-1.5 text-sm shadow-md backdrop-blur">
+              <span>
+                {displaySolution.config_preset_label} ·{" "}
+                {strategyLabel(displaySolution.strategy)}
+              </span>
+              {displaySolution.recommended && (
+                <Badge variant="success">★ Recomendada</Badge>
+              )}
+              {displaySolution.published_at && (
+                <Badge variant="secondary">✓ Publicada</Badge>
+              )}
+            </div>
           ) : (
             <span className="rounded-md border bg-background/90 px-3 py-1.5 text-sm text-muted-foreground shadow-md backdrop-blur">
               Optimiza el dataset para ver rutas
@@ -157,10 +140,12 @@ export default function DatasetDetail() {
             openPanel === "optimization" ? "translate-x-0" : "translate-x-full",
           )}
         >
-          <div className="flex flex-col gap-4">
-            <OptimizationPanel key={id} datasetId={id} />
-            <JobHistoryCard datasetId={id} />
-          </div>
+          <OptimizationPanel
+            key={id}
+            datasetId={id}
+            activeSolutionId={solutionId}
+            onViewSolution={handleViewSolution}
+          />
         </div>
 
         <div

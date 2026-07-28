@@ -7,17 +7,6 @@ export const STRATEGY_LABELS = {
 export const strategyLabel = (strategy) =>
   STRATEGY_LABELS[strategy] ?? strategy;
 
-const STATUS_SUMMARIES = {
-  queued: "En cola",
-  running: "Optimizando…",
-};
-
-export const strategySummary = (job) => {
-  const strategies = Object.keys(job.solution_ids ?? {});
-  if (strategies.length > 0) return strategies.map(strategyLabel).join(", ");
-  return STATUS_SUMMARIES[job.status] ?? "Sin soluciones";
-};
-
 export const formatDuration = (seconds) => {
   const total = Math.round(seconds ?? 0);
   const hours = Math.floor(total / 3600);
@@ -44,12 +33,6 @@ export function pollInterval(status, createdAt, now = Date.now()) {
   }
   return 3000;
 }
-
-export const formatElapsed = (value, now = Date.now()) => {
-  if (!value) return null;
-  const minutes = Math.max(0, Math.floor((now - new Date(value).getTime()) / 60000));
-  return `hace ${minutes} min`;
-};
 
 export const formatTimestamp = (value, dateStyle = "long") =>
   value
@@ -88,6 +71,18 @@ export const COMPARISON_METRICS = [
     better: "higher",
   },
   {
+    key: "dropped_trees",
+    label: "Árboles fuera de ruta",
+    format: (v) => `${v}`,
+    better: "lower",
+  },
+  {
+    key: "degenerate_routes",
+    label: "Rutas degeneradas",
+    format: (v) => `${v}`,
+    better: "lower",
+  },
+  {
     key: "sum_max_radius_m",
     label: "Radio máx. (suma)",
     format: (v) => `${v} m`,
@@ -106,6 +101,40 @@ export const COMPARISON_METRICS = [
     better: "lower",
   },
 ];
+
+// total_time_sec/total_service_time_sec are dropped from the candidate card:
+// within one sweep the census time is constant (same trees, same
+// service_time_sec), so total duration only replicates travel. dropped_trees
+// and degenerate_routes are surfaced as warnings there, not as numbers.
+const KEY_METRIC_KEYS = ["total_routes", "total_travel_time_sec", "balance_score"];
+
+export const KEY_METRICS = COMPARISON_METRICS.filter((m) =>
+  KEY_METRIC_KEYS.includes(m.key),
+);
+
+export function solutionWarnings(solution) {
+  const warnings = [];
+  if (solution.dropped_trees > 0) {
+    warnings.push(
+      solution.dropped_trees === 1
+        ? "1 árbol fuera de ruta"
+        : `${solution.dropped_trees} árboles fuera de ruta`,
+    );
+  }
+  if (solution.degenerate_routes > 0) {
+    warnings.push(
+      solution.degenerate_routes === 1
+        ? "1 ruta muy corta"
+        : `${solution.degenerate_routes} rutas muy cortas`,
+    );
+  }
+  // The gate lives in the backend criterion (recommendation.BALANCE_GATE) and
+  // arrives serialized; re-deriving it here would drift from the ranking.
+  if (solution.balance_below_gate) {
+    warnings.push("carga desbalanceada");
+  }
+  return warnings;
+}
 
 export function bestValue(values, better) {
   if (!better || values.length === 0) return null;

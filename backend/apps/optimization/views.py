@@ -7,11 +7,18 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .config_presets import CONFIG_PRESETS
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
 from .pipeline import estimate_fleet_from_cache
+from .recommendation import (
+    order_by_criterion,
+    pick_recommended,
+    pick_recommended_bulk,
+)
 from .serializers import (
     OptimizationJobSerializer,
     RoutingConfigSerializer,
@@ -44,25 +51,45 @@ class OptimizationJobViewSet(
         return queryset
 
     def create(self, request, *args, **kwargs):
+        # One submit fans out into one job per preset (all running the full
+        # strategy comparison) so the admin gets a ranked sweep instead of
+        # having to relaunch by hand for each preset.
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         config = serializer.save()
-        job = OptimizationJob.objects.create(
-            config=config, strategy=serializer.validated_data["strategy"]
-        )
-        try:
-            run_optimization.delay(str(job.id))
-        except Exception as exc:
-            job.set_error(f"Failed to enqueue optimization task: {exc}")
-            raise
+        jobs = [
+            OptimizationJob.objects.create(
+                config=config,
+                strategy=OptimizationJob.Strategy.COMPARE,
+                config_preset=preset,
+            )
+            for preset in CONFIG_PRESETS
+        ]
+        for job in jobs:
+            try:
+                run_optimization.delay(str(job.id))
+            except Exception as exc:
+                job.set_error(f"Failed to enqueue optimization task: {exc}")
+                raise
         return Response(
-            OptimizationJobSerializer(job).data, status=status.HTTP_201_CREATED
+            OptimizationJobSerializer(jobs, many=True).data,
+            status=status.HTTP_201_CREATED,
         )
 
 
-class RoutingSolutionViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class SolutionPagination(PageNumberPagination):
+    # Each submit produces one solution per preset x strategy, and the panel lists
+    # every past sweep of a dataset in one response. The global PAGE_SIZE of 20
+    # would drop whole sweeps off the first page after the second run.
+    page_size = 200
+
+
+class RoutingSolutionViewSet(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     serializer_class = RoutingSolutionSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = SolutionPagination
 
     def get_permissions(self) -> Any:
         if self.action in ("publish", "unpublish"):
@@ -71,9 +98,33 @@ class RoutingSolutionViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet)
 
     def get_queryset(self) -> Any:
         user = self.request.user
+        base = RoutingSolution.objects.select_related("job__config").prefetch_related(
+            "routes"
+        )
         if user.role == CustomUser.Role.ADMIN:
-            return RoutingSolution.objects.all()
-        return RoutingSolution.objects.filter(routes__surveyor=user).distinct()
+            queryset = base
+        else:
+            queryset = base.filter(routes__surveyor=user).distinct()
+        dataset = self.request.query_params.get("dataset")
+        if dataset:
+            queryset = queryset.filter(dataset=dataset)
+        return order_by_criterion(queryset)
+
+    def get_serializer_context(self) -> Any:
+        context = super().get_serializer_context()
+        dataset = self.request.query_params.get("dataset")
+        if dataset:
+            context["recommended_solution_id"] = pick_recommended(dataset)
+        elif self.action == "list":
+            # order_by() strips the criterion ordering: with values_list Django
+            # would carry those columns into the SELECT and defeat the distinct.
+            context["recommended_by_dataset"] = pick_recommended_bulk(
+                self.get_queryset()
+                .order_by()
+                .values_list("dataset_id", flat=True)
+                .distinct()
+            )
+        return context
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):

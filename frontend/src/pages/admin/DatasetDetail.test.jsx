@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DatasetDetail from "./DatasetDetail.jsx";
 import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
-import { fetchJobs } from "@/api/optimization";
+import { fetchJobs, fetchSolutionsForDataset } from "@/api/optimization";
 import { fetchRoutesGeojson } from "@/api/routes.js";
 
 vi.mock("@/api/datasets.js", () => ({
@@ -18,6 +18,7 @@ vi.mock("@/api/optimization", () => ({
   fetchSolution: vi.fn(),
   publishSolution: vi.fn(),
   fetchJobs: vi.fn().mockResolvedValue([]),
+  fetchSolutionsForDataset: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/api/routes.js", () => ({
@@ -30,12 +31,6 @@ vi.mock("@/api/routes.js", () => ({
 
 vi.mock("@/api/surveyors.js", () => ({
   fetchSurveyors: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock("@/hooks/useOptimizationJob", () => ({
-  useOptimizationJob: (jobId) => ({
-    data: jobId ? { id: jobId, status: "completed", solution_ids: {} } : undefined,
-  }),
 }));
 
 vi.mock("@/components/map/BaseMap.jsx", () => ({
@@ -65,19 +60,23 @@ function renderDetail() {
   );
 }
 
-const JOBS = [
-  {
-    id: "j2",
-    status: "completed",
-    started_at: "2026-07-20T14:00:00Z",
-    solution_ids: { global: "s2" },
-  },
-  {
-    id: "j1",
-    status: "completed",
-    started_at: "2026-07-18T09:00:00Z",
-    solution_ids: { global: "s1" },
-  },
+const baseSolution = {
+  strategy: "global",
+  config_preset_label: "Equilibrada",
+  total_routes: 2,
+  total_travel_time_sec: 900,
+  balance_score: 0.8,
+  balance_below_gate: false,
+  dropped_trees: 0,
+  degenerate_routes: 0,
+  published_at: null,
+  recommended: false,
+};
+
+// API-ordered best-first: s2 ranks ahead of s1.
+const SOLUTIONS = [
+  { ...baseSolution, id: "s2", job: "j2", recommended: true },
+  { ...baseSolution, id: "s1", job: "j1", strategy: "spatial_term" },
 ];
 
 beforeEach(() => {
@@ -85,6 +84,8 @@ beforeEach(() => {
   fetchDatasetTrees.mockReset();
   fetchJobs.mockReset();
   fetchJobs.mockResolvedValue([]);
+  fetchSolutionsForDataset.mockReset();
+  fetchSolutionsForDataset.mockResolvedValue([]);
   fetchRoutesGeojson.mockClear();
 });
 
@@ -118,40 +119,74 @@ describe("DatasetDetail", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the optimization job history for the dataset", async () => {
+  it("shows a sweep switcher when a past sweep exists", async () => {
     fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
     fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
     fetchJobs.mockResolvedValue([
-      { id: "j1", status: "completed", solution_ids: { global: "s1" } },
+      { id: "j2", config: "c2", status: "completed", solution_ids: { global: "s2" }, created_at: "2026-07-28T12:00:00Z" },
+      { id: "j1", config: "c1", status: "completed", solution_ids: { global: "s1" }, created_at: "2026-07-27T12:00:00Z" },
+    ]);
+    fetchSolutionsForDataset.mockResolvedValue([
+      { ...baseSolution, id: "s2", job: "j2", config: "c2", recommended: true },
+      { ...baseSolution, id: "s1", job: "j1", config: "c1" },
     ]);
     renderDetail();
 
     expect(
-      await screen.findByText("Historial de trabajos"),
+      await screen.findByRole("combobox", { name: "Corrida" }),
     ).toBeInTheDocument();
   });
 
-  it("renders the most recent optimization by default", async () => {
+  it("hides the sweep switcher when there is only the current sweep", async () => {
     fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
     fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
-    fetchJobs.mockResolvedValue(JOBS);
+    fetchJobs.mockResolvedValue([
+      { id: "j1", config: "c1", status: "completed", solution_ids: { global: "s1" } },
+    ]);
+    renderDetail();
+
+    await screen.findByText("Providencia");
+    expect(
+      screen.queryByRole("combobox", { name: "Corrida" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the best-ranked solution by default", async () => {
+    fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    fetchSolutionsForDataset.mockResolvedValue(SOLUTIONS);
     renderDetail();
 
     await waitFor(() => expect(fetchRoutesGeojson).toHaveBeenCalledWith("s2"));
     expect(fetchRoutesGeojson).not.toHaveBeenCalledWith("s1");
+    expect(
+      (await screen.findAllByText(/Equilibrada · Global/)).length,
+    ).toBeGreaterThan(0);
   });
 
-  it("switches the map to the solution of an older optimization", async () => {
+  it("defaults to the recommended solution, not to an older sweep that ranks higher", async () => {
+    fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    fetchSolutionsForDataset.mockResolvedValue([
+      { ...baseSolution, id: "old", job: "j1", config: "c1", total_travel_time_sec: 10 },
+      { ...baseSolution, id: "new", job: "j2", config: "c2", recommended: true },
+    ]);
+    renderDetail();
+
+    await waitFor(() => expect(fetchRoutesGeojson).toHaveBeenCalledWith("new"));
+    expect(fetchRoutesGeojson).not.toHaveBeenCalledWith("old");
+  });
+
+  it("switches the map when picking another candidate from the list", async () => {
     const user = userEvent.setup();
     fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
     fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
-    fetchJobs.mockResolvedValue(JOBS);
+    fetchSolutionsForDataset.mockResolvedValue(SOLUTIONS);
     renderDetail();
 
-    await user.click(await screen.findByRole("combobox", { name: "Optimización" }));
-    const options = screen.getAllByRole("option");
-    expect(options).toHaveLength(2);
-    await user.click(options[1]);
+    await user.click(await screen.findByRole("button", { name: "⚙ Optimización" }));
+    const viewButtons = await screen.findAllByText("Ver en el mapa");
+    await user.click(viewButtons[1]);
 
     await waitFor(() => expect(fetchRoutesGeojson).toHaveBeenCalledWith("s1"));
   });
