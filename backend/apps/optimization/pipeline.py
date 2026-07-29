@@ -208,7 +208,7 @@ class OptimizationPipeline:
                     s_value,
                     cost_matrix_timing,
                     timers[s_value],
-                    len(dropped_by_strategy[s_value]),
+                    dropped_by_strategy[s_value],
                 )
 
         return {
@@ -228,8 +228,9 @@ class OptimizationPipeline:
         strategy,
         cost_matrix_timing,
         timer,
-        dropped_trees=0,
+        dropped_nodes=(),
     ):
+        dropped_nodes = list(dropped_nodes)
         routes = resequence_routes(routes, matrix)
         route_times = [self._travel_time(matrix, route) for route in routes]
         estimated_times = [
@@ -250,7 +251,7 @@ class OptimizationPipeline:
             total_routes=len(routes),
             total_travel_time_sec=sum(route_times),
             balance_score=self._balance_score(estimated_times),
-            dropped_trees=dropped_trees,
+            dropped_trees=len(dropped_nodes),
             degenerate_routes=degenerate_routes,
             sum_max_radius_m=spatial["sum_max_radius_m"],
             interleave_total=spatial["interleave_total"],
@@ -258,6 +259,8 @@ class OptimizationPipeline:
             worst_pair_iou=spatial["worst_pair_iou"],
             timing=timing,
         )
+        if dropped_nodes:
+            solution.dropped.set(trees[n] for n in dropped_nodes)
 
         stops = []
         for route_number, (route, travel, estimated) in enumerate(

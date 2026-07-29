@@ -25,3 +25,7 @@ class DatasetSerializer(serializers.ModelSerializer):
         model = Dataset
         fields = ["id", "name", "description", "imported_at", "total_trees", "file"]
         read_only_fields = ["id", "imported_at", "total_trees"]
+
+
+class DeactivateTreesSerializer(serializers.Serializer):
+    tree_ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=False)

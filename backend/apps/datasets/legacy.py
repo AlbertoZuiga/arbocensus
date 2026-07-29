@@ -375,7 +375,9 @@ def list_trees() -> list[dict]:
     datasets_by_key: dict[tuple, list[dict]] = {}
     imported: dict[tuple, str] = {}
     for tree_id, source, external_id, dataset_id, dataset_name in (
-        Tree.objects.filter(source__in=SOURCES, external_id__isnull=False)
+        Tree.objects.filter(
+            source__in=SOURCES, external_id__isnull=False, is_active=True
+        )
         .order_by("dataset__imported_at")
         .values_list("id", "source", "external_id", "dataset_id", "dataset__name")
     ):

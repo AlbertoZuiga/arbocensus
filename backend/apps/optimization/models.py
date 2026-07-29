@@ -129,6 +129,9 @@ class RoutingSolution(models.Model):
     total_travel_time_sec = models.FloatField(default=0)
     balance_score = models.FloatField(default=0)
     dropped_trees = models.IntegerField(default=0)
+    dropped = models.ManyToManyField(
+        "datasets.Tree", blank=True, related_name="dropped_in"
+    )
     degenerate_routes = models.IntegerField(default=0)
     sum_max_radius_m = models.IntegerField(default=0)
     interleave_total = models.IntegerField(default=0)

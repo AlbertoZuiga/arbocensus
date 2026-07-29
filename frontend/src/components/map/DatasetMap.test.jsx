@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -20,8 +20,13 @@ vi.mock("./BaseMap.jsx", () => ({
 }));
 
 vi.mock("react-leaflet", () => ({
-  CircleMarker: ({ center, eventHandlers, children }) => (
-    <div data-testid="marker" data-center={JSON.stringify(center)}>
+  CircleMarker: ({ center, pathOptions, eventHandlers, children }) => (
+    <div
+      data-testid="marker"
+      data-center={JSON.stringify(center)}
+      data-fill={pathOptions?.fillColor}
+      data-fill-opacity={pathOptions?.fillOpacity}
+    >
       <button onClick={() => eventHandlers?.popupopen?.()}>abrir</button>
       {children}
     </div>
@@ -70,6 +75,54 @@ function renderMap(props) {
 beforeEach(() => {
   fetchTreeObservations.mockClear();
   fetchRoutesGeojson.mockReset().mockResolvedValue(ROUTES_GEOJSON);
+});
+
+describe("DatasetMap dropped markers", () => {
+  it("renders only dropped markers with hollow red style when solution is active", async () => {
+    const markers = [
+      { id: "t1", position: [-33.45, -70.65] },
+      { id: "t2", position: [-33.46, -70.66] },
+    ];
+    renderMap({ markers, droppedIds: new Set(["t1"]) });
+
+    // Wait for routes to load (which also triggers dropped markers to render)
+    await screen.findByTestId("route-line");
+
+    await waitFor(() => {
+      const allMarkers = screen.getAllByTestId("marker");
+      const droppedMarkers = allMarkers.filter(
+        (m) => m.getAttribute("data-fill-opacity") === "0.4",
+      );
+      expect(droppedMarkers).toHaveLength(1);
+      expect(droppedMarkers[0].getAttribute("data-fill")).toBe("#dc2626");
+    });
+  });
+
+  it("renders no dropped markers when droppedIds is empty", async () => {
+    const markers = [{ id: "t9", position: [-33.4, -70.6] }];
+    renderMap({ markers, droppedIds: new Set() });
+
+    await screen.findByTestId("route-line");
+
+    const allMarkers = screen.getAllByTestId("marker");
+    const droppedMarkers = allMarkers.filter(
+      (m) => m.getAttribute("data-fill-opacity") === "0.4",
+    );
+    expect(droppedMarkers).toHaveLength(0);
+  });
+
+  it("shows fuera de ruta label in dropped marker popup", async () => {
+    const markers = [{ id: "t1", position: [-33.45, -70.65] }];
+    renderMap({ markers, droppedIds: new Set(["t1"]) });
+
+    // Wait for routes to load, then dropped marker appears
+    await screen.findByTestId("route-line");
+
+    const buttons = screen.getAllByRole("button", { name: "abrir" });
+    await userEvent.click(buttons[buttons.length - 1]);
+
+    expect(await screen.findByText("Fuera de ruta")).toBeInTheDocument();
+  });
 });
 
 describe("DatasetMap stop popups", () => {

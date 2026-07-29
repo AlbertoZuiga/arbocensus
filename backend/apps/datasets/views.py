@@ -13,6 +13,7 @@ from .legacy import LegacyDatabaseNotConfiguredError
 from .models import Dataset
 from .serializers import (
     DatasetSerializer,
+    DeactivateTreesSerializer,
     LegacyPartitionSerializer,
     LegacySelectionSerializer,
 )
@@ -35,6 +36,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
             "import_legacy",
             "from_legacy_selection",
             "partition_legacy_selection",
+            "deactivate_trees",
         ):
             return [IsAdminRole()]
         return [IsAuthenticated()]
@@ -154,6 +156,18 @@ class DatasetViewSet(viewsets.ModelViewSet):
         datasets = legacy.create_datasets(imports)
         serializer = self.get_serializer(datasets, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="trees/deactivate")
+    def deactivate_trees(self, request, pk=None):
+        dataset = self.get_object()
+        serializer = DeactivateTreesSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tree_ids = serializer.validated_data["tree_ids"]
+        with transaction.atomic():
+            dataset.tree_set.filter(id__in=tree_ids).update(is_active=False)
+            dataset.total_trees = dataset.tree_set.filter(is_active=True).count()
+            dataset.save(update_fields=["total_trees"])
+        return Response({"total_trees": dataset.total_trees})
 
     @action(detail=True, methods=["get"])
     def trees(self, request, pk=None):
