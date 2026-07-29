@@ -62,6 +62,7 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
     config_preset_label = serializers.SerializerMethodField()
     balance_below_gate = serializers.SerializerMethodField()
     recommended = serializers.SerializerMethodField()
+    dropped_tree_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = RoutingSolution
@@ -77,6 +78,7 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
             "balance_score",
             "balance_below_gate",
             "dropped_trees",
+            "dropped_tree_ids",
             "degenerate_routes",
             "sum_max_radius_m",
             "interleave_total",
@@ -114,3 +116,6 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
         if "recommended_by_dataset" in self.context:
             return self.context["recommended_by_dataset"].get(obj.dataset_id) == obj.id
         return pick_recommended(obj.dataset_id) == obj.id
+
+    def get_dropped_tree_ids(self, obj):
+        return [str(t.id) for t in obj.dropped.all()]

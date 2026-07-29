@@ -160,6 +160,7 @@ def test_get_solution_shape(make_dataset_with_trees):
         "balance_score",
         "balance_below_gate",
         "dropped_trees",
+        "dropped_tree_ids",
         "degenerate_routes",
         "sum_max_radius_m",
         "interleave_total",

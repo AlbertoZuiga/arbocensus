@@ -172,6 +172,29 @@ def test_pipeline_drops_unreachable_tree(requests_mock):
     }
 
 
+def test_pipeline_dropped_m2m_persisted_per_strategy(requests_mock):
+    tree_count = 8
+    job = make_job(tree_count)
+    durations = osrm_durations(tree_count)
+    trees = sorted(Tree.objects.filter(dataset=job.config.dataset), key=lambda t: t.id)
+    unreachable_index = 3
+    for i in range(tree_count):
+        durations["durations"][i][unreachable_index] = 9_999_999.0
+        durations["durations"][unreachable_index][i] = 9_999_999.0
+    durations["durations"][unreachable_index][unreachable_index] = 0.0
+    requests_mock.get(ANY, json=durations)
+
+    OptimizationPipeline(job).run()
+
+    for solution in job.solutions.all():
+        dropped_ids = set(solution.dropped.values_list("id", flat=True))
+        assert dropped_ids == {trees[unreachable_index].id}, (
+            f"Strategy {solution.strategy}: expected exactly the unreachable tree "
+            f"in dropped M2M, got {dropped_ids}"
+        )
+        assert solution.dropped_trees == 1
+
+
 def test_pipeline_drops_all_when_time_budget_too_tight(requests_mock):
     tree_count = 5
     job = make_job(
