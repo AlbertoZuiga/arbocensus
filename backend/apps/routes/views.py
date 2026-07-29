@@ -22,9 +22,11 @@ from .serializers import (
     RouteDetailSerializer,
     RouteSerializer,
     RouteStopSerializer,
+    SuggestAssignmentSerializer,
     TreeObservationInputSerializer,
     TreeObservationSerializer,
 )
+from .workload import suggest_assignment, surveyor_workload
 
 
 class RouteViewSet(viewsets.ReadOnlyModelViewSet):
@@ -238,6 +240,41 @@ class RouteStopSkipView(APIView):
                 created_by=request.user,
             )
         return Response(RouteStopSerializer(stop).data)
+
+
+class WorkloadView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        return Response(surveyor_workload())
+
+
+class SuggestAssignmentView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        from apps.optimization.models import RoutingSolution
+
+        serializer = SuggestAssignmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data: Any = serializer.validated_data
+
+        solution_id = data["solution_id"]
+        surveyor_ids = [u.id for u in data["surveyor_ids"]]
+
+        try:
+            solution = RoutingSolution.objects.get(id=solution_id)
+        except RoutingSolution.DoesNotExist:
+            return Response({"detail": "Solución no encontrada."}, status=404)
+
+        if solution.published_at is None:
+            return Response(
+                {"detail": "Solo se puede asignar sobre la solución publicada."},
+                status=400,
+            )
+
+        assignments, balance = suggest_assignment(solution_id, surveyor_ids)
+        return Response({"assignments": assignments, "balance": balance})
 
 
 class TreeObservationListView(APIView):

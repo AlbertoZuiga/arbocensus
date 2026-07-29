@@ -5,14 +5,22 @@ from .views import (
     RouteStopSkipView,
     RouteStopVisitView,
     RouteViewSet,
+    SuggestAssignmentView,
     TreeObservationListView,
+    WorkloadView,
 )
 
 router = DefaultRouter()
 router.include_format_suffixes = False
 router.register("routes", RouteViewSet, basename="route")
 
-urlpatterns = router.urls + [
+urlpatterns = [
+    path("routes/workload/", WorkloadView.as_view(), name="route_workload"),
+    path(
+        "routes/suggest-assignment/",
+        SuggestAssignmentView.as_view(),
+        name="route_suggest_assignment",
+    ),
     path(
         "routes/stops/<uuid:stop_id>/visit/",
         RouteStopVisitView.as_view(),
@@ -28,4 +36,4 @@ urlpatterns = router.urls + [
         TreeObservationListView.as_view(),
         name="tree_observations",
     ),
-]
+] + router.urls

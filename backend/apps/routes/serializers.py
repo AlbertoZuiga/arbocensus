@@ -17,6 +17,18 @@ class RouteAssignSerializer(serializers.Serializer):
     )
 
 
+class SuggestAssignmentSerializer(serializers.Serializer):
+    solution_id = serializers.UUIDField()
+    surveyor_ids = serializers.ListField(
+        child=serializers.PrimaryKeyRelatedField(
+            queryset=CustomUser.objects.filter(
+                role=CustomUser.Role.SURVEYOR, is_active=True
+            )
+        ),
+        min_length=1,
+    )
+
+
 class TreeObservationInputSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
         choices=TreeObservation.Status.choices, required=False
