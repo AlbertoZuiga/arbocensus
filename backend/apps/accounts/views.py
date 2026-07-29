@@ -2,7 +2,9 @@ from typing import Any
 
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import CustomUser
 from .permissions import IsAdminRole
@@ -11,6 +13,14 @@ from .serializers import (
     SurveyorSerializer,
     UserAdminSerializer,
 )
+
+
+class TokenObtainThrottle(AnonRateThrottle):
+    scope = "token_obtain"
+
+
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [TokenObtainThrottle]
 
 
 class MeView(RetrieveAPIView):
