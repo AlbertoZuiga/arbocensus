@@ -16,9 +16,9 @@ from .feasibility import check_config
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
 from .pipeline import estimate_fleet_from_cache
 from .recommendation import (
+    _build_recommendation_context,
     order_by_criterion,
     pick_recommended,
-    pick_recommended_bulk,
 )
 from .serializers import (
     OptimizationJobSerializer,
@@ -140,16 +140,23 @@ class RoutingSolutionViewSet(
         context = super().get_serializer_context()
         dataset = self.request.query_params.get("dataset")
         if dataset:
+            rec_ctx = _build_recommendation_context([dataset])
             context["recommended_solution_id"] = pick_recommended(dataset)
+            context["rec_context_by_dataset"] = rec_ctx
         elif self.action == "list":
             # order_by() strips the criterion ordering: with values_list Django
             # would carry those columns into the SELECT and defeat the distinct.
-            context["recommended_by_dataset"] = pick_recommended_bulk(
+            dataset_ids = (
                 self.get_queryset()
                 .order_by()
                 .values_list("dataset_id", flat=True)
                 .distinct()
             )
+            rec_ctx = _build_recommendation_context(dataset_ids)
+            context["recommended_by_dataset"] = {
+                did: c["recommended_id"] for did, c in rec_ctx.items()
+            }
+            context["rec_context_by_dataset"] = rec_ctx
         return context
 
     @action(detail=True, methods=["post"])
