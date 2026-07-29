@@ -4,13 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import DatasetDetail from "./DatasetDetail.jsx";
-import { fetchDataset, fetchDatasetTrees } from "@/api/datasets.js";
+import { fetchDataset, fetchDatasetTrees, updateDataset } from "@/api/datasets.js";
 import { fetchJobs, fetchSolutionsForDataset } from "@/api/optimization";
 import { fetchRoutesGeojson } from "@/api/routes.js";
 
 vi.mock("@/api/datasets.js", () => ({
   fetchDataset: vi.fn(),
   fetchDatasetTrees: vi.fn(),
+  updateDataset: vi.fn(),
 }));
 
 vi.mock("@/api/optimization", () => ({
@@ -87,6 +88,7 @@ beforeEach(() => {
   fetchSolutionsForDataset.mockReset();
   fetchSolutionsForDataset.mockResolvedValue([]);
   fetchRoutesGeojson.mockClear();
+  updateDataset.mockReset();
 });
 
 describe("DatasetDetail", () => {
@@ -199,5 +201,65 @@ describe("DatasetDetail", () => {
     expect(
       await screen.findByText(/No se pudieron cargar los árboles/),
     ).toBeInTheDocument();
+  });
+
+  it("opens the edit dialog pre-filled with the current name and description", async () => {
+    const user = userEvent.setup();
+    fetchDataset.mockResolvedValue({
+      id: "d1",
+      name: "Providencia",
+      description: "Censo 2025",
+    });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    renderDetail();
+
+    await user.click(await screen.findByRole("button", { name: "Editar" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText("Nombre")).toHaveValue("Providencia");
+    expect(screen.getByLabelText("Descripción")).toHaveValue("Censo 2025");
+  });
+
+  it("calls updateDataset and closes dialog on save", async () => {
+    const user = userEvent.setup();
+    fetchDataset.mockResolvedValue({
+      id: "d1",
+      name: "Providencia",
+      description: "",
+    });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    updateDataset.mockResolvedValue({ id: "d1", name: "Providencia editado", description: "desc" });
+    renderDetail();
+
+    await user.click(await screen.findByRole("button", { name: "Editar" }));
+
+    const nameInput = screen.getByLabelText("Nombre");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Providencia editado");
+
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() =>
+      expect(updateDataset).toHaveBeenCalledWith("d1", {
+        name: "Providencia editado",
+        description: "",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("disables the save button when name is blank", async () => {
+    const user = userEvent.setup();
+    fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia", description: "" });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    renderDetail();
+
+    await user.click(await screen.findByRole("button", { name: "Editar" }));
+    const nameInput = screen.getByLabelText("Nombre");
+    await user.clear(nameInput);
+
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
   });
 });

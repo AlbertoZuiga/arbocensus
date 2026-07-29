@@ -55,6 +55,34 @@ def test_surveyor_cannot_create_dataset():
     assert response.status_code == 403
 
 
+def test_admin_can_patch_name_and_description(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    response = _client("admin").patch(
+        f"/api/datasets/{dataset.id}/",
+        {"name": "Renamed", "description": "Nueva descripción"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.data["name"] == "Renamed"
+    assert response.data["description"] == "Nueva descripción"
+    dataset.refresh_from_db()
+    assert dataset.name == "Renamed"
+    assert dataset.description == "Nueva descripción"
+
+
+def test_patch_does_not_alter_total_trees(make_dataset_with_trees):
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    original_count = dataset.total_trees
+    response = _client("admin").patch(
+        f"/api/datasets/{dataset.id}/", {"name": "Edited"}, format="json"
+    )
+    assert response.status_code == 200
+    assert response.data["total_trees"] == original_count
+    dataset.refresh_from_db()
+    assert dataset.total_trees == original_count
+    assert dataset.tree_set.count() == len(trees)
+
+
 def test_surveyor_cannot_update_dataset(make_dataset_with_trees):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
     response = _client("surveyor").patch(

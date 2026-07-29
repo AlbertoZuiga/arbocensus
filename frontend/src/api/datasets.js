@@ -63,6 +63,11 @@ export async function uploadDataset(file) {
   return data;
 }
 
+export async function updateDataset(id, { name, description }) {
+  const { data } = await client.patch(`/datasets/${id}/`, { name, description });
+  return data;
+}
+
 export async function deleteDataset(id) {
   await client.delete(`/datasets/${id}/`);
 }
