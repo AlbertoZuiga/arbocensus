@@ -75,3 +75,11 @@ export async function suggestAssignment(solutionId, surveyorIds) {
   });
   return data;
 }
+
+export async function setSolutionParticipants(solutionId, participantIds) {
+  const { data } = await client.post(
+    `/routes/solutions/${solutionId}/participants/`,
+    { participant_ids: participantIds }
+  );
+  return data;
+}
