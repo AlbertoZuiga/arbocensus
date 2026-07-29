@@ -1341,7 +1341,9 @@ la cota es dura por construcción del modelo, y la corrección del redondeo del 
 eliminó el artefacto de medición que antes producía excesos aparentes. El balance de
 carga (CA-03) queda dentro del criterio, con un índice de $0{,}829$ a $0{,}837$ según
 la repetición frente al $0{,}80$ exigido, acompañado de una desviación estándar de
-$559$\,s equivalente al $5{,}6$\,\% del promedio. La flota
+$559$\,s equivalente al $5{,}6$\,\% del promedio; el índice acredita el umbral y no
+ordena soluciones entre sí, porque no distingue un reparto equitativo de una flota
+saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
 (CA-04) es en efecto una salida del sistema: el administrador declara la duración de
 la jornada y el tiempo de servicio, y el número de censadores necesarios se deriva de
 ellos, lo que constituye la diferencia funcional más nítida respecto de la
@@ -1374,6 +1376,55 @@ caminata y satura las jornadas a un promedio del $98$\,\% de $T_{\max}$, mientra
 la solución del modelo opera al $93$\,\% en promedio y su ruta más pequeña visita entre
 seis y doce árboles. La atenuación de esa patología es de grado y no de naturaleza: el
 modelo no la elimina.
+
+\subsection{Cumplimiento de los atributos de calidad}
+
+Los criterios de aceptación fijan umbrales sobre una configuración; los cuatro
+atributos de la Sección~\ref{sec:atributos-calidad} son afirmaciones más amplias sobre
+el producto, y conviene declarar con qué grado y con qué salvedades se sostienen.
+
+La robustez del plan se sostiene con una excepción caracterizada. Sobre la grilla de
+configuraciones operacionales del Anexo 4 ---las combinaciones de tiempo de servicio y
+jornada máxima con que puede configurarse una campaña---, cinco de las seis mantienen
+cobertura total y el índice de balance por sobre $0{,}80$. La sexta es la más
+restrictiva, con tiempo de servicio de 3\,min bajo $T_{\max}=2$\,h: allí la carga de
+servicio excede la capacidad de la flota y la solución deja un árbol fuera del plan,
+que reporta de forma explícita en lugar de omitirlo en silencio. El atributo se cumple,
+por tanto, en todo el rango salvo en su borde, y ese borde está documentado con la
+configuración que lo evita.
+
+La operabilidad en terreno es el atributo cuyo cumplimiento esta memoria acredita con
+menos fuerza, y por dos razones distintas. La primera es de alcance de la evidencia:
+el portal se verificó por partes y nunca en una jornada de censo con censadores
+reales, de modo que lo que se comprueba es que el sistema hace lo que su diseño dice,
+no que resista la calle. La segunda es de grado de implementación: el registro
+sobrevive a pérdidas de conexión momentáneas mediante una cola local, pero no se
+implementó la sincronización diferida robusta ni el almacenamiento de teselas de mapa
+que exigiría una intermitencia prolongada. El atributo se cumple en su forma débil
+---no se pierde lo registrado ante un corte breve--- y queda pendiente en la fuerte.
+
+La eficiencia de cómputo se cumple en sus dos componentes. Planificar la instancia
+completa cuesta $120$\,s con la matriz en caché, muy por debajo de la cota, y el
+análisis de sensibilidad de la Tabla~\ref{tab:sensibilidad-tl} muestra que ese
+presupuesto captura prácticamente toda la mejora alcanzable: ampliarlo a $180$\,s
+altera el desplazamiento total en un $0{,}2$\,\% y no cambia ni el número de rutas ni
+el balance. La salvedad pertinente es que la cifra de $120$\,s es el tope configurado
+y no una medición de convergencia, de modo que el primer componente se satisface por
+construcción y es el segundo el que aporta la evidencia.
+
+La calidad geográfica de las rutas se cumple de forma acotada, y su alcance quedó
+redefinido por la propia experimentación. La métrica sobre la que el atributo se juzga
+es el número de auto-cruces sobre el trazado real de calles, y no la de cuerdas rectas
+entre paradas consecutivas, porque la auditoría de instrumento
+(Sección~\ref{sec:discusion-calidad}) midió entre ambas una correlación débil ($\rho$
+de Spearman de $0{,}527$) e invertida en el conjunto de evaluación agregado
+($\rho = -0{,}575$): una mejora en cuerdas no garantiza una mejora en calle. Bajo esa
+métrica, el único componente del \textit{pipeline} que mejora la geometría con
+evidencia directa es el post-proceso de resecuenciación, que reduce simultáneamente el
+tiempo de viaje y los auto-cruces en las doce instancias de prueba. El resto de los
+componentes de la función objetivo actúa sobre la geometría de forma indirecta y sin
+evidencia equivalente sobre calle real, de modo que el atributo se sostiene sobre ese
+post-proceso y no sobre el modelo completo.
 
 \subsection{Lo que los resultados muestran sobre el problema}
 
@@ -1531,12 +1582,12 @@ iteración de Arbocensus.
   inaccesibles por cierre del plan de facturación asociado; únicamente los metadatos y
   las coordenadas están disponibles para su uso en la plataforma.
 
-  \item \textbf{Alcance de la integración con Arbocensus}: RF-01 se acotó a la
-  importación de árboles desde archivo (CSV o JSON) y desde las bases legadas
-  mediante conexión de solo lectura (Sección~\ref{sec:legacy}), en lugar de una
-  integración en vivo con las bases de datos operativas de Arbocensus. El corte
-  es adecuado al alcance de esta iteración, pero deja fuera la sincronización
-  continua del arbolado entre plataformas.
+  \item \textbf{Alcance de la integración con Arbocensus}: la incorporación del
+  catastro existente se resuelve mediante una conexión de solo lectura a las bases
+  legadas y una importación puntual del arbolado seleccionado
+  (Sección~\ref{sec:legacy}), en lugar de una integración en vivo con las bases de
+  datos operativas del proyecto. El corte es adecuado al alcance de esta iteración,
+  pero deja fuera la sincronización continua del arbolado entre plataformas.
 
   \item \textbf{Reconciliación de trabajos abandonados}: el registro de un
   trabajo de optimización permanece en estado \texttt{running} si el
