@@ -47,7 +47,13 @@ const ROUTES = [
   },
 ];
 const SURVEYORS = [
-  { id: SURVEYOR_ID, username: "ana", first_name: "Ana", last_name: "" },
+  {
+    id: SURVEYOR_ID,
+    username: "ana",
+    first_name: "Ana",
+    last_name: "",
+    is_active: true,
+  },
 ];
 const WORKLOAD = [
   {
@@ -90,92 +96,109 @@ describe("RouteAssignmentPanel", () => {
     fetchWorkload.mockResolvedValue(WORKLOAD);
   });
 
-  it("shows participant checkboxes when solution is published", async () => {
+  it("shows 'Asignación automática' button when solution is published", async () => {
     renderPanel();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Asignación automática" }),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("opens modal with surveyor list on button click", async () => {
+    renderPanel();
+    const btn = await screen.findByRole("button", { name: "Asignación automática" });
+    await userEvent.click(btn);
+
     await waitFor(() =>
       expect(screen.getByRole("checkbox", { name: "Ana" })).toBeInTheDocument(),
     );
   });
 
-  it("suggest button disabled until participant selected", async () => {
+  it("'Siguiente' disabled until surveyor selected in modal", async () => {
     renderPanel();
-    await waitFor(() =>
-      expect(screen.getByRole("checkbox", { name: "Ana" })).toBeInTheDocument(),
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Asignación automática" }),
     );
-    expect(screen.getByText("Sugerir asignación")).toBeDisabled();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Siguiente" }),
+      ).toBeDisabled(),
+    );
 
     await userEvent.click(screen.getByRole("checkbox", { name: "Ana" }));
-    expect(screen.getByText("Sugerir asignación")).not.toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Siguiente" }),
+    ).not.toBeDisabled();
   });
 
-  it("sugerir calls API and shows confirm/discard without persisting", async () => {
+  it("calls API and shows per-surveyor preview on suggest", async () => {
     suggestAssignment.mockResolvedValue(SUGGESTION);
     renderPanel();
 
-    await waitFor(() =>
-      expect(screen.getByRole("checkbox", { name: "Ana" })).toBeInTheDocument(),
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Asignación automática" }),
     );
+    await waitFor(() => screen.getByRole("checkbox", { name: "Ana" }));
+
     await userEvent.click(screen.getByRole("checkbox", { name: "Ana" }));
-    await userEvent.click(screen.getByText("Sugerir asignación"));
+    await userEvent.click(screen.getByRole("button", { name: "Siguiente" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Confirmar")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Confirmar asignación" }),
+      ).toBeInTheDocument(),
     );
-    expect(screen.getByText("Descartar")).toBeInTheDocument();
-    expect(mockAssignMutate).not.toHaveBeenCalled();
     expect(suggestAssignment).toHaveBeenCalledWith(SOLUTION_ID, [SURVEYOR_ID]);
+    expect(screen.getByText(/Ruta 1 \(0\.42×\)/)).toBeInTheDocument();
+    expect(mockAssignMutate).not.toHaveBeenCalled();
   });
 
-  it("confirmar dispara assign.mutate para cada ruta sugerida", async () => {
+  it("confirmar asignación calls assign.mutate for each route and closes modal", async () => {
     suggestAssignment.mockResolvedValue(SUGGESTION);
     renderPanel();
 
-    await waitFor(() =>
-      expect(screen.getByRole("checkbox", { name: "Ana" })).toBeInTheDocument(),
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Asignación automática" }),
     );
+    await waitFor(() => screen.getByRole("checkbox", { name: "Ana" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Ana" }));
-    await userEvent.click(screen.getByText("Sugerir asignación"));
+    await userEvent.click(screen.getByRole("button", { name: "Siguiente" }));
     await waitFor(() =>
-      expect(screen.getByText("Confirmar")).toBeInTheDocument(),
+      screen.getByRole("button", { name: "Confirmar asignación" }),
     );
 
-    await userEvent.click(screen.getByText("Confirmar"));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar asignación" }));
 
     expect(mockAssignMutate).toHaveBeenCalledWith({
       routeId: ROUTE_ID,
       surveyorId: SURVEYOR_ID,
     });
     await waitFor(() =>
-      expect(screen.queryByText("Confirmar")).not.toBeInTheDocument(),
+      expect(
+        screen.queryByRole("button", { name: "Confirmar asignación" }),
+      ).not.toBeInTheDocument(),
     );
   });
 
-  it("descartar oculta confirm/discard sin llamar mutate", async () => {
+  it("'Volver' regresa a paso 1 sin llamar mutate", async () => {
     suggestAssignment.mockResolvedValue(SUGGESTION);
     renderPanel();
 
-    await waitFor(() =>
-      expect(screen.getByRole("checkbox", { name: "Ana" })).toBeInTheDocument(),
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Asignación automática" }),
     );
+    await waitFor(() => screen.getByRole("checkbox", { name: "Ana" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Ana" }));
-    await userEvent.click(screen.getByText("Sugerir asignación"));
-    await waitFor(() =>
-      expect(screen.getByText("Descartar")).toBeInTheDocument(),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Siguiente" }));
+    await waitFor(() => screen.getByRole("button", { name: "Volver" }));
 
-    await userEvent.click(screen.getByText("Descartar"));
+    await userEvent.click(screen.getByRole("button", { name: "Volver" }));
 
     expect(mockAssignMutate).not.toHaveBeenCalled();
     await waitFor(() =>
-      expect(screen.queryByText("Confirmar")).not.toBeInTheDocument(),
+      expect(screen.getByRole("checkbox", { name: "Ana" })).toBeInTheDocument(),
     );
-  });
-
-  it("muestra carga histórica cuando hay datos de workload", async () => {
-    renderPanel();
-    await waitFor(() =>
-      expect(screen.getByText("Carga histórica")).toBeInTheDocument(),
-    );
-    expect(screen.getByText("1.50×")).toBeInTheDocument();
   });
 });

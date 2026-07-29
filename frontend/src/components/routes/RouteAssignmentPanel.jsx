@@ -15,6 +15,14 @@ import { getErrorMessage } from "@/lib/errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -36,67 +44,280 @@ function formatUtil(value) {
   return `${value.toFixed(2)}×`;
 }
 
-function WorkloadTable({ workload, surveyors }) {
-  const surveyorById = useMemo(
-    () => Object.fromEntries(surveyors.map((s) => [s.id, s])),
-    [surveyors],
+function deficitClass(value) {
+  if (value > 0.001) return "text-green-600 dark:text-green-400";
+  if (value < -0.001) return "text-red-600 dark:text-red-400";
+  return "text-muted-foreground";
+}
+
+function AssignmentModal({ open, onOpenChange, surveyors, solutionId, onApply }) {
+  const [step, setStep] = useState(1);
+  const [selected, setSelected] = useState(new Set());
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState("cumulative_deficit");
+  const [sortDir, setSortDir] = useState("desc");
+  const [suggestion, setSuggestion] = useState(null);
+
+  const { data: workload = [] } = useSurveyorWorkload({ enabled: open });
+
+  const workloadById = useMemo(
+    () => Object.fromEntries(workload.map((e) => [e.surveyor_id, e])),
+    [workload],
   );
 
-  if (!workload.length) return null;
+  function handleOpenChange(val) {
+    if (!val) {
+      setStep(1);
+      setSelected(new Set());
+      setSearch("");
+      setSuggestion(null);
+    }
+    onOpenChange(val);
+  }
+
+  function toggleSelected(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  const displayed = useMemo(() => {
+    const filtered = surveyors.filter((s) => {
+      if (s.is_active === false) return false;
+      return surveyorLabel(s).toLowerCase().includes(search.toLowerCase());
+    });
+    return [...filtered].sort((a, b) => {
+      const wa = workloadById[a.id];
+      const wb = workloadById[b.id];
+      let aVal, bVal;
+      switch (sortKey) {
+        case "name":
+          aVal = surveyorLabel(a);
+          bVal = surveyorLabel(b);
+          break;
+        case "census_count":
+          aVal = wa?.census_count ?? 0;
+          bVal = wb?.census_count ?? 0;
+          break;
+        case "total_utilization":
+          aVal = wa?.total_utilization ?? 0;
+          bVal = wb?.total_utilization ?? 0;
+          break;
+        default:
+          aVal = wa?.cumulative_deficit ?? 0;
+          bVal = wb?.cumulative_deficit ?? 0;
+      }
+      const order = sortDir === "asc" ? 1 : -1;
+      return typeof aVal === "string"
+        ? aVal.localeCompare(bVal) * order
+        : (aVal - bVal) * order;
+    });
+  }, [surveyors, search, sortKey, sortDir, workloadById]);
+
+  const suggestMutation = useMutation({
+    mutationFn: () => suggestAssignment(solutionId, [...selected]),
+    onSuccess: (data) => {
+      setSuggestion(data);
+      setStep(2);
+    },
+  });
+
+  const previewBySurveyor = useMemo(() => {
+    if (!suggestion) return [];
+    const grouped = {};
+    for (const a of suggestion.assignments) {
+      if (!grouped[a.surveyor_id]) grouped[a.surveyor_id] = [];
+      grouped[a.surveyor_id].push(a);
+    }
+    return Object.entries(grouped)
+      .map(([sid, assignments]) => {
+        const s = surveyors.find((u) => u.id === sid);
+        return {
+          surveyorId: sid,
+          name: s ? surveyorLabel(s) : sid,
+          assignments,
+          balance: suggestion.balance[sid] ?? 0,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [suggestion, surveyors]);
+
+  function sortArrow(key) {
+    if (sortKey !== key) return null;
+    return sortDir === "asc" ? " ↑" : " ↓";
+  }
+
+  function handleConfirm() {
+    onApply(suggestion.assignments);
+    handleOpenChange(false);
+  }
+
+  const COLUMNS = [
+    ["Censista", "name", "text-left"],
+    ["Censos", "census_count", "text-right"],
+    ["Carga acum.", "total_utilization", "text-right"],
+    ["Saldo", "cumulative_deficit", "text-right"],
+  ];
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-muted-foreground">
-            <th className="py-1 text-left font-medium">Censista</th>
-            <th className="py-1 text-right font-medium">Censos</th>
-            <th className="py-1 text-right font-medium">Util. acum.</th>
-            <th className="py-1 text-right font-medium">Saldo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {workload.map((entry) => {
-            const surveyor = surveyorById[entry.surveyor_id];
-            const label = surveyor ? surveyorLabel(surveyor) : entry.username;
-            const deficit = entry.cumulative_deficit;
-            return (
-              <tr key={entry.surveyor_id} className="border-b last:border-0">
-                <td className="py-1">{label}</td>
-                <td className="py-1 text-right text-muted-foreground">
-                  {entry.census_count}
-                </td>
-                <td className="py-1 text-right text-muted-foreground">
-                  {formatUtil(entry.total_utilization)}
-                </td>
-                <td
-                  className={`py-1 text-right ${
-                    deficit > 0.001
-                      ? "text-green-600 dark:text-green-400"
-                      : deficit < -0.001
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-muted-foreground"
-                  }`}
-                >
-                  {deficit > 0 ? "+" : ""}
-                  {formatUtil(deficit)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Utilización calculada sobre tiempos estimados por el solver. Una ruta
-        abandonada cuenta como carga completa.
-      </p>
-    </div>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col">
+        <DialogHeader>
+          <DialogTitle>
+            {step === 1
+              ? "Seleccionar censistas"
+              : "Previsualización de asignación"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {step === 1 && (
+          <>
+            <Input
+              placeholder="Buscar censista…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-shrink-0"
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-background">
+                  <tr className="border-b text-muted-foreground">
+                    <th className="w-8 py-1" />
+                    {COLUMNS.map(([label, key, align]) => (
+                      <th
+                        key={key}
+                        className={`cursor-pointer select-none py-1 font-medium ${align}`}
+                        onClick={() => toggleSort(key)}
+                      >
+                        {label}
+                        {sortArrow(key)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayed.map((surveyor) => {
+                    const wl = workloadById[surveyor.id];
+                    const deficit = wl?.cumulative_deficit ?? 0;
+                    return (
+                      <tr
+                        key={surveyor.id}
+                        className="cursor-pointer border-b last:border-0 hover:bg-muted/50"
+                        onClick={() => toggleSelected(surveyor.id)}
+                      >
+                        <td className="py-1.5">
+                          <input
+                            type="checkbox"
+                            aria-label={surveyorLabel(surveyor)}
+                            checked={selected.has(surveyor.id)}
+                            onChange={() => toggleSelected(surveyor.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4"
+                          />
+                        </td>
+                        <td className="py-1.5">{surveyorLabel(surveyor)}</td>
+                        <td className="py-1.5 text-right text-muted-foreground">
+                          {wl?.census_count ?? "—"}
+                        </td>
+                        <td className="py-1.5 text-right text-muted-foreground">
+                          {wl ? formatUtil(wl.total_utilization) : "—"}
+                        </td>
+                        <td
+                          className={`py-1.5 text-right ${deficitClass(deficit)}`}
+                        >
+                          {wl
+                            ? `${deficit > 0 ? "+" : ""}${formatUtil(deficit)}`
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Carga acum. = sumatoria de (tiempo de ruta / T_máx) en todos los
+                censos anteriores. Saldo positivo = le corresponde más trabajo
+                que el promedio; negativo = ya tiene más. Una ruta abandonada
+                cuenta como carga completa.
+              </p>
+            </div>
+
+            {suggestMutation.isError && (
+              <Alert variant="destructive" className="flex-shrink-0">
+                <AlertDescription>
+                  {getErrorMessage(
+                    suggestMutation.error,
+                    "No se pudo generar la propuesta.",
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <DialogFooter className="flex-shrink-0">
+              <Button
+                disabled={selected.size === 0 || suggestMutation.isPending}
+                onClick={() => suggestMutation.mutate()}
+              >
+                {suggestMutation.isPending ? "Calculando…" : "Siguiente"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {step === 2 && suggestion && (
+          <>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+              {previewBySurveyor.map(({ surveyorId, name, assignments, balance }) => (
+                <div key={surveyorId} className="rounded-md border p-3">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-sm font-medium">{name}</span>
+                    <span className={`text-xs ${deficitClass(balance)}`}>
+                      Saldo resultante:{" "}
+                      {balance > 0 ? "+" : ""}
+                      {formatUtil(balance)}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {assignments.map((a) => (
+                      <span
+                        key={a.route_id}
+                        className="rounded bg-muted px-1.5 py-0.5 text-xs"
+                      >
+                        Ruta {a.route_number} ({formatUtil(a.utilization)})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <DialogFooter className="flex-shrink-0">
+              <Button variant="outline" onClick={() => setStep(1)}>
+                Volver
+              </Button>
+              <Button onClick={handleConfirm}>Confirmar asignación</Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
 export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
-  const [selectedParticipants, setSelectedParticipants] = useState(new Set());
-  const [pending, setPending] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const solutionResults = useQueries({
     queries: datasetSolutionIds.map((id) => ({
@@ -128,66 +349,19 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
     enabled: !!solutionId,
   });
 
-  const { data: workload = [] } = useSurveyorWorkload({ enabled: !!solutionId });
-
   const assign = useAssignRoute();
-
-  const suggestMutation = useMutation({
-    mutationFn: () =>
-      suggestAssignment(solutionId, [...selectedParticipants]),
-    onSuccess: (data) => {
-      const map = new Map(
-        data.assignments.map((a) => [a.route_id, a.surveyor_id]),
-      );
-      setPending(map);
-    },
-  });
 
   const published = !!solutionId;
 
-  const workloadBySurveyor = useMemo(
-    () => Object.fromEntries(workload.map((e) => [e.surveyor_id, e])),
-    [workload],
-  );
-
-  function handleParticipantToggle(surveyorId) {
-    setSelectedParticipants((prev) => {
-      const next = new Set(prev);
-      if (next.has(surveyorId)) {
-        next.delete(surveyorId);
-      } else {
-        next.add(surveyorId);
-      }
-      return next;
-    });
-  }
-
-  function selectValue(route) {
-    if (pending && pending.has(route.id)) {
-      return pending.get(route.id) ?? UNASSIGNED;
-    }
-    return route.surveyor ?? UNASSIGNED;
-  }
-
   function handleSelectChange(routeId, nextValue) {
     const surveyorId = nextValue === UNASSIGNED ? null : nextValue;
-    if (pending) {
-      setPending((prev) => new Map(prev).set(routeId, surveyorId));
-    } else {
-      assign.mutate({ routeId, surveyorId });
-    }
+    assign.mutate({ routeId, surveyorId });
   }
 
-  function handleConfirm() {
-    if (!pending) return;
-    for (const [routeId, surveyorId] of pending) {
-      assign.mutate({ routeId, surveyorId });
+  function handleApply(assignments) {
+    for (const a of assignments) {
+      assign.mutate({ routeId: a.route_id, surveyorId: a.surveyor_id });
     }
-    setPending(null);
-  }
-
-  function handleDiscard() {
-    setPending(null);
   }
 
   return (
@@ -208,83 +382,22 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
         </Alert>
       )}
 
-      {published && workload.length > 0 && (
-        <div className="rounded-md border p-3">
-          <h3 className="mb-2 text-sm font-medium">Carga histórica</h3>
-          <WorkloadTable workload={workload} surveyors={surveyors} />
-        </div>
-      )}
-
       {published && (
-        <div className="rounded-md border p-3">
-          <h3 className="mb-2 text-sm font-medium">
-            Participantes en este censo
-          </h3>
-          <div className="flex flex-col gap-1">
-            {surveyors.map((surveyor) => {
-              const wl = workloadBySurveyor[surveyor.id];
-              return (
-                <label
-                  key={surveyor.id}
-                  className="flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    aria-label={surveyorLabel(surveyor)}
-                    checked={selectedParticipants.has(surveyor.id)}
-                    onChange={() => handleParticipantToggle(surveyor.id)}
-                    className="h-4 w-4"
-                  />
-                  {surveyorLabel(surveyor)}
-                  {wl && (
-                    <span className="text-xs text-muted-foreground">
-                      saldo {wl.cumulative_deficit > 0 ? "+" : ""}
-                      {formatUtil(wl.cumulative_deficit)}
-                    </span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              disabled={
-                selectedParticipants.size === 0 || suggestMutation.isPending
-              }
-              onClick={() => suggestMutation.mutate()}
-            >
-              Sugerir asignación
-            </Button>
-            {pending && (
-              <>
-                <Button size="sm" onClick={handleConfirm}>
-                  Confirmar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDiscard}
-                >
-                  Descartar
-                </Button>
-              </>
-            )}
-          </div>
-
-          {suggestMutation.isError && (
-            <Alert variant="destructive" className="mt-2">
-              <AlertDescription>
-                {getErrorMessage(
-                  suggestMutation.error,
-                  "No se pudo generar la propuesta.",
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
+        <Button
+          className="self-start bg-green-600 text-white hover:bg-green-700"
+          onClick={() => setModalOpen(true)}
+        >
+          Asignación automática
+        </Button>
       )}
+
+      <AssignmentModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        surveyors={surveyors}
+        solutionId={solutionId}
+        onApply={handleApply}
+      />
 
       {routesLoading && (
         <p className="text-sm text-muted-foreground">Cargando rutas…</p>
@@ -316,7 +429,7 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
             </p>
 
             <Select
-              value={selectValue(route)}
+              value={route.surveyor ?? UNASSIGNED}
               disabled={!published}
               onValueChange={(next) => handleSelectChange(route.id, next)}
             >
