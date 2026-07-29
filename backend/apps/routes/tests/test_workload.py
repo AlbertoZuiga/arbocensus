@@ -183,7 +183,7 @@ class TestSurveyorWorkloadParticipants:
         by_user = {r["username"]: r for r in result}
 
         total = sum(
-            r["cumulative_deficit"]
+            float(r["cumulative_deficit"])
             for r in [by_user["ana_sum"], by_user["bob_sum"], by_user["carlos_sum"]]
         )
         assert total == pytest.approx(0.0, abs=0.001)
