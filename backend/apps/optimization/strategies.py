@@ -23,6 +23,15 @@ except ImportError:
 # Higher → tighter, less overlapping routes at the price of more total travel time.
 SPATIAL_SPAN_COEF = 3
 
+# Strategies the default job fanout pairs every preset with.
+# cluster_first is excluded: it was experimentally refuted and is only available
+# via management commands, sweeps and COMPARE jobs through an explicit strategy=
+# argument.
+PRODUCTION_STRATEGIES = (
+    RoutingSolution.Strategy.GLOBAL,
+    RoutingSolution.Strategy.SPATIAL_TERM,
+)
+
 
 def solve_by_strategy(
     strategy,
