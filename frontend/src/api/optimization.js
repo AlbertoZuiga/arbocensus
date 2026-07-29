@@ -5,14 +5,12 @@ export async function createJob({
   minRouteTimeSec,
   maxRouteTimeSec,
   serviceTimeSec,
-  strategy,
 }) {
   const { data } = await client.post("/optimization/jobs/", {
     dataset,
     min_route_time_sec: minRouteTimeSec,
     max_route_time_sec: maxRouteTimeSec,
     service_time_sec: serviceTimeSec,
-    strategy,
   });
   return data;
 }
@@ -47,6 +45,13 @@ export async function fetchJobs(datasetId) {
 export async function fetchSolution(solutionId) {
   const { data } = await client.get(`/optimization/solutions/${solutionId}/`);
   return data;
+}
+
+export async function fetchSolutionsForDataset(datasetId) {
+  const { data } = await client.get("/optimization/solutions/", {
+    params: { dataset: datasetId },
+  });
+  return data.results ?? [];
 }
 
 export async function publishSolution(solutionId) {

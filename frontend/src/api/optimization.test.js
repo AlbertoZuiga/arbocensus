@@ -10,6 +10,7 @@ import {
   fetchJob,
   fetchJobs,
   fetchSolution,
+  fetchSolutionsForDataset,
 } from "./optimization.js";
 
 describe("optimization api", () => {
@@ -18,14 +19,13 @@ describe("optimization api", () => {
   });
 
   it("maps camelCase args to a snake_case request body", async () => {
-    client.post.mockResolvedValue({ data: { id: "j1" } });
+    client.post.mockResolvedValue({ data: [{ id: "j1" }] });
 
     await createJob({
       dataset: "d1",
       minRouteTimeSec: 7200,
       maxRouteTimeSec: 10800,
       serviceTimeSec: 300,
-      strategy: "compare",
     });
 
     expect(client.post).toHaveBeenCalledWith("/optimization/jobs/", {
@@ -33,14 +33,15 @@ describe("optimization api", () => {
       min_route_time_sec: 7200,
       max_route_time_sec: 10800,
       service_time_sec: 300,
-      strategy: "compare",
     });
   });
 
-  it("returns the created job data", async () => {
-    client.post.mockResolvedValue({ data: { id: "j1", status: "queued" } });
+  it("returns the created jobs data", async () => {
+    client.post.mockResolvedValue({
+      data: [{ id: "j1", status: "queued" }],
+    });
     const result = await createJob({ dataset: "d1" });
-    expect(result).toEqual({ id: "j1", status: "queued" });
+    expect(result).toEqual([{ id: "j1", status: "queued" }]);
   });
 
   it("fetches a job by id", async () => {
@@ -72,5 +73,22 @@ describe("optimization api", () => {
     const result = await fetchSolution("s1");
     expect(client.get).toHaveBeenCalledWith("/optimization/solutions/s1/");
     expect(result).toEqual({ balance: 0.9 });
+  });
+
+  it("fetches all solutions for a dataset as an array", async () => {
+    client.get.mockResolvedValue({
+      data: { results: [{ id: "s2" }, { id: "s1" }] },
+    });
+    const result = await fetchSolutionsForDataset("d1");
+    expect(client.get).toHaveBeenCalledWith("/optimization/solutions/", {
+      params: { dataset: "d1" },
+    });
+    expect(result).toEqual([{ id: "s2" }, { id: "s1" }]);
+  });
+
+  it("returns an empty array when a dataset has no solutions", async () => {
+    client.get.mockResolvedValue({ data: {} });
+    const result = await fetchSolutionsForDataset("d1");
+    expect(result).toEqual([]);
   });
 });

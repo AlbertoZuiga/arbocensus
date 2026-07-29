@@ -1,30 +1,59 @@
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useOptimizationJobs } from "@/hooks/useOptimizationJobs";
-import { formatElapsed, formatTimestamp, strategySummary } from "@/lib/optimization";
+import { formatTimestamp } from "@/lib/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import JobStatusBadge from "./JobStatusBadge";
 import RoutingConfigForm from "./RoutingConfigForm";
+import SolutionCandidatesList from "./SolutionCandidatesList";
 
-export default function OptimizationPanel({ datasetId }) {
+function sweepStatusText(sweepJobs) {
+  if (sweepJobs.some((job) => job.status === "failed")) {
+    return "Una de las configuraciones falló; puede faltar una solución.";
+  }
+  const done = sweepJobs.filter((job) => job.status === "completed").length;
+  if (done === sweepJobs.length) return null;
+  return `Optimizando… ${done} de ${sweepJobs.length} configuraciones listas.`;
+}
+
+export default function OptimizationPanel({
+  datasetId,
+  activeSolutionId = null,
+  onViewSolution,
+}) {
   const queryClient = useQueryClient();
+  const [viewedConfig, setViewedConfig] = useState(null);
 
   const { data: jobs = [], error } = useOptimizationJobs(datasetId);
 
-  const latest = jobs[0];
-  const isActive = latest && ["queued", "running"].includes(latest.status);
+  // jobs are newest-first; the newest job's config is the sweep in progress
+  // (or most recently finished), which may span several jobs (one per preset).
+  const latestConfig = jobs[0]?.config;
+  const currentSweep = jobs.filter((job) => job.config === latestConfig);
   const hasActiveJob = jobs.some((job) =>
     ["queued", "running"].includes(job.status)
   );
+  const sweepStatus = latestConfig ? sweepStatusText(currentSweep) : null;
+
+  // One entry per past sweep (RoutingConfig), newest first, for the sweep
+  // switcher inside the candidate list.
+  const sweeps = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    for (const job of jobs) {
+      if (seen.has(job.config)) continue;
+      seen.add(job.config);
+      list.push({ config: job.config, label: formatTimestamp(job.created_at, "short") });
+    }
+    return list;
+  }, [jobs]);
 
   const handleJobCreated = () => {
     queryClient.invalidateQueries({
       queryKey: ["optimization-jobs", datasetId],
     });
+    setViewedConfig(null);
   };
 
   return (
@@ -43,33 +72,19 @@ export default function OptimizationPanel({ datasetId }) {
         </Alert>
       )}
 
-      {latest && (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Última optimización</CardTitle>
-            <JobStatusBadge status={latest.status} />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {isActive
-                ? formatElapsed(latest.created_at)
-                : formatTimestamp(latest.started_at)}
-            </p>
-            {latest.error_message ? (
-              <Alert variant="destructive">
-                <AlertDescription>{latest.error_message}</AlertDescription>
-              </Alert>
-            ) : (
-              <p className="text-sm">{strategySummary(latest)}</p>
-            )}
-            <Button asChild size="sm">
-              <Link to={`/admin/datasets/${datasetId}/jobs/${latest.id}`}>
-                Ver detalle
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      {sweepStatus && (
+        <p className="text-sm text-muted-foreground">{sweepStatus}</p>
       )}
+
+      <SolutionCandidatesList
+        datasetId={datasetId}
+        hasActiveJob={hasActiveJob}
+        viewedConfig={viewedConfig ?? latestConfig}
+        sweeps={sweeps}
+        onChangeViewedConfig={setViewedConfig}
+        activeSolutionId={activeSolutionId}
+        onViewSolution={onViewSolution}
+      />
     </div>
   );
 }

@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock
 
 import pytest
+from apps.optimization.config_presets import CONFIG_PRESETS
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
+from apps.optimization.recommendation import BALANCE_GATE
 from rest_framework.test import APIClient
 from tests.factories import CustomUserFactory
 
@@ -23,7 +25,7 @@ def _payload(dataset):
     }
 
 
-def test_admin_creates_job_and_triggers_task(make_dataset_with_trees, monkeypatch):
+def test_admin_creates_one_job_per_preset(make_dataset_with_trees, monkeypatch):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
     delay = MagicMock()
     monkeypatch.setattr("apps.optimization.views.run_optimization.delay", delay)
@@ -33,53 +35,14 @@ def test_admin_creates_job_and_triggers_task(make_dataset_with_trees, monkeypatc
     )
 
     assert response.status_code == 201
-    job = OptimizationJob.objects.get(id=response.data["id"])
+    assert len(response.data) == len(CONFIG_PRESETS)
     config = RoutingConfig.objects.get(dataset=dataset)
-    assert job.config == config
     assert config.min_route_time_sec == 3600
-    assert response.data["status"] == OptimizationJob.Status.QUEUED
-    delay.assert_called_once_with(str(job.id))
-
-
-def test_create_job_defaults_to_spatial_term_strategy(
-    make_dataset_with_trees, monkeypatch
-):
-    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
-    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
-
-    response = _client("admin").post(
-        "/api/optimization/jobs/", _payload(dataset), format="json"
-    )
-
-    assert response.status_code == 201
-    job = OptimizationJob.objects.get(id=response.data["id"])
-    assert job.strategy == OptimizationJob.Strategy.SPATIAL_TERM
-
-
-def test_create_job_persists_chosen_strategy(make_dataset_with_trees, monkeypatch):
-    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
-    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
-
-    payload = _payload(dataset)
-    payload["strategy"] = "compare"
-    response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
-
-    assert response.status_code == 201
-    assert response.data["strategy"] == "compare"
-    job = OptimizationJob.objects.get(id=response.data["id"])
-    assert job.strategy == OptimizationJob.Strategy.COMPARE
-
-
-def test_create_job_rejects_invalid_strategy(make_dataset_with_trees, monkeypatch):
-    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
-    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
-
-    payload = _payload(dataset)
-    payload["strategy"] = "bogus"
-    response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
-
-    assert response.status_code == 400
-    assert not OptimizationJob.objects.exists()
+    jobs = OptimizationJob.objects.filter(config=config)
+    assert {job.config_preset for job in jobs} == set(CONFIG_PRESETS)
+    assert all(job.strategy == OptimizationJob.Strategy.COMPARE for job in jobs)
+    assert all(job.status == OptimizationJob.Status.QUEUED for job in jobs)
+    assert delay.call_count == len(CONFIG_PRESETS)
 
 
 def test_create_job_rejected_for_non_admin(make_dataset_with_trees, monkeypatch):
@@ -121,7 +84,9 @@ def test_get_job_status_shape(make_dataset_with_trees):
     assert response.status_code == 200
     assert set(response.data) == {
         "id",
+        "config",
         "strategy",
+        "config_preset",
         "status",
         "error_message",
         "metrics",
@@ -186,11 +151,16 @@ def test_get_solution_shape(make_dataset_with_trees):
     assert set(response.data) == {
         "id",
         "strategy",
+        "config_preset",
+        "config_preset_label",
         "total_routes",
         "total_travel_time_sec",
         "total_service_time_sec",
         "total_time_sec",
         "balance_score",
+        "balance_below_gate",
+        "dropped_trees",
+        "degenerate_routes",
         "sum_max_radius_m",
         "interleave_total",
         "interleave_per_route",
@@ -198,13 +168,160 @@ def test_get_solution_shape(make_dataset_with_trees):
         "timing",
         "generated_at",
         "published_at",
+        "recommended",
         "job",
         "dataset",
+        "config",
     }
     assert response.data["total_routes"] == 3
     assert response.data["job"] == str(job.id)
     assert response.data["total_service_time_sec"] == 0
     assert response.data["total_time_sec"] == 120.5
+
+
+def test_solution_exposes_the_backend_balance_gate(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(
+        config=config, status=OptimizationJob.Status.COMPLETED
+    )
+    unbalanced = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=1, balance_score=BALANCE_GATE - 0.01
+    )
+    balanced = RoutingSolution.objects.create(
+        job=job, strategy="spatial_term", total_routes=1, balance_score=BALANCE_GATE
+    )
+
+    client = _client("admin")
+    assert (
+        client.get(f"/api/optimization/solutions/{unbalanced.id}/").data[
+            "balance_below_gate"
+        ]
+        is True
+    )
+    assert (
+        client.get(f"/api/optimization/solutions/{balanced.id}/").data[
+            "balance_below_gate"
+        ]
+        is False
+    )
+
+
+def test_list_solutions_filters_by_dataset_and_flags_recommended(
+    make_dataset_with_trees,
+):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    other_dataset, _ = make_dataset_with_trees([(-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    other_config = RoutingConfig.objects.create(dataset=other_dataset)
+    job = OptimizationJob.objects.create(
+        config=config, status=OptimizationJob.Status.COMPLETED
+    )
+    other_job = OptimizationJob.objects.create(
+        config=other_config, status=OptimizationJob.Status.COMPLETED
+    )
+    slow = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=1, total_travel_time_sec=900.0
+    )
+    fast = RoutingSolution.objects.create(
+        job=job,
+        strategy="spatial_term",
+        total_routes=1,
+        total_travel_time_sec=100.0,
+    )
+    RoutingSolution.objects.create(
+        job=other_job,
+        strategy="global",
+        total_routes=1,
+        total_travel_time_sec=1.0,
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/solutions/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    ids = {row["id"] for row in response.data["results"]}
+    assert ids == {str(slow.id), str(fast.id)}
+    recommended = {row["id"]: row["recommended"] for row in response.data["results"]}
+    assert recommended[str(fast.id)] is True
+    assert recommended[str(slow.id)] is False
+
+
+def test_list_solutions_ordered_best_first(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(
+        config=config, status=OptimizationJob.Status.COMPLETED
+    )
+    with_drops = RoutingSolution.objects.create(
+        job=job,
+        strategy="global",
+        total_routes=1,
+        total_travel_time_sec=1.0,
+        balance_score=0.9,
+        dropped_trees=1,
+    )
+    slow = RoutingSolution.objects.create(
+        job=job,
+        strategy="spatial_term",
+        total_routes=1,
+        total_travel_time_sec=900.0,
+        balance_score=0.9,
+    )
+    fast = RoutingSolution.objects.create(
+        job=job,
+        strategy="cluster_first",
+        total_routes=1,
+        total_travel_time_sec=100.0,
+        balance_score=0.9,
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/solutions/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    ids = [row["id"] for row in response.data["results"]]
+    assert ids == [str(fast.id), str(slow.id), str(with_drops.id)]
+
+
+def test_list_solutions_without_dataset_filter_flags_recommended_per_dataset(
+    make_dataset_with_trees,
+):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    other_dataset, _ = make_dataset_with_trees([(-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    other_config = RoutingConfig.objects.create(dataset=other_dataset)
+    job = OptimizationJob.objects.create(
+        config=config, status=OptimizationJob.Status.COMPLETED
+    )
+    other_job = OptimizationJob.objects.create(
+        config=other_config, status=OptimizationJob.Status.COMPLETED
+    )
+    slow = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=1, total_travel_time_sec=900.0
+    )
+    fast = RoutingSolution.objects.create(
+        job=job,
+        strategy="spatial_term",
+        total_routes=1,
+        total_travel_time_sec=100.0,
+    )
+    other_fast = RoutingSolution.objects.create(
+        job=other_job,
+        strategy="global",
+        total_routes=1,
+        total_travel_time_sec=1.0,
+    )
+
+    response = _client("admin").get("/api/optimization/solutions/")
+
+    assert response.status_code == 200
+    recommended = {row["id"]: row["recommended"] for row in response.data["results"]}
+    assert recommended[str(fast.id)] is True
+    assert recommended[str(slow.id)] is False
+    assert recommended[str(other_fast.id)] is True
 
 
 def _solution_with_surveyor_route(make_dataset_with_trees, surveyor):

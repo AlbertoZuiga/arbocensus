@@ -36,11 +36,13 @@ describe("RoutingConfigForm", () => {
   });
 
   it("submits with minutes converted to seconds", async () => {
-    createJob.mockResolvedValue({ id: "j1", status: "queued" });
+    createJob.mockResolvedValue([{ id: "j1", status: "queued" }]);
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
+    await user.click(
+      screen.getByRole("button", { name: "Generar y comparar rutas" })
+    );
 
     await waitFor(() =>
       expect(createJob).toHaveBeenCalledWith({
@@ -48,20 +50,21 @@ describe("RoutingConfigForm", () => {
         minRouteTimeSec: 7200,
         maxRouteTimeSec: 10800,
         serviceTimeSec: 120,
-        strategy: "spatial_term",
       })
     );
   });
 
   it("converts edited minute values to seconds", async () => {
-    createJob.mockResolvedValue({ id: "j1" });
+    createJob.mockResolvedValue([{ id: "j1" }]);
     const user = userEvent.setup();
     renderForm();
 
     const minInput = screen.getByLabelText(/Tiempo mínimo por ruta/);
     await user.clear(minInput);
     await user.type(minInput, "90");
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
+    await user.click(
+      screen.getByRole("button", { name: "Generar y comparar rutas" })
+    );
 
     await waitFor(() =>
       expect(createJob).toHaveBeenCalledWith(
@@ -70,37 +73,25 @@ describe("RoutingConfigForm", () => {
     );
   });
 
-  it("calls onJobCreated with the created job", async () => {
-    const job = { id: "j1", status: "queued" };
-    createJob.mockResolvedValue(job);
+  it("calls onJobCreated with the created jobs", async () => {
+    const jobs = [{ id: "j1", status: "queued" }];
+    createJob.mockResolvedValue(jobs);
     const onJobCreated = vi.fn();
     const user = userEvent.setup();
     renderForm({ onJobCreated });
 
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
-
-    await waitFor(() => expect(onJobCreated).toHaveBeenCalledWith(job));
-  });
-
-  it("sends the default spatial_term strategy", async () => {
-    createJob.mockResolvedValue({ id: "j1" });
-    const user = userEvent.setup();
-    renderForm();
-
-    await user.click(screen.getByRole("button", { name: "Generar rutas" }));
-
-    await waitFor(() =>
-      expect(createJob).toHaveBeenCalledWith(
-        expect.objectContaining({ strategy: "spatial_term" })
-      )
+    await user.click(
+      screen.getByRole("button", { name: "Generar y comparar rutas" })
     );
+
+    await waitFor(() => expect(onJobCreated).toHaveBeenCalledWith(jobs));
   });
 
   it("disables submit while an active job exists for the dataset", async () => {
     renderForm({ hasActiveJob: true });
 
     expect(
-      screen.getByRole("button", { name: "Generar rutas" })
+      screen.getByRole("button", { name: "Generar y comparar rutas" })
     ).toBeDisabled();
     expect(
       screen.getByText("Ya hay una optimización en curso para este dataset.")
@@ -154,7 +145,7 @@ describe("RoutingConfigForm", () => {
       screen.getByText("El tiempo mínimo no puede ser mayor que el máximo.")
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Generar rutas" })
+      screen.getByRole("button", { name: "Generar y comparar rutas" })
     ).toBeDisabled();
     expect(createJob).not.toHaveBeenCalled();
   });

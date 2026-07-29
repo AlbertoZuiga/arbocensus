@@ -12,27 +12,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const DEFAULTS = {
   minRouteTimeMinutes: 120,
   maxRouteTimeMinutes: 180,
   serviceTimeMinutes: 2,
-  strategy: "spatial_term",
 };
-
-const STRATEGY_OPTIONS = [
-  { value: "global", label: "Global" },
-  { value: "spatial_term", label: "Término espacial" },
-  { value: "cluster_first", label: "Clustering primero" },
-  { value: "compare", label: "Comparar las 3" },
-];
 
 const minutesToSeconds = (minutes) => Math.round(Number(minutes) * 60);
 
@@ -50,7 +35,6 @@ export default function RoutingConfigForm({
   const [serviceTimeMinutes, setServiceTimeMinutes] = useState(
     DEFAULTS.serviceTimeMinutes
   );
-  const [strategy, setStrategy] = useState(DEFAULTS.strategy);
 
   const hasEmptyField = [
     minRouteTimeMinutes,
@@ -85,10 +69,9 @@ export default function RoutingConfigForm({
         minRouteTimeSec: minutesToSeconds(minRouteTimeMinutes),
         maxRouteTimeSec: minutesToSeconds(maxRouteTimeMinutes),
         serviceTimeSec: minutesToSeconds(serviceTimeMinutes),
-        strategy,
       }),
-    onSuccess: (job) => {
-      onJobCreated?.(job);
+    onSuccess: (jobs) => {
+      onJobCreated?.(jobs);
     },
   });
 
@@ -116,8 +99,7 @@ export default function RoutingConfigForm({
               onChange={(e) => setMinRouteTimeMinutes(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Duración mínima objetivo de cada ruta; el optimizador intenta que
-              no queden rutas más cortas.
+              El optimizador evita rutas más cortas que esto.
             </p>
           </div>
           <div className="space-y-2">
@@ -131,7 +113,7 @@ export default function RoutingConfigForm({
               onChange={(e) => setMaxRouteTimeMinutes(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Tope máximo de duración de una ruta; ninguna ruta puede superarlo.
+              Ninguna ruta puede superar este tope.
             </p>
           </div>
           <div className="space-y-2">
@@ -149,23 +131,6 @@ export default function RoutingConfigForm({
             <p className="text-xs text-muted-foreground">
               Tiempo estimado para censar un árbol en terreno.
             </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="strategy">Estrategia</Label>
-            <Select value={strategy} onValueChange={setStrategy}>
-              <SelectTrigger id="strategy">
-                <SelectValue>
-                  {STRATEGY_OPTIONS.find((o) => o.value === strategy)?.label}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {STRATEGY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {fleetEstimate != null && (
@@ -201,8 +166,11 @@ export default function RoutingConfigForm({
               mutation.isPending || hasEmptyField || rangeInvalid || hasActiveJob
             }
           >
-            {mutation.isPending ? "Generando…" : "Generar rutas"}
+            {mutation.isPending ? "Generando…" : "Generar y comparar rutas"}
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Corre 3 configuraciones × 3 estrategias y recomienda la mejor.
+          </p>
         </form>
       </CardContent>
     </Card>

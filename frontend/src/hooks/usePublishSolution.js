@@ -8,6 +8,7 @@ export function usePublishSolution() {
     mutationFn: (solutionId) => publishSolution(solutionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["solution-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-solutions"] });
       queryClient.invalidateQueries({ queryKey: ["routes"] });
       queryClient.invalidateQueries({ queryKey: ["census-progress"] });
       queryClient.invalidateQueries({ queryKey: ["census-progress-stops"] });
