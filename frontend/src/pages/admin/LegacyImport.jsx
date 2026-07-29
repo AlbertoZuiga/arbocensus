@@ -56,6 +56,8 @@ export default function LegacyImport() {
   const [datasetName, setDatasetName] = useState("");
   const [partitionBy, setPartitionBy] = useState("single");
   const [clusterCount, setClusterCount] = useState("2");
+  const [importFilter, setImportFilter] = useState("all");
+  const [datasetFilter, setDatasetFilter] = useState(new Set());
 
   const nextShapeId = useRef(1);
   const selectionModeRef = useRef(selectionMode);
@@ -85,9 +87,31 @@ export default function LegacyImport() {
     [trees],
   );
 
+  const allDatasets = useMemo(() => {
+    const seen = new Map();
+    for (const tree of trees ?? []) {
+      for (const ds of tree.datasets ?? []) {
+        if (!seen.has(ds.id)) seen.set(ds.id, ds.name);
+      }
+    }
+    return [...seen.entries()].map(([id, name]) => ({ id, name }));
+  }, [trees]);
+
+  const filteredTrees = useMemo(() => {
+    let result = trees ?? [];
+    if (importFilter === "available") result = result.filter((t) => !t.already_imported);
+    else if (importFilter === "imported") result = result.filter((t) => t.already_imported);
+    if (datasetFilter.size > 0) {
+      result = result.filter((t) =>
+        t.datasets?.some((d) => datasetFilter.has(d.id)),
+      );
+    }
+    return result;
+  }, [trees, importFilter, datasetFilter]);
+
   const keysByShape = useMemo(
-    () => shapes.map((shape) => keysInRing(trees ?? [], shape.ring)),
-    [trees, shapes],
+    () => shapes.map((shape) => keysInRing(filteredTrees, shape.ring)),
+    [filteredTrees, shapes],
   );
 
   const coveredKeys = useMemo(() => new Set(keysByShape.flat()), [keysByShape]);
@@ -144,6 +168,13 @@ export default function LegacyImport() {
     setSelection(EMPTY_SELECTION);
     setSelectionMode(null);
   };
+
+  const handleClearFilters = () => {
+    setImportFilter("all");
+    setDatasetFilter(new Set());
+  };
+
+  const filtersActive = importFilter !== "all" || datasetFilter.size > 0;
 
   const createDataset = useMutation({
     mutationFn: createDatasetFromLegacySelection,
@@ -253,47 +284,93 @@ export default function LegacyImport() {
       )}
 
       <div className="flex flex-1 gap-4 overflow-hidden">
-        <div className="relative isolate flex-1 overflow-hidden rounded-md border">
-          {treesLoading && (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              Cargando árboles legacy…
-            </div>
-          )}
-          {trees && (
-            <LegacySelectionMap
-              trees={trees}
-              areas={areas ?? NO_AREAS}
-              selectedKeys={selectedKeys}
-              shapes={shapes}
-              selectionMode={selectionMode}
-              onToggleTree={handleToggleTree}
-              onToggleArea={handleToggleArea}
-              onShapeCreate={handleShapeCreate}
-              onShapeChange={handleShapeChange}
-            />
-          )}
-          <div className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-md backdrop-blur">
-            <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-green-600" /> Disponible
+        <div className="flex flex-1 flex-col overflow-hidden rounded-md border">
+          <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-sm">
+            <select
+              aria-label="Estado de importación"
+              className="rounded border px-1 py-0.5 text-sm"
+              value={importFilter}
+              onChange={(e) => setImportFilter(e.target.value)}
+            >
+              <option value="all">Todos</option>
+              <option value="available">Solo disponibles</option>
+              <option value="imported">Solo ya importados</option>
+            </select>
+            {allDatasets.length > 0 && (
+              <select
+                aria-label="Dataset de origen"
+                className="rounded border px-1 py-0.5 text-sm"
+                multiple
+                size={Math.min(allDatasets.length, 3)}
+                value={[...datasetFilter]}
+                onChange={(e) =>
+                  setDatasetFilter(
+                    new Set(
+                      [...e.target.options]
+                        .filter((o) => o.selected)
+                        .map((o) => o.value),
+                    ),
+                  )
+                }
+              >
+                {allDatasets.map((ds) => (
+                  <option key={ds.id} value={ds.id}>
+                    {ds.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <span className="ml-auto text-muted-foreground">
+              {filteredTrees.length} de {trees?.length ?? 0} árboles
             </span>
-            <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-blue-600" /> Seleccionado
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya en otro
-              dataset
-            </span>
+            {filtersActive && (
+              <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                Limpiar filtros
+              </Button>
+            )}
           </div>
-          {(selectionMode || shapes.length > 0) && (
-            <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md border bg-background/90 px-3 py-1.5 text-sm shadow-md backdrop-blur">
-              {selectionMode === "bbox" &&
-                "Arrastra un rectángulo para seleccionar"}
-              {selectionMode === "polygon" &&
-                "Haz clic para marcar vértices y cierra sobre el primero"}
-              {!selectionMode &&
-                "Arrastra un vértice para moverlo, clic en un punto medio para añadir, clic derecho para borrar"}
+          <div className="relative isolate flex-1 overflow-hidden">
+            {treesLoading && (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                Cargando árboles legacy…
+              </div>
+            )}
+            {trees && (
+              <LegacySelectionMap
+                trees={filteredTrees}
+                areas={areas ?? NO_AREAS}
+                selectedKeys={selectedKeys}
+                shapes={shapes}
+                selectionMode={selectionMode}
+                onToggleTree={handleToggleTree}
+                onToggleArea={handleToggleArea}
+                onShapeCreate={handleShapeCreate}
+                onShapeChange={handleShapeChange}
+              />
+            )}
+            <div className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-md backdrop-blur">
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-green-600" /> Disponible
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-blue-600" /> Seleccionado
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya en otro
+                dataset
+              </span>
             </div>
-          )}
+            {(selectionMode || shapes.length > 0) && (
+              <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md border bg-background/90 px-3 py-1.5 text-sm shadow-md backdrop-blur">
+                {selectionMode === "bbox" &&
+                  "Arrastra un rectángulo para seleccionar"}
+                {selectionMode === "polygon" &&
+                  "Haz clic para marcar vértices y cierra sobre el primero"}
+                {!selectionMode &&
+                  "Arrastra un vértice para moverlo, clic en un punto medio para añadir, clic derecho para borrar"}
+              </div>
+            )}
+          </div>
         </div>
 
         <aside className="flex w-72 shrink-0 flex-col rounded-md border bg-white">

@@ -530,4 +530,75 @@ describe("LegacyImport", () => {
       screen.queryByText(/ya pertenece/),
     ).not.toBeInTheDocument();
   });
+
+  it("import filter hides trees that do not match", async () => {
+    const user = userEvent.setup();
+    fetchLegacyTrees.mockResolvedValue(TREES_WITH_IMPORTED);
+    renderPage();
+
+    await screen.findByText("tree-900");
+    expect(screen.getByText("tree-776")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Estado de importación/ }),
+      "imported",
+    );
+
+    expect(screen.queryByText("tree-776")).not.toBeInTheDocument();
+    expect(screen.getByText("tree-900")).toBeInTheDocument();
+  });
+
+  it("filter does not discard manual selections of hidden trees", async () => {
+    const user = userEvent.setup();
+    fetchLegacyTrees.mockResolvedValue(TREES_WITH_IMPORTED);
+    renderPage();
+
+    await user.click(await screen.findByText("tree-776"));
+    expect(screen.getByText("1 seleccionados")).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Estado de importación/ }),
+      "imported",
+    );
+
+    expect(screen.queryByText("tree-776")).not.toBeInTheDocument();
+    expect(screen.getByText("1 seleccionados")).toBeInTheDocument();
+  });
+
+  it("brush over filtered region selects only visible trees", async () => {
+    const user = userEvent.setup();
+    fetchLegacyTrees.mockResolvedValue(TREES_WITH_IMPORTED);
+    renderPage();
+
+    await screen.findByText("tree-776");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Estado de importación/ }),
+      "available",
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Selección por polígono/ }),
+    );
+    await user.click(screen.getByText("cerrar-poligono"));
+
+    expect(screen.getByText("2 seleccionados")).toBeInTheDocument();
+    expect(screen.queryByText(/tree-900/)).not.toBeInTheDocument();
+  });
+
+  it("clear filters button restores full tree list", async () => {
+    const user = userEvent.setup();
+    fetchLegacyTrees.mockResolvedValue(TREES_WITH_IMPORTED);
+    renderPage();
+
+    await screen.findByText("tree-776");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Estado de importación/ }),
+      "imported",
+    );
+    expect(screen.queryByText("tree-776")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+
+    expect(screen.getByText("tree-776")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
+  });
 });
