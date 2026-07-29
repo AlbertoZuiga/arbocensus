@@ -13,10 +13,10 @@ import {
   keysInRing,
   pruneExclusions,
   resolveSelection,
-  selectableKeys,
   selectionPayload,
   toggleKeys,
   treeKey,
+  treeKeys,
 } from "@/lib/legacySelection.js";
 import LegacySelectionMap from "@/components/map/LegacySelectionMap.jsx";
 import { getErrorMessage } from "@/lib/errors";
@@ -112,7 +112,7 @@ export default function LegacyImport() {
   const handleToggleTree = useCallback(
     (tree) => {
       if (selectionModeRef.current) return;
-      toggle(selectableKeys([tree]));
+      toggle(treeKeys([tree]));
     },
     [toggle],
   );
@@ -178,6 +178,13 @@ export default function LegacyImport() {
       toast.error(getErrorMessage(err, "No se pudieron crear los datasets"));
     },
   });
+
+  const reimportCount = useMemo(
+    () =>
+      [...selectedKeys].filter((key) => treesByKey.get(key)?.already_imported)
+        .length,
+    [selectedKeys, treesByKey],
+  );
 
   const k = Number(clusterCount);
   const maxK = Math.floor(selectedKeys.size / MIN_TREES_PER_DATASET);
@@ -273,8 +280,8 @@ export default function LegacyImport() {
               <span className="h-3 w-3 rounded-full bg-blue-600" /> Seleccionado
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya
-              importado
+              <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya en otro
+              dataset
             </span>
           </div>
           {(selectionMode || shapes.length > 0) && (
@@ -433,6 +440,15 @@ export default function LegacyImport() {
             <p className="text-sm text-muted-foreground">
               Se importarán {selectedKeys.size} árboles.
             </p>
+            {reimportCount > 0 && (
+              <p className="text-sm text-amber-600">
+                {reimportCount} de {selectedKeys.size}{" "}
+                {reimportCount === 1
+                  ? "árbol ya pertenece"
+                  : "árboles ya pertenecen"}{" "}
+                a otro dataset.
+              </p>
+            )}
             <DialogFooter>
               <Button
                 type="button"

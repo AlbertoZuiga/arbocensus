@@ -4,17 +4,12 @@ export function treeKey(tree) {
   return `${tree.source}:${tree.external_id}`;
 }
 
-export function isSelectable(tree) {
-  return !tree.already_imported;
-}
-
-export function selectableKeys(trees) {
-  return trees.filter(isSelectable).map(treeKey);
+export function treeKeys(trees) {
+  return trees.map(treeKey);
 }
 
 export function keysInRing(trees, ring) {
   return trees
-    .filter(isSelectable)
     .filter((tree) => pointInRing([tree.lat, tree.lon], ring))
     .map(treeKey);
 }

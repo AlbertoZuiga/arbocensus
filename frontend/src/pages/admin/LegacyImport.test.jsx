@@ -92,6 +92,7 @@ const TREES = [
     species: "Quillaja saponaria",
     area_id: 26,
     already_imported: false,
+    datasets: [],
   },
   {
     source: "legacy_api",
@@ -101,6 +102,7 @@ const TREES = [
     species: "",
     area_id: 26,
     already_imported: false,
+    datasets: [],
   },
   {
     source: "legacy_app",
@@ -110,6 +112,21 @@ const TREES = [
     species: "",
     area_id: null,
     already_imported: false,
+    datasets: [],
+  },
+];
+
+const TREES_WITH_IMPORTED = [
+  ...TREES,
+  {
+    source: "legacy_api",
+    external_id: 900,
+    lat: -33.44,
+    lon: -70.54,
+    species: "Peumus boldus",
+    area_id: null,
+    already_imported: true,
+    datasets: [{ id: "d-old", name: "Dataset Viejo" }],
   },
 ];
 
@@ -483,5 +500,34 @@ describe("LegacyImport", () => {
 
     const button = await screen.findByRole("button", { name: "Importar" });
     expect(button).toBeDisabled();
+  });
+
+  it("shows reimport warning in dialog when selection includes already imported trees", async () => {
+    const user = userEvent.setup();
+    fetchLegacyTrees.mockResolvedValue(TREES_WITH_IMPORTED);
+    renderPage();
+
+    await user.click(await screen.findByText("tree-900"));
+    await user.click(screen.getByText("tree-776"));
+    await user.click(screen.getByRole("button", { name: /Importar \(2\)/ }));
+    await user.type(screen.getByLabelText("Nombre del dataset"), "Mi mezcla");
+
+    expect(
+      screen.getByText(/1 de 2 árbol ya pertenece a otro dataset/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Crear dataset" }),
+    ).not.toBeDisabled();
+  });
+
+  it("does not show reimport warning when no selected tree is already imported", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await openImportDialog(user);
+
+    expect(
+      screen.queryByText(/ya pertenece/),
+    ).not.toBeInTheDocument();
   });
 });
