@@ -1,8 +1,13 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { fetchSolution } from "@/api/optimization.js";
-import { fetchRoutes, suggestAssignment } from "@/api/routes.js";
+import { fetchRoutes, setSolutionParticipants, suggestAssignment } from "@/api/routes.js";
 import { fetchSurveyors } from "@/api/surveyors.js";
 import { useAssignRoute } from "@/hooks/useAssignRoute";
 import { useSurveyorWorkload } from "@/hooks/useSurveyorWorkload";
@@ -58,6 +63,7 @@ function AssignmentModal({ open, onOpenChange, surveyors, solutionId, onApply })
   const [sortDir, setSortDir] = useState("desc");
   const [suggestion, setSuggestion] = useState(null);
 
+  const queryClient = useQueryClient();
   const { data: workload = [] } = useSurveyorWorkload({ enabled: open });
 
   const workloadById = useMemo(
@@ -134,6 +140,12 @@ function AssignmentModal({ open, onOpenChange, surveyors, solutionId, onApply })
     },
   });
 
+  const participantsMutation = useMutation({
+    mutationFn: () => setSolutionParticipants(solutionId, [...selected]),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["surveyor-workload"] }),
+  });
+
   const previewBySurveyor = useMemo(() => {
     if (!suggestion) return [];
     const grouped = {};
@@ -159,7 +171,12 @@ function AssignmentModal({ open, onOpenChange, surveyors, solutionId, onApply })
     return sortDir === "asc" ? " ↑" : " ↓";
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
+    try {
+      await participantsMutation.mutateAsync();
+    } catch {
+      return;
+    }
     onApply(suggestion.assignments);
     handleOpenChange(false);
   }
@@ -303,11 +320,27 @@ function AssignmentModal({ open, onOpenChange, surveyors, solutionId, onApply })
               ))}
             </div>
 
+            {participantsMutation.isError && (
+              <Alert variant="destructive" className="flex-shrink-0">
+                <AlertDescription>
+                  {getErrorMessage(
+                    participantsMutation.error,
+                    "No se pudo registrar a los censistas participantes.",
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <DialogFooter className="flex-shrink-0">
               <Button variant="outline" onClick={() => setStep(1)}>
                 Volver
               </Button>
-              <Button onClick={handleConfirm}>Confirmar asignación</Button>
+              <Button
+                disabled={participantsMutation.isPending}
+                onClick={handleConfirm}
+              >
+                Confirmar asignación
+              </Button>
             </DialogFooter>
           </>
         )}

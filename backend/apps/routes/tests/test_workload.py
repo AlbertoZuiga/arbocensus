@@ -132,6 +132,268 @@ class TestSurveyorWorkload:
         assert surveyor_workload() == []
 
 
+class TestSurveyorWorkloadParticipants:
+    def test_participant_with_no_routes_earns_positive_credit(
+        self, make_published_solution
+    ):
+        """Scenario A/B/C: C is selected but gets no routes; deficit must decrease."""
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45), (-70.66, -33.46), (-70.67, -33.47)],
+            max_route_time_sec=3600,
+        )
+        ana = CustomUserFactory(username="ana_p", role="surveyor")
+        bob = CustomUserFactory(username="bob_p", role="surveyor")
+        carlos = CustomUserFactory(username="carlos_p", role="surveyor")
+
+        # 6 routes * util 0.5 each = 3.0 total; 3 routes to Ana, 3 to Bob
+        for _ in range(3):
+            _make_route(solution, trees[:1], ana, total_estimated_time_sec=1800)
+        for _ in range(3):
+            _make_route(solution, trees[1:2], bob, total_estimated_time_sec=1800)
+
+        solution.participants.set([ana, bob, carlos])
+
+        result = surveyor_workload()
+        by_user = {r["username"]: r for r in result}
+
+        # total_util = 3.0, n = 3, fair_share = 1.0
+        # ana: 1.5 routes * util 0.5 = 1.5 → deficit = 1.0 - 1.5 = -0.5
+        # bob: 1.5 routes * util 0.5 = 1.5 → deficit = 1.0 - 1.5 = -0.5
+        # carlos: 0 routes → deficit = 1.0 - 0 = +1.0
+        assert by_user["carlos_p"]["cumulative_deficit"] == pytest.approx(
+            1.0, abs=0.001
+        )
+        assert by_user["ana_p"]["cumulative_deficit"] == pytest.approx(-0.5, abs=0.001)
+        assert by_user["bob_p"]["cumulative_deficit"] == pytest.approx(-0.5, abs=0.001)
+
+    def test_census_deficits_sum_to_zero(self, make_published_solution):
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45), (-70.66, -33.46)], max_route_time_sec=3600
+        )
+        ana = CustomUserFactory(username="ana_sum", role="surveyor")
+        bob = CustomUserFactory(username="bob_sum", role="surveyor")
+        carlos = CustomUserFactory(username="carlos_sum", role="surveyor")
+
+        _make_route(solution, trees[:1], ana, total_estimated_time_sec=3000)
+        _make_route(solution, trees[1:], bob, total_estimated_time_sec=1200)
+
+        solution.participants.set([ana, bob, carlos])
+
+        result = surveyor_workload()
+        by_user = {r["username"]: r for r in result}
+
+        total = sum(
+            float(r["cumulative_deficit"])
+            for r in [by_user["ana_sum"], by_user["bob_sum"], by_user["carlos_sum"]]
+        )
+        assert total == pytest.approx(0.0, abs=0.001)
+
+    def test_backwards_compat_no_registered_participants(self, make_published_solution):
+        """Solutions without registered participants fall back to surveyors-with-routes."""
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45), (-70.66, -33.46)], max_route_time_sec=3600
+        )
+        ana = CustomUserFactory(username="ana_bc", role="surveyor")
+        bob = CustomUserFactory(username="bob_bc", role="surveyor")
+        _make_route(solution, trees[:1], ana, total_estimated_time_sec=3600)
+        _make_route(solution, trees[1:], bob, total_estimated_time_sec=1800)
+        # no participants set — legacy behavior
+
+        result = surveyor_workload()
+        by_user = {r["username"]: r for r in result}
+
+        assert "ana_bc" in by_user
+        assert "bob_bc" in by_user
+        # fair_share = (1.0 + 0.5) / 2 = 0.75
+        assert by_user["ana_bc"]["cumulative_deficit"] == pytest.approx(
+            -0.25, abs=0.001
+        )
+        assert by_user["bob_bc"]["cumulative_deficit"] == pytest.approx(0.25, abs=0.001)
+
+    def test_abc_scenario_deficit_does_not_freeze(self, make_published_solution):
+        """
+        Exact A/B/C scenario from the bug report:
+        6 routes util 0.3 each, A gets 3, B gets 3, C gets 0.
+        With participants registered, C accumulates +0.6 (fair_share), not 0.
+        """
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45)], max_route_time_sec=10
+        )
+        a = CustomUserFactory(username="a_abc", role="surveyor")
+        b = CustomUserFactory(username="b_abc", role="surveyor")
+        c = CustomUserFactory(username="c_abc", role="surveyor")
+
+        for _ in range(3):
+            _make_route(solution, trees, a, total_estimated_time_sec=3)
+        for _ in range(3):
+            _make_route(solution, trees, b, total_estimated_time_sec=3)
+
+        solution.participants.set([a, b, c])
+
+        result = surveyor_workload()
+        by_user = {r["username"]: r for r in result}
+
+        # total_util = 6 * 0.3 = 1.8, n = 3, fair_share = 0.6
+        assert by_user["c_abc"]["cumulative_deficit"] == pytest.approx(0.6, abs=0.001)
+        assert by_user["a_abc"]["cumulative_deficit"] == pytest.approx(-0.3, abs=0.001)
+        assert by_user["b_abc"]["cumulative_deficit"] == pytest.approx(-0.3, abs=0.001)
+
+    def test_surveyor_with_routes_outside_registered_set_is_counted(
+        self, make_published_solution
+    ):
+        """Manual assignment outside the registered set must not inflate fair_share."""
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45)], max_route_time_sec=10
+        )
+        a = CustomUserFactory(username="a_out", role="surveyor")
+        b = CustomUserFactory(username="b_out", role="surveyor")
+        c = CustomUserFactory(username="c_out", role="surveyor")
+
+        _make_route(solution, trees, a, total_estimated_time_sec=3)
+        _make_route(solution, trees, b, total_estimated_time_sec=6)
+
+        solution.participants.set([a, c])
+
+        result = surveyor_workload()
+        by_user = {r["username"]: r for r in result}
+
+        # total_util = 0.9 over {a, b, c} → fair_share = 0.3
+        assert by_user["a_out"]["cumulative_deficit"] == pytest.approx(0.0, abs=0.001)
+        assert by_user["b_out"]["cumulative_deficit"] == pytest.approx(-0.3, abs=0.001)
+        assert by_user["c_out"]["cumulative_deficit"] == pytest.approx(0.3, abs=0.001)
+
+
+class TestSolutionParticipantsEndpoint:
+    def test_admin_sets_participants(self, make_published_solution):
+        solution, _ = make_published_solution([(-70.65, -33.45)])
+        surveyor = CustomUserFactory(role="surveyor")
+
+        response = _admin_client().post(
+            f"/api/routes/solutions/{solution.id}/participants/",
+            {"participant_ids": [str(surveyor.id)]},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.data["participant_count"] == 1
+        solution.refresh_from_db()
+        assert solution.participants.filter(id=surveyor.id).exists()
+
+    def test_empty_list_clears_participants(self, make_published_solution):
+        solution, _ = make_published_solution([(-70.65, -33.45)])
+        surveyor = CustomUserFactory(role="surveyor")
+        solution.participants.set([surveyor])
+
+        response = _admin_client().post(
+            f"/api/routes/solutions/{solution.id}/participants/",
+            {"participant_ids": []},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert solution.participants.count() == 0
+
+    def test_rejects_unpublished_solution(self, make_dataset_with_trees):
+        dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+        from apps.optimization.models import (
+            OptimizationJob,
+            RoutingConfig,
+            RoutingSolution,
+        )
+
+        config = RoutingConfig.objects.create(
+            dataset=dataset, min_route_time_sec=1, max_route_time_sec=3600
+        )
+        job = OptimizationJob.objects.create(config=config)
+        solution = RoutingSolution.objects.create(job=job, total_routes=1)
+        surveyor = CustomUserFactory(role="surveyor")
+
+        response = _admin_client().post(
+            f"/api/routes/solutions/{solution.id}/participants/",
+            {"participant_ids": [str(surveyor.id)]},
+            format="json",
+        )
+
+        assert response.status_code == 404
+
+    def test_surveyor_gets_403(self, make_published_solution):
+        solution, _ = make_published_solution([(-70.65, -33.45)])
+        surveyor = CustomUserFactory(role="surveyor")
+
+        response = _surveyor_client().post(
+            f"/api/routes/solutions/{solution.id}/participants/",
+            {"participant_ids": [str(surveyor.id)]},
+            format="json",
+        )
+
+        assert response.status_code == 403
+
+
+class TestManualAssignRegistersParticipant:
+    def test_assign_adds_surveyor_to_participants(self, make_published_solution):
+        solution, _ = make_published_solution([(-70.65, -33.45)])
+        route = Route.objects.create(
+            solution=solution,
+            route_number=1,
+            total_trees=1,
+            total_estimated_time_sec=1800,
+        )
+        surveyor = CustomUserFactory(role="surveyor")
+
+        response = _admin_client().patch(
+            f"/api/routes/{route.id}/assign/",
+            {"surveyor_id": str(surveyor.id)},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert solution.participants.filter(id=surveyor.id).exists()
+
+    def test_unassign_keeps_participant_registered(self, make_published_solution):
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45), (-70.66, -33.46)], max_route_time_sec=3600
+        )
+        ana = CustomUserFactory(username="ana_ma", role="surveyor")
+        bob = CustomUserFactory(username="bob_ma", role="surveyor")
+        route = _make_route(solution, trees[:1], ana, total_estimated_time_sec=1800)
+        _make_route(solution, trees[1:], bob, total_estimated_time_sec=1800)
+        solution.participants.set([ana, bob])
+
+        response = _admin_client().patch(
+            f"/api/routes/{route.id}/assign/",
+            {"surveyor_id": None},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert solution.participants.filter(id=ana.id).exists()
+        by_user = {r["username"]: r for r in surveyor_workload()}
+        # total_util = 0.5 (bob only), n = 2, fair_share = 0.25
+        assert by_user["ana_ma"]["cumulative_deficit"] == pytest.approx(0.25, abs=0.001)
+
+    def test_reassignment_keeps_previous_surveyor_registered(
+        self, make_published_solution
+    ):
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45)], max_route_time_sec=3600
+        )
+        ana = CustomUserFactory(username="ana_re", role="surveyor")
+        bob = CustomUserFactory(username="bob_re", role="surveyor")
+        route = _make_route(solution, trees, ana, total_estimated_time_sec=1800)
+        solution.participants.set([ana])
+
+        _admin_client().patch(
+            f"/api/routes/{route.id}/assign/",
+            {"surveyor_id": str(bob.id)},
+            format="json",
+        )
+
+        assert set(solution.participants.values_list("id", flat=True)) == {
+            ana.id,
+            bob.id,
+        }
+
+
 class TestSuggestAssignment:
     def test_heavy_route_goes_to_candidate_with_highest_deficit(
         self, make_published_solution

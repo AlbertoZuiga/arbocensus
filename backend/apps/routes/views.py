@@ -22,6 +22,7 @@ from .serializers import (
     RouteDetailSerializer,
     RouteSerializer,
     RouteStopSerializer,
+    SolutionParticipantsSerializer,
     SuggestAssignmentSerializer,
     TreeObservationInputSerializer,
     TreeObservationSerializer,
@@ -130,6 +131,8 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             )
         route.surveyor = surveyor
         route.save(update_fields=["surveyor"])
+        if surveyor is not None:
+            route.solution.participants.add(surveyor)
         return Response(RouteSerializer(route).data)
 
     def _dataset_id(self, request):
@@ -275,6 +278,23 @@ class SuggestAssignmentView(APIView):
 
         assignments, balance = suggest_assignment(solution_id, surveyor_ids)
         return Response({"assignments": assignments, "balance": balance})
+
+
+class SolutionParticipantsView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, solution_id):
+        from apps.optimization.models import RoutingSolution
+
+        serializer = SolutionParticipantsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        solution = get_object_or_404(
+            RoutingSolution, id=solution_id, published_at__isnull=False
+        )
+        participants = serializer.validated_data["participant_ids"]
+        solution.participants.set(participants)
+        return Response({"participant_count": len(participants)})
 
 
 class TreeObservationListView(APIView):

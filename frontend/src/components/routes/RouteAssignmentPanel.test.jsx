@@ -7,6 +7,7 @@ vi.mock("@/api/routes.js", () => ({
   fetchRoutes: vi.fn(),
   fetchWorkload: vi.fn(),
   suggestAssignment: vi.fn(),
+  setSolutionParticipants: vi.fn(),
 }));
 
 vi.mock("@/api/optimization.js", () => ({
@@ -22,7 +23,12 @@ vi.mock("@/hooks/useAssignRoute", () => ({
   useAssignRoute: () => ({ mutate: mockAssignMutate }),
 }));
 
-import { fetchRoutes, fetchWorkload, suggestAssignment } from "@/api/routes.js";
+import {
+  fetchRoutes,
+  fetchWorkload,
+  setSolutionParticipants,
+  suggestAssignment,
+} from "@/api/routes.js";
 import { fetchSolution } from "@/api/optimization.js";
 import { fetchSurveyors } from "@/api/surveyors.js";
 import RouteAssignmentPanel from "./RouteAssignmentPanel.jsx";
@@ -94,6 +100,7 @@ describe("RouteAssignmentPanel", () => {
     fetchRoutes.mockResolvedValue(ROUTES);
     fetchSurveyors.mockResolvedValue(SURVEYORS);
     fetchWorkload.mockResolvedValue(WORKLOAD);
+    setSolutionParticipants.mockResolvedValue({ participant_count: 1 });
   });
 
   it("shows 'Asignación automática' button when solution is published", async () => {
@@ -171,6 +178,11 @@ describe("RouteAssignmentPanel", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Confirmar asignación" }));
 
+    await waitFor(() =>
+      expect(setSolutionParticipants).toHaveBeenCalledWith(SOLUTION_ID, [
+        SURVEYOR_ID,
+      ]),
+    );
     expect(mockAssignMutate).toHaveBeenCalledWith({
       routeId: ROUTE_ID,
       surveyorId: SURVEYOR_ID,

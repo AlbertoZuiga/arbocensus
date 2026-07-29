@@ -5,6 +5,7 @@ from apps.optimization.config_presets import (
     CONFIG_PRESET_CHOICES,
     DEFAULT_CONFIG_PRESET,
 )
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import F, Q
@@ -136,6 +137,11 @@ class RoutingSolution(models.Model):
     timing = models.JSONField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
     generated_at = models.DateTimeField(auto_now_add=True)
+    participants = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="solution_participations",
+        blank=True,
+    )
 
     class Meta:
         ordering = ["-generated_at"]

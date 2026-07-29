@@ -5,6 +5,7 @@ from .views import (
     RouteStopSkipView,
     RouteStopVisitView,
     RouteViewSet,
+    SolutionParticipantsView,
     SuggestAssignmentView,
     TreeObservationListView,
     WorkloadView,
@@ -20,6 +21,11 @@ urlpatterns = [
         "routes/suggest-assignment/",
         SuggestAssignmentView.as_view(),
         name="route_suggest_assignment",
+    ),
+    path(
+        "routes/solutions/<uuid:solution_id>/participants/",
+        SolutionParticipantsView.as_view(),
+        name="solution_participants",
     ),
     path(
         "routes/stops/<uuid:stop_id>/visit/",

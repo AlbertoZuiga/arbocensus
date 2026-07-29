@@ -8,9 +8,18 @@ def route_utilization(route):
 
 
 def surveyor_workload():
+    from apps.optimization.models import RoutingSolution
+
+    solutions = {
+        s.id: s
+        for s in RoutingSolution.objects.filter(published_at__isnull=False)
+        .select_related("job__config")
+        .prefetch_related("participants")
+    }
+
     routes = (
         Route.objects.filter(
-            solution__published_at__isnull=False,
+            solution_id__in=solutions.keys(),
             surveyor__isnull=False,
         )
         .select_related("solution__job__config", "surveyor")
@@ -19,33 +28,42 @@ def surveyor_workload():
 
     by_solution: dict = defaultdict(list)
     for route in routes:
-        by_solution[route.solution.id].append(route)
+        by_solution[route.solution_id].append(route)
 
-    accum = {}
+    accum: dict = {}
 
-    for solution_routes in by_solution.values():
-        util_by_surveyor = defaultdict(float)
-        surveyor_obj = {}
+    for solution_id, solution in solutions.items():
+        solution_routes = by_solution.get(solution_id, [])
+
+        util_by_surveyor: dict = defaultdict(float)
+        surveyor_obj: dict = {}
         for route in solution_routes:
             util = route_utilization(route)
             util_by_surveyor[route.surveyor_id] += util
             surveyor_obj[route.surveyor_id] = route.surveyor
 
-        total_util = sum(util_by_surveyor.values())
-        n = len(util_by_surveyor)
-        fair_share = total_util / n if n else 0.0
+        registered = {p.id: p for p in solution.participants.all()}
+        participant_obj = {**surveyor_obj, **registered}
 
-        for sid, util in util_by_surveyor.items():
-            if sid not in accum:
-                accum[sid] = {
-                    "surveyor": surveyor_obj[sid],
+        n = len(participant_obj)
+        if not n:
+            continue
+
+        total_util = sum(util_by_surveyor.values())
+        fair_share = total_util / n
+
+        for pid, p in participant_obj.items():
+            util = util_by_surveyor.get(pid, 0.0)
+            if pid not in accum:
+                accum[pid] = {
+                    "surveyor": p,
                     "total_utilization": 0.0,
                     "census_count": 0,
                     "cumulative_deficit": 0.0,
                 }
-            accum[sid]["total_utilization"] += util
-            accum[sid]["census_count"] += 1
-            accum[sid]["cumulative_deficit"] += fair_share - util
+            accum[pid]["total_utilization"] += util
+            accum[pid]["census_count"] += 1
+            accum[pid]["cumulative_deficit"] += fair_share - util
 
     return sorted(
         [
