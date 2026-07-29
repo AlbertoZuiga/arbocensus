@@ -118,4 +118,4 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
         return pick_recommended(obj.dataset_id) == obj.id
 
     def get_dropped_tree_ids(self, obj):
-        return [str(t.id) for t in obj.dropped.all()]
+        return [str(t.id) for t in obj.dropped.all() if t.is_active]

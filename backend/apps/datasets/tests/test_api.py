@@ -112,3 +112,76 @@ def test_trees_endpoint_returns_geojson(make_dataset_with_trees):
     assert response.data["type"] == "FeatureCollection"
     coordinates = [f["geometry"]["coordinates"] for f in response.data["features"]]
     assert sorted(coordinates) == [[-70.66, -33.46], [-70.65, -33.45]]
+
+
+def test_deactivate_marks_trees_inactive(make_dataset_with_trees):
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    response = _client("admin").post(
+        f"/api/datasets/{dataset.id}/trees/deactivate/",
+        {"tree_ids": [str(trees[0].id)]},
+        format="json",
+    )
+    assert response.status_code == 200
+    trees[0].refresh_from_db()
+    trees[1].refresh_from_db()
+    assert trees[0].is_active is False
+    assert trees[1].is_active is True
+
+
+def test_deactivate_recalculates_total_trees(make_dataset_with_trees):
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    _client("admin").post(
+        f"/api/datasets/{dataset.id}/trees/deactivate/",
+        {"tree_ids": [str(trees[0].id)]},
+        format="json",
+    )
+    dataset.refresh_from_db()
+    assert dataset.total_trees == 1
+
+
+def test_deactivate_leaves_routestop_intact(make_dataset_with_trees):
+    from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
+    from apps.routes.models import Route, RouteStop
+
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(config=config)
+    solution = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=1
+    )
+    route = Route.objects.create(solution=solution, route_number=1, total_trees=1)
+    stop = RouteStop.objects.create(route=route, tree=trees[0], sequence=1)
+
+    _client("admin").post(
+        f"/api/datasets/{dataset.id}/trees/deactivate/",
+        {"tree_ids": [str(trees[0].id)]},
+        format="json",
+    )
+
+    assert RouteStop.objects.filter(id=stop.id).exists()
+    trees[0].refresh_from_db()
+    assert trees[0].is_active is False
+
+
+def test_deactivated_tree_not_in_trees_endpoint(make_dataset_with_trees):
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    _client("admin").post(
+        f"/api/datasets/{dataset.id}/trees/deactivate/",
+        {"tree_ids": [str(trees[0].id)]},
+        format="json",
+    )
+    response = _client("surveyor").get(f"/api/datasets/{dataset.id}/trees/")
+    assert response.status_code == 200
+    ids_in_response = {f["properties"]["id"] for f in response.data["features"]}
+    assert str(trees[0].id) not in ids_in_response
+    assert str(trees[1].id) in ids_in_response
+
+
+def test_deactivate_requires_admin(make_dataset_with_trees):
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45)])
+    response = _client("surveyor").post(
+        f"/api/datasets/{dataset.id}/trees/deactivate/",
+        {"tree_ids": [str(trees[0].id)]},
+        format="json",
+    )
+    assert response.status_code == 403

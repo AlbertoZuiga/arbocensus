@@ -44,7 +44,9 @@ class OptimizationJobViewSet(
         return OptimizationJobSerializer
 
     def get_queryset(self) -> Any:
-        queryset = OptimizationJob.objects.prefetch_related("solutions")
+        queryset = OptimizationJob.objects.prefetch_related(
+            "solutions", "solutions__dropped"
+        )
         dataset = self.request.query_params.get("dataset")
         if dataset:
             queryset = queryset.filter(config__dataset=dataset)
@@ -99,7 +101,7 @@ class RoutingSolutionViewSet(
     def get_queryset(self) -> Any:
         user = self.request.user
         base = RoutingSolution.objects.select_related("job__config").prefetch_related(
-            "routes"
+            "routes", "dropped"
         )
         if user.role == CustomUser.Role.ADMIN:
             queryset = base

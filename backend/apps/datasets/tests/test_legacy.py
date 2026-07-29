@@ -206,6 +206,18 @@ def test_list_trees_flags_already_imported(legacy_db):
 
 
 @pytest.mark.django_db
+def test_list_trees_deactivated_tree_appears_selectable(legacy_db):
+    dataset = legacy.create_dataset("Existing", [APP_TREES[0]])
+    imported_tree = Tree.objects.get(dataset=dataset)
+    imported_tree.is_active = False
+    imported_tree.save(update_fields=["is_active"])
+
+    trees = legacy.list_trees()
+    by_key = {(t["source"], t["external_id"]): t for t in trees}
+    assert by_key[(legacy.SOURCE_APP, 96905)]["already_imported"] is False
+
+
+@pytest.mark.django_db
 def test_list_trees_points_a_twice_imported_tree_at_the_newest_dataset(legacy_db):
     legacy.create_dataset("Old", [APP_TREES[0]])
     newest = legacy.create_dataset("New", [APP_TREES[0]])
