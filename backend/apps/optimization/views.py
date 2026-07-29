@@ -29,6 +29,16 @@ from .tasks import run_optimization
 
 CustomUser = get_user_model()
 
+# Default production fanout: one job per (preset, strategy) pair.
+# Avoids running cluster_first in normal admin usage while keeping it
+# available via management commands through an explicit strategy argument.
+_PRODUCTION_JOB_PAIRS = [
+    ("default", RoutingSolution.Strategy.GLOBAL),
+    ("default", RoutingSolution.Strategy.SPATIAL_TERM),
+    ("temporal_span_100", RoutingSolution.Strategy.SPATIAL_TERM),
+    ("arc_linear_30", RoutingSolution.Strategy.SPATIAL_TERM),
+]
+
 
 class OptimizationJobViewSet(
     mixins.CreateModelMixin,
@@ -54,20 +64,33 @@ class OptimizationJobViewSet(
         return queryset
 
     def create(self, request, *args, **kwargs):
-        # One submit fans out into one job per preset (all running the full
-        # strategy comparison) so the admin gets a ranked sweep instead of
-        # having to relaunch by hand for each preset.
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         config = serializer.save()
-        jobs = [
-            OptimizationJob.objects.create(
-                config=config,
-                strategy=OptimizationJob.Strategy.COMPARE,
-                config_preset=preset,
-            )
-            for preset in CONFIG_PRESETS
-        ]
+
+        full_comparison = request.data.get("full_comparison", False)
+        if full_comparison:
+            # 3 presets × 3 strategies = 9 solves (original behaviour, for research).
+            jobs = [
+                OptimizationJob.objects.create(
+                    config=config,
+                    strategy=OptimizationJob.Strategy.COMPARE,
+                    config_preset=preset,
+                )
+                for preset in CONFIG_PRESETS
+            ]
+        else:
+            # 4 explicit pairs; each job runs exactly one strategy so cluster_first
+            # is never launched from normal admin usage.
+            jobs = [
+                OptimizationJob.objects.create(
+                    config=config,
+                    strategy=strategy,
+                    config_preset=preset,
+                )
+                for preset, strategy in _PRODUCTION_JOB_PAIRS
+            ]
+
         for job in jobs:
             try:
                 run_optimization.delay(str(job.id))
