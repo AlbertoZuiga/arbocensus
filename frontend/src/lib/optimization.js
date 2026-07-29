@@ -1,6 +1,8 @@
 export const STRATEGY_LABELS = {
   global: "Global",
   spatial_term: "Término espacial",
+  // cluster_first is kept for display purposes only — it may appear on historical
+  // solutions but is no longer launched from the production UI.
   cluster_first: "Clustering primero",
 };
 
