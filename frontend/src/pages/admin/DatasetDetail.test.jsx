@@ -28,6 +28,8 @@ vi.mock("@/api/routes.js", () => ({
     type: "FeatureCollection",
     features: [],
   }),
+  fetchWorkload: vi.fn().mockResolvedValue([]),
+  suggestAssignment: vi.fn().mockResolvedValue({ assignments: [], balance: {} }),
 }));
 
 vi.mock("@/api/surveyors.js", () => ({

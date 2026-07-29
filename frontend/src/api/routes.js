@@ -62,3 +62,16 @@ export async function assignRoute(routeId, surveyorId) {
   });
   return data;
 }
+
+export async function fetchWorkload() {
+  const { data } = await client.get("/routes/workload/");
+  return data;
+}
+
+export async function suggestAssignment(solutionId, surveyorIds) {
+  const { data } = await client.post("/routes/suggest-assignment/", {
+    solution_id: solutionId,
+    surveyor_ids: surveyorIds,
+  });
+  return data;
+}
