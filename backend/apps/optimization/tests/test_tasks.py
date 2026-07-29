@@ -143,6 +143,36 @@ def test_task_compare_runs_all_strategies(make_dataset_with_trees, monkeypatch):
     assert captured["strategy"] is None
 
 
+def test_pipeline_explicit_cluster_first_runs_it(make_dataset_with_trees, monkeypatch):
+    from apps.optimization.models import RoutingSolution
+
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(config=config)
+
+    strategies_run = []
+
+    def fake_solve(s_value, matrix, **kwargs):
+        strategies_run.append(s_value)
+        return ([], [])
+
+    monkeypatch.setattr("apps.optimization.pipeline.solve_by_strategy", fake_solve)
+    monkeypatch.setattr(
+        "apps.optimization.pipeline.OptimizationPipeline._persist_solution",
+        lambda self, *a, **kw: {},
+    )
+    monkeypatch.setattr(
+        "apps.optimization.pipeline.OSRMCostMatrixBuilder.build",
+        lambda self, trees, **kw: [[0, 1], [1, 0]],
+    )
+
+    from apps.optimization.pipeline import OptimizationPipeline
+
+    OptimizationPipeline(job).run(strategy="cluster_first")
+
+    assert strategies_run == [RoutingSolution.Strategy.CLUSTER_FIRST.value]
+
+
 def test_task_configured_with_max_retries():
     assert run_optimization.max_retries == 1
 

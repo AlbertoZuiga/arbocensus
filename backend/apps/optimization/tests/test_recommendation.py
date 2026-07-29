@@ -1,6 +1,7 @@
 import pytest
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.recommendation import (
+    TRAVEL_TIE_PCT,
     order_by_criterion,
     pick_recommended,
     pick_recommended_bulk,
@@ -17,15 +18,20 @@ def make_solution(
     degenerate_routes=0,
     balance_score=0.9,
     total_travel_time_sec=1000.0,
+    total_routes=1,
+    strategy="global",
+    config_preset="default",
     status=OptimizationJob.Status.COMPLETED,
 ):
     config = config or RoutingConfig.objects.create(dataset=dataset)
-    job = OptimizationJob.objects.create(config=config, status=status)
+    job = OptimizationJob.objects.create(
+        config=config, status=status, config_preset=config_preset
+    )
     return RoutingSolution.objects.create(
         job=job,
         dataset=dataset,
-        strategy="global",
-        total_routes=1,
+        strategy=strategy,
+        total_routes=total_routes,
         total_travel_time_sec=total_travel_time_sec,
         balance_score=balance_score,
         dropped_trees=dropped_trees,
@@ -164,3 +170,70 @@ def test_ignores_faster_solution_from_an_older_routing_config():
 
     assert pick_recommended(dataset.id) == current_best.id
     assert pick_recommended(dataset.id) != old_fast.id
+
+
+def test_total_routes_breaks_travel_tie():
+    # When two solutions have identical travel, fewer routes wins.
+    dataset = DatasetFactory()
+    config = RoutingConfig.objects.create(dataset=dataset)
+    more_routes = make_solution(
+        dataset, config=config, total_travel_time_sec=500.0, total_routes=5
+    )
+    fewer_routes = make_solution(
+        dataset, config=config, total_travel_time_sec=500.0, total_routes=3
+    )
+
+    assert pick_recommended(dataset.id) == fewer_routes.id
+    assert pick_recommended(dataset.id) != more_routes.id
+
+
+def test_technical_tie_prefers_control_over_strict_winner():
+    # If the strict winner's travel is within TRAVEL_TIE_PCT of the control
+    # (default×spatial_term), the control is recommended instead.
+    dataset = DatasetFactory()
+    config = RoutingConfig.objects.create(dataset=dataset)
+    control_travel = 1000.0
+    # winner is slightly better than control but within the tie margin
+    within_margin = control_travel * (1 - TRAVEL_TIE_PCT / 2)
+    strict_winner = make_solution(
+        dataset,
+        config=config,
+        total_travel_time_sec=within_margin,
+        strategy="global",
+        config_preset="default",
+    )
+    control = make_solution(
+        dataset,
+        config=config,
+        total_travel_time_sec=control_travel,
+        strategy="spatial_term",
+        config_preset="default",
+    )
+
+    assert pick_recommended(dataset.id) == control.id
+    assert pick_recommended(dataset.id) != strict_winner.id
+
+
+def test_technical_tie_does_not_apply_outside_margin():
+    # If the strict winner's travel is more than TRAVEL_TIE_PCT below the control,
+    # the strict winner keeps the recommendation.
+    dataset = DatasetFactory()
+    config = RoutingConfig.objects.create(dataset=dataset)
+    control_travel = 1000.0
+    outside_margin = control_travel * (1 - TRAVEL_TIE_PCT * 2)
+    strict_winner = make_solution(
+        dataset,
+        config=config,
+        total_travel_time_sec=outside_margin,
+        strategy="global",
+        config_preset="default",
+    )
+    make_solution(
+        dataset,
+        config=config,
+        total_travel_time_sec=control_travel,
+        strategy="spatial_term",
+        config_preset="default",
+    )
+
+    assert pick_recommended(dataset.id) == strict_winner.id
