@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .config_presets import CONFIG_PRESETS
+from .feasibility import check_config
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
 from .pipeline import estimate_fleet_from_cache
 from .recommendation import (
@@ -164,6 +165,11 @@ def fleet_estimate(request):
                 "min_route_time_sec", RoutingConfig.DEFAULT_MIN_ROUTE_TIME_SEC
             )
         )
+        max_route_time_sec = int(
+            request.query_params.get(
+                "max_route_time_sec", RoutingConfig.DEFAULT_MAX_ROUTE_TIME_SEC
+            )
+        )
         service_time_sec = int(
             request.query_params.get(
                 "service_time_sec", RoutingConfig.DEFAULT_SERVICE_TIME_SEC
@@ -171,20 +177,30 @@ def fleet_estimate(request):
         )
     except ValueError:
         return Response(
-            {"detail": "min_route_time_sec and service_time_sec must be integers"},
+            {
+                "detail": "min_route_time_sec, max_route_time_sec and service_time_sec must be integers"
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
-    if min_route_time_sec < 1 or service_time_sec < 1:
+    if min_route_time_sec < 1 or max_route_time_sec < 1 or service_time_sec < 1:
         return Response(
-            {"detail": "min_route_time_sec and service_time_sec must be positive"},
+            {
+                "detail": "min_route_time_sec, max_route_time_sec and service_time_sec must be positive"
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     dataset = get_object_or_404(Dataset, pk=dataset_id)
+    feasibility = check_config(
+        dataset, min_route_time_sec, max_route_time_sec, service_time_sec
+    )
     return Response(
         {
             "n_estimated": estimate_fleet_from_cache(
                 dataset, min_route_time_sec, service_time_sec
-            )
+            ),
+            "blocking": feasibility["blocking"],
+            "warnings": feasibility["warnings"],
+            "diagnostics": feasibility["diagnostics"],
         }
     )

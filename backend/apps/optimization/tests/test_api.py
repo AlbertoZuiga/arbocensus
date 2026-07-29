@@ -26,7 +26,7 @@ def _payload(dataset):
 
 
 def test_admin_creates_one_job_per_preset(make_dataset_with_trees, monkeypatch):
-    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     delay = MagicMock()
     monkeypatch.setattr("apps.optimization.views.run_optimization.delay", delay)
 
