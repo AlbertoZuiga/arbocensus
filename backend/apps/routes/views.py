@@ -131,6 +131,8 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             )
         route.surveyor = surveyor
         route.save(update_fields=["surveyor"])
+        if surveyor is not None:
+            route.solution.participants.add(surveyor)
         return Response(RouteSerializer(route).data)
 
     def _dataset_id(self, request):

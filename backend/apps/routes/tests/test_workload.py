@@ -329,6 +329,71 @@ class TestSolutionParticipantsEndpoint:
         assert response.status_code == 403
 
 
+class TestManualAssignRegistersParticipant:
+    def test_assign_adds_surveyor_to_participants(self, make_published_solution):
+        solution, _ = make_published_solution([(-70.65, -33.45)])
+        route = Route.objects.create(
+            solution=solution,
+            route_number=1,
+            total_trees=1,
+            total_estimated_time_sec=1800,
+        )
+        surveyor = CustomUserFactory(role="surveyor")
+
+        response = _admin_client().patch(
+            f"/api/routes/{route.id}/assign/",
+            {"surveyor_id": str(surveyor.id)},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert solution.participants.filter(id=surveyor.id).exists()
+
+    def test_unassign_keeps_participant_registered(self, make_published_solution):
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45), (-70.66, -33.46)], max_route_time_sec=3600
+        )
+        ana = CustomUserFactory(username="ana_ma", role="surveyor")
+        bob = CustomUserFactory(username="bob_ma", role="surveyor")
+        route = _make_route(solution, trees[:1], ana, total_estimated_time_sec=1800)
+        _make_route(solution, trees[1:], bob, total_estimated_time_sec=1800)
+        solution.participants.set([ana, bob])
+
+        response = _admin_client().patch(
+            f"/api/routes/{route.id}/assign/",
+            {"surveyor_id": None},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert solution.participants.filter(id=ana.id).exists()
+        by_user = {r["username"]: r for r in surveyor_workload()}
+        # total_util = 0.5 (bob only), n = 2, fair_share = 0.25
+        assert by_user["ana_ma"]["cumulative_deficit"] == pytest.approx(0.25, abs=0.001)
+
+    def test_reassignment_keeps_previous_surveyor_registered(
+        self, make_published_solution
+    ):
+        solution, trees = make_published_solution(
+            [(-70.65, -33.45)], max_route_time_sec=3600
+        )
+        ana = CustomUserFactory(username="ana_re", role="surveyor")
+        bob = CustomUserFactory(username="bob_re", role="surveyor")
+        route = _make_route(solution, trees, ana, total_estimated_time_sec=1800)
+        solution.participants.set([ana])
+
+        _admin_client().patch(
+            f"/api/routes/{route.id}/assign/",
+            {"surveyor_id": str(bob.id)},
+            format="json",
+        )
+
+        assert set(solution.participants.values_list("id", flat=True)) == {
+            ana.id,
+            bob.id,
+        }
+
+
 class TestSuggestAssignment:
     def test_heavy_route_goes_to_candidate_with_highest_deficit(
         self, make_published_solution
