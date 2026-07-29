@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { createJob, fetchFleetEstimate } from "@/api/optimization";
 import { getErrorMessage } from "@/lib/errors";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,23 +43,28 @@ export default function RoutingConfigForm({
     serviceTimeMinutes,
   ].some((value) => value === "" || Number.isNaN(Number(value)));
 
-  const { data: fleetEstimate } = useQuery({
+  const { data: estimateData } = useQuery({
     queryKey: [
       "fleet-estimate",
       datasetId,
       minRouteTimeMinutes,
+      maxRouteTimeMinutes,
       serviceTimeMinutes,
     ],
     queryFn: () =>
       fetchFleetEstimate(
         datasetId,
         minutesToSeconds(minRouteTimeMinutes),
+        minutesToSeconds(maxRouteTimeMinutes),
         minutesToSeconds(serviceTimeMinutes),
       ),
     enabled: !!datasetId && !hasEmptyField,
     refetchInterval: false,
     staleTime: 5_000,
   });
+
+  const blockingErrors = estimateData?.blocking ?? [];
+  const configWarnings = estimateData?.warnings ?? [];
   const rangeInvalid =
     !hasEmptyField && Number(maxRouteTimeMinutes) < Number(minRouteTimeMinutes);
 
@@ -77,7 +83,13 @@ export default function RoutingConfigForm({
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (hasEmptyField || rangeInvalid || hasActiveJob) return;
+    if (
+      hasEmptyField ||
+      rangeInvalid ||
+      hasActiveJob ||
+      blockingErrors.length > 0
+    )
+      return;
     mutation.mutate();
   };
 
@@ -133,11 +145,23 @@ export default function RoutingConfigForm({
             </p>
           </div>
 
-          {fleetEstimate != null && (
+          {estimateData?.n_estimated != null && blockingErrors.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Hasta {fleetEstimate} rutas aprox.
+              Hasta {estimateData.n_estimated} rutas aprox.
             </p>
           )}
+
+          {blockingErrors.map((item) => (
+            <Alert key={item.code} variant="destructive">
+              <AlertDescription>{item.detail}</AlertDescription>
+            </Alert>
+          ))}
+
+          {configWarnings.map((item) => (
+            <Alert key={item.code}>
+              <AlertDescription>{item.detail}</AlertDescription>
+            </Alert>
+          ))}
 
           {hasActiveJob && (
             <p className="text-sm text-muted-foreground">
@@ -163,7 +187,11 @@ export default function RoutingConfigForm({
           <Button
             type="submit"
             disabled={
-              mutation.isPending || hasEmptyField || rangeInvalid || hasActiveJob
+              mutation.isPending ||
+              hasEmptyField ||
+              rangeInvalid ||
+              hasActiveJob ||
+              blockingErrors.length > 0
             }
           >
             {mutation.isPending ? "Generando…" : "Generar y comparar rutas"}
