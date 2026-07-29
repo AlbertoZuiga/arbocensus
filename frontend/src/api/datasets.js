@@ -71,3 +71,10 @@ export async function updateDataset(id, { name, description }) {
 export async function deleteDataset(id) {
   await client.delete(`/datasets/${id}/`);
 }
+
+export async function deactivateDatasetTrees(datasetId, treeIds) {
+  const { data } = await client.post(`/datasets/${datasetId}/trees/deactivate/`, {
+    tree_ids: treeIds,
+  });
+  return data;
+}

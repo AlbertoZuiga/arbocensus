@@ -7,6 +7,7 @@ import { useDatasetSolutions } from "@/hooks/useDatasetSolutions";
 import { strategyLabel } from "@/lib/optimization";
 import { getErrorMessage } from "@/lib/errors";
 import DatasetMap from "@/components/map/DatasetMap.jsx";
+import DroppedTreesPanel from "@/components/optimization/DroppedTreesPanel.jsx";
 import RouteAssignmentPanel from "@/components/routes/RouteAssignmentPanel.jsx";
 import OptimizationPanel from "@/components/optimization/OptimizationPanel.jsx";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -78,6 +79,8 @@ export default function DatasetDetail() {
     () => solutions.map((s) => s.id),
     [solutions],
   );
+  const droppedTreeIds = useMemo(() => displaySolution?.dropped_tree_ids ?? [], [displaySolution]);
+  const droppedIds = useMemo(() => new Set(droppedTreeIds), [droppedTreeIds]);
 
   const edit = useMutation({
     mutationFn: ({ name, description }) => updateDataset(id, { name, description }),
@@ -154,7 +157,23 @@ export default function DatasetDetail() {
               Cargando árboles…
             </div>
           )}
-          {trees && <DatasetMap markers={markers} solutionId={solutionId} />}
+          {trees && (
+            <DatasetMap
+              markers={markers}
+              solutionId={solutionId}
+              droppedIds={droppedIds}
+            />
+          )}
+
+          {droppedIds.size > 0 && (
+            <div className="absolute left-3 bottom-3 z-[1001] w-72">
+              <DroppedTreesPanel
+                datasetId={id}
+                droppedTreeIds={droppedTreeIds}
+                onReoptimize={() => togglePanel("optimization")}
+              />
+            </div>
+          )}
 
           <div className="absolute left-3 top-3 z-[1000] flex flex-col gap-2">
             {displaySolution ? (

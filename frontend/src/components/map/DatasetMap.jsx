@@ -13,7 +13,7 @@ import BaseMap from "./BaseMap.jsx";
 import { geojsonToRoutes } from "./routeGeojson.js";
 import TreeHistoryPopup from "./TreeHistoryPopup.jsx";
 
-export default function DatasetMap({ markers, solutionId }) {
+export default function DatasetMap({ markers, solutionId, droppedIds = new Set() }) {
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [openTreeId, setOpenTreeId] = useState(null);
 
@@ -65,6 +65,37 @@ export default function DatasetMap({ markers, solutionId }) {
               </CircleMarker>
             );
           })}
+
+        {markers
+            .filter((marker) => droppedIds.has(marker.id))
+            .map((marker) => {
+              const open = openTreeId === marker.id;
+              return (
+                <CircleMarker
+                  key={marker.id}
+                  center={marker.position}
+                  radius={open ? 8 : 6}
+                  pathOptions={{
+                    className: "cursor-pointer",
+                    color: "#dc2626",
+                    weight: 2,
+                    fillColor: "#dc2626",
+                    fillOpacity: 0.4,
+                  }}
+                  eventHandlers={{
+                    popupopen: () => openTree(marker.id),
+                    popupclose: () => closeTree(marker.id),
+                  }}
+                >
+                  <Popup minWidth={248} maxWidth={280} keepInView>
+                    <span className="mb-1.5 block text-xs font-medium text-red-600">
+                      Fuera de ruta
+                    </span>
+                    {open && <TreeHistoryPopup treeId={marker.id} />}
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
 
         {routes.map((route) => {
           const active =
