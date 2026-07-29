@@ -1,3 +1,4 @@
+from apps.optimization.config_presets import DEFAULT_CONFIG_PRESET
 from apps.optimization.models import OptimizationJob, RoutingSolution
 from django.db.models import Case, IntegerField, Q, Value, When
 
@@ -6,12 +7,15 @@ BALANCE_GATE = 0.60
 # equivalent; the control (default×spatial_term) wins over an arbitrary id-ranked tie.
 TRAVEL_TIE_PCT = 0.03
 
+_CONTROL_PRESET = DEFAULT_CONFIG_PRESET
+_CONTROL_STRATEGY = RoutingSolution.Strategy.SPATIAL_TERM.value
+
 
 def order_by_criterion(queryset):
     # Strict lexicographic order: 0 drops -> 0 degenerate routes -> balance >= 0.60
-    # -> less travel. Unlike sweep_judgement.pick_winner (which can return "no
-    # winner" for an offline experiment cell), production always has to rank every
-    # candidate, so this orders them instead of gating and stopping.
+    # -> less travel -> fewer routes. Unlike sweep_judgement.pick_winner (which can
+    # return "no winner" for an offline experiment cell), production always has to rank
+    # every candidate, so this orders them instead of gating and stopping.
     return queryset.annotate(
         balance_below_gate=Case(
             When(balance_score__gte=BALANCE_GATE, then=Value(0)),
@@ -23,6 +27,7 @@ def order_by_criterion(queryset):
         "degenerate_routes",
         "balance_below_gate",
         "total_travel_time_sec",
+        "total_routes",
         # Ties are common (two strategies converging on the same routes). Without a
         # total order the list endpoint and pick_recommended run two separate queries
         # that can disagree on which tied row comes first.
@@ -30,13 +35,17 @@ def order_by_criterion(queryset):
     )
 
 
-def pick_recommended_bulk(dataset_ids):
-    # Solutions from different RoutingConfigs (different max_route_time_sec,
-    # service_time_sec, etc.) are not comparable to each other: their travel
-    # time and route count differ because of the config, not the preset.
-    # Rank only within the sweep launched by each dataset's most recent config.
-    # Two queries regardless of how many datasets are asked for, so listing
-    # solutions across datasets does not turn into a per-row lookup.
+def _build_recommendation_context(dataset_ids):
+    """
+    For each dataset return:
+      recommended_id           — solution to show as recommended
+      recommended_travel_sec   — its travel time
+      control_travel_sec       — travel of the control (default×spatial_term), or None
+
+    Two queries regardless of how many datasets. The tie rule: if the strict-order
+    winner's travel is within TRAVEL_TIE_PCT of the control, the control wins instead
+    of an arbitrary id-ranked tiebreak between two near-identical solutions.
+    """
     dataset_ids = list(dataset_ids)
     if not dataset_ids:
         return {}
@@ -54,15 +63,66 @@ def pick_recommended_bulk(dataset_ids):
         latest_sweeps |= Q(dataset_id=dataset_id, job__config_id=config_id)
     if not latest_sweeps:
         return {}
-    recommended = {}
-    ranked = order_by_criterion(
-        RoutingSolution.objects.filter(
-            latest_sweeps, job__status=OptimizationJob.Status.COMPLETED
+
+    rows = list(
+        order_by_criterion(
+            RoutingSolution.objects.filter(
+                latest_sweeps, job__status=OptimizationJob.Status.COMPLETED
+            )
+        ).values_list(
+            "dataset_id",
+            "id",
+            "total_travel_time_sec",
+            "job__config_preset",
+            "strategy",
         )
-    ).values_list("dataset_id", "id")
-    for dataset_id, solution_id in ranked:
-        recommended.setdefault(dataset_id, solution_id)
-    return recommended
+    )
+
+    travel_by_id = {sol_id: travel for _, sol_id, travel, _, _ in rows}
+
+    # First occurrence per dataset (best by criterion) is the strict winner.
+    strict_winners = {}  # dataset_id → (sol_id, travel)
+    controls = {}  # dataset_id → (sol_id, travel)
+    for dataset_id, sol_id, travel, preset, strategy in rows:
+        if dataset_id not in strict_winners:
+            strict_winners[dataset_id] = (sol_id, travel)
+        if (
+            dataset_id not in controls
+            and preset == _CONTROL_PRESET
+            and strategy == _CONTROL_STRATEGY
+        ):
+            controls[dataset_id] = (sol_id, travel)
+
+    result = {}
+    for dataset_id, (winner_id, winner_travel) in strict_winners.items():
+        ctrl = controls.get(dataset_id)
+        recommended_id = winner_id
+        if ctrl is not None:
+            ctrl_id, ctrl_travel = ctrl
+            # Within the tie margin, prefer the stable reference point over an
+            # id-ordered winner that may vary between sweeps.
+            if (
+                ctrl_travel > 0
+                and abs(winner_travel - ctrl_travel) / ctrl_travel < TRAVEL_TIE_PCT
+            ):
+                recommended_id = ctrl_id
+        result[dataset_id] = {
+            "recommended_id": recommended_id,
+            "recommended_travel_sec": travel_by_id.get(recommended_id),
+            "control_travel_sec": ctrl[1] if ctrl is not None else None,
+        }
+    return result
+
+
+def pick_recommended_bulk(dataset_ids):
+    # Solutions from different RoutingConfigs (different max_route_time_sec,
+    # service_time_sec, etc.) are not comparable to each other: their travel
+    # time and route count differ because of the config, not the preset.
+    # Rank only within the sweep launched by each dataset's most recent config.
+    # Two queries regardless of how many datasets are asked for, so listing
+    # solutions across datasets does not turn into a per-row lookup.
+    ctx = _build_recommendation_context(dataset_ids)
+    return {did: c["recommended_id"] for did, c in ctx.items()}
 
 
 def pick_recommended(dataset_id):
