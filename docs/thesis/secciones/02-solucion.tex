@@ -99,9 +99,12 @@ visita debe sobrevivir a una pérdida momentánea de red en lugar de perderse.
 \section{REQUISITOS FUNCIONALES}
 \label{sec:requisitos-funcionales}
 
-La Tabla~\ref{tab:requisitos} enumera los requisitos funcionales que la solución
-compromete, agrupados por el flujo operacional al que pertenecen. El Anexo 5
-traza cada requisito a la sección de diseño que documenta su realización.
+Los requisitos funcionales se derivan del problema descrito en el capítulo anterior:
+para que el re-censo estructurado sea ejecutable, el sistema debe partir del catastro
+que dejaron las iteraciones anteriores, convertirlo en un plan de trabajo repartido
+entre censadores, llevar ese plan al terreno y devolver de la jornada una observación
+nueva por árbol. La Tabla~\ref{tab:requisitos} enumera los requisitos que la solución
+compromete, agrupados por la etapa de esa cadena a la que pertenecen.
 
 \begin{xltabular}{\textwidth}{@{}l X@{}}
   \caption{Requisitos funcionales de la solución.}
@@ -116,114 +119,108 @@ traza cada requisito a la sección de diseño que documenta su realización.
   \endhead
   \bottomrule
   \endlastfoot
-  \multicolumn{2}{@{}l}{\textit{Constitución del conjunto de árboles}} \\
-  RF-01 & Importar árboles desde un archivo CSV o JSON con detección automática de las columnas de coordenadas. \\
-  RF-02 & Explorar sobre un mapa el arbolado de ambas bases legadas, con sus áreas de censo y una marca de los árboles ya importados. \\
-  RF-03 & Componer una selección territorial combinando área completa, rectángulo y árbol individual, con des-selección manual. \\
-  RF-04 & Materializar un \textit{dataset} a partir de la selección confirmada, en una única transacción que incluya el histórico de observaciones. \\
-  RF-05 & Exportar los árboles de un \textit{dataset} en formato \textit{GeoJSON}. \\
-  \multicolumn{2}{@{}l}{\textit{Optimización}} \\
-  RF-06 & Estimar, antes de optimizar, cuántos censadores requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. \\
-  RF-07 & Configurar por sesión los parámetros temporales $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol. \\
-  RF-08 & Seleccionar la estrategia de partición espacial, o ejecutar las tres sobre el mismo conjunto para contrastarlas. \\
-  RF-09 & Ejecutar la optimización de forma asíncrona, sin bloquear la interfaz durante el cómputo. \\
-  RF-10 & Consultar el estado de un trabajo de optimización hasta que alcance un estado terminal. \\
-  RF-11 & Determinar el número de rutas $k$ como salida del \textit{solver}, sin que el administrador lo declare. \\
-  RF-12 & Reportar de forma explícita los árboles que la solución dejó fuera del plan. \\
-  RF-13 & Exponer las métricas de cada solución: número de rutas, tiempo total de desplazamiento, balance, métricas espaciales y tiempos por fase. \\
+  \multicolumn{2}{@{}l}{\textit{Integración del catastro existente}} \\
+  RF-01 & Consultar el arbolado registrado en las bases de datos legadas del proyecto, con sus áreas de censo. \\
+  RF-02 & Delimitar territorialmente el arbolado que se censará en una campaña. \\
+  RF-03 & Constituir el conjunto de árboles de una campaña (\textit{dataset}) a partir de esa delimitación, junto con el historial de observaciones que cada árbol ya tenga. \\
+  \multicolumn{2}{@{}l}{\textit{Planificación del censo}} \\
+  RF-04 & Configurar los parámetros de la jornada: duración mínima $T_{\min}$, duración máxima $T_{\max}$ y tiempo de servicio por árbol. \\
+  RF-05 & Estimar cuántos censadores exigiría una campaña antes de planificarla. \\
+  RF-06 & Asignar cada árbol del \textit{dataset} a una ruta y fijar el orden de visita, sobre los tiempos de desplazamiento a pie que impone la red vial real. \\
+  RF-07 & Determinar el número de rutas $k$ como salida de la planificación, sin que el administrador lo declare. \\
+  RF-08 & Reportar los árboles que la planificación no logró incorporar a ninguna ruta. \\
+  RF-09 & Exponer las métricas de un plan ---cobertura, número de rutas, tiempo de desplazamiento y balance de carga--- antes de que se publique. \\
+  RF-10 & Presentar las rutas de un plan sobre el trazado que el censador recorrerá a pie. \\
   \multicolumn{2}{@{}l}{\textit{Publicación y asignación}} \\
-  RF-14 & Visualizar las rutas resultantes sobre el trazado peatonal real de la red vial. \\
-  RF-15 & Comparar las soluciones producidas por distintas estrategias sobre un mismo \textit{dataset}. \\
-  RF-16 & Publicar una solución como plan vigente, con a lo más una solución publicada por \textit{dataset}. \\
-  RF-17 & Asignar y desasignar censadores a las rutas de la solución publicada, y solo de esa. \\
+  RF-11 & Publicar un plan como vigente, con a lo más un plan vigente por \textit{dataset}. \\
+  RF-12 & Asignar y desasignar censadores a las rutas del plan vigente. \\
   \multicolumn{2}{@{}l}{\textit{Captura en terreno}} \\
-  RF-18 & Entregar al censador únicamente las rutas propias del plan vigente. \\
-  RF-19 & Presentar las paradas en orden secuencial estricto: una parada solo se cierra cuando las anteriores ya lo están. \\
-  RF-20 & Calcular la distancia del censador a la parada activa a partir de la geolocalización del navegador. \\
-  RF-21 & Registrar la visita de una parada con su estado, su fotografía y sus notas, y generar la observación histórica correspondiente. \\
-  RF-22 & Registrar la omisión de una parada con un motivo obligatorio, del que se deriva el estado de la observación. \\
-  RF-23 & Conservar el historial completo de observaciones de cada árbol, incluidas las importadas de las fuentes legadas. \\
-  RF-24 & Permitir el registro de visitas sin conexión a la red. \\
+  RF-13 & Entregar a cada censador las rutas que le fueron asignadas, y solo esas. \\
+  RF-14 & Presentar las paradas de una ruta en orden secuencial estricto. \\
+  RF-15 & Registrar en cada parada la observación del árbol ---su estado, su fotografía y sus notas---, fechada y asociada al ejemplar. \\
+  RF-16 & Registrar la omisión de una parada con un motivo obligatorio. \\
+  RF-17 & Conservar el historial completo de observaciones de cada árbol. \\
+  RF-18 & Preservar el registro de una visita cuando el dispositivo pierde la conexión. \\
   \multicolumn{2}{@{}l}{\textit{Seguimiento y administración}} \\
-  RF-25 & Presentar el avance del censo: proporción de árboles censados, omitidos y pendientes, con su distribución sobre el mapa. \\
-  RF-26 & Desglosar el avance por ruta y por censador, de modo que el administrador pueda redistribuir la carga. \\
-  RF-27 & Administrar las cuentas de usuario y sus roles, con desactivación lógica en lugar de borrado. \\
+  RF-19 & Presentar el avance del censo: árboles censados, omitidos y pendientes. \\
+  RF-20 & Desglosar el avance por ruta y por censador. \\
+  RF-21 & Administrar las cuentas de usuario y sus roles, sin que dar de baja a una persona borre el trabajo que registró. \\
 \end{xltabular}
-
-Los 27 requisitos se agrupan en los cinco bloques operacionales que encabezan la
-tabla: constitución del conjunto de árboles, optimización, publicación y asignación,
-captura en terreno, y seguimiento y administración. RF-11 caracteriza al producto
-frente a la práctica manual actual: la flota de censadores es una salida del sistema
-y no un dato que el administrador declare (Sección~\ref{sec:flota}).
 
 \section{ATRIBUTOS DE CALIDAD}
 \label{sec:atributos-calidad}
 
-Los atributos de calidad expresan qué tan bien opera el sistema, en una escala
-sobre la que se puede medir. Bajo ese criterio se comprometen tres
-atributos. La Tabla~\ref{tab:atributos-calidad} los resume.
+Los atributos de calidad no expresan qué hace el sistema sino qué tan bien debe
+hacerlo. Se comprometen cuatro, que la Tabla~\ref{tab:atributos-calidad} resume. Dos
+de ellos reciben prioridad alta porque su incumplimiento inutiliza la campaña: un plan
+que no resiste el cambio de parámetros y un portal que no resiste la calle no sirven,
+por buenas que sean sus demás propiedades.
 
 \begin{table}[H]
   \centering
-  \caption{Atributos de calidad, prioridad, métrica asociada y valor objetivo.}
+  \caption{Atributos de calidad comprometidos por la solución.}
   \label{tab:atributos-calidad}
   \small
-  \begin{tabularx}{\textwidth}{@{}p{2.7cm} l X X@{}}
+  \begin{tabularx}{\textwidth}{@{}p{3.1cm} l X@{}}
     \toprule
-    Atributo & Prioridad & Métrica & Valor objetivo \\
+    Atributo & Prioridad & Exigencia sobre el sistema \\
     \midrule
-    {\raggedright Robustez del plan\par}  & Alta & Proporción de las combinaciones de tiempo de servicio por árbol y jornada máxima con que se configura una campaña en que el plan cubre la totalidad de los árboles del \textit{dataset} y mantiene el índice de balance de carga en al menos $0{,}80$. & Cobertura total y balance $\geq 0{,}80$ en cinco de las seis combinaciones de la grilla operacional (Anexo 4); la única excepción es la más restrictiva ---tiempo de servicio de 3\,min bajo $T_{\max}=2$\,h---, donde la solución deja un árbol fuera del plan y lo reporta de forma explícita en lugar de omitirlo en silencio. Sus dos componentes coinciden con los criterios de aceptación CA-01 y CA-03, que los fijan como umbral mínimo. \\
-    {\raggedright Eficiencia de cómputo\par}  & Media & Tiempo de cómputo de una planificación sobre un conjunto de $1\,607$ árboles reales, con la matriz de costos en caché, y variación de la solución al ampliar el presupuesto de tiempo del \textit{solver}. & Menos de cinco minutos bajo cualquier configuración censal, y ninguna mejora apreciable de la solución al duplicar el presupuesto de tiempo. \\
-    {\raggedright Calidad geográfica de las rutas\par}  & Media & Auto-cruces por ruta sobre el trazado real de calles (\texttt{crossings\_road}), medidos con el post-proceso de resecuenciación de la Sección~\ref{sec:postpass} activo, frente a la misma solución sin ese post-proceso. & Ninguna degradación de \texttt{crossings\_road} frente al \textit{baseline} sin post-proceso, en la totalidad de las instancias de prueba. \\
+    {\raggedright Robustez del plan\par} & Alta & El plan sigue siendo utilizable cuando cambian las condiciones de la campaña ---el tiempo de servicio por árbol, la duración de la jornada y el conjunto de árboles---, entendiendo por utilizable que ningún árbol queda fuera y que ningún censador carga con un trabajo desproporcionado respecto de sus pares. \\
+    {\raggedright Operabilidad en terreno\par} & Alta & El portal del censador se opera a pie, en la vía pública, con un teléfono como único dispositivo y una conectividad intermitente, sin que esas condiciones comprometan lo que se registra. \\
+    {\raggedright Eficiencia de cómputo\par} & Media & Planificar una campaña completa cuesta un tiempo compatible con la preparación de una jornada de terreno, y la calidad del plan no depende de conceder al cómputo un presupuesto mayor. \\
+    {\raggedright Calidad geográfica de las rutas\par} & Media & Cada ruta es recorrible a pie sin retrocesos ni cruces sobre sí misma, juzgada sobre el trazado real de calles y no sobre distancias en línea recta. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-La elección de cada métrica responde a una razón. La robustez se mide sobre un
-conjunto de configuraciones y no sobre una sola porque los dos parámetros que el
-administrador fija en cada campaña ---el tiempo de servicio por árbol y la jornada
-máxima--- desplazan el problema entre regímenes de trabajo distintos: al acortar la
-jornada o alargar el servicio, el trabajo por árbol domina la capacidad de cada ruta
-y el reparto cambia de naturaleza, de modo que un plan correcto bajo una combinación
-no garantiza nada bajo otra. Sus dos componentes son los que un censo no puede
-sacrificar: ningún árbol fuera del plan y ninguna cuadrilla con una carga
-desproporcionada respecto de las demás. El índice de balance de carga es el cociente
-entre la duración de la ruta más corta y la de la más larga, de modo que el umbral de
-$0{,}80$ exige que ningún censador trabaje menos de un $80$\,\% de lo que trabaja el
-más cargado: holgura razonable para una cuadrilla a pie y exigente frente al reparto
-manual que la práctica actual produce. Esta es la única definición de balance que
-emplea esta memoria, tanto en los criterios de aceptación como en las mediciones, y
-es también la que el sistema almacena junto a cada solución.
+La robustez del plan es alta porque el sistema no se opera bajo una única
+configuración. Los dos parámetros que el administrador fija en cada campaña ---el
+tiempo de servicio por árbol y la jornada máxima--- desplazan el problema entre
+regímenes de trabajo distintos: al acortar la jornada o alargar el servicio, el
+trabajo por árbol domina la capacidad de cada ruta y el reparto cambia de naturaleza,
+de modo que un plan correcto bajo una combinación no acredita nada bajo otra. Un
+atributo verificado sobre una sola configuración sería, por eso, una afirmación vacía.
+Sus dos componentes son los que un censo no puede sacrificar: cobertura y reparto. El
+reparto se observa mediante el índice de balance de carga, definido como el cociente
+entre la duración de la ruta más corta y la de la más larga; esta es la única noción
+de balance que emplea esta memoria, es la que el sistema almacena junto a cada plan y
+el umbral exigible se fija en el criterio CA-03.
 
-La eficiencia de cómputo aparece con prioridad media y no alta porque la optimización
-se ejecuta de forma asíncrona: el administrador despacha el trabajo y consulta su
-estado después, sin que la interfaz quede bloqueada durante el cómputo. La magnitud
-relevante no es entonces la latencia percibida sino el costo de una planificación, y
-su cota de cinco minutos se justifica por el uso previsto ---la preparación de una
-campaña, no una consulta interactiva--- acompañada de la sensibilidad al presupuesto,
-que demuestra que el límite asignado captura la mejora alcanzable en lugar de
-truncarla.
+La operabilidad en terreno eleva a propiedad del producto las tres exigencias que
+impone el contexto del censador ---pantalla de teléfono como formato primario,
+recorrido sin desbloqueos repetidos y registro que sobrevive a una caída de red---,
+porque ninguna de ellas es una función que el sistema ofrezca sino una condición bajo
+la que todas sus funciones deben seguir sirviendo. Su prioridad es alta porque una
+observación perdida en terreno no se recupera: la jornada ya terminó y el árbol quedó
+sin dato.
 
-La calidad geográfica se mide sobre \texttt{crossings\_road} y no sobre la métrica de
-cuerdas rectas entre paradas consecutivas, porque la auditoría de instrumento de julio
-de 2026 (Sección~\ref{sec:discusion-calidad}) encontró que esta última correlaciona
-débilmente con el trazado real ($\rho$ de Spearman global de $0{,}527$) y de forma
-invertida en el \textit{dataset} de evaluación agregado ($\rho = -0{,}575$): una
-mejora en cuerdas no garantiza una mejora en calle, y viceversa. El único componente
-del \textit{pipeline} que se compromete contra esta métrica es el post-proceso de
-resecuenciación, porque es el único cuyo efecto sobre \texttt{crossings\_road} se
-verificó directamente, con mejora simultánea de tiempo de viaje y de geometría en las
-doce instancias de prueba (Sección~\ref{sec:discusion-calidad}). El resto de los
-componentes de la función objetivo actúa sobre la geometría de forma indirecta, sin
-evidencia equivalente sobre calle real, de modo que este atributo no se extiende a
-ellos.
+La eficiencia de cómputo aparece con prioridad media, y no alta, porque la
+planificación no es una interacción sino un encargo: el administrador la despacha y
+consulta su resultado después. La magnitud relevante no es entonces la latencia
+percibida sino el costo de planificar una campaña, acotado por el uso previsto ---la
+preparación de una jornada, no una consulta interactiva---. A ese costo se añade una
+exigencia de suficiencia: como la búsqueda se corta por tiempo y no por convergencia
+demostrada, el presupuesto asignado debe capturar la mejora alcanzable en lugar de
+truncarla, lo que se observa comparando la solución obtenida frente a la que se
+obtiene con un presupuesto mayor.
+
+La calidad geográfica de las rutas se juzga sobre el trazado real de calles porque el
+censador camina por la vereda y no en línea recta: una ruta puede parecer limpia entre
+cuerdas y obligar sobre el pavimento a un retroceso que cuesta minutos. Su prioridad
+es media porque una ruta con auto-cruces sigue siendo ejecutable ---no invalida el
+censo, lo encarece---, y porque el tiempo de desplazamiento, que sí es objetivo
+explícito del modelo, ya penaliza buena parte de esa ineficiencia.
+
+El grado en que el producto satisface estos cuatro atributos, y las salvedades con que
+cada uno se sostiene, se examina más adelante a la luz de lo medido.
 
 \section{RESTRICCIONES}
 \label{sec:restricciones}
 
 La Tabla~\ref{tab:restricciones} enumera las restricciones bajo las que se elaboró el
-producto. Son condiciones del entorno o de las herramientas empleadas, no decisiones
-de diseño: el diseño responde a ellas, pero no puede levantarlas.
+producto. Son condiciones impuestas por el entorno de operación, por los datos
+heredados o por las herramientas empleadas: el diseño responde a ellas, pero no puede
+levantarlas. Se enuncian como condición, y no como la respuesta que el diseño les dio.
 
 \begin{table}[H]
   \centering
@@ -234,32 +231,36 @@ de diseño: el diseño responde a ellas, pero no puede levantarlas.
     \toprule
     ID & Restricción \\
     \midrule
-    RE-01 & El servicio \texttt{/table} de OSRM codifica cada coordenada en la ruta de la petición, de modo que la solicitud falla por longitud de URL antes de alcanzar el límite de tabla del servidor. El sistema fija un tope de $350$ coordenadas por solicitud y fragmenta la matriz en bloques (Sección~\ref{sec:matriz}). \\
-    RE-02 & El tamaño en disco de la matriz de costos crece como $O(n^2)$, lo que impone un tope de $2\,000$ árboles sobre su dimensión (Sección~\ref{sec:matriz}). \\
-    RE-03 & Las bases de datos legadas pertenecen a sistemas ajenos al alcance de esta iteración y se acceden estrictamente en modo de solo lectura (Sección~\ref{sec:legacy}). \\
-    RE-04 & Las fotografías históricas de la fuente legada residen en un almacenamiento externo cuyo plan de facturación fue cerrado y resultan inaccesibles: solo se conserva su referencia, no el archivo (Sección~\ref{sec:recenso}). \\
-    RE-05 & La búsqueda local del \textit{solver} se corta por reloj de pared y no por convergencia demostrada, de modo que la calidad de la solución depende del presupuesto de tiempo asignado (Sección~\ref{sec:solver}). \\
-    RE-06 & \textit{OR-Tools} no expone una semilla de generador pseudoaleatorio, por lo que las réplicas de un experimento deben construirse permutando el orden de entrada de los nodos (Sección~\ref{sec:metricas-calidad}). \\
-    RE-07 & La conectividad en terreno es intermitente, de modo que el portal del censador no puede suponer red disponible en el instante del registro (Sección~\ref{sec:ui}). \\
-    RE-08 & El único entorno de medición disponible es hardware de desarrollo, con los contenedores de base de datos y de ruteo emulados sobre otra arquitectura, lo que impide extrapolar las cifras absolutas de tiempo a un servidor de producción (Sección~\ref{sec:perfil-rendimiento}). \\
-    RE-09 & El sistema no cuenta con un despliegue productivo dentro del alcance, de modo que toda medición se realiza sobre una réplica local del entorno de producción (Sección~\ref{sec:perfil-rendimiento}). \\
+    RE-01 & El servicio \texttt{/table} de OSRM codifica cada coordenada en la ruta de la petición, de modo que una consulta de matriz falla por longitud de URL mucho antes de alcanzar el límite de tabla del servidor. \\
+    RE-02 & El tamaño de una matriz de costos crece como $O(n^2)$, lo que acota el número de árboles que una sola planificación puede abarcar. \\
+    RE-03 & Las bases de datos legadas pertenecen a sistemas ajenos al alcance de esta iteración y se acceden estrictamente en modo de solo lectura. \\
+    RE-04 & Las fotografías históricas de la fuente legada residen en un almacenamiento externo cuyo plan de facturación fue cerrado y resultan inaccesibles: solo se conserva su referencia, no el archivo. \\
+    RE-05 & La búsqueda local del \textit{solver} se corta por reloj de pared y no por convergencia demostrada, de modo que la calidad de la solución depende del presupuesto de tiempo asignado. \\
+    RE-06 & \textit{OR-Tools} no expone una semilla de generador pseudoaleatorio, por lo que las réplicas de un experimento deben construirse permutando el orden de entrada de los nodos. \\
+    RE-07 & La conectividad en terreno es intermitente, de modo que el portal del censador no puede suponer red disponible en el instante del registro. \\
+    RE-08 & El único entorno de medición disponible es hardware de desarrollo, con los contenedores de base de datos y de ruteo emulados sobre otra arquitectura, lo que impide extrapolar las cifras absolutas de tiempo a un servidor de producción. \\
+    RE-09 & El sistema no cuenta con un despliegue productivo dentro del alcance, de modo que toda medición se realiza sobre una réplica local del entorno de producción. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-Las cinco primeras (RE-01 a RE-05) y RE-07 son condiciones del producto: acotan lo
-que la plataforma puede construir. Las tres restantes (RE-06, RE-08, RE-09) son
-condiciones del entorno o de las herramientas empleadas, no decisiones de diseño;
-afectan a la evidencia experimental del Capítulo~\ref{cap:resultados} antes que al
-producto.
+Las restricciones se reparten en tres grupos según a qué afectan. RE-01, RE-02 y RE-05
+provienen de las herramientas de ruteo y de optimización y acotan lo que la plataforma
+puede calcular. RE-03, RE-04 y RE-07 provienen del entorno de operación y de los datos
+heredados, y acotan de qué información dispone el sistema y bajo qué condiciones se
+usa. RE-06, RE-08 y RE-09 no afectan al producto sino a la evidencia con que se lo
+juzga: limitan qué se puede medir y hasta dónde son extrapolables las cifras que se
+midan.
 
 \section{CRITERIOS DE ACEPTACIÓN}
 \label{sec:criterios-aceptacion}
 
-Los criterios con que se juzga si la solución cumple su propósito se fijan aquí, antes
-de presentar resultado alguno. La Tabla~\ref{tab:criterios} los enumera junto con su
-valor exigido; el Capítulo~\ref{cap:resultados} los contrasta contra lo medido y la
-Sección~\ref{sec:conclusiones} cierra ese contraste.
+Los criterios de aceptación son la traducción de los atributos de calidad a
+condiciones verificables: fijan el umbral bajo el cual el producto se considera
+insuficiente, no la escala con que se ordenan sus variantes entre sí. Se enuncian
+sobre la configuración censal de referencia ---el arbolado importado de las bases
+legadas, con los parámetros de jornada por defecto--- y sobre ella se contrastan
+después contra lo medido.
 
 \begin{table}[H]
   \centering
@@ -270,28 +271,18 @@ Sección~\ref{sec:conclusiones} cierra ese contraste.
     \toprule
     ID & Criterio & Valor exigido \\
     \midrule
-    CA-01 & Cobertura del censo bajo la configuración censal de referencia. & Ningún árbol descartado del plan. \\
-    CA-02 & Respeto de la jornada máxima. & Ninguna ruta que exceda $T_{\max}$. \\
-    CA-03 & Balance de carga entre equipos, medido como el índice de balance definido en la Sección~\ref{sec:atributos-calidad}. & Índice de al menos $0{,}80$. \\
+    CA-01 & Cobertura del censo. & Ningún árbol del \textit{dataset} queda fuera del plan. \\
+    CA-02 & Respeto de la jornada máxima. & Ninguna ruta excede $T_{\max}$. \\
+    CA-03 & Balance de carga entre equipos, medido con el índice definido más arriba. & Índice de al menos $0{,}80$. \\
     CA-04 & Determinación de la flota. & El número de rutas $k$ es una salida del \textit{solver} y no un dato que el administrador declare. \\
-    CA-05 & Costo de cómputo de una planificación, con la matriz de costos en caché. & Menos de 5 minutos. \\
-    CA-06 & Mejora frente a la alternativa trivial. & Reducción estrictamente positiva del tiempo total de desplazamiento frente a un heurístico de vecino más cercano, medida sobre la misma instancia, la misma matriz de costos y con el mismo post-proceso de refinamiento aplicado a ambos métodos, y superior a la dispersión entre semillas del \textit{solver}. \\
+    CA-05 & Costo de planificar una campaña, con la matriz de costos en caché. & Menos de 5 minutos. \\
+    CA-06 & Mejora frente a la alternativa trivial. & Reducción estrictamente positiva del tiempo total de desplazamiento frente a un heurístico de vecino más cercano, sobre la misma instancia y la misma matriz de costos. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-El criterio CA-03 merece una precisión, porque el mecanismo que lo persigue y la
-métrica que lo evalúa no son la misma cosa: el modelo no minimiza el cociente entre la
-ruta más corta y la más larga ---una razón entre extremos de la solución completa no es
-expresable como costo aditivo por arco--- sino que penaliza de forma blanda que la
-duración de cada ruta se aleje de un objetivo, y el efecto de esa penalización se
-observa después sobre el índice. La distinción se desarrolla en la
-Sección~\ref{sec:formulacion}.
-
-Corresponde además fijar el estatus del índice: es un umbral mínimo y no una medida
-de mérito comparativo. El cociente entre extremos no distingue un reparto equitativo
-de una flota saturada, de modo que un heurístico que llena cada ruta hasta el borde
-de $T_{\max}$ obtiene un índice más alto sin repartir mejor la carga, como muestra la
-Sección~\ref{sec:comparacion-greedy}. CA-03 se lee entonces junto con CA-02 y con la
-holgura de jornada que esa sección reporta, y no como la métrica que ordena
-soluciones entre sí.
+CA-06 exige una precisión de método, porque un margen es comparable solo si ambos
+enfoques reciben el mismo trato: la comparación debe fijar la instancia, la matriz de
+costos y los refinamientos que se aplican a cada lado, y el margen resultante debe
+superar la variabilidad propia del \textit{solver} entre corridas para ser atribuible
+al método y no al azar de la búsqueda.

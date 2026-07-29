@@ -87,9 +87,9 @@ arbolado y 21 no vacías, que se reducen a 12 polígonos distintos porque las á
 recrean en cada campaña--- distribuidas en 10 campañas. La unión de lo importable de
 ambas fuentes ---los 1\,178 árboles de \texttt{legacy\_app} con posición reconstruida y
 los 429 de \texttt{legacy\_api}, que la registran de forma explícita--- conforma los
-1\,607 nodos de la instancia de referencia empleada en los experimentos de esta memoria
-(Capítulo~\ref{cap:resultados}), un subconjunto del catastro del proyecto, que solo en
-\texttt{legacy\_app} registra 13\,081 árboles distintos.
+1\,607 nodos de la instancia de referencia empleada en los experimentos de esta
+memoria, un subconjunto del catastro del proyecto, que solo en \texttt{legacy\_app}
+registra 13\,081 árboles distintos.
 
 Ninguna de esas iteraciones abordó la planificación de rutas. En las campañas
 documentadas por Binder y Cortés \citeyearpar{binder-cortes2023} y Pizarro y Zumaeta
@@ -103,8 +103,30 @@ haría ejecutable en terreno.
 \section{ALCANCE}
 \label{sec:alcance-desarrollo}
 
-Esta iteración agrega esa pieza faltante: un motor de optimización que determina
-automáticamente el número de equipos necesarios, asigna los árboles entre ellos y ordena
-las visitas sobre la red vial real, además del ciclo operacional que lo rodea
----importación del arbolado desde las bases legadas, publicación del plan, portal móvil
-del censador y seguimiento del avance---, que el Capítulo~\ref{cap:solucion} detalla.
+Esta iteración se hace cargo de la pieza que las anteriores no abordaron: llevar el
+catastro ya levantado hasta una jornada de terreno planificada y traer de vuelta una
+observación nueva por cada árbol visitado. Ese propósito se descompone en tres partes.
+
+La primera es la planificación. Se desarrolla un motor de optimización que determina
+cuántos equipos se necesitan, reparte los árboles entre ellos y ordena las visitas de
+cada uno, sobre tiempos de desplazamiento a pie calculados en la red vial real y bajo
+jornadas de duración acotada. El número de equipos no es un dato que se le entregue al
+motor sino un resultado que este produce.
+
+La segunda es el ciclo operacional que lleva ese plan al terreno: incorporar el
+arbolado desde las bases de datos que dejaron las iteraciones anteriores, fijar los
+parámetros de la jornada, publicar el plan como asignación de trabajo a censadores
+identificados y seguir su avance.
+
+La tercera es el registro en terreno. El censador recorre desde su teléfono la
+secuencia de visitas de su ruta y anota en cada parada lo que observa del árbol, de
+modo que el resultado de la jornada quede asociado al ejemplar ya catastrado y no a
+una muestra sin correspondencia entre campañas.
+
+La verificación del producto se realiza sobre el arbolado real de las bases legadas
+---la instancia de referencia de 1\,607 árboles y las áreas de censo efectivamente
+registradas---, mediante experimentos que comparan las configuraciones del motor entre
+sí y contra una solución heurística simple. Queda fuera del alcance la operación del
+sistema en una jornada de censo real, con censadores en terreno: lo que esta memoria
+acredita es que el producto cumple lo que su diseño declara, no que resuelva en
+terreno el problema logístico que lo motiva.
