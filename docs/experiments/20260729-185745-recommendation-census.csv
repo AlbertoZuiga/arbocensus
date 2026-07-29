@@ -1,0 +1,10 @@
+config_preset,strategy,times_recommended,times_near_winner_not_recommended,datasets_appearing,pruned_by_plan
+arc_linear_30,cluster_first,0,0,0,True
+arc_linear_30,global,0,1,0,True
+arc_linear_30,spatial_term,1,0,1,False
+default,cluster_first,0,0,0,True
+default,global,2,1,2,False
+default,spatial_term,13,1,13,False
+temporal_span_100,cluster_first,0,0,0,True
+temporal_span_100,global,0,1,0,True
+temporal_span_100,spatial_term,0,1,0,False

@@ -2,6 +2,9 @@ from apps.optimization.models import OptimizationJob, RoutingSolution
 from django.db.models import Case, IntegerField, Q, Value, When
 
 BALANCE_GATE = 0.60
+# Two solutions whose travel times differ less than this fraction are treated as
+# equivalent; the control (default×spatial_term) wins over an arbitrary id-ranked tie.
+TRAVEL_TIE_PCT = 0.03
 
 
 def order_by_criterion(queryset):
