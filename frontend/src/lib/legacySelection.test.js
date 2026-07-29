@@ -6,10 +6,10 @@ import {
   pruneExclusions,
   resolveSelection,
   selectKeys,
-  selectableKeys,
   selectionPayload,
   toggleKeys,
   treeKey,
+  treeKeys,
 } from "./legacySelection.js";
 
 const tree = (source, externalId, lat = -33.45, lon = -70.65) => ({
@@ -41,13 +41,16 @@ const SQUARE = [
 const EMPTY = { manualKeys: new Set(), excludedKeys: new Set() };
 
 describe("keysInRing", () => {
-  it("keeps only the selectable trees inside the ring", () => {
+  it("includes all trees inside the ring regardless of import state", () => {
     const trees = [
       tree("legacy_api", 776),
       tree("legacy_app", 96905, -33.3, -70.65),
       importedTree("legacy_api", 778),
     ];
-    expect(keysInRing(trees, SQUARE)).toEqual(["legacy_api:776"]);
+    expect(keysInRing(trees, SQUARE)).toEqual([
+      "legacy_api:776",
+      "legacy_api:778",
+    ]);
   });
 });
 
@@ -73,7 +76,11 @@ describe("resolveSelection", () => {
 
 describe("deselectKeys", () => {
   it("excludes a key a shape still covers", () => {
-    const state = deselectKeys(EMPTY, ["legacy_api:776"], new Set(["legacy_api:776"]));
+    const state = deselectKeys(
+      EMPTY,
+      ["legacy_api:776"],
+      new Set(["legacy_api:776"]),
+    );
     expect(state.excludedKeys).toEqual(new Set(["legacy_api:776"]));
   });
 
@@ -118,21 +125,22 @@ describe("selectKeys", () => {
 });
 
 describe("toggleKeys (area selection)", () => {
-  const keys = selectableKeys(AREA_TREES);
+  const keys = treeKeys(AREA_TREES);
 
-  it("selects every selectable tree of the area", () => {
+  it("selects all trees of the area including already imported ones", () => {
     const state = toggleKeys(EMPTY, keys, new Set());
     expect(state.manualKeys).toEqual(
-      new Set(["legacy_api:776", "legacy_api:777"]),
+      new Set(["legacy_api:776", "legacy_api:777", "legacy_api:778"]),
     );
   });
 
-  it("skips already imported trees", () => {
-    expect(keys).not.toContain("legacy_api:778");
-  });
-
   it("deselects the area when all its trees are already selected", () => {
-    const selected = new Set(["legacy_api:776", "legacy_api:777", "other:1"]);
+    const selected = new Set([
+      "legacy_api:776",
+      "legacy_api:777",
+      "legacy_api:778",
+      "other:1",
+    ]);
     const state = toggleKeys(
       { manualKeys: selected, excludedKeys: new Set() },
       keys,
@@ -148,12 +156,16 @@ describe("toggleKeys (area selection)", () => {
       new Set(),
     );
     expect(state.manualKeys).toEqual(
-      new Set(["legacy_api:776", "legacy_api:777"]),
+      new Set(["legacy_api:776", "legacy_api:777", "legacy_api:778"]),
     );
   });
 
   it("counts the keys a shape covers as selected", () => {
-    const covered = new Set(["legacy_api:776", "legacy_api:777"]);
+    const covered = new Set([
+      "legacy_api:776",
+      "legacy_api:777",
+      "legacy_api:778",
+    ]);
     const state = toggleKeys(EMPTY, keys, covered);
     expect(resolveSelection({ coveredKeys: covered, ...state })).toEqual(
       new Set(),

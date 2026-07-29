@@ -1,8 +1,11 @@
 import io
 
 import pytest
+from apps.datasets import legacy
+from apps.datasets.models import Dataset, Tree
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.routes.models import Route, RouteStop, TreeObservation
+from django.contrib.gis.geos import Point
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 from rest_framework.test import APIClient
@@ -381,3 +384,30 @@ def test_observations_list_rejects_anonymous(solution_with_route):
     _, _, stops = solution_with_route
     response = APIClient().get(f"/api/datasets/trees/{stops[0].tree.id}/observations/")
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_observations_list_crosses_datasets_for_legacy_tree():
+    loc = Point(-70.65, -33.45)
+    dataset_a = Dataset.objects.create(name="Dataset A", total_trees=1)
+    tree_a = Tree.objects.create(
+        dataset=dataset_a, location=loc, source=legacy.SOURCE_API, external_id=776
+    )
+    observation = TreeObservation.objects.create(
+        tree=tree_a, status=TreeObservation.Status.ALIVE
+    )
+
+    dataset_b = Dataset.objects.create(name="Dataset B", total_trees=1)
+    tree_b = Tree.objects.create(
+        dataset=dataset_b, location=loc, source=legacy.SOURCE_API, external_id=776
+    )
+
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/datasets/trees/{tree_b.id}/observations/")
+    assert response.status_code == 200
+    non_legacy_ids = [
+        entry["id"]
+        for entry in response.data
+        if entry.get("source") != legacy.SOURCE_API
+    ]
+    assert str(observation.id) in non_legacy_ids

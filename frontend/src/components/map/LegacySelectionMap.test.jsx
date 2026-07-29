@@ -286,13 +286,13 @@ describe("LegacySelectionMap areas", () => {
     expect(positions).toEqual([SQUARE, INNER]);
   });
 
-  it("toggles the trees inside the area the click landed on", () => {
+  it("toggles all trees inside the area including already imported ones", () => {
     const onToggleArea = vi.fn();
     renderMap({ areas, trees: areaTrees, selectionMode: null, onToggleArea });
 
     fireEvent.click(screen.getAllByTestId("polygon")[1]);
 
-    expect(onToggleArea).toHaveBeenCalledWith(["legacy_app:1"]);
+    expect(onToggleArea).toHaveBeenCalledWith(["legacy_app:1", "legacy_app:2"]);
   });
 
   it("counts the trees inside the ring instead of the legacy tree_count", () => {
@@ -389,7 +389,7 @@ describe("LegacySelectionMap shape editing", () => {
 });
 
 describe("LegacySelectionMap tree history", () => {
-  it("opens the history of an already imported tree without selecting it", async () => {
+  it("opens the history of an already imported tree and notifies the parent", async () => {
     const onToggleTree = vi.fn();
     renderMap({ trees: TREES, selectionMode: null, onToggleTree });
 

@@ -11,22 +11,42 @@ import {
   useMapEvents,
 } from "react-leaflet";
 
-import { areaShapes, selectableKeys, treeKey } from "@/lib/legacySelection.js";
+import { areaShapes, treeKey, treeKeys } from "@/lib/legacySelection.js";
 import { midpoint, pointInRing, ringFromCorners } from "@/lib/geometry.js";
 import BaseMap from "./BaseMap.jsx";
 import TreeHistoryPopup from "./TreeHistoryPopup.jsx";
 
 const MARKER_STYLES = {
-  imported: { color: "#64748b", fillColor: "#94a3b8", fillOpacity: 0.4, weight: 1 },
-  selected: { color: "#1d4ed8", fillColor: "#2563eb", fillOpacity: 0.9, weight: 2 },
-  available: { color: "#15803d", fillColor: "#16a34a", fillOpacity: 0.6, weight: 1 },
+  imported: {
+    color: "#64748b",
+    fillColor: "#94a3b8",
+    fillOpacity: 0.4,
+    weight: 1,
+  },
+  selected: {
+    color: "#1d4ed8",
+    fillColor: "#2563eb",
+    fillOpacity: 0.9,
+    weight: 2,
+  },
+  available: {
+    color: "#15803d",
+    fillColor: "#16a34a",
+    fillOpacity: 0.6,
+    weight: 1,
+  },
 };
 
 const AREA_STYLE = { color: "#f59e0b", weight: 2, fillOpacity: 0.05 };
 const BBOX_STYLE = { color: "#2563eb", weight: 1, fillOpacity: 0.1 };
 const DRAWING_STYLE = { color: "#2563eb", weight: 2, fillOpacity: 0.1 };
 const SHAPE_STYLE = { color: "#1d4ed8", weight: 2, fillOpacity: 0.08 };
-const VERTEX_STYLE = { color: "#1d4ed8", fillColor: "#fff", fillOpacity: 1, weight: 2 };
+const VERTEX_STYLE = {
+  color: "#1d4ed8",
+  fillColor: "#fff",
+  fillOpacity: 1,
+  weight: 2,
+};
 const CLOSE_TOLERANCE_PX = 12;
 const MIN_RING_VERTICES = 3;
 
@@ -50,12 +70,11 @@ const TreeMarker = memo(function TreeMarker({
   drawing,
   onClick,
 }) {
-  const style = tree.already_imported
-    ? MARKER_STYLES.imported
-    : selected
-      ? MARKER_STYLES.selected
+  const style = selected
+    ? MARKER_STYLES.selected
+    : tree.already_imported
+      ? MARKER_STYLES.imported
       : MARKER_STYLES.available;
-  // An imported tree can no longer be selected, but its history is worth opening.
   const clickable = !drawing;
   return (
     <CircleMarker
@@ -263,7 +282,7 @@ export default memo(function LegacySelectionMap({
         const inside = trees.filter((tree) =>
           pointInRing([tree.lat, tree.lon], ring),
         );
-        return { area, ring, count: inside.length, keys: selectableKeys(inside) };
+        return { area, ring, count: inside.length, keys: treeKeys(inside) };
       }),
     [areas, trees],
   );
@@ -325,7 +344,10 @@ export default memo(function LegacySelectionMap({
           onChange={(ring) => onShapeChange(shape.id, ring)}
         />
       ))}
-      <BboxSelector active={selectionMode === "bbox"} onSelect={onShapeCreate} />
+      <BboxSelector
+        active={selectionMode === "bbox"}
+        onSelect={onShapeCreate}
+      />
       <PolygonSelector
         active={selectionMode === "polygon"}
         onSelect={onShapeCreate}

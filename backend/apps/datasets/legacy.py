@@ -372,14 +372,20 @@ def list_trees() -> list[dict]:
     rows = api_rows + _dedup_app_against_api(api_rows, app_rows)
     # Uniqueness is per dataset, so the same legacy tree can be imported more
     # than once; the newest dataset wins because it holds the newest history.
-    imported = {
-        (source, external_id): str(tree_id)
-        for tree_id, source, external_id in Tree.objects.filter(
-            source__in=SOURCES, external_id__isnull=False
-        )
+    datasets_by_key: dict[tuple, list[dict]] = {}
+    imported: dict[tuple, str] = {}
+    for tree_id, source, external_id, dataset_id, dataset_name in (
+        Tree.objects.filter(source__in=SOURCES, external_id__isnull=False)
         .order_by("dataset__imported_at")
-        .values_list("id", "source", "external_id")
-    }
+        .values_list("id", "source", "external_id", "dataset_id", "dataset__name")
+    ):
+        key = (source, external_id)
+        entry = {"id": str(dataset_id), "name": dataset_name}
+        if key in datasets_by_key:
+            datasets_by_key[key].append(entry)
+        else:
+            datasets_by_key[key] = [entry]
+        imported[key] = str(tree_id)
     return [
         {
             "source": row.source,
@@ -388,8 +394,9 @@ def list_trees() -> list[dict]:
             "lon": row.lon,
             "species": row.species,
             "area_id": row.area_id,
-            "already_imported": (row.source, row.external_id) in imported,
+            "already_imported": (row.source, row.external_id) in datasets_by_key,
             "tree_id": imported.get((row.source, row.external_id)),
+            "datasets": datasets_by_key.get((row.source, row.external_id), []),
         }
         for row in rows
     ]

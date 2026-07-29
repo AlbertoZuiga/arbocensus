@@ -265,7 +265,13 @@ class TreeObservationListView(APIView):
         # same legacy tree lives in as many Tree rows as datasets hold it. Only
         # when the legacy database is unavailable does the snapshot stand in.
         live = self._legacy_history(tree)
-        stored = TreeObservation.objects.filter(tree_id=tree_id).select_related(
+        if tree.source in legacy.SOURCES and tree.external_id is not None:
+            tree_ids = Tree.objects.filter(
+                source=tree.source, external_id=tree.external_id
+            ).values_list("id", flat=True)
+        else:
+            tree_ids = [tree_id]
+        stored = TreeObservation.objects.filter(tree_id__in=tree_ids).select_related(
             "created_by"
         )
         if live is not None:

@@ -13,10 +13,10 @@ import {
   keysInRing,
   pruneExclusions,
   resolveSelection,
-  selectableKeys,
   selectionPayload,
   toggleKeys,
   treeKey,
+  treeKeys,
 } from "@/lib/legacySelection.js";
 import LegacySelectionMap from "@/components/map/LegacySelectionMap.jsx";
 import { getErrorMessage } from "@/lib/errors";
@@ -39,6 +39,17 @@ const EMPTY_SELECTION = { manualKeys: new Set(), excludedKeys: new Set() };
 const NO_AREAS = [];
 // Mirrors MIN_TREES_PER_DATASET in apps/datasets/partition.py, which validates it.
 const MIN_TREES_PER_DATASET = 51;
+const IMPORT_FILTERS = [
+  ["all", "Todos"],
+  ["available", "Disponibles"],
+  ["imported", "Ya importados"],
+];
+
+function chipClass(active) {
+  return active
+    ? "rounded px-2 py-0.5 text-xs font-medium bg-primary text-primary-foreground"
+    : "rounded px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/60";
+}
 
 function treeLabel(tree) {
   const species = tree.species?.trim();
@@ -56,6 +67,8 @@ export default function LegacyImport() {
   const [datasetName, setDatasetName] = useState("");
   const [partitionBy, setPartitionBy] = useState("single");
   const [clusterCount, setClusterCount] = useState("2");
+  const [importFilter, setImportFilter] = useState("all");
+  const [datasetFilter, setDatasetFilter] = useState(new Set());
 
   const nextShapeId = useRef(1);
   const selectionModeRef = useRef(selectionMode);
@@ -85,9 +98,38 @@ export default function LegacyImport() {
     [trees],
   );
 
+  const allDatasets = useMemo(() => {
+    const seen = new Map();
+    let hasNone = false;
+    for (const tree of trees ?? []) {
+      if (!tree.datasets?.length) hasNone = true;
+      for (const ds of tree.datasets ?? []) {
+        if (!seen.has(ds.id)) seen.set(ds.id, ds.name);
+      }
+    }
+    const list = [...seen.entries()].map(([id, name]) => ({ id, name }));
+    if (hasNone) list.push({ id: "__none__", name: "Sin dataset" });
+    return list;
+  }, [trees]);
+
+  const filteredTrees = useMemo(() => {
+    let result = trees ?? [];
+    if (importFilter === "available")
+      result = result.filter((t) => !t.already_imported);
+    else if (importFilter === "imported")
+      result = result.filter((t) => t.already_imported);
+    if (datasetFilter.size > 0) {
+      result = result.filter((t) => {
+        if (datasetFilter.has("__none__") && !t.datasets?.length) return true;
+        return t.datasets?.some((d) => datasetFilter.has(d.id));
+      });
+    }
+    return result;
+  }, [trees, importFilter, datasetFilter]);
+
   const keysByShape = useMemo(
-    () => shapes.map((shape) => keysInRing(trees ?? [], shape.ring)),
-    [trees, shapes],
+    () => shapes.map((shape) => keysInRing(filteredTrees, shape.ring)),
+    [filteredTrees, shapes],
   );
 
   const coveredKeys = useMemo(() => new Set(keysByShape.flat()), [keysByShape]);
@@ -112,7 +154,7 @@ export default function LegacyImport() {
   const handleToggleTree = useCallback(
     (tree) => {
       if (selectionModeRef.current) return;
-      toggle(selectableKeys([tree]));
+      toggle(treeKeys([tree]));
     },
     [toggle],
   );
@@ -144,6 +186,13 @@ export default function LegacyImport() {
     setSelection(EMPTY_SELECTION);
     setSelectionMode(null);
   };
+
+  const handleClearFilters = () => {
+    setImportFilter("all");
+    setDatasetFilter(new Set());
+  };
+
+  const filtersActive = importFilter !== "all" || datasetFilter.size > 0;
 
   const createDataset = useMutation({
     mutationFn: createDatasetFromLegacySelection,
@@ -178,6 +227,13 @@ export default function LegacyImport() {
       toast.error(getErrorMessage(err, "No se pudieron crear los datasets"));
     },
   });
+
+  const reimportCount = useMemo(
+    () =>
+      [...selectedKeys].filter((key) => treesByKey.get(key)?.already_imported)
+        .length,
+    [selectedKeys, treesByKey],
+  );
 
   const k = Number(clusterCount);
   const maxK = Math.floor(selectedKeys.size / MIN_TREES_PER_DATASET);
@@ -246,47 +302,127 @@ export default function LegacyImport() {
       )}
 
       <div className="flex flex-1 gap-4 overflow-hidden">
-        <div className="relative isolate flex-1 overflow-hidden rounded-md border">
-          {treesLoading && (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
-              Cargando árboles legacy…
+        <div className="flex flex-1 flex-col overflow-hidden rounded-md border">
+          <div className="flex shrink-0 flex-col gap-1.5 border-b px-3 py-2 text-sm">
+            <div className="flex items-center gap-3">
+              <span
+                id="import-filter-label"
+                className="shrink-0 text-xs font-medium text-muted-foreground"
+              >
+                Estado:
+              </span>
+              <div
+                role="group"
+                aria-labelledby="import-filter-label"
+                className="flex gap-1"
+              >
+                {IMPORT_FILTERS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={importFilter === value}
+                    onClick={() =>
+                      setImportFilter((prev) =>
+                        prev === value && value !== "all" ? "all" : value,
+                      )
+                    }
+                    className={chipClass(importFilter === value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <span className="ml-auto text-xs text-muted-foreground">
+                {filteredTrees.length} de {trees?.length ?? 0} árboles
+              </span>
+              {filtersActive && (
+                <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                  Limpiar filtros
+                </Button>
+              )}
             </div>
-          )}
-          {trees && (
-            <LegacySelectionMap
-              trees={trees}
-              areas={areas ?? NO_AREAS}
-              selectedKeys={selectedKeys}
-              shapes={shapes}
-              selectionMode={selectionMode}
-              onToggleTree={handleToggleTree}
-              onToggleArea={handleToggleArea}
-              onShapeCreate={handleShapeCreate}
-              onShapeChange={handleShapeChange}
-            />
-          )}
-          <div className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-md backdrop-blur">
-            <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-green-600" /> Disponible
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-blue-600" /> Seleccionado
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya
-              importado
-            </span>
+            {allDatasets.length > 0 && (
+              <div
+                role="group"
+                aria-labelledby="dataset-filter-label"
+                className="flex max-h-16 flex-wrap items-center gap-1 overflow-y-auto"
+              >
+                <span
+                  id="dataset-filter-label"
+                  className="shrink-0 text-xs font-medium text-muted-foreground mr-1"
+                >
+                  Dataset origen:
+                </span>
+                {allDatasets.map((ds) => (
+                  <button
+                    key={ds.id}
+                    type="button"
+                    aria-pressed={datasetFilter.has(ds.id)}
+                    onClick={() =>
+                      setDatasetFilter((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(ds.id)) next.delete(ds.id);
+                        else next.add(ds.id);
+                        return next;
+                      })
+                    }
+                    className={chipClass(datasetFilter.has(ds.id))}
+                  >
+                    {ds.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {(selectionMode || shapes.length > 0) && (
-            <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md border bg-background/90 px-3 py-1.5 text-sm shadow-md backdrop-blur">
-              {selectionMode === "bbox" &&
-                "Arrastra un rectángulo para seleccionar"}
-              {selectionMode === "polygon" &&
-                "Haz clic para marcar vértices y cierra sobre el primero"}
-              {!selectionMode &&
-                "Arrastra un vértice para moverlo, clic en un punto medio para añadir, clic derecho para borrar"}
+          <div className="relative isolate flex-1 overflow-hidden">
+            {treesLoading && (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                Cargando árboles legacy…
+              </div>
+            )}
+            {trees && (
+              <LegacySelectionMap
+                trees={filteredTrees}
+                areas={areas ?? NO_AREAS}
+                selectedKeys={selectedKeys}
+                shapes={shapes}
+                selectionMode={selectionMode}
+                onToggleTree={handleToggleTree}
+                onToggleArea={handleToggleArea}
+                onShapeCreate={handleShapeCreate}
+                onShapeChange={handleShapeChange}
+              />
+            )}
+            {trees && filteredTrees.length === 0 && (
+              <div className="absolute left-1/2 top-1/2 z-[1000] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow-md backdrop-blur">
+                Ningún árbol coincide con los filtros.
+              </div>
+            )}
+            <div className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-md backdrop-blur">
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-green-600" />{" "}
+                Disponible
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-blue-600" />{" "}
+                Seleccionado
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya en
+                otro dataset
+              </span>
             </div>
-          )}
+            {(selectionMode || shapes.length > 0) && (
+              <div className="absolute left-1/2 top-3 z-[1000] -translate-x-1/2 rounded-md border bg-background/90 px-3 py-1.5 text-sm shadow-md backdrop-blur">
+                {selectionMode === "bbox" &&
+                  "Arrastra un rectángulo para seleccionar"}
+                {selectionMode === "polygon" &&
+                  "Haz clic para marcar vértices y cierra sobre el primero"}
+                {!selectionMode &&
+                  "Arrastra un vértice para moverlo, clic en un punto medio para añadir, clic derecho para borrar"}
+              </div>
+            )}
+          </div>
         </div>
 
         <aside className="flex w-72 shrink-0 flex-col rounded-md border bg-white">
@@ -433,6 +569,15 @@ export default function LegacyImport() {
             <p className="text-sm text-muted-foreground">
               Se importarán {selectedKeys.size} árboles.
             </p>
+            {reimportCount > 0 && (
+              <p className="text-sm text-amber-600">
+                {reimportCount} de {selectedKeys.size}{" "}
+                {reimportCount === 1
+                  ? "árbol ya pertenece"
+                  : "árboles ya pertenecen"}{" "}
+                a otro dataset.
+              </p>
+            )}
             <DialogFooter>
               <Button
                 type="button"

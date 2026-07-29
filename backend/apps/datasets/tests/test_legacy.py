@@ -220,6 +220,30 @@ def test_list_trees_points_a_twice_imported_tree_at_the_newest_dataset(legacy_db
 
 
 @pytest.mark.django_db
+def test_list_trees_datasets_field_empty_when_not_imported(legacy_db):
+    trees = legacy.list_trees()
+    by_key = {(t["source"], t["external_id"]): t for t in trees}
+    assert by_key[(legacy.SOURCE_API, 776)]["datasets"] == []
+
+
+@pytest.mark.django_db
+def test_list_trees_datasets_field_lists_all_importing_datasets_ordered(legacy_db):
+    old = legacy.create_dataset("Old", [APP_TREES[0]])
+    new = legacy.create_dataset("New", [APP_TREES[0]])
+
+    by_key = {(t["source"], t["external_id"]): t for t in legacy.list_trees()}
+    datasets = by_key[(legacy.SOURCE_APP, 96905)]["datasets"]
+
+    assert datasets == [
+        {"id": str(old.id), "name": "Old"},
+        {"id": str(new.id), "name": "New"},
+    ]
+    assert by_key[(legacy.SOURCE_APP, 96905)]["tree_id"] == str(
+        Tree.objects.get(dataset=new).id
+    )
+
+
+@pytest.mark.django_db
 def test_list_trees_works_with_single_source_configured(
     legacy_db, monkeypatch, settings
 ):
@@ -363,6 +387,7 @@ def test_legacy_trees_endpoint_returns_both_sources(legacy_db):
         "area_id": 26,
         "already_imported": False,
         "tree_id": None,
+        "datasets": [],
     }
 
 
