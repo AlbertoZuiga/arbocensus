@@ -1,52 +1,45 @@
 \chapter{PROBLEMÁTICA}
 \label{cap:problematica}
 
+En este capítulo se describe el problema que motiva esta iteración, el estado en que las
+iteraciones anteriores del proyecto Arbocensus dejaron la plataforma y el alcance del
+trabajo desarrollado.
+
 \section{DESCRIPCIÓN DE LA PROBLEMÁTICA}
 
-Los censos de árboles urbanos constituyen una actividad de gestión ambiental de
-primera importancia para los municipios, ya que permiten caracterizar el patrimonio
-verde de la ciudad, evaluar su cobertura y planificar intervenciones de mantenimiento.
-Esta información es esencial para mitigar riesgos ambientales, prevenir accidentes
-por caídas de árboles y optimizar recursos municipales.
+El arbolado urbano es parte de la infraestructura de la ciudad y su gestión recae en los
+municipios. Los árboles en mal estado representan un riesgo para las personas y para la
+infraestructura crítica, y la evaluación de ese riesgo requiere personal capacitado y
+criterios explícitos de inspección \citep{klein2019risk}. Para planificar el
+mantenimiento y anticipar esos riesgos, el municipio necesita un catastro a nivel de
+árbol individual: dónde está cada ejemplar y en qué estado se encuentra. Levantar y
+mantener ese catastro es costoso, y el costo crece con la cantidad de atributos
+registrados y con la frecuencia de actualización \citep{nielsen2014review}.
 
-Arbocensus, desarrollado en la Universidad de los Andes en el marco del proyecto
-Fondef ID21110360, censa el arbolado urbano mediante visión artificial y
-participación ciudadana \citep{binder-cortes2023,pizarro2024}. Las campañas
-ejecutadas hasta ahora produjeron el catastro de árboles georreferenciados que esta
-iteración utiliza como punto de partida (la Sección~\ref{sec:alcance-desarrollo}
-detalla las iteraciones que lo produjeron); ese catastro es, sin embargo, una fotografía
-única de cada árbol.
+Arbocensus, desarrollado en la Universidad de los Andes en el marco del proyecto Fondef
+ID21110360, responde a esa necesidad: realizar una evaluación masiva del arbolado urbano
+asistida por tecnología, mediante visión artificial y participación ciudadana, de modo
+que los municipios dispongan de información sobre el número y el estado de los árboles de
+la comuna y puedan priorizar aquellos que presentan mayor riesgo
+\citep{binder-cortes2023,pizarro-zumaeta2024}.
 
-Para mejorar la calidad de los datos en futuras campañas de monitoreo, así como
-para entrenar modelos de inteligencia artificial, surge una necesidad crítica:
-realizar un re-censo estructurado que permita construir un historial de
-observaciones por árbol ---objetivo declarado del proyecto \citep{pizarro2024}---
-y provea datos etiquetados que permitan clasificar los árboles por nivel de riesgo
-(riesgoso/no-riesgoso). Con este fin resulta necesario repartir el arbolado entre
-los equipos de trabajo mediante rutas eficientes de desplazamiento.
+Ese propósito no se agota en localizar cada árbol una vez. Requiere un historial de
+observaciones por árbol a lo largo del tiempo ---objetivo declarado del proyecto
+\citep{pizarro-zumaeta2024}--- y datos etiquetados que permitan clasificar los ejemplares
+por nivel de riesgo (riesgoso/no-riesgoso) para entrenar los modelos de inteligencia
+artificial. Construir ese historial exige un re-censo estructurado: volver sobre un
+conjunto conocido de árboles ya georreferenciados y registrar una observación nueva de
+cada uno, en lugar de recolectar muestras dispersas sin correspondencia entre campañas.
+Ese cambio de modalidad convierte al censo en un problema de asignación de trabajo:
+el arbolado debe repartirse entre los equipos en terreno mediante rutas eficientes de
+desplazamiento.
 
-La escala real del problema se evidencia en las dos bases de datos que dejaron las
-iteraciones anteriores del proyecto \citep{binder-cortes2023,pizarro2024}. La
-más antigua, la base \texttt{legacy\_app} de la aplicación de censado previa desplegada
-en Heroku, registra 17\,208 muestras de censo asociadas por código QR, que corresponden a
-13\,081 árboles distintos. De ellos, los validados por el canal de medición automática
-(\texttt{mltree}) y con una posición geográfica única ---determinada mediante la mediana
-de las muestras de cada QR--- suman 1\,178 árboles importables.
-La posterior, la
-base de datos \texttt{legacy\_api}, contiene 429 árboles georreferenciados, 3\,961
-muestras (\textit{samples}), 10\,008 fotografías y 48 áreas de censo distribuidas en 10
-campañas.
-Al combinar ambas fuentes, el conjunto de árboles a rutear asciende a 1\,607 nodos,
-un tamaño que sitúa el problema fuera del alcance de la planificación manual y que
-impone restricciones sobre la construcción de la matriz de costos (RE-01, RE-02).
+El desafío logístico se formula así: dado un conjunto de $n$ puntos geográficos
+correspondientes a árboles distribuidos en el espacio urbano, se requiere generar un
+conjunto de rutas que garanticen la cobertura total, minimicen tiempos de desplazamiento
+y respeten jornadas acotadas temporalmente.
 
-Actualmente, con las coordenadas geográficas disponibles de los árboles, la organización
-de los censadores en terreno representa un desafío logístico significativo: dado un
-conjunto de $n$ puntos geográficos correspondientes a árboles distribuidos en el espacio
-urbano, se requiere generar un conjunto de rutas que garanticen la cobertura total,
-minimicen tiempos de desplazamiento y respeten jornadas acotadas temporalmente.
-
-La planificación inadecuada de rutas genera consecuencias operacionales inmediatas:
+Una planificación inadecuada de rutas traería consecuencias operacionales inmediatas:
 viajes innecesarios entre puntos lejanos, sobrecarga de ciertos equipos mientras otros
 subutilizan su tiempo, imposibilidad de cubrir todos los árboles en una jornada y
 aumento de costos logísticos.
@@ -54,33 +47,14 @@ aumento de costos logísticos.
 \section{ESTADO ACTUAL DEL PROBLEMA}
 \label{sec:estado-actual}
 
-Ante la ausencia de herramientas especializadas de optimización, la planificación de
-rutas para censos urbanos queda limitada a métodos manuales ---hojas de cálculo o
-herramientas de sistemas de información geográfica (GIS) de propósito general--- sin capacidad de optimización combinatoria. Los administradores de bases de datos arbóreas deben
-asignar manualmente árboles a censadores con apenas factores espaciales rudimentarios
-(proximidad euclidiana), sin considerar costos reales de desplazamiento ni
-restricciones de jornada.
-
-Las soluciones \textit{greedy} (vecino más cercano, \textit{clustering} geométrico) generan resultados
-subóptimos: viajes innecesariamente largos, desbalance severo en el número de árboles
-asignado a cada censador o incapacidad para cumplir restricciones temporales por jornada
-laboral. La comparación del Capítulo~\ref{cap:resultados} ilustra las dos primeras
-deficiencias sobre el censo real: el heurístico del vecino más cercano acumula más
-desplazamiento total que el modelo de optimización y produce una ruta degenerada que
-dedica más de dos horas y media de caminata a cinco árboles, además de saturar cada
-jornada al borde de su cota, sin holgura ante imprevistos de terreno.
-
-\section{ALCANCE}
-\label{sec:alcance-desarrollo}
-
-La plataforma de censado se construyó en iteraciones sucesivas desde 2021: una
-primera versión web orientada a dispositivos móviles que permitió tomar muestras de
-árboles ---mediante lectura de códigos QR y captura de GPS--- organizadas en
-campañas, zonas y equipos; un rediseño que incorporó elementos de ludificación
----puntos, logros, desafíos y tablas de posiciones--- para incentivar la
-participación \citep{binder-cortes2023}; y una tercera iteración que integró el
-procesamiento de imágenes del Sistema de Análisis de Imágenes de Árboles (SAIdA) y
-un modelo de estimación de cobertura del censo \citep{pizarro2024}.
+La plataforma de censado se construyó en iteraciones sucesivas desde 2021: una primera
+versión web orientada a dispositivos móviles que permitió tomar muestras de árboles
+---mediante lectura de códigos QR y captura de GPS--- organizadas en campañas, zonas y
+equipos \citep{castro-diaz2022}; un rediseño que incorporó elementos de ludificación
+---puntos, logros, desafíos y tablas de posiciones--- para incentivar la participación
+\citep{binder-cortes2023}; y una tercera iteración que integró el procesamiento de
+imágenes del Sistema de Análisis de Imágenes de Árboles (SAIdA) y un modelo de estimación
+de cobertura del censo \citep{pizarro-zumaeta2024}.
 % Historia verificada contra los repositorios de código del proyecto (jul 2026):
 %   - github.com/mrecabarren/arbocensus: commit inicial 2021-10-01 (Matías Recabarren,
 %     profesor guía). Django + templates HTML/JS, escaneo de QR con cámara, Google auth,
@@ -98,10 +72,39 @@ un modelo de estimación de cobertura del censo \citep{pizarro2024}.
 %   - Discrepancia de año de inicio entre fuentes (Binder/Cortés: 2022; Pizarro:
 %     2021) queda resuelta a 2021 por el commit inicial del repositorio original.
 
-Ninguna de esas iteraciones abordó la planificación de rutas: la asignación de
-árboles a censadores y el orden de visita se decidieron manualmente en cada campaña.
+Las campañas ejecutadas con esas versiones produjeron un catastro de árboles
+georreferenciados que constituye, sin embargo, un registro puntual de cada ejemplar. Su
+escala se evidencia en las dos bases de datos que dejaron las iteraciones anteriores
+\citep{binder-cortes2023,pizarro-zumaeta2024}. La más antigua, la base
+\texttt{legacy\_app} de la aplicación de censado previa desplegada en Heroku, registra
+17\,208 muestras de censo asociadas por código QR, que corresponden a 13\,081 árboles
+distintos. De ellos, los validados por el canal de medición automática (\texttt{mltree})
+y con una posición geográfica única ---determinada mediante la mediana de las muestras de
+cada QR--- suman 1\,178 árboles importables. La posterior, la base de datos
+\texttt{legacy\_api}, contiene 429 árboles georreferenciados, 3\,961 muestras
+(\textit{samples}), 10\,008 fotografías y 48 áreas de censo registradas ---27 sin
+arbolado y 21 no vacías, que se reducen a 12 polígonos distintos porque las áreas se
+recrean en cada campaña--- distribuidas en 10 campañas. La unión de lo importable de
+ambas fuentes ---los 1\,178 árboles de \texttt{legacy\_app} con posición reconstruida y
+los 429 de \texttt{legacy\_api}, que la registran de forma explícita--- conforma los
+1\,607 nodos de la instancia de referencia empleada en los experimentos de esta memoria
+(Capítulo~\ref{cap:resultados}), un subconjunto del catastro del proyecto, que solo en
+\texttt{legacy\_app} registra 13\,081 árboles distintos.
+
+Ninguna de esas iteraciones abordó la planificación de rutas. En las campañas
+documentadas por Binder y Cortés \citeyearpar{binder-cortes2023} y Pizarro y Zumaeta
+\citeyearpar{pizarro-zumaeta2024} quedó fuera del alcance: las jornadas de terreno se
+organizaban sin un sistema de asignación formal, y los censadores recorrían las zonas sin
+una secuencia de visitas predeterminada ni consideración de costos reales de
+desplazamiento o restricciones de jornada. Sobre ese estado, el re-censo estructurado que
+el proyecto necesita para construir el historial por árbol carece de la pieza que lo
+haría ejecutable en terreno.
+
+\section{ALCANCE}
+\label{sec:alcance-desarrollo}
+
 Esta iteración agrega esa pieza faltante: un motor de optimización que determina
-automáticamente el número de equipos necesarios, asigna los árboles entre ellos y
-ordena las visitas sobre la red vial real, además del ciclo operacional que lo rodea
----importación del arbolado, publicación del plan, portal móvil del censador y
-seguimiento del avance---, que el Capítulo~\ref{cap:solucion} detalla.
+automáticamente el número de equipos necesarios, asigna los árboles entre ellos y ordena
+las visitas sobre la red vial real, además del ciclo operacional que lo rodea
+---importación del arbolado desde las bases legadas, publicación del plan, portal móvil
+del censador y seguimiento del avance---, que el Capítulo~\ref{cap:solucion} detalla.

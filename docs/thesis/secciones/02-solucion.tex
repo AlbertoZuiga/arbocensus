@@ -29,9 +29,9 @@ censadores identificados y recoger de vuelta, parada por parada, la observación
 histórica de cada árbol que alimenta el re-censo. Esa cadena ---catastro legado,
 optimización, asignación, captura en terreno e historial--- es lo que el producto
 aporta, y es específica del dominio y no del algoritmo. A ello se añade una
-consideración de costo: la construcción de la matriz para los 1\,607 árboles requiere
-100 solicitudes fragmentadas al servicio de ruteo ---una por bloque de la grilla de
-$10 \times 10$ coordenadas (Sección~\ref{sec:matriz})---; con una API externa de pago
+consideración de costo: la construcción de la matriz para la instancia de referencia de 1\,607 árboles
+requiere 100 solicitudes fragmentadas al servicio de ruteo ---una por bloque de la
+grilla de $10 \times 10$ coordenadas (Sección~\ref{sec:matriz})---; con una API externa de pago
 ese volumen implicaría un gasto recurrente que se renueva en cada campaña, mientras
 que la alternativa adoptada lo elimina al desplegar el servicio localmente sobre datos
 cartográficos abiertos.
@@ -150,6 +150,12 @@ traza cada requisito a la sección de diseño que documenta su realización.
   RF-27 & Administrar las cuentas de usuario y sus roles, con desactivación lógica en lugar de borrado. \\
 \end{xltabular}
 
+Los 27 requisitos se agrupan en los cinco bloques operacionales que encabezan la
+tabla: constitución del conjunto de árboles, optimización, publicación y asignación,
+captura en terreno, y seguimiento y administración. RF-11 caracteriza al producto
+frente a la práctica manual actual: la flota de censadores es una salida del sistema
+y no un dato que el administrador declare (Sección~\ref{sec:flota}).
+
 \section{ATRIBUTOS DE CALIDAD}
 \label{sec:atributos-calidad}
 
@@ -166,7 +172,7 @@ atributos. La Tabla~\ref{tab:atributos-calidad} los resume.
     \toprule
     Atributo & Prioridad & Métrica & Valor objetivo \\
     \midrule
-    {\raggedright Robustez del plan\par}  & Alta & Proporción de las combinaciones de tiempo de servicio por árbol y jornada máxima con que se configura una campaña en que el plan cubre la totalidad de los árboles del \textit{dataset} y mantiene el índice de balance de carga en al menos $0{,}80$. & La totalidad de las combinaciones cuya carga de servicio cabe dentro de la capacidad de la flota bajo la jornada configurada; fuera de ese régimen, todo árbol que la solución deje fuera del plan se reporta de forma explícita en lugar de omitirse en silencio. \\
+    {\raggedright Robustez del plan\par}  & Alta & Proporción de las combinaciones de tiempo de servicio por árbol y jornada máxima con que se configura una campaña en que el plan cubre la totalidad de los árboles del \textit{dataset} y mantiene el índice de balance de carga en al menos $0{,}80$. & Cobertura total y balance $\geq 0{,}80$ en cinco de las seis combinaciones de la grilla operacional (Anexo 4); la única excepción es la más restrictiva ---tiempo de servicio de 3\,min bajo $T_{\max}=2$\,h---, donde la solución deja un árbol fuera del plan y lo reporta de forma explícita en lugar de omitirlo en silencio. Sus dos componentes coinciden con los criterios de aceptación CA-01 y CA-03, que los fijan como umbral mínimo. \\
     {\raggedright Eficiencia de cómputo\par}  & Media & Tiempo de cómputo de una planificación sobre un conjunto de $1\,607$ árboles reales, con la matriz de costos en caché, y variación de la solución al ampliar el presupuesto de tiempo del \textit{solver}. & Menos de cinco minutos bajo cualquier configuración censal, y ninguna mejora apreciable de la solución al duplicar el presupuesto de tiempo. \\
     {\raggedright Calidad geográfica de las rutas\par}  & Media & Auto-cruces por ruta sobre el trazado real de calles (\texttt{crossings\_road}), medidos con el post-proceso de resecuenciación de la Sección~\ref{sec:postpass} activo, frente a la misma solución sin ese post-proceso. & Ninguna degradación de \texttt{crossings\_road} frente al \textit{baseline} sin post-proceso, en la totalidad de las instancias de prueba. \\
     \bottomrule
@@ -241,6 +247,12 @@ de diseño: el diseño responde a ellas, pero no puede levantarlas.
   \end{tabularx}
 \end{table}
 
+Las cinco primeras (RE-01 a RE-05) y RE-07 son condiciones del producto: acotan lo
+que la plataforma puede construir. Las tres restantes (RE-06, RE-08, RE-09) son
+condiciones del entorno o de las herramientas empleadas, no decisiones de diseño;
+afectan a la evidencia experimental del Capítulo~\ref{cap:resultados} antes que al
+producto.
+
 \section{CRITERIOS DE ACEPTACIÓN}
 \label{sec:criterios-aceptacion}
 
@@ -263,7 +275,7 @@ Sección~\ref{sec:conclusiones} cierra ese contraste.
     CA-03 & Balance de carga entre equipos, medido como el índice de balance definido en la Sección~\ref{sec:atributos-calidad}. & Índice de al menos $0{,}80$. \\
     CA-04 & Determinación de la flota. & El número de rutas $k$ es una salida del \textit{solver} y no un dato que el administrador declare. \\
     CA-05 & Costo de cómputo de una planificación, con la matriz de costos en caché. & Menos de 5 minutos. \\
-    CA-06 & Mejora frente a la alternativa trivial. & Reducción medible del tiempo total de desplazamiento respecto de un heurístico de vecino más cercano sobre el mismo problema. \\
+    CA-06 & Mejora frente a la alternativa trivial. & Reducción estrictamente positiva del tiempo total de desplazamiento frente a un heurístico de vecino más cercano, medida sobre la misma instancia, la misma matriz de costos y con el mismo post-proceso de refinamiento aplicado a ambos métodos, y superior a la dispersión entre semillas del \textit{solver}. \\
     \bottomrule
   \end{tabularx}
 \end{table}

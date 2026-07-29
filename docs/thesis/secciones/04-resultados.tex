@@ -63,9 +63,11 @@ ella y en efecto lo hace en tres rutas. El barrido de la corrida de referencia
 cifra proviene del barrido de sensibilidad a las penalizaciones sobre el mismo
 \textit{dataset} y la misma configuración de producción
 (\texttt{penalty-sensitivity-20260713-reference.csv}, columna
-\texttt{tmin\_gap\_routes}), consistente en las tres semillas. Se reporta aquí
-porque su omisión, junto con la fila anterior, sugeriría que el modelo respeta como
-dura una cota que relaja de forma deliberada.}
+\texttt{tmin\_gap\_routes}). Ese barrido es anterior a la corrección de instrumento
+descrita en la Sección~\ref{sec:discusion-calidad} y sus filas no son réplicas
+independientes de una misma semilla; la cifra se reporta como observación única y
+sin dispersión. Se reporta aquí porque su omisión, junto con la fila anterior,
+sugeriría que el modelo respeta como dura una cota que relaja de forma deliberada.}
 \end{sloppypar}
 
 El número de rutas, $k=25$, es la flota que el
@@ -947,8 +949,10 @@ El conjunto de evaluación de $n = 1\,607$ árboles agrega arbolado real de múl
 áreas de censo dispersas en $\approx 10{,}3$\,km de extensión ($12{,}5$\,km de
 diagonal), frente a $1{,}32$\,km del área individual mayor ---razón cercana a
 $8\times$, según las instancias versionadas en \texttt{docs/experiments/instances/}---.
-Los árboles son reales; lo sin correlato operativo es tratar esa unión de veintiuna
-áreas dispersas como un único trabajo de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}).
+Los árboles son reales; lo sin correlato operativo es tratar esa unión ---las
+veintiuna áreas no vacías de \texttt{legacy\_api} (429 árboles, 27\,\% del conjunto)
+más los 1\,178 árboles de \texttt{legacy\_app}, sin área asignada--- como un único
+trabajo de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}).
 En el régimen de área real la configuración de producción genera rutas sin auto-cruces
 apreciables; estos emergen solo al procesar el conjunto agregado disperso
 (Ilustración~\ref{fig:ruta-vueltas-r1}), situación que en operación solo surgiría si se
@@ -1301,7 +1305,7 @@ medible.
 
 \begin{table}[H]
   \centering
-  \caption{Sensibilidad al límite de tiempo del \textit{solver} (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$).}
+  \caption{Sensibilidad al límite de tiempo del \textit{solver} (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$; estrategia \texttt{global}, código previo a la corrección del redondeo del tránsito, de ahí que $k=24$ y no $25$ como en el resto del capítulo).}
   \label{tab:sensibilidad-tl}
   \begin{tabularx}{\textwidth}{rXXXX}
     \toprule
@@ -1313,6 +1317,10 @@ medible.
     \bottomrule
   \end{tabularx}
 \end{table}
+
+El $k=24$ de esta tabla proviene de una medición anterior a la corrección del
+redondeo del tránsito descrita en la Sección~\ref{sec:discusion-calidad}; no
+contradice el $k=25$ del resto del capítulo, que corresponde al código vigente.
 
 \section{CONCLUSIONES}
 \label{sec:conclusiones}
@@ -1441,9 +1449,11 @@ Las conclusiones anteriores valen dentro de un perímetro que conviene delimitar
 precisión, y que corresponde al alcance declarado en la Sección~\ref{sec:verificacion} y a
 las restricciones de la Sección~\ref{sec:restricciones}.
 
-Valen sobre el arbolado real de las dos bases legadas del proyecto ---no sobre
-instancias sintéticas ni sobre los bancos de referencia de la literatura
-\citep{solomon1987algorithms}, que no se emplearon--- y sobre el rango de tamaños comprendido entre $43$ y $1\,607$ nodos. Las
+Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción
+del diagnóstico geográfico inicial de la Tabla~\ref{tab:baseline-geo}, medido sobre
+nodos sintéticos de distribución uniforme--- y sobre el rango de tamaños comprendido
+entre $43$ y $1\,607$ nodos; no se emplearon los bancos de referencia de la literatura
+\citep{solomon1987algorithms}. Las
 comparaciones son internas: contrastan el sistema contra otras configuraciones de sí
 mismo y contra un heurístico de vecino más cercano escrito para este trabajo. No hay
 anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo
@@ -1521,6 +1531,21 @@ iteración de Arbocensus.
   inaccesibles por cierre del plan de facturación asociado; únicamente los metadatos y
   las coordenadas están disponibles para su uso en la plataforma.
 
+  \item \textbf{Alcance de la integración con Arbocensus}: RF-01 se acotó a la
+  importación de árboles desde archivo (CSV o JSON) y desde las bases legadas
+  mediante conexión de solo lectura (Sección~\ref{sec:legacy}), en lugar de una
+  integración en vivo con las bases de datos operativas de Arbocensus. El corte
+  es adecuado al alcance de esta iteración, pero deja fuera la sincronización
+  continua del arbolado entre plataformas.
+
+  \item \textbf{Reconciliación de trabajos abandonados}: el registro de un
+  trabajo de optimización permanece en estado \texttt{running} si el
+  \textit{worker} muere después de iniciar la tarea; el sistema no implementa
+  reconciliación por latido ni por marca de inicio, y el cliente abandona el
+  sondeo a los 15 minutos (Sección~\ref{sec:ui}). La consecuencia es un registro
+  colgado en la lista de trabajos, sin efecto sobre las soluciones ya
+  publicadas.
+
   \item \textbf{Estrategia \texttt{cluster\_first}}: la estrategia de particionamiento
   previo mediante $k$-medias quedó descartada como opción de producción a partir de los
   resultados de la Sección~\ref{sec:comparacion-estrategias}. Incluso en su versión
@@ -1557,59 +1582,23 @@ iteración de Arbocensus.
   solución estructural es la segmentación previa por área de censo.
 
   \item \textbf{Ausencia de una cota inferior de referencia para el relleno de
-  trayecto}: la discusión de la Sección~\ref{sec:discusion-calidad} caracteriza el
-  relleno de trayecto por la variación relativa del desplazamiento entre
-  configuraciones, sin una cota inferior absoluta que permita separar qué fracción de
-  ese desplazamiento es geometría irreducible. Una cota válida y de cálculo directo es
-  el bosque generador mínimo de $k$ componentes ($\text{MSF}_k$)
-  \citep{kruskal1956shortest} sobre la matriz simetrizada $\min(d_{ij},\,d_{ji})$: $k$ recorridos abiertos no vacíos que cubren
-  $n$ nodos constituyen un bosque generador de $k$ componentes, y simetrizar hacia
-  abajo solo puede subestimar el costo dirigido de cada arco, de modo que toda
-  solución factible satisface $\text{viaje} \geq \text{MSF}_k$. Evaluar el exceso sobre esa
-  cota, en lugar del desplazamiento absoluto, distingue el relleno evitable de la
-  estructura que ningún recorrido puede eliminar. La cota es, sin embargo, una
-  relajación: un bosque generador no está sujeto a la restricción de grado máximo $2$
-  que todo recorrido sí satisface, de modo que el óptimo real se sitúa en general por
-  encima de $\text{MSF}_k$ y el exceso medido sobre ella sobreestima el relleno
-  evitable. Sirve como cota de referencia, no como objetivo alcanzable. La cota está
-  implementada en la instrumentación de experimentos y se registra como columna del
-  barrido.
-
-  La distancia entre esa cota y lo que un recorrido concreto alcanza está medida. Un
-  experimento posterior construyó, para cada instancia, un ancla alcanzable
-  $\text{UB}_k$ ---los $k$ recorridos abiertos que resultan de partir un recorrido
-  \textit{TSP} sobre los mismos $n$ nodos por sus $k-1$ tramos más caros--- y la
-  contrastó contra $\text{MSF}_k$: ese recorrido queda entre un $13$\,\% y un
-  $29$\,\% por encima de la cota en las instancias reales, con $13{,}3$\,\% en \texttt{area-27-n72},
-  $18{,}6$\,\% en \texttt{area-26-n157}, $21{,}1$\,\% en \texttt{area-29-n43} y a lo
-  sumo $28{,}8$\,\% en \texttt{reference-n1607}
-  (\texttt{docs/experiments/tsp-achievable-anchor-20260722.md}). Dado que
-  $\text{UB}_k$ es un recorrido construido y no óptimo, un ancla más ajustada solo
-  podría estrechar esa distancia, nunca ampliarla; las cifras son, por tanto, cotas
-  superiores de la incertidumbre del criterio y no su valor exacto, lo que las sitúa
-  del lado conservador. El mismo experimento advierte que el ancla no respeta
-  $T_{\max}$ donde $k$ es restrictivo, de modo que no constituye una solución factible
-  del VRP y su papel es acotar la flojedad de la cota, no sustituirla como referencia
-  operacional. Re-juzgadas contra el ancla, ninguna de las doce celdas de área de
-  los dos ciclos más recientes cambia de veredicto. Lo que queda pendiente es reexpresar contra
-  $\text{MSF}_k$ las cifras de relleno reportadas en esta memoria, que siguen
-  formuladas como desplazamiento relativo; la magnitud del ajuste que ello supondría
-  está acotada por el rango anterior.
+  trayecto}: la Sección~\ref{sec:discusion-calidad} caracteriza el relleno de
+  trayecto por la variación relativa del desplazamiento entre configuraciones, sin
+  una cota inferior absoluta que separe qué fracción es geometría irreducible. El
+  Anexo 4 construye esa cota ($\text{MSF}_k$, el bosque generador mínimo de $k$
+  componentes) y un ancla alcanzable ($\text{UB}_k$) que mide su flojedad: el ancla
+  se sitúa entre un $13$\,\% y un $29$\,\% por encima de la cota en las instancias
+  reales, de modo que el exceso medido contra $\text{MSF}_k$ sobreestima el relleno
+  evitable en a lo sumo esa magnitud, sin que ninguna de las doce celdas re-juzgadas
+  cambie de veredicto. Queda pendiente reexpresar contra $\text{MSF}_k$ las cifras
+  de relleno de esta memoria, que siguen formuladas como desplazamiento relativo.
 
   \item \textbf{Geometría de referencia de la métrica de auto-cruces}: el número de
-  auto-cruces se calcula sobre las cuerdas rectas que unen paradas consecutivas, es
-  decir sobre la proyección equirectangular de las coordenadas de las paradas, sin
-  intervención de la red vial. Esa geometría no coincide con ninguna de las otras dos
-  que participan en el problema: el \textit{solver} optimiza tiempo de red sobre la
-  matriz de duraciones de OSRM, y la aplicación dibuja al censador la polilínea real de
-  calles que OSRM devuelve para la secuencia de paradas. Las tres geometrías ---cuerda
-  recta, tiempo de red y trazado de calles--- son distintas, y la correspondencia entre
-  ellas no se ha comprobado: no está medido en qué grado un auto-cruce de cuerdas
-  implica un auto-cruce del trazado real, ni en qué grado la métrica refleja el costo
-  que el \textit{solver} minimiza. La métrica conserva, no obstante, su valor
-  comparativo: todas las configuraciones contrastadas en esta memoria se midieron con
-  la misma vara, de modo que las diferencias relativas entre ellas son homogéneas
-  aunque el nivel absoluto quede sujeto a esta reserva.
+  auto-cruces se calcula sobre las cuerdas rectas entre paradas consecutivas, geometría
+  distinta de la que optimiza el \textit{solver} (tiempo de red de OSRM) y de la que
+  recorre el censador (trazado real de calles); la correspondencia entre las tres no
+  se ha comprobado. La métrica conserva su valor comparativo entre configuraciones
+  medidas con la misma vara, con la reserva que el Anexo 4 detalla.
 
   \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el ahorro de
   \textit{OR-Tools} frente al heurístico del vecino más cercano, cuando este recibe el
@@ -1651,50 +1640,66 @@ iteración de Arbocensus.
 \section{POSIBLES MEJORAS}
 \label{sec:posibles-mejoras}
 
-Las mejoras enumeradas a continuación se derivan directamente de los resultados
-del capítulo. Las dos primeras tienen anclaje en mediciones propias de esta
-memoria; las cuatro restantes abordan limitaciones funcionales independientes de
-la serie experimental.
+Las mejoras enumeradas a continuación se derivan de los resultados del capítulo.
+La primera es la de mayor valor para el proyecto; las dos siguientes tienen además
+anclaje en mediciones propias de esta memoria. Las cuatro restantes abordan
+limitaciones funcionales independientes de la serie experimental. Cada una indica
+la evidencia que la respalda, su costo y qué habría que construir.
 
 \begin{itemize}
-  \item \textbf{Segmentación previa por área}: la
-  Sección~\ref{sec:discusion-calidad} y la Sección~\ref{sec:areas-reales}
-  establecen que la unidad operativa correcta del motor es el área de censo
-  individual. Procesar cada área como problema independiente eliminaría los
-  auto-cruces del régimen disperso y reduciría la varianza entre repeticiones.
-  El costo está medido sobre las áreas reales: una ruta adicional, tres jornadas
-  por debajo de $T_{\min}$ y el triple de cómputo, sin incremento en el
-  desplazamiento.
+  \item \textbf{Validación en terreno}: las conclusiones de este capítulo
+  verifican que el producto hace lo que su diseño declara, pero no que resuelva en
+  operación el problema logístico que lo motivó (Sección~\ref{sec:verificacion}).
+  El costo es una jornada de censo real con censadores y un área individual, con
+  registro de tiempos de caminata. Debe construirse una jornada instrumentada que
+  contraste el tiempo estimado por el perfil peatonal de OSRM contra el tiempo
+  observado en terreno, y que ejercite la cola \textit{offline} bajo la
+  conectividad real que describe la Sección~\ref{sec:ui}.
+
+  \item \textbf{Segmentación previa por área}: la Sección~\ref{sec:discusion-calidad}
+  y la Sección~\ref{sec:areas-reales} muestran que la unidad operativa correcta
+  del motor es el área de censo individual, no el arbolado agregado. El costo
+  está medido sobre las áreas reales: una ruta adicional, tres jornadas por
+  debajo de $T_{\min}$ y el triple de cómputo, sin incremento en el
+  desplazamiento. Debe construirse la segmentación automática del \textit{dataset}
+  por área antes de rutear, hoy responsabilidad manual del administrador.
 
   \item \textbf{Post-proceso de fusión de rutas}: el diagnóstico de
   \texttt{area-27} en la Sección~\ref{sec:areas-reales} muestra que el
   \textit{solver} queda atrapado en un óptimo local cuya función objetivo lo
-  penaliza por un factor de $43$ frente a la solución del heurístico. Un
-  post-proceso de fusión de paradas entre rutas, operando sobre la solución ya
-  construida sin volver a resolver el problema completo, atacaría ese valle sin
-  incrementar el presupuesto de cómputo del GLS.
+  penaliza por un factor de $43$ frente a la solución del heurístico. El costo es
+  de implementación, no de cómputo adicional: opera sobre la solución ya
+  construida. Debe construirse un post-proceso de fusión de paradas entre rutas
+  que ataque ese valle sin incrementar el presupuesto del GLS.
 
-  \item \textbf{Matrices de costos de gran escala}: superar el tope de
-  $2\,000$ árboles que hoy acota la dimensión de la matriz de costos ---impuesto
-  por el crecimiento $O(n^2)$ de su tamaño en disco--- mediante almacenamiento
-  disperso o la segmentación previa del \textit{dataset}, para censos que
-  excedan ese umbral.
+  \item \textbf{Matrices de costos de gran escala}: el tope de $2\,000$ árboles
+  que hoy acota la dimensión de la matriz de costos está impuesto por el
+  crecimiento $O(n^2)$ de su tamaño en disco (Sección~\ref{sec:limitaciones}). El
+  costo es de almacenamiento y de tiempo de construcción de la matriz para censos
+  mayores. Debe construirse almacenamiento disperso o segmentación previa del
+  \textit{dataset} para censos que excedan ese umbral.
 
-  \item \textbf{Operación \textit{offline} robusta}: reemplazar la cola
-  \textit{offline} básica actual (Sección~\ref{sec:ui}) por un \textit{service
-  worker} que gestione el almacenamiento de teselas y la sincronización diferida
-  de forma confiable en condiciones de conectividad intermitente.
+  \item \textbf{Operación \textit{offline} robusta}: la cola \textit{offline}
+  actual (Sección~\ref{sec:ui}) preserva datos ante pérdidas momentáneas de red,
+  pero no gestiona teselas de mapa ni sincronización bajo conectividad
+  intermitente prolongada. El costo es de desarrollo de un \textit{service
+  worker} dedicado. Debe construirse la gestión de teselas y la sincronización
+  diferida robusta que la versión actual no cubre.
 
-  \item \textbf{Importación de formatos adicionales}: soporte de GeoJSON como
-  formato de entrada de \textit{datasets}, que actualmente se importan desde
-  archivos CSV o JSON, o bien desde las fuentes legadas
-  (Sección~\ref{sec:legacy}).
+  \item \textbf{Importación de formatos adicionales}: los \textit{datasets} se
+  importan hoy desde archivos CSV o JSON, o desde las fuentes legadas
+  (Sección~\ref{sec:legacy}), sin soporte de GeoJSON. El costo es un
+  \textit{parser} adicional sobre el mismo flujo de importación. Debe
+  construirse el soporte de GeoJSON como tercer formato de entrada.
 
-  \item \textbf{Pruebas de extremo a extremo}: automatización de los flujos
-  completos de administrador y censador mediante Playwright.
+  \item \textbf{Pruebas de extremo a extremo}: la Sección~\ref{sec:verificacion}
+  cubre pruebas unitarias de \textit{backend} y \textit{frontend}, pero ningún
+  flujo completo de usuario. El costo es de mantenimiento de la suite. Debe
+  construirse la automatización de los flujos de administrador y censador
+  mediante Playwright.
 \end{itemize}
 
-Una séptima extensión se evaluó y quedó descartada por la propia medición, lo
+Una octava extensión se evaluó y quedó descartada por la propia medición, lo
 que justifica dejarla registrada. La compuerta de régimen por saturación
 consistía en activar el brazo \texttt{upper-tmax-tmin9000} por encima de un
 umbral $\overline{\text{sat}} \gtrsim 0{,}9$, ya que el barrido de la
@@ -1710,10 +1715,3 @@ calles sube de $43$ a $69$ en \texttt{reference-n1607}
 geometría real el brazo empeora aquello que pretendía corregir, de modo que la
 compuerta no se propone para activación y su código permanece en el árbol como
 opción no activa de uso experimental.
-
-De todas las extensiones enumeradas, la de mayor valor para el proyecto es la
-validación en terreno de la plataforma en una jornada real de censo. Las
-conclusiones de este capítulo verifican que el producto hace lo que su diseño
-declara, pero no que resuelva en operación el problema logístico que lo motivó.
-Esa comprobación queda pendiente y ninguna mejora de la función objetivo la
-sustituye.

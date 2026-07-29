@@ -85,6 +85,9 @@ La Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada
   \end{tabularx}
 \end{table}
 
+En los cuatro casos el criterio dominante fue la integración con el resto del
+\textit{stack} y no el rendimiento aislado del componente.
+
 % ---- 3.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
 \label{sec:modelo-datos}
@@ -166,6 +169,14 @@ que lo es el censador de una ruta. Todas las entidades usan claves primarias UUI
   \caption[Modelo entidad-relación simplificado]{Modelo entidad-relación simplificado. \texttt{DistanceMatrix} cachea la matriz de tiempos del \textit{dataset}; \texttt{RouteStop} es la fuente de verdad del orden de visita; \texttt{TreeObservation} sobrevive al plan de rutas que la originó.}
   \label{fig:er}
 \end{figure}
+
+Dos aristas del diagrama no son obvias a primera vista. La doble ruta
+\texttt{RouteStop} $\to$ \texttt{TreeObservation} y \texttt{Tree} $\to$
+\texttt{TreeObservation} es lo que permite que una observación de re-censo
+sobreviva al plan de rutas que la originó, incluso si esa ruta se reemplaza. La
+cardinalidad 1:1 entre \texttt{Dataset} y \texttt{DistanceMatrix} refleja que la
+matriz de costos se cachea una vez por conjunto de árboles activos, no una vez
+por optimización.
 
 % ---- 3.3 -------------------------------------------------------
 \section{MOTOR DE OPTIMIZACIÓN}
@@ -578,7 +589,7 @@ todo el tiempo de ejecución del \textit{pipeline}
 (Capítulo~\ref{cap:resultados}), cabe esperar que el efecto no se manifieste como un
 mayor tiempo total sino como una menor calidad alcanzable dentro del mismo
 presupuesto. Esa expectativa no se verificó experimentalmente y se asume como
-limitación del trabajo (Sección~\ref{sec:posibles-mejoras}).
+limitación del trabajo (Sección~\ref{sec:limitaciones}).
 
 % ---- 3.3.6 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
@@ -687,7 +698,7 @@ que la cierra, se documentan en la Sección~\ref{sec:discusion-calidad}.
 
 El sistema no parte de cero: existen dos bases de datos operativas de versiones
 anteriores del proyecto Arbocensus
-\citep{binder-cortes2023,pizarro2024}, que contienen el arbolado ya catastrado
+\citep{binder-cortes2023,pizarro-zumaeta2024}, que contienen el arbolado ya catastrado
 en campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
 el campo \texttt{source} del modelo \texttt{Tree}:
 
@@ -941,6 +952,12 @@ el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
   \end{tabularx}
 \end{table}
 
+Los grupos \textit{Datasets} y Optimización son exclusivos del rol Administrador,
+al igual que la administración de cuentas dentro del grupo Autenticación; el resto
+de ese grupo ---obtención y renovación del token y consulta de la sesión propia---
+lo utilizan ambos roles. Rutas es el único grupo cuyas operaciones de negocio
+comparten los dos, con el censador restringido a su propia ruta vigente.
+
 % ---- 3.7 -------------------------------------------------------
 \section{INTERFAZ DE USUARIO}
 \label{sec:ui}
@@ -968,7 +985,7 @@ creación, de modo que un trabajo colgado no deja al navegador consultando
 indefinidamente. El abandono es del cliente: el registro del trabajo permanece en
 estado \texttt{running} si el \textit{worker} muere después de iniciar la tarea,
 pues el sistema no implementa reconciliación por latido ni por marca de inicio. Es
-una limitación asumida (Sección~\ref{sec:posibles-mejoras}). Finalmente, se presentan las rutas resultantes: cuando el trabajo
+una limitación asumida (Sección~\ref{sec:limitaciones}). Finalmente, se presentan las rutas resultantes: cuando el trabajo
 ejecutó más de una estrategia, un componente de pestañas (\texttt{StrategyTabs})
 permite alternar entre las soluciones \texttt{global}, \texttt{spatial\_term} y
 \texttt{cluster\_first} y comparar sus métricas; cuando ejecutó una sola, la muestra
