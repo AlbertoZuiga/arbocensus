@@ -18,16 +18,18 @@ export async function createJob({
 export async function fetchFleetEstimate(
   datasetId,
   minRouteTimeSec,
+  maxRouteTimeSec,
   serviceTimeSec,
 ) {
   const { data } = await client.get("/optimization/estimate/", {
     params: {
       dataset: datasetId,
       min_route_time_sec: minRouteTimeSec,
+      max_route_time_sec: maxRouteTimeSec,
       service_time_sec: serviceTimeSec,
     },
   });
-  return data.n_estimated;
+  return data;
 }
 
 export async function fetchJob(jobId) {

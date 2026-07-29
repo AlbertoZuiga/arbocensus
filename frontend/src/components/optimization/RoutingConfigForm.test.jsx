@@ -23,9 +23,16 @@ function renderForm(props = {}) {
 }
 
 describe("RoutingConfigForm", () => {
+  const emptyEstimate = {
+    n_estimated: null,
+    blocking: [],
+    warnings: [],
+    diagnostics: {},
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    fetchFleetEstimate.mockResolvedValue(null);
+    fetchFleetEstimate.mockResolvedValue(emptyEstimate);
   });
 
   it("renders editable defaults (120min / 180min / 2min)", () => {
@@ -99,29 +106,38 @@ describe("RoutingConfigForm", () => {
   });
 
   it("shows the fleet estimate hint when n_estimated is a number", async () => {
-    fetchFleetEstimate.mockResolvedValue(4);
+    fetchFleetEstimate.mockResolvedValue({
+      n_estimated: 4,
+      blocking: [],
+      warnings: [],
+      diagnostics: {},
+    });
     renderForm();
 
     expect(await screen.findByText("Hasta 4 rutas aprox.")).toBeInTheDocument();
   });
 
   it("renders no hint when n_estimated is null", async () => {
-    fetchFleetEstimate.mockResolvedValue(null);
     renderForm();
 
     await waitFor(() =>
-      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 120)
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 10800, 120)
     );
     expect(screen.queryByText(/rutas aprox\./)).not.toBeInTheDocument();
   });
 
   it("refetches the estimate when min route time or service time change", async () => {
-    fetchFleetEstimate.mockResolvedValue(4);
+    fetchFleetEstimate.mockResolvedValue({
+      n_estimated: 4,
+      blocking: [],
+      warnings: [],
+      diagnostics: {},
+    });
     const user = userEvent.setup();
     renderForm();
 
     await waitFor(() =>
-      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 120)
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 10800, 120)
     );
 
     const serviceInput = screen.getByLabelText(/Tiempo de censo por árbol/);
@@ -129,8 +145,51 @@ describe("RoutingConfigForm", () => {
     await user.type(serviceInput, "10");
 
     await waitFor(() =>
-      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 600)
+      expect(fetchFleetEstimate).toHaveBeenCalledWith("d1", 7200, 10800, 600)
     );
+  });
+
+  it("shows blocking error and disables submit when blocking errors present", async () => {
+    fetchFleetEstimate.mockResolvedValue({
+      n_estimated: null,
+      blocking: [
+        {
+          code: "service_exceeds_tmax",
+          detail: "Ni un solo árbol alcanza a censarse dentro de una ruta.",
+        },
+      ],
+      warnings: [],
+      diagnostics: {},
+    });
+    renderForm();
+
+    expect(
+      await screen.findByText(
+        "Ni un solo árbol alcanza a censarse dentro de una ruta."
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Generar y comparar rutas" })
+    ).toBeDisabled();
+  });
+
+  it("shows warning without blocking submit", async () => {
+    fetchFleetEstimate.mockResolvedValue({
+      n_estimated: 3,
+      blocking: [],
+      warnings: [
+        { code: "padding_regime", detail: "Las rutas van a incluir relleno." },
+      ],
+      diagnostics: {},
+    });
+    renderForm();
+
+    expect(
+      await screen.findByText("Las rutas van a incluir relleno.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Generar y comparar rutas" })
+    ).not.toBeDisabled();
   });
 
   it("blocks submit and warns when min exceeds max", async () => {

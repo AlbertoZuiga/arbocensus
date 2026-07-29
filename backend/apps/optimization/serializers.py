@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .config_presets import CONFIG_PRESETS
+from .feasibility import check_config
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
 from .recommendation import BALANCE_GATE, pick_recommended
 
@@ -25,6 +26,19 @@ class RoutingConfigSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "max_route_time_sec must be greater than or equal to min_route_time_sec"
             )
+        dataset = attrs.get("dataset")
+        service = attrs.get("service_time_sec")
+        if (
+            dataset is not None
+            and min_time is not None
+            and max_time is not None
+            and service is not None
+        ):
+            result = check_config(dataset, min_time, max_time, service)
+            if result["blocking"]:
+                raise serializers.ValidationError(
+                    [item["detail"] for item in result["blocking"]]
+                )
         return attrs
 
 
