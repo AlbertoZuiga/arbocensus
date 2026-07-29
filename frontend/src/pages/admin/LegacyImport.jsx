@@ -39,6 +39,17 @@ const EMPTY_SELECTION = { manualKeys: new Set(), excludedKeys: new Set() };
 const NO_AREAS = [];
 // Mirrors MIN_TREES_PER_DATASET in apps/datasets/partition.py, which validates it.
 const MIN_TREES_PER_DATASET = 51;
+const IMPORT_FILTERS = [
+  ["all", "Todos"],
+  ["available", "Disponibles"],
+  ["imported", "Ya importados"],
+];
+
+function chipClass(active) {
+  return active
+    ? "rounded px-2 py-0.5 text-xs font-medium bg-primary text-primary-foreground"
+    : "rounded px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/60";
+}
 
 function treeLabel(tree) {
   const species = tree.species?.trim();
@@ -89,22 +100,29 @@ export default function LegacyImport() {
 
   const allDatasets = useMemo(() => {
     const seen = new Map();
+    let hasNone = false;
     for (const tree of trees ?? []) {
+      if (!tree.datasets?.length) hasNone = true;
       for (const ds of tree.datasets ?? []) {
         if (!seen.has(ds.id)) seen.set(ds.id, ds.name);
       }
     }
-    return [...seen.entries()].map(([id, name]) => ({ id, name }));
+    const list = [...seen.entries()].map(([id, name]) => ({ id, name }));
+    if (hasNone) list.push({ id: "__none__", name: "Sin dataset" });
+    return list;
   }, [trees]);
 
   const filteredTrees = useMemo(() => {
     let result = trees ?? [];
-    if (importFilter === "available") result = result.filter((t) => !t.already_imported);
-    else if (importFilter === "imported") result = result.filter((t) => t.already_imported);
+    if (importFilter === "available")
+      result = result.filter((t) => !t.already_imported);
+    else if (importFilter === "imported")
+      result = result.filter((t) => t.already_imported);
     if (datasetFilter.size > 0) {
-      result = result.filter((t) =>
-        t.datasets?.some((d) => datasetFilter.has(d.id)),
-      );
+      result = result.filter((t) => {
+        if (datasetFilter.has("__none__") && !t.datasets?.length) return true;
+        return t.datasets?.some((d) => datasetFilter.has(d.id));
+      });
     }
     return result;
   }, [trees, importFilter, datasetFilter]);
@@ -285,48 +303,75 @@ export default function LegacyImport() {
 
       <div className="flex flex-1 gap-4 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-hidden rounded-md border">
-          <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2 text-sm">
-            <select
-              aria-label="Estado de importación"
-              className="rounded border px-1 py-0.5 text-sm"
-              value={importFilter}
-              onChange={(e) => setImportFilter(e.target.value)}
-            >
-              <option value="all">Todos</option>
-              <option value="available">Solo disponibles</option>
-              <option value="imported">Solo ya importados</option>
-            </select>
-            {allDatasets.length > 0 && (
-              <select
-                aria-label="Dataset de origen"
-                className="rounded border px-1 py-0.5 text-sm"
-                multiple
-                size={Math.min(allDatasets.length, 3)}
-                value={[...datasetFilter]}
-                onChange={(e) =>
-                  setDatasetFilter(
-                    new Set(
-                      [...e.target.options]
-                        .filter((o) => o.selected)
-                        .map((o) => o.value),
-                    ),
-                  )
-                }
+          <div className="flex shrink-0 flex-col gap-1.5 border-b px-3 py-2 text-sm">
+            <div className="flex items-center gap-3">
+              <span
+                id="import-filter-label"
+                className="shrink-0 text-xs font-medium text-muted-foreground"
               >
-                {allDatasets.map((ds) => (
-                  <option key={ds.id} value={ds.id}>
-                    {ds.name}
-                  </option>
+                Estado:
+              </span>
+              <div
+                role="group"
+                aria-labelledby="import-filter-label"
+                className="flex gap-1"
+              >
+                {IMPORT_FILTERS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={importFilter === value}
+                    onClick={() =>
+                      setImportFilter((prev) =>
+                        prev === value && value !== "all" ? "all" : value,
+                      )
+                    }
+                    className={chipClass(importFilter === value)}
+                  >
+                    {label}
+                  </button>
                 ))}
-              </select>
-            )}
-            <span className="ml-auto text-muted-foreground">
-              {filteredTrees.length} de {trees?.length ?? 0} árboles
-            </span>
-            {filtersActive && (
-              <Button variant="ghost" size="sm" onClick={handleClearFilters}>
-                Limpiar filtros
-              </Button>
+              </div>
+              <span className="ml-auto text-xs text-muted-foreground">
+                {filteredTrees.length} de {trees?.length ?? 0} árboles
+              </span>
+              {filtersActive && (
+                <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                  Limpiar filtros
+                </Button>
+              )}
+            </div>
+            {allDatasets.length > 0 && (
+              <div
+                role="group"
+                aria-labelledby="dataset-filter-label"
+                className="flex max-h-16 flex-wrap items-center gap-1 overflow-y-auto"
+              >
+                <span
+                  id="dataset-filter-label"
+                  className="shrink-0 text-xs font-medium text-muted-foreground mr-1"
+                >
+                  Dataset origen:
+                </span>
+                {allDatasets.map((ds) => (
+                  <button
+                    key={ds.id}
+                    type="button"
+                    aria-pressed={datasetFilter.has(ds.id)}
+                    onClick={() =>
+                      setDatasetFilter((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(ds.id)) next.delete(ds.id);
+                        else next.add(ds.id);
+                        return next;
+                      })
+                    }
+                    className={chipClass(datasetFilter.has(ds.id))}
+                  >
+                    {ds.name}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
           <div className="relative isolate flex-1 overflow-hidden">
@@ -348,16 +393,23 @@ export default function LegacyImport() {
                 onShapeChange={handleShapeChange}
               />
             )}
+            {trees && filteredTrees.length === 0 && (
+              <div className="absolute left-1/2 top-1/2 z-[1000] -translate-x-1/2 -translate-y-1/2 rounded-md border bg-background/90 px-4 py-2 text-sm text-muted-foreground shadow-md backdrop-blur">
+                Ningún árbol coincide con los filtros.
+              </div>
+            )}
             <div className="absolute bottom-3 left-3 z-[1000] flex flex-col gap-1 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-md backdrop-blur">
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-green-600" /> Disponible
+                <span className="h-3 w-3 rounded-full bg-green-600" />{" "}
+                Disponible
               </span>
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-blue-600" /> Seleccionado
+                <span className="h-3 w-3 rounded-full bg-blue-600" />{" "}
+                Seleccionado
               </span>
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya en otro
-                dataset
+                <span className="h-3 w-3 rounded-full bg-slate-400" /> Ya en
+                otro dataset
               </span>
             </div>
             {(selectionMode || shapes.length > 0) && (

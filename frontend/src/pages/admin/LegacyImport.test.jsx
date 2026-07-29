@@ -526,9 +526,7 @@ describe("LegacyImport", () => {
 
     await openImportDialog(user);
 
-    expect(
-      screen.queryByText(/ya pertenece/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/ya pertenece/)).not.toBeInTheDocument();
   });
 
   it("import filter hides trees that do not match", async () => {
@@ -539,10 +537,7 @@ describe("LegacyImport", () => {
     await screen.findByText("tree-900");
     expect(screen.getByText("tree-776")).toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /Estado de importación/ }),
-      "imported",
-    );
+    await user.click(screen.getByRole("button", { name: "Ya importados" }));
 
     expect(screen.queryByText("tree-776")).not.toBeInTheDocument();
     expect(screen.getByText("tree-900")).toBeInTheDocument();
@@ -556,10 +551,7 @@ describe("LegacyImport", () => {
     await user.click(await screen.findByText("tree-776"));
     expect(screen.getByText("1 seleccionados")).toBeInTheDocument();
 
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /Estado de importación/ }),
-      "imported",
-    );
+    await user.click(screen.getByRole("button", { name: "Ya importados" }));
 
     expect(screen.queryByText("tree-776")).not.toBeInTheDocument();
     expect(screen.getByText("1 seleccionados")).toBeInTheDocument();
@@ -571,10 +563,7 @@ describe("LegacyImport", () => {
     renderPage();
 
     await screen.findByText("tree-776");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /Estado de importación/ }),
-      "available",
-    );
+    await user.click(screen.getByRole("button", { name: "Disponibles" }));
     await user.click(
       screen.getByRole("button", { name: /Selección por polígono/ }),
     );
@@ -590,15 +579,43 @@ describe("LegacyImport", () => {
     renderPage();
 
     await screen.findByText("tree-776");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /Estado de importación/ }),
-      "imported",
-    );
+    await user.click(screen.getByRole("button", { name: "Ya importados" }));
     expect(screen.queryByText("tree-776")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
 
     expect(screen.getByText("tree-776")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Limpiar filtros" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Limpiar filtros" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clicking the active state chip clears it back to all", async () => {
+    const user = userEvent.setup();
+    fetchLegacyTrees.mockResolvedValue(TREES_WITH_IMPORTED);
+    renderPage();
+
+    await screen.findByText("tree-776");
+    const chip = screen.getByRole("button", { name: "Ya importados" });
+
+    await user.click(chip);
+    expect(chip).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("tree-776")).not.toBeInTheDocument();
+
+    await user.click(chip);
+    expect(chip).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("tree-776")).toBeInTheDocument();
+  });
+
+  it("tells the user when no tree matches the filters", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("tree-776");
+    await user.click(screen.getByRole("button", { name: "Ya importados" }));
+
+    expect(
+      screen.getByText("Ningún árbol coincide con los filtros."),
+    ).toBeInTheDocument();
   });
 });
