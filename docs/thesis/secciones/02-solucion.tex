@@ -4,12 +4,12 @@
 \section{FORMULACIÓN Y DESCRIPCIÓN DE LA SOLUCIÓN}
 \label{sec:solucion}
 
-El problema de ruteo de censos se relaciona con variantes conocidas de la investigación
-operativa: el \textit{Multiple Travelling Salesman Problem} (mTSP) \citep{bektas2006multiple},
-que generaliza el TSP a múltiples agentes; el \textit{Vehicle Routing Problem with Time
-Windows} (VRPTW) \citep{solomon1987algorithms, toth2014vehicle}, que introduce restricciones
-de ventanas horarias en nodos; y el \textit{Guided Local Search} (GLS), una metaheurística
-efectiva para problemas de optimización combinatoria \citep{voudouris1999guided}.
+El problema de ruteo de censos se relaciona con dos variantes conocidas de la
+investigación operativa. El \textit{Multiple Travelling Salesman Problem} (mTSP)
+generaliza el TSP a múltiples agentes \citep{bektas2006multiple}. El \textit{Vehicle
+Routing Problem with Time Windows} (VRPTW) introduce restricciones de ventanas horarias
+en nodos \citep{solomon1987algorithms, toth2014vehicle}. Su resolución práctica recurre
+a metaheurísticas como \textit{Guided Local Search} (GLS) \citep{voudouris1999guided}.
 
 Sin embargo, los problemas de ruteo urbano reales presentan características específicas:
 \begin{enumerate}
@@ -19,29 +19,25 @@ Sin embargo, los problemas de ruteo urbano reales presentan características esp
   \item distancias caminables sobre redes viales reales (\textit{OpenStreetMap}, OSM), no euclidianas.
 \end{enumerate}
 
-Existen herramientas de ruteo de propósito general capaces de resolver variantes del
-problema de ruteo de vehículos ---los módulos de análisis de redes de las suites GIS
-comerciales, entre ellas--- y no sería exacto afirmar que carecen de la capacidad
-algorítmica necesaria. Lo que ninguna de ellas ofrece es la integración con el flujo de
-trabajo específico de este proyecto: partir del catastro que dejaron las iteraciones
-anteriores de Arbocensus, publicar el plan resultante como asignación de trabajo a
-censadores identificados y recoger de vuelta, parada por parada, la observación
-histórica de cada árbol que alimenta el re-censo. Esa cadena ---catastro legado,
+Las herramientas de ruteo de propósito general ---entre ellas los módulos de análisis
+de redes de las suites GIS comerciales--- resuelven variantes del problema de ruteo de
+vehículos. Lo que no cubren es la integración con el flujo de trabajo de este proyecto:
+partir del catastro que dejaron las iteraciones anteriores de Arbocensus, publicar el
+plan como asignación de trabajo a censadores identificados y recoger de vuelta, parada
+por parada, la observación histórica de cada árbol. Esa cadena ---catastro legado,
 optimización, asignación, captura en terreno e historial--- es lo que el producto
 aporta, y es específica del dominio y no del algoritmo. A ello se añade una
-consideración de costo: la construcción de la matriz para la instancia de referencia de 1\,607 árboles
-requiere 100 solicitudes fragmentadas al servicio de ruteo ---una por bloque de la
-grilla de $10 \times 10$ coordenadas (Sección~\ref{sec:matriz})---; con una API externa de pago
-ese volumen implicaría un gasto recurrente que se renueva en cada campaña, mientras
-que la alternativa adoptada lo elimina al desplegar el servicio localmente sobre datos
-cartográficos abiertos.
+consideración de costo: una instancia de 1\,607 árboles exige una matriz de más de dos
+millones y medio de tiempos de desplazamiento, volumen que con una API externa de pago
+implicaría un gasto recurrente en cada campaña, mientras que la alternativa adoptada lo
+elimina al desplegar el servicio localmente sobre datos cartográficos abiertos.
 
 Se propone el desarrollo de una plataforma web que formula el problema de ruteo de
 censo como un problema de ruteo de vehículos de rutas abiertas con visitas opcionales
-penalizadas y restricción de duración por ruta ---la taxonomía precisa se detalla en la
-Sección~\ref{sec:formulacion}--- y lo resuelve mediante el \textit{solver} de ruteo
-vehicular de \textit{OR-Tools}, basado en programación con restricciones
-\citep{ortools}. La plataforma cubre las cuatro carencias que las herramientas
+penalizadas y restricción de duración por ruta; la taxonomía precisa se detalla en la
+Sección~\ref{sec:formulacion}. La plataforma resuelve esa formulación mediante el
+\textit{solver} de ruteo vehicular de \textit{OR-Tools}, basado en programación con
+restricciones \citep{ortools}, y cubre las cuatro carencias que las herramientas
 genéricas no abordan:
 \begin{enumerate}
   \item determina automáticamente el número de rutas necesarias $k$ dado el conjunto
@@ -66,9 +62,8 @@ que convierte al sistema en una herramienta de re-censo y no de censo inicial.
 \section{USUARIOS OBJETIVO}
 \label{sec:usuarios}
 
-La plataforma se dirige a dos perfiles de usuario con contextos de uso muy distintos,
-y esa diferencia gobierna buena parte de las decisiones de diseño del
-Capítulo~\ref{cap:diseno}.
+La plataforma se dirige a dos perfiles de usuario con contextos de uso distintos,
+diferencia que gobierna las decisiones de diseño del Capítulo~\ref{cap:diseno}.
 
 \begin{itemize}
   \item \textbf{Administrador de campaña}. Coordina el censo dentro del proyecto
@@ -79,22 +74,20 @@ Capítulo~\ref{cap:diseno}.
         terreno. Se espera un único administrador activo por campaña.
   \item \textbf{Censador}. Participa en la jornada de terreno recorriendo a pie la
         ruta que le fue asignada. Utiliza su propio teléfono con datos móviles, en la
-        vía pública, durante una jornada acotada de dos a tres horas, con una
-        conectividad que se degrada de forma intermitente bajo copa arbórea ---el
-        mismo fenómeno que degradaba las lecturas de GPS de la aplicación de censado
-        anterior (Sección~\ref{sec:legacy})--- y con la batería del dispositivo como
-        recurso limitado. Su número no es un dato de entrada sino una salida del
-        sistema: según el tiempo de servicio y la jornada máxima que se configuren,
-        varía entre 16 y 49 censadores para el conjunto de evaluación completo
-        (Capítulo~\ref{cap:resultados}), y es de una a tres personas sobre un área
-        individual (Sección~\ref{sec:areas-reales}).
+        vía pública, durante una jornada acotada de dos a tres horas. La conectividad
+        se degrada de forma intermitente bajo copa arbórea ---el mismo fenómeno que
+        degradaba las lecturas de GPS de la aplicación anterior
+        (Sección~\ref{sec:legacy})--- y la batería del dispositivo es un recurso
+        limitado. Su número no es un dato de entrada sino una salida del sistema, que
+        depende del tiempo de servicio y de la jornada máxima que se configuren
+        (Capítulo~\ref{cap:resultados}).
 \end{itemize}
 
-De ese contraste se derivan tres exigencias concretas: la interfaz de terreno se
-diseña primero para pantalla de teléfono (\textit{mobile-first}) y no como adaptación
-de la de escritorio; la pantalla se mantiene encendida durante el recorrido para no
-obligar al censador a desbloquear el dispositivo en cada árbol; y el registro de una
-visita debe sobrevivir a una pérdida momentánea de red en lugar de perderse.
+De ese contraste se derivan tres exigencias concretas: el portal debe ser operable con
+una sola mano en la pantalla de un teléfono, sin depender de un formato de escritorio;
+debe poder recorrerse de árbol en árbol sin que el censador desbloquee el dispositivo
+en cada parada; y el registro de una visita debe sobrevivir a una pérdida momentánea de
+red en lugar de perderse.
 
 \section{REQUISITOS FUNCIONALES}
 \label{sec:requisitos-funcionales}
@@ -147,11 +140,19 @@ compromete, agrupados por la etapa de esa cadena a la que pertenecen.
   RF-21 & Administrar las cuentas de usuario y sus roles, sin que dar de baja a una persona borre el trabajo que registró. \\
 \end{xltabular}
 
+Los veintiún requisitos se reparten en las cinco etapas de la cadena: tres para
+incorporar el catastro existente, siete para planificar, dos para publicar y asignar,
+seis para la captura en terreno y tres para el seguimiento. RF-07 es el que separa a
+esta solución de la práctica actual, dado que convierte el número de equipos en un
+resultado del sistema y no en una decisión previa del administrador. El
+Anexo~\ref{anx:trazabilidad} remite cada requisito a la sección de diseño que lo
+realiza.
+
 \section{ATRIBUTOS DE CALIDAD}
 \label{sec:atributos-calidad}
 
-Los atributos de calidad no expresan qué hace el sistema sino qué tan bien debe
-hacerlo. Se comprometen cuatro, que la Tabla~\ref{tab:atributos-calidad} resume. Dos
+Los atributos de calidad no expresan qué hace el sistema, sino con qué grado de
+suficiencia debe hacerlo. Se comprometen cuatro, que la Tabla~\ref{tab:atributos-calidad} resume. Dos
 de ellos reciben prioridad alta porque su incumplimiento inutiliza la campaña: un plan
 que no resiste el cambio de parámetros y un portal que no resiste la calle no sirven,
 por buenas que sean sus demás propiedades.
@@ -176,7 +177,7 @@ por buenas que sean sus demás propiedades.
 La robustez del plan es alta porque el sistema no se opera bajo una única
 configuración. Los dos parámetros que el administrador fija en cada campaña ---el
 tiempo de servicio por árbol y la jornada máxima--- desplazan el problema entre
-regímenes de trabajo distintos: al acortar la jornada o alargar el servicio, el
+regímenes de trabajo distintos. Al acortar la jornada o alargar el servicio, el
 trabajo por árbol domina la capacidad de cada ruta y el reparto cambia de naturaleza,
 de modo que un plan correcto bajo una combinación no acredita nada bajo otra. Un
 atributo verificado sobre una sola configuración sería, por eso, una afirmación vacía.
@@ -184,13 +185,14 @@ Sus dos componentes son los que un censo no puede sacrificar: cobertura y repart
 reparto se observa mediante el índice de balance de carga, definido como el cociente
 entre la duración de la ruta más corta y la de la más larga; esta es la única noción
 de balance que emplea esta memoria, es la que el sistema almacena junto a cada plan y
-el umbral exigible se fija en el criterio CA-03.
+el umbral exigible se fija en el criterio CA-03, umbral que esta memoria adopta como
+exigencia de reparto y no como resultado de una medición previa.
 
 La operabilidad en terreno eleva a propiedad del producto las tres exigencias que
 impone el contexto del censador ---pantalla de teléfono como formato primario,
-recorrido sin desbloqueos repetidos y registro que sobrevive a una caída de red---,
-porque ninguna de ellas es una función que el sistema ofrezca sino una condición bajo
-la que todas sus funciones deben seguir sirviendo. Su prioridad es alta porque una
+recorrido sin desbloqueos repetidos y registro que sobrevive a una caída de red---.
+Ninguna de ellas es una función que el sistema ofrezca, sino una condición bajo la que
+todas sus funciones deben seguir sirviendo. Su prioridad es alta porque una
 observación perdida en terreno no se recupera: la jornada ya terminó y el árbol quedó
 sin dato.
 
@@ -212,7 +214,8 @@ censo, lo encarece---, y porque el tiempo de desplazamiento, que sí es objetivo
 explícito del modelo, ya penaliza buena parte de esa ineficiencia.
 
 El grado en que el producto satisface estos cuatro atributos, y las salvedades con que
-cada uno se sostiene, se examina más adelante a la luz de lo medido.
+cada uno se sostiene, se examina en la Sección~\ref{sec:cumplimiento-atributos} a la
+luz de lo medido.
 
 \section{RESTRICCIONES}
 \label{sec:restricciones}
@@ -257,7 +260,8 @@ midan.
 
 Los criterios de aceptación son la traducción de los atributos de calidad a
 condiciones verificables: fijan el umbral bajo el cual el producto se considera
-insuficiente, no la escala con que se ordenan sus variantes entre sí. Se enuncian
+insuficiente, no la escala con que se ordenan sus variantes entre sí. La
+Tabla~\ref{tab:criterios} enumera los seis criterios comprometidos, que se enuncian
 sobre la configuración censal de referencia ---el arbolado importado de las bases
 legadas, con los parámetros de jornada por defecto--- y sobre ella se contrastan
 después contra lo medido.
