@@ -491,18 +491,21 @@ Se emplea el vecino más cercano y no el promedio de todos los pares porque una 
 real encadena árboles contiguos, no pares arbitrarios: el promedio general
 sobreestima el desplazamiento por árbol en un factor que crece con la extensión
 geográfica del \textit{dataset}, e inflaría $N_{\max}$ innecesariamente. El término
-$b$ es un margen de holgura de $5$ vehículos ---fijo y pequeño frente al $N_{\max}$
-típico, que absorbe la subestimación del estimador de vecino más cercano sin ampliar
-el espacio de búsqueda de forma apreciable--- y el mínimo con $n$ impide que el
-techo supere el caso degenerado de un árbol por ruta.
+$b$ es un margen de holgura de $5$ vehículos, que absorbe la subestimación del
+estimador de vecino más cercano sin ampliar el espacio de búsqueda de forma
+apreciable ---es fijo y pequeño frente al techo de $N_{\max}=36$ que la
+Ecuación~\ref{eq:nmax} produce sobre la instancia de referencia---; el mínimo con
+$n$ impide que el techo supere el caso degenerado de un árbol por ruta.
 
 $N_{\max}$ es una cota superior, no una
 predicción: solo debe ser lo bastante amplia como para no excluir la solución óptima.
 La minimización efectiva de $k$ ocurre dentro del \textit{solver}, mediante el costo fijo de
 $100\,000$\,s por vehículo activo (Sección~\ref{sec:solver}): activar una ruta
 adicional es tan caro que el \textit{solver} solo lo hace cuando las restricciones temporales
-lo obligan. El número de rutas de la solución final es, en la práctica,
-sustancialmente menor que $N_{\max}$.
+lo obligan. El número de rutas de la solución final es, en la práctica, muy inferior
+al techo: sobre los $1\,607$ árboles de la evaluación, con un techo de
+$N_{\max}=36$ vehículos, el \textit{solver} activa $25$ rutas
+(Capítulo~\ref{cap:resultados}).
 
 La misma estimación alimenta un segundo uso, orientado a la planificación operativa
 y no al \textit{solver}: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite
