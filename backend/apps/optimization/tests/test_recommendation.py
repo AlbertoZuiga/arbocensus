@@ -237,3 +237,38 @@ def test_technical_tie_does_not_apply_outside_margin():
     )
 
     assert pick_recommended(dataset.id) == strict_winner.id
+
+
+@pytest.mark.parametrize(
+    "control_kwargs",
+    [
+        {"dropped_trees": 1},
+        {"degenerate_routes": 1},
+        {"balance_score": 0.4},
+    ],
+)
+def test_technical_tie_never_overrides_a_gate(control_kwargs):
+    # The tie rule only breaks ties between solutions that clear the same gates:
+    # a control that drops trees (or is degenerate, or below the balance gate) does
+    # not take the recommendation from a clean winner just by travel proximity.
+    dataset = DatasetFactory()
+    config = RoutingConfig.objects.create(dataset=dataset)
+    control_travel = 1000.0
+    strict_winner = make_solution(
+        dataset,
+        config=config,
+        total_travel_time_sec=control_travel * (1 - TRAVEL_TIE_PCT / 2),
+        strategy="global",
+        config_preset="default",
+    )
+    control = make_solution(
+        dataset,
+        config=config,
+        total_travel_time_sec=control_travel,
+        strategy="spatial_term",
+        config_preset="default",
+        **control_kwargs,
+    )
+
+    assert pick_recommended(dataset.id) == strict_winner.id
+    assert pick_recommended(dataset.id) != control.id

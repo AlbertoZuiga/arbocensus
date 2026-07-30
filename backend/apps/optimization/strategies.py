@@ -1,4 +1,5 @@
 import numpy as np
+from apps.optimization.config_presets import CONFIG_PRESETS, DEFAULT_CONFIG_PRESET
 from apps.optimization.models import RoutingSolution
 from apps.optimization.n_estimator import (
     estimate_max_vehicles,
@@ -31,6 +32,21 @@ PRODUCTION_STRATEGIES = (
     RoutingSolution.Strategy.GLOBAL,
     RoutingSolution.Strategy.SPATIAL_TERM,
 )
+
+# Default fanout of a POST to /optimization/jobs/: one job per pair.
+# A preset is a product-level option the admin picks *after* the sweep (its label is
+# shown in the UI), so every preset gets one job even when it never won the
+# recommendation criterion; a strategy is an internal solver knob, so only the
+# spatial_term winner is fanned out, plus global on the default preset as control.
+# The single source of truth: views.py and recommendation_census both read this.
+PRODUCTION_JOB_PAIRS = (
+    (DEFAULT_CONFIG_PRESET, RoutingSolution.Strategy.GLOBAL),
+    (DEFAULT_CONFIG_PRESET, RoutingSolution.Strategy.SPATIAL_TERM),
+    ("temporal_span_100", RoutingSolution.Strategy.SPATIAL_TERM),
+    ("arc_linear_30", RoutingSolution.Strategy.SPATIAL_TERM),
+)
+
+assert all(preset in CONFIG_PRESETS for preset, _ in PRODUCTION_JOB_PAIRS)
 
 
 def solve_by_strategy(

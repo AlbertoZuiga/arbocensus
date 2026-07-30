@@ -35,16 +35,19 @@ def order_by_criterion(queryset):
     )
 
 
-def _build_recommendation_context(dataset_ids):
+def build_recommendation_context(dataset_ids):
     """
     For each dataset return:
       recommended_id           — solution to show as recommended
       recommended_travel_sec   — its travel time
-      control_travel_sec       — travel of the control (default×spatial_term), or None
+      sweep_config_id          — the RoutingConfig the ranking was scoped to
 
-    Two queries regardless of how many datasets. The tie rule: if the strict-order
-    winner's travel is within TRAVEL_TIE_PCT of the control, the control wins instead
-    of an arbitrary id-ranked tiebreak between two near-identical solutions.
+    Two queries regardless of how many datasets. The tie rule: if the control
+    (default×spatial_term) clears the same gates as the strict-order winner and its
+    travel is within TRAVEL_TIE_PCT, the control wins instead of an arbitrary
+    id-ranked tiebreak between two near-identical solutions. The gate check is what
+    keeps the rule from overriding the lexicographic criterion: a control that drops
+    trees or leaves degenerate routes never wins on travel alone.
     """
     dataset_ids = list(dataset_ids)
     if not dataset_ids:
@@ -75,41 +78,59 @@ def _build_recommendation_context(dataset_ids):
             "total_travel_time_sec",
             "job__config_preset",
             "strategy",
+            "job__config_id",
+            "dropped_trees",
+            "degenerate_routes",
+            "balance_below_gate",
         )
     )
 
-    travel_by_id = {sol_id: travel for _, sol_id, travel, _, _ in rows}
+    travel_by_id = {row[1]: row[2] for row in rows}
 
     # First occurrence per dataset (best by criterion) is the strict winner.
-    strict_winners = {}  # dataset_id → (sol_id, travel)
-    controls = {}  # dataset_id → (sol_id, travel)
-    for dataset_id, sol_id, travel, preset, strategy in rows:
+    strict_winners = {}  # dataset_id → (sol_id, travel, gates)
+    controls = {}  # dataset_id → (sol_id, travel, gates)
+    sweep_config_ids = {}  # dataset_id → config_id
+    for (
+        dataset_id,
+        sol_id,
+        travel,
+        preset,
+        strategy,
+        config_id,
+        drops,
+        degens,
+        below_gate,
+    ) in rows:
+        gates = (drops, degens, below_gate)
         if dataset_id not in strict_winners:
-            strict_winners[dataset_id] = (sol_id, travel)
+            strict_winners[dataset_id] = (sol_id, travel, gates)
+            sweep_config_ids[dataset_id] = config_id
         if (
             dataset_id not in controls
             and preset == _CONTROL_PRESET
             and strategy == _CONTROL_STRATEGY
         ):
-            controls[dataset_id] = (sol_id, travel)
+            controls[dataset_id] = (sol_id, travel, gates)
 
     result = {}
-    for dataset_id, (winner_id, winner_travel) in strict_winners.items():
+    for dataset_id, (winner_id, winner_travel, winner_gates) in strict_winners.items():
         ctrl = controls.get(dataset_id)
         recommended_id = winner_id
         if ctrl is not None:
-            ctrl_id, ctrl_travel = ctrl
+            ctrl_id, ctrl_travel, ctrl_gates = ctrl
             # Within the tie margin, prefer the stable reference point over an
             # id-ordered winner that may vary between sweeps.
             if (
-                ctrl_travel > 0
+                ctrl_gates == winner_gates
+                and ctrl_travel > 0
                 and abs(winner_travel - ctrl_travel) / ctrl_travel < TRAVEL_TIE_PCT
             ):
                 recommended_id = ctrl_id
         result[dataset_id] = {
             "recommended_id": recommended_id,
             "recommended_travel_sec": travel_by_id.get(recommended_id),
-            "control_travel_sec": ctrl[1] if ctrl is not None else None,
+            "sweep_config_id": sweep_config_ids[dataset_id],
         }
     return result
 
@@ -121,7 +142,7 @@ def pick_recommended_bulk(dataset_ids):
     # Rank only within the sweep launched by each dataset's most recent config.
     # Two queries regardless of how many datasets are asked for, so listing
     # solutions across datasets does not turn into a per-row lookup.
-    ctx = _build_recommendation_context(dataset_ids)
+    ctx = build_recommendation_context(dataset_ids)
     return {did: c["recommended_id"] for did, c in ctx.items()}
 
 

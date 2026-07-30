@@ -136,13 +136,18 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
         return pick_recommended(obj.dataset_id) == obj.id
 
     def _rec_ctx(self, obj):
-        return (self.context.get("rec_context_by_dataset") or {}).get(obj.dataset_id)
+        # Solutions from an older RoutingConfig are not comparable to the ranked sweep
+        # (different max_route_time_sec, service_time_sec): no margin is meaningful.
+        ctx = (self.context.get("rec_context_by_dataset") or {}).get(obj.dataset_id)
+        if ctx is None or obj.job.config_id != ctx["sweep_config_id"]:
+            return None
+        return ctx
 
     def get_travel_margin_pct(self, obj):
         ctx = self._rec_ctx(obj)
         if ctx is None:
             return None
-        rec_travel = ctx.get("recommended_travel_sec")
+        rec_travel = ctx["recommended_travel_sec"]
         if not rec_travel:
             return None
         return round(
@@ -152,14 +157,12 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
 
     def get_technical_tie(self, obj):
         ctx = self._rec_ctx(obj)
-        if ctx is None:
+        if ctx is None or obj.id == ctx["recommended_id"]:
             return False
-        ctrl_travel = ctx.get("control_travel_sec")
-        if not ctrl_travel:
+        rec_travel = ctx["recommended_travel_sec"]
+        if not rec_travel:
             return False
-        return (
-            abs(obj.total_travel_time_sec - ctrl_travel) / ctrl_travel < TRAVEL_TIE_PCT
-        )
+        return abs(obj.total_travel_time_sec - rec_travel) / rec_travel < TRAVEL_TIE_PCT
 
     def get_dropped_tree_ids(self, obj):
         return [str(t.id) for t in obj.dropped.all() if t.is_active]

@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.fields import BooleanField
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,29 +16,16 @@ from .config_presets import CONFIG_PRESETS
 from .feasibility import check_config
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
 from .pipeline import estimate_fleet_from_cache
-from .recommendation import (
-    _build_recommendation_context,
-    order_by_criterion,
-    pick_recommended,
-)
+from .recommendation import build_recommendation_context, order_by_criterion
 from .serializers import (
     OptimizationJobSerializer,
     RoutingConfigSerializer,
     RoutingSolutionSerializer,
 )
+from .strategies import PRODUCTION_JOB_PAIRS
 from .tasks import run_optimization
 
 CustomUser = get_user_model()
-
-# Default production fanout: one job per (preset, strategy) pair.
-# Avoids running cluster_first in normal admin usage while keeping it
-# available via management commands through an explicit strategy argument.
-_PRODUCTION_JOB_PAIRS = [
-    ("default", RoutingSolution.Strategy.GLOBAL),
-    ("default", RoutingSolution.Strategy.SPATIAL_TERM),
-    ("temporal_span_100", RoutingSolution.Strategy.SPATIAL_TERM),
-    ("arc_linear_30", RoutingSolution.Strategy.SPATIAL_TERM),
-]
 
 
 class OptimizationJobViewSet(
@@ -64,11 +52,15 @@ class OptimizationJobViewSet(
         return queryset
 
     def create(self, request, *args, **kwargs):
+        # Not a config field, so it is parsed here and not by the serializer: a
+        # form-encoded "false" is a truthy string and must go through BooleanField.
+        full_comparison = BooleanField().to_internal_value(
+            request.data.get("full_comparison", False)
+        )
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         config = serializer.save()
 
-        full_comparison = request.data.get("full_comparison", False)
         if full_comparison:
             # 3 presets × 3 strategies = 9 solves (original behaviour, for research).
             jobs = [
@@ -80,7 +72,7 @@ class OptimizationJobViewSet(
                 for preset in CONFIG_PRESETS
             ]
         else:
-            # 4 explicit pairs; each job runs exactly one strategy so cluster_first
+            # Explicit pairs; each job runs exactly one strategy so cluster_first
             # is never launched from normal admin usage.
             jobs = [
                 OptimizationJob.objects.create(
@@ -88,7 +80,7 @@ class OptimizationJobViewSet(
                     strategy=strategy,
                     config_preset=preset,
                 )
-                for preset, strategy in _PRODUCTION_JOB_PAIRS
+                for preset, strategy in PRODUCTION_JOB_PAIRS
             ]
 
         for job in jobs:
@@ -140,8 +132,10 @@ class RoutingSolutionViewSet(
         context = super().get_serializer_context()
         dataset = self.request.query_params.get("dataset")
         if dataset:
-            rec_ctx = _build_recommendation_context([dataset])
-            context["recommended_solution_id"] = pick_recommended(dataset)
+            rec_ctx = build_recommendation_context([dataset])
+            context["recommended_solution_id"] = next(
+                (c["recommended_id"] for c in rec_ctx.values()), None
+            )
             context["rec_context_by_dataset"] = rec_ctx
         elif self.action == "list":
             # order_by() strips the criterion ordering: with values_list Django
@@ -152,7 +146,7 @@ class RoutingSolutionViewSet(
                 .values_list("dataset_id", flat=True)
                 .distinct()
             )
-            rec_ctx = _build_recommendation_context(dataset_ids)
+            rec_ctx = build_recommendation_context(dataset_ids)
             context["recommended_by_dataset"] = {
                 did: c["recommended_id"] for did, c in rec_ctx.items()
             }
