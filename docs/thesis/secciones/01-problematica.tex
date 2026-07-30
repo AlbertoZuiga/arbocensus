@@ -10,18 +10,18 @@ trabajo desarrollado.
 El arbolado urbano es parte de la infraestructura de la ciudad y su gestión recae en los
 municipios. Los árboles en mal estado representan un riesgo para las personas y para la
 infraestructura crítica, y la evaluación de ese riesgo requiere personal capacitado y
-criterios explícitos de inspección \citep{klein2019risk}. Para planificar el
+criterios explícitos de inspección \citep{klein2019risk}. Con el fin de planificar el
 mantenimiento y anticipar esos riesgos, el municipio necesita un catastro a nivel de
 árbol individual: dónde está cada ejemplar y en qué estado se encuentra. Levantar y
 mantener ese catastro es costoso, y el costo crece con la cantidad de atributos
 registrados y con la frecuencia de actualización \citep{nielsen2014review}.
 
 Arbocensus, desarrollado en la Universidad de los Andes en el marco del proyecto Fondef
-ID21110360, responde a esa necesidad: realizar una evaluación masiva del arbolado urbano
-asistida por tecnología, mediante visión artificial y participación ciudadana, de modo
-que los municipios dispongan de información sobre el número y el estado de los árboles de
-la comuna y puedan priorizar aquellos que presentan mayor riesgo
-\citep{binder-cortes2023,pizarro-zumaeta2024}.
+ID21110360, responde a esa necesidad. El proyecto realiza una evaluación masiva del
+arbolado urbano asistida por tecnología, mediante visión artificial y participación
+ciudadana, de modo que los municipios dispongan de información sobre el número y el
+estado de los árboles de la comuna y puedan priorizar aquellos que presentan mayor
+riesgo \citep{binder-cortes2023,pizarro-zumaeta2024}.
 
 Ese propósito no se agota en localizar cada árbol una vez. Requiere un historial de
 observaciones por árbol a lo largo del tiempo ---objetivo declarado del proyecto
@@ -54,14 +54,17 @@ una alternativa algorítmica sobre la misma instancia (\ref{sec:comparacion-gree
 \section{ESTADO ACTUAL DEL PROBLEMA}
 \label{sec:estado-actual}
 
-La plataforma de censado se construyó en iteraciones sucesivas desde 2021: una primera
-versión web orientada a dispositivos móviles que permitió tomar muestras de árboles
----mediante lectura de códigos QR y captura de GPS--- organizadas en campañas, zonas y
-equipos \citep{castro-diaz2022}; un rediseño que incorporó elementos de ludificación
----puntos, logros, desafíos y tablas de posiciones--- para incentivar la participación
-\citep{binder-cortes2023}; y una tercera iteración que integró el procesamiento de
-imágenes del Sistema de Análisis de Imágenes de Árboles (SAIdA) y un modelo de estimación
-de cobertura del censo \citep{pizarro-zumaeta2024}.
+La plataforma de censado se construyó en iteraciones sucesivas desde 2021:
+\begin{enumerate}[label=\alph*)]
+  \item una primera versión web orientada a dispositivos móviles que permitió tomar
+    muestras de árboles ---mediante lectura de códigos QR y captura de GPS--- organizadas
+    en campañas, zonas y equipos \citep{castro-diaz2022};
+  \item un rediseño que incorporó elementos de ludificación ---puntos, logros, desafíos y
+    tablas de posiciones--- para incentivar la participación \citep{binder-cortes2023};
+  \item una tercera iteración que integró el procesamiento de imágenes del Sistema de
+    Análisis de Imágenes de Árboles (SAIdA) y un modelo de estimación de cobertura del
+    censo \citep{pizarro-zumaeta2024}.
+\end{enumerate}
 % Historia verificada contra los repositorios de código del proyecto (jul 2026):
 %   - github.com/mrecabarren/arbocensus: commit inicial 2021-10-01 (Matías Recabarren,
 %     profesor guía). Django + templates HTML/JS, escaneo de QR con cámara, Google auth,
@@ -85,9 +88,10 @@ escala se evidencia en las dos bases de datos que dejaron las iteraciones anteri
 \citep{binder-cortes2023,pizarro-zumaeta2024}. La más antigua, la base
 \texttt{legacy\_app} de la aplicación de censado previa desplegada en Heroku, registra
 17\,208 muestras de censo asociadas por código QR, que corresponden a 13\,081 árboles
-distintos. De ellos, los validados por el canal de medición automática (\texttt{mltree})
-y con una posición geográfica única ---determinada mediante la mediana de las muestras de
-cada QR--- suman 1\,178 árboles importables. La posterior, la base de datos
+distintos, de los cuales 12\,946 tienen coordenada geográfica utilizable ---obtenida como
+la mediana de las muestras de cada QR dentro del recuadro de Chile continental---. El
+corte dominante es la validación automática por \texttt{mltree}, que reduce el conjunto a
+1\,178 árboles importables. La posterior, la base de datos
 \texttt{legacy\_api}, contiene 429 árboles georreferenciados, 3\,961 muestras
 (\textit{samples}), 10\,008 fotografías y 48 áreas de censo registradas ---27 sin
 arbolado y 21 no vacías, que se reducen a 12 polígonos distintos porque las áreas se
@@ -95,8 +99,7 @@ recrean en cada campaña--- distribuidas en 10 campañas. La unión de lo import
 ambas fuentes ---los 1\,178 árboles de \texttt{legacy\_app} con posición reconstruida y
 los 429 de \texttt{legacy\_api}, que la registran de forma explícita--- conforma los
 1\,607 nodos de la instancia de referencia empleada en los experimentos de esta
-memoria, un subconjunto del catastro del proyecto, que solo en \texttt{legacy\_app}
-registra 13\,081 árboles distintos.
+memoria.
 
 Ninguna de esas iteraciones abordó la planificación de rutas. En las campañas
 documentadas por Binder y Cortés \citeyearpar{binder-cortes2023} y Pizarro y Zumaeta
