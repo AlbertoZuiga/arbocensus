@@ -1595,18 +1595,13 @@ iteración de Arbocensus.
   árboles de forma consistente (Tabla~\ref{tab:grilla-spatial}); para garantizar cobertura
   total se requiere operar con $T_{\max}=3$\,h bajo esas condiciones.
 
-  \item \textbf{Costo no medido de las disyunciones de nodos}: declarar cada árbol como
-  una disyunción unitaria (Sección~\ref{sec:disyunciones}) añade una decisión binaria
-  por nodo y amplía el vecindario que la búsqueda local debe explorar en cada
-  iteración. Como el GLS se corta por reloj de pared y no por convergencia, cabe
-  esperar que ese costo no se manifieste en un tiempo total mayor sino en una calidad
-  menor alcanzable dentro del mismo presupuesto. La magnitud del efecto no se midió:
-  aislarla exige una ablación con y sin disyunciones sobre el mismo \textit{dataset},
-  el mismo presupuesto de \textit{solver} y las mismas semillas, experimento que no se
-  ejecutó. La limitación se asume porque el mecanismo no es prescindible ---sin él un
-  solo árbol inalcanzable deja al \textit{solver} sin solución para todo el
-  \textit{dataset}---, de modo que la alternativa medida no sería una configuración
-  operable sino una referencia de laboratorio.
+  \item \textbf{Costo no medido de las disyunciones de nodos}: declarar cada árbol
+  como una disyunción unitaria (Sección~\ref{sec:disyunciones}) amplía el vecindario
+  de búsqueda local; como el GLS se corta por reloj de pared, ese costo se traduce en
+  calidad menor alcanzable dentro del mismo presupuesto, no en tiempo mayor. La
+  ablación que mediría el efecto no se ejecutó porque la alternativa sin disyunciones
+  no es operable: sin ellas, un árbol inalcanzable deja al \textit{solver} sin solución
+  para todo el \textit{dataset} (Anexo~\ref{anx:efectos-no-medidos}).
 
   \item \textbf{Solapamiento inter-ruta}: el par de rutas con mayor superposición espacial
   presenta un \textit{IoU} de $0{,}55$ (Ilustración~\ref{fig:peor-par}). Este solapamiento
@@ -1655,19 +1650,14 @@ iteración de Arbocensus.
   efecto está medido.
 
   \item \textbf{Exactitud no medida del estimador de distancias}: el perfil peatonal
-  (\texttt{foot}) de OSRM sobre datos de \textit{OpenStreetMap} estima el tiempo de
-  caminata a partir de la representación de la red vial y de un factor de velocidad
-  constante, de modo que se aparta necesariamente de la caminata real de terreno: no
-  modela pendientes, semáforos, congestión peatonal, obras ni el ritmo de una persona
-  que se detiene a censar. La magnitud de esa desviación no está medida en
-  este trabajo, y no podría estarlo sin una jornada de terreno con registro de tiempos,
-  que queda fuera del alcance (Sección~\ref{sec:verificacion}). Cabe esperar, eso sí, que el
-  error sea sistemático más que aleatorio ---todas las rutas se estiman con el mismo
-  perfil sobre la misma red---, lo que lo hace sensible para las cifras absolutas de
-  duración de jornada y mucho menos sensible para las comparaciones relativas entre
-  configuraciones, que son las que sostienen las conclusiones de este capítulo.
-  Contrastar la estimación contra tiempos reales de terreno es la validación pendiente
-  de mayor valor para el uso operativo de la plataforma.
+  de OSRM se aparta de la caminata real de terreno por no modelar pendientes,
+  semáforos, congestión peatonal ni el ritmo de un censador; la magnitud de esa
+  desviación no se midió porque exigiría una jornada de terreno con registro de
+  tiempos, fuera del alcance de esta memoria (Sección~\ref{sec:verificacion}). Cabe
+  esperar que el error sea sistemático ---todas las rutas se estiman con el mismo
+  perfil sobre la misma red---, lo que lo hace más sensible para las cifras absolutas
+  de duración que para las comparaciones relativas entre configuraciones
+  (Anexo~\ref{anx:efectos-no-medidos}).
 \end{itemize}
 
 \section{POSIBLES MEJORAS}
