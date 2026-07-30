@@ -4,6 +4,8 @@ import io
 from apps.optimization.models import OptimizationJob, RoutingSolution
 from apps.optimization.recommendation import (
     BALANCE_GATE,
+    CONTROL_PRESET,
+    CONTROL_STRATEGY,
     TRAVEL_TIE_PCT,
     order_by_criterion,
     pick_recommended_bulk,
@@ -37,6 +39,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dataset_ids = list(
             RoutingSolution.objects.filter(job__status=OptimizationJob.Status.COMPLETED)
+            # order_by() is required: the model Meta ordering would be carried into the
+            # SELECT and defeat the distinct, yielding one "dataset" per solution row.
+            .order_by()
             .values_list("dataset_id", flat=True)
             .distinct()
         )
@@ -88,6 +93,19 @@ class Command(BaseCommand):
 
         recommended_by_dataset = pick_recommended_bulk(dataset_ids)
 
+        # Win rate is measured on a travel-dominated criterion, so a preset that buys
+        # route evenness by paying travel cannot win by construction. These deltas
+        # against the control are what says whether such a cell earns its CPU.
+        control_by_dataset = {}  # dataset_id → (travel, balance)
+        for row in rows:
+            dataset_id, _sol_id, travel, preset, strategy = row[:5]
+            if (
+                dataset_id not in control_by_dataset
+                and preset == CONTROL_PRESET
+                and strategy == CONTROL_STRATEGY
+            ):
+                control_by_dataset[dataset_id] = (travel, row[7])
+
         production_pairs = {
             (preset, str(strategy)) for preset, strategy in PRODUCTION_JOB_PAIRS
         }
@@ -112,8 +130,19 @@ class Command(BaseCommand):
                     "strict_winner": 0,
                     "near_winner": 0,
                     "datasets": 0,
+                    "travel_deltas": [],
+                    "balance_deltas": [],
                 }
             stats = cell_stats[cell]
+
+            control = control_by_dataset.get(dataset_id)
+            if control is not None and cell != (CONTROL_PRESET, CONTROL_STRATEGY):
+                ctrl_travel, ctrl_balance = control
+                if ctrl_travel > 0:
+                    stats["travel_deltas"].append(
+                        (travel - ctrl_travel) / ctrl_travel * 100
+                    )
+                stats["balance_deltas"].append(balance - ctrl_balance)
 
             winner_travel = winner_travel_by_dataset[dataset_id]
             is_winner = sol_id == winner_id_by_dataset[dataset_id]
@@ -160,10 +189,14 @@ class Command(BaseCommand):
                 "times_strict_winner",
                 "times_near_winner_not_winner",
                 "datasets_appearing",
+                "mean_travel_delta_pct_vs_control",
+                "mean_balance_delta_vs_control",
                 "in_production_fanout",
             ]
         )
         for cell, stats in sorted(cell_stats.items()):
+            travel_deltas = stats["travel_deltas"]
+            balance_deltas = stats["balance_deltas"]
             writer.writerow(
                 [
                     cell[0],
@@ -172,6 +205,12 @@ class Command(BaseCommand):
                     stats["strict_winner"],
                     stats["near_winner"],
                     stats["datasets"],
+                    round(sum(travel_deltas) / len(travel_deltas), 2)
+                    if travel_deltas
+                    else "",
+                    round(sum(balance_deltas) / len(balance_deltas), 3)
+                    if balance_deltas
+                    else "",
                     cell in production_pairs,
                 ]
             )

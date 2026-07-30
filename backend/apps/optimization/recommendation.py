@@ -7,8 +7,8 @@ BALANCE_GATE = 0.60
 # equivalent; the control (default×spatial_term) wins over an arbitrary id-ranked tie.
 TRAVEL_TIE_PCT = 0.03
 
-_CONTROL_PRESET = DEFAULT_CONFIG_PRESET
-_CONTROL_STRATEGY = RoutingSolution.Strategy.SPATIAL_TERM.value
+CONTROL_PRESET = DEFAULT_CONFIG_PRESET
+CONTROL_STRATEGY = RoutingSolution.Strategy.SPATIAL_TERM.value
 
 
 def order_by_criterion(queryset):
@@ -108,8 +108,8 @@ def build_recommendation_context(dataset_ids):
             sweep_config_ids[dataset_id] = config_id
         if (
             dataset_id not in controls
-            and preset == _CONTROL_PRESET
-            and strategy == _CONTROL_STRATEGY
+            and preset == CONTROL_PRESET
+            and strategy == CONTROL_STRATEGY
         ):
             controls[dataset_id] = (sol_id, travel, gates)
 
