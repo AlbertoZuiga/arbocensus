@@ -17,7 +17,7 @@ mantener ese catastro es costoso, y el costo crece con la cantidad de atributos
 registrados y con la frecuencia de actualización \citep{nielsen2014review}.
 
 Arbocensus, desarrollado en la Universidad de los Andes en el marco del proyecto Fondef
-ID21110360, responde a esa necesidad. El proyecto realiza una evaluación masiva del arbolado urbano asistida por tecnología,
+ID21110360, responde a esa necesidad. El proyecto levanta un catastro masivo del arbolado urbano asistido por tecnología,
 mediante visión artificial y participación ciudadana \citep{binder-cortes2023,pizarro-zumaeta2024}.
 Los municipios disponen así de información sobre el número y el estado de los árboles de
 la comuna y pueden priorizar aquellos que presentan mayor riesgo.
@@ -39,7 +39,7 @@ conjunto de rutas que garanticen la cobertura total, minimicen tiempos de despla
 y respeten jornadas acotadas temporalmente. Los tres objetivos se derivan directamente del re-censo. La cobertura total es un
 requisito porque el historial exige una observación de cada árbol ya georreferenciado;
 la jornada acotada refleja que el censador es voluntario a pie, sin jornada completa
-(§2.2); y el tiempo de desplazamiento es el único costo que la planificación puede
+(Sección~\ref{sec:usuarios}); y el tiempo de desplazamiento es el único costo que la planificación puede
 reducir, dado que el tiempo de inspección por árbol es fijo.
 
 Una planificación inadecuada de rutas traería consecuencias operacionales inmediatas:
@@ -47,7 +47,7 @@ viajes innecesarios entre puntos lejanos, sobrecarga de ciertos equipos mientras
 subutilizan su tiempo, imposibilidad de cubrir todos los árboles en una jornada y
 aumento de costos logísticos. Las campañas anteriores no registraron tiempo de
 planificación ni caminata efectiva, de modo que esta memoria evalúa el producto contra
-una alternativa algorítmica sobre la misma instancia (\ref{sec:comparacion-greedy}).
+una alternativa algorítmica sobre la misma instancia (Sección~\ref{sec:comparacion-greedy}).
 
 \section{ESTADO ACTUAL DEL PROBLEMA}
 \label{sec:estado-actual}
@@ -97,9 +97,10 @@ una vez descartados los duplicados geográficos entre ellas, conforma el univers
 importable descrito en la Sección~\ref{sec:legacy}. De ese universo se
 congeló, por reproducibilidad, la instancia de referencia empleada en los
 experimentos de esta memoria: 1\,607 nodos, los 429 árboles de \texttt{legacy\_api}
-con posición explícita más los 1\,178 de \texttt{legacy\_app} con posición
-reconstruida que la validación automática por \texttt{mltree} admitía al momento de
-fijarla. La distribución geográfica de esos nodos, diferenciada por fuente de
+con posición explícita más los 1\,178 de \texttt{legacy\_app} cuya posición
+reconstruida superaba, al momento de congelar la instancia, la validación automática
+de calidad que entonces aplicaba el importador. Ese filtro no forma parte del
+sistema vigente. La distribución geográfica de esos nodos, diferenciada por fuente de
 origen, se muestra en la Ilustración~\ref{fig:instancia-legada}.
 
 \begin{figure}[H]

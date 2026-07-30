@@ -65,7 +65,7 @@ que convierte al sistema en una herramienta de re-censo y no de censo inicial.
 La plataforma se dirige a dos perfiles de usuario con contextos de uso distintos,
 diferencia que gobierna las decisiones de diseño del Capítulo~\ref{cap:diseno}.
 
-\begin{itemize}
+\begin{itemize}[label=--]
   \item \textbf{Administrador de campaña}. Coordina el censo dentro del proyecto
         Arbocensus. Su formación es ambiental o de gestión y no incluye optimización
         combinatoria: no debe tener que declarar cuántos equipos necesita ni ajustar
@@ -114,7 +114,7 @@ compromete, agrupados por la etapa de esa cadena a la que pertenecen.
   RF-01 & Consultar el arbolado registrado en las bases de datos legadas del proyecto, con sus áreas de censo. \\
   RF-02 & Delimitar territorialmente el arbolado que se censará en una campaña. \\
   RF-03 & Constituir el conjunto de árboles de una campaña (\textit{dataset}) a partir de esa delimitación, junto con el historial de observaciones que cada árbol ya tenga. \\
-  RF-25 & Filtrar la exploración legada por estado y por \textit{dataset} de origen, y permitir reincorporar un árbol ya presente en otro \textit{dataset} cuando la campaña lo requiere. \\
+  RF-25 & Filtrar la exploración legada por estado y por \textit{dataset} de origen, y reincorporar un árbol ya presente en otro \textit{dataset} cuando la campaña lo requiere. \\
   \multicolumn{2}{@{}l}{\textit{Planificación del censo}} \\
   RF-04 & Configurar los parámetros de la jornada: duración mínima $T_{\min}$, duración máxima $T_{\max}$ y tiempo de servicio por árbol. \\
   RF-05 & Estimar cuántos censadores exigiría una campaña antes de planificarla. \\
@@ -184,11 +184,12 @@ regímenes de trabajo distintos. Al acortar la jornada o alargar el servicio, el
 trabajo por árbol domina la capacidad de cada ruta y el reparto cambia de naturaleza,
 de modo que un plan correcto bajo una combinación no acredita nada bajo otra. Un
 atributo verificado sobre una sola configuración sería, por eso, una afirmación vacía.
-Sus dos componentes son los que un censo no puede sacrificar: cobertura y reparto. El
-reparto se observa mediante el índice de balance de carga, definido como el cociente
+Los dos componentes de la robustez son los que un censo no puede sacrificar: cobertura
+y reparto. El reparto se observa mediante el índice de balance de carga, definido como
+el cociente
 entre la duración de la ruta más corta y la de la más larga; esta es la única noción
 de balance que emplea esta memoria, es la que el sistema almacena junto a cada plan y
-el umbral exigible se fija en el criterio CA-03, umbral que esta memoria adopta como
+el umbral exigible se fija en el criterio CA-03, que esta memoria adopta como
 exigencia de reparto y no como resultado de una medición previa.
 
 La operabilidad en terreno eleva a propiedad del producto las tres exigencias que
@@ -280,7 +281,7 @@ después contra lo medido.
     \midrule
     CA-01 & Cobertura del censo. & Ningún árbol del \textit{dataset} queda fuera del plan. \\
     CA-02 & Respeto de la jornada máxima. & Ninguna ruta excede $T_{\max}$. \\
-    CA-03 & Balance de carga entre equipos, medido con el índice definido más arriba. & Índice de al menos $0{,}80$. \\
+    CA-03 & Balance de carga entre equipos, medido con el índice definido en la Sección~\ref{sec:atributos-calidad}. & Índice de al menos $0{,}80$. \\
     CA-04 & Determinación de la flota. & El número de rutas $k$ es una salida del \textit{solver} y no un dato que el administrador declare. \\
     CA-05 & Costo de planificar una campaña: tiempo de reloj de una corrida completa del proceso de optimización, con la matriz de costos en caché. Comprende el presupuesto de tiempo que se configura al \textit{solver}, de modo que el criterio acota esa configuración además de su resultado. & Menos de 5 minutos. \\
     CA-06 & Mejora frente a la alternativa trivial. & Reducción estrictamente positiva del tiempo total de desplazamiento frente a un heurístico de vecino más cercano, sobre la misma instancia y la misma matriz de costos. \\
