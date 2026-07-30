@@ -854,18 +854,28 @@ el campo \texttt{source} del modelo \texttt{Tree}:
         un conjunto de muestras (\textit{samples}) tomadas en terreno, cada una con
         su propia lectura de GPS. La posición de cada árbol se reconstruye como la
         mediana de las latitudes y longitudes de sus muestras, agrupadas por
-        código QR, descartando las lecturas sin coordenada y aquellas con latitud
-        igual a cero ---el valor con que la aplicación previa dejaba constancia de una
-        lectura de GPS fallida---. Se emplea la
-        mediana y no el promedio por su robustez frente a lecturas de GPS atípicas. De este modo se
-        obtienen $1\,178$ árboles con posición utilizable.
+        código QR, descartando las lecturas sin coordenada, las que caen fuera del
+        rango de Chile continental ---con lo que se eliminan las lecturas de GPS
+        fallidas, que la aplicación previa registraba como coordenada nula--- y los
+        códigos QR compuestos solo de ceros. Se emplea la
+        mediana y no el promedio por su robustez frente a lecturas de GPS atípicas. De
+        este modo se obtienen $12\,941$ árboles con posición utilizable, sobre un total
+        de $17\,208$ muestras.
   \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): posterior a la
         anterior, aporta $429$ árboles con posición explícita y especie, organizados en
         áreas pertenecientes a campañas de censo.
 \end{itemize}
 
-El \textit{dataset} definitivo de la evaluación reúne ambas fuentes y totaliza
-$n = 1\,607$ árboles. El acceso a las bases legadas es estrictamente de solo
+Ambas fuentes se solapan geográficamente, por lo que se descarta el árbol de
+\texttt{legacy\_app} que se encuentre a $5$\,m o menos de uno de \texttt{legacy\_api}
+---se conserva este último, que aporta especie y área---. El explorador expone así
+$13\,319$ árboles importables: $429$ de \texttt{legacy\_api} y $12\,890$ de
+\texttt{legacy\_app}. Ese es el universo disponible; el \textit{dataset} de
+$n = 1\,607$ árboles con que se evalúa el sistema
+(Capítulo~\ref{cap:resultados}) es una instancia congelada de ese universo, elegida
+por reproducibilidad, y no su totalidad.
+
+El acceso a las bases legadas es estrictamente de solo
 lectura (la conexión se abre con \texttt{readonly}), dado que se trata de sistemas
 que no pertenecen al alcance de esta iteración del proyecto y cuya integridad no debe verse
 comprometida por el proceso de importación.
@@ -873,8 +883,9 @@ comprometida por el proceso de importación.
 \subsection{Selección previa a la creación del \textit{dataset}}
 
 La decisión de diseño central de este módulo es que la importación no crea
-un \textit{dataset} de forma inmediata. Importar áreas completas a ciegas ---el
-enfoque inicial--- resultaba inadecuado en la práctica: el usuario no sabe, antes de
+un \textit{dataset} de forma inmediata. La primera versión del importador de esta
+iteración traía áreas completas a ciegas, lo que resultó inadecuado en la
+práctica: el usuario no sabe, antes de
 importar, qué árboles trae un área, cuáles ya están en el sistema ni si el conjunto
 resultante corresponde al territorio que efectivamente quiere censar. El flujo se
 divide por ello en dos etapas: primero explorar y seleccionar, y solo después
