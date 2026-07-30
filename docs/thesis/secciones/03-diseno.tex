@@ -66,27 +66,59 @@ solución en PostGIS. El \textit{frontend} consulta el estado del trabajo por
   \label{fig:arquitectura}
 \end{figure}
 
-La Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada componente del \textit{stack} y el criterio de elección.
+Las decisiones de \textit{stack} se tomaron contra un mismo conjunto de criterios,
+ordenados por prioridad decreciente:
+
+\begin{enumerate}
+  \item \textbf{Costo de operación nulo.} El producto no dispone de presupuesto
+        recurrente, y la restricción RE-04 documenta el desenlace concreto de
+        depender de un servicio facturado: las fotografías del sistema anterior son
+        hoy inaccesibles porque su plan de facturación se cerró. Todo componente
+        debe poder ejecutarse sobre licencia libre y sin cuota por consulta.
+  \item \textbf{Reproducibilidad del experimento.} El Capítulo~\ref{cap:resultados}
+        compara variantes del algoritmo sobre miles de consultas de ruteo. Un
+        servicio remoto tarificado por consulta hace la comparación cara y, al no
+        versionar su red ni sus tiempos, impide repetirla meses después sobre la
+        misma base.
+  \item \textbf{Ajuste al dominio geográfico.} El sistema es geoespacial de extremo
+        a extremo. Se prefiere el componente que trata la geometría como tipo de
+        primera clase antes que aquel al que hay que añadírsela.
+  \item \textbf{Integración con el resto del \textit{stack}} por sobre el
+        rendimiento aislado del componente, dado que el cuello de botella medido
+        está en el \textit{solver} y en OSRM (Capítulo~\ref{cap:resultados}) y no en
+        las capas que los rodean.
+  \item \textbf{Costo de operación para un solo desarrollador.} La complejidad que
+        no se justifica por un requisito se paga en tiempo de mantención que el
+        proyecto no tiene.
+\end{enumerate}
+
+La Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada
+componente y el criterio que resolvió la elección.
 
 \begin{table}[H]
   \centering
   \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
   \label{tab:stack-decisions}
   \small
-  \begin{tabularx}{\textwidth}{@{}l l X@{}}
+  \begin{tabularx}{\textwidth}{@{}l X X@{}}
     \toprule
-    Decisión & Alternativa considerada & Criterio de elección \\
+    Decisión & Alternativas consideradas & Criterio de elección \\
     \midrule
-    Django + GeoDjango & FastAPI (iteración anterior) & GeoDjango aporta soporte nativo de PostGIS y operaciones espaciales vía el ORM; la iteración anterior del proyecto usaba FastAPI, que no tiene equivalente integrado. \\[4pt]
-    Celery + Redis & Ejecución síncrona & La construcción de la matriz de costos y la ejecución del \textit{solver} pueden tardar varios minutos; resolverlos en el ciclo de la petición HTTP excede los tiempos de respuesta aceptables de un servidor web. \\[4pt]
-    OSRM & Valhalla, GraphHopper & Disponibilidad de perfil peatonal preprocesable localmente a partir de datos de \textit{OpenStreetMap}; elimina costos de API y dependencias de red durante la optimización. \\[4pt]
-    \textit{Leaflet} & \textit{MapLibre GL} & API madura con integración directa en \textit{React} sin requerir un servidor de teselas vectoriales propio, suficiente para el alcance de visualización del producto. \\
+    Django + GeoDjango & FastAPI (empleado por la iteración anterior), Flask, \textit{Ruby on Rails} & Criterio 3. GeoDjango es la única de las cuatro que integra PostGIS en el ORM: tipos geográficos, consultas espaciales y migraciones vienen resueltos. FastAPI y Flask exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\[4pt]
+    \textit{OR-Tools} & \textit{Gurobi}, \textit{CPLEX}, heurística propia & Criterios 1 y 4. \textit{Gurobi} y \textit{CPLEX} resuelven mejor el VRP exacto, pero su licencia comercial contradice el criterio de costo y su licencia académica no acompaña al producto fuera de la titulación. \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el mismo proceso Python. \\[4pt]
+    OSRM & \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}), \textit{Mapbox Directions}, Valhalla, GraphHopper & Criterios 1 y 2. Las dos primeras son de pago por consulta: una sola matriz de $1\,607$ árboles supera el millón de pares origen-destino, de modo que el experimento del Capítulo~\ref{cap:resultados} sería económicamente inviable y, además, irreproducible, porque el proveedor no versiona su red. OSRM se preprocesa localmente sobre \textit{OpenStreetMap}, ofrece perfil peatonal y responde sin red. \\[4pt]
+    \textit{React} 18 + Vite & \textit{Vue}, \textit{Angular}, \textit{Svelte} & Criterio 4. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el ecosistema con integración más directa con \textit{Leaflet} (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada (\textit{React Query}), y por ser el que el desarrollador ya dominaba, lo que reduce el costo del criterio 5. \\[4pt]
+    \textit{Leaflet} & \textit{MapLibre GL}, \textit{Google Maps JavaScript API} & Criterios 1 y 4. La API de \textit{Google} requiere clave facturada. \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, complejidad que el alcance de visualización no justifica. \textit{Leaflet} consume teselas de \textit{OpenStreetMap} sin costo. \\[4pt]
+    Celery + Redis & Ejecución síncrona, \textit{cron} sobre tabla de tareas & Criterio 4. La construcción de la matriz de costos y la ejecución del \textit{solver} pueden tardar varios minutos; resolverlas en el ciclo de la petición HTTP excede los tiempos de respuesta aceptables de un servidor web, y una cola artesanal sobre la base de datos replicaría lo que Celery ya resuelve. \\[4pt]
+    Monolito modular & Servicios separados por dominio & Criterio 5. Las operaciones de importación y optimización cruzan módulos en una sola transacción; el proyecto cuenta con un único desarrollador, y la escala prevista no justifica la complejidad operacional de desplegar servicios independientes. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-En los cuatro casos el criterio dominante fue la integración con el resto del
-\textit{stack} y no el rendimiento aislado del componente.
+El patrón que recorre la tabla es que ninguna decisión se resolvió por rendimiento
+aislado del componente: las alternativas de pago se descartaron por los criterios 1
+y 2 antes de compararlas técnicamente, y entre las libres decidió el ajuste al
+dominio y el costo de integración.
 
 % ---- 3.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
