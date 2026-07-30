@@ -15,7 +15,7 @@
 \section{ARQUITECTURA DEL SISTEMA}
 \label{sec:arquitectura}
 La arquitectura del sistema sigue el patrón de monolito modular: un único servicio
-Django \citep{django} con módulos claramente separados por dominio
+Django \citep{django} con módulos separados por dominio
 (\texttt{accounts}, \texttt{datasets}, \texttt{optimization}, \texttt{routes}).
 
 Las tareas de optimización se ejecutan de forma asíncrona mediante Celery
@@ -66,27 +66,132 @@ solución en PostGIS. El \textit{frontend} consulta el estado del trabajo por
   \label{fig:arquitectura}
 \end{figure}
 
-La Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada componente del \textit{stack} y el criterio de elección.
+La Ilustración~\ref{fig:secuencia} detalla ese recorrido en el tiempo, para uno de los
+seis trabajos que despliega una solicitud (Sección~\ref{sec:abanico}). La petición HTTP
+termina en cuanto los trabajos quedan encolados, de modo que el navegador nunca espera
+al \textit{solver}; el estado se obtiene después por \textit{polling}. Un fallo del
+\textit{worker} deja el trabajo en \texttt{failed} con el mensaje de la excepción, que
+el panel muestra sin necesidad de un canal de error distinto del de estado.
+
+\begin{figure}[H]
+  \centering
+  \shorthandoff{<>}%
+  \begin{tikzpicture}[
+      scale=0.78, transform shape,
+      actor/.style={draw, rounded corners=2pt, align=center, font=\scriptsize,
+                    minimum width=2.35cm, minimum height=0.85cm},
+      vida/.style={dashed, gray},
+      msj/.style={->, >=stealth, semithick},
+      ret/.style={->, >=stealth, semithick, dashed},
+      et/.style={font=\scriptsize, midway, above, inner sep=1.5pt},
+      etl/.style={font=\scriptsize, inner sep=1.5pt},
+      nota/.style={draw, fill=black!4, rounded corners=2pt, align=center,
+                   font=\scriptsize, inner sep=3pt}
+    ]
+    \def\yb{-11.7}
+    \node[actor] (pa) at (0,0)    {Panel\\ (\textit{React})};
+    \node[actor] (ap) at (3.1,0)  {API REST};
+    \node[actor] (re) at (6.2,0)  {Redis\\ (cola)};
+    \node[actor] (wo) at (9.3,0)  {\textit{Worker}\\ (\textit{pipeline})};
+    \node[actor] (os) at (12.4,0) {OSRM};
+    \node[actor] (bd) at (15.2,0) {PostGIS};
+
+    \foreach \n in {pa,ap,re,wo,os,bd} { \draw[vida] (\n.south) -- ($(\n.south)+(0,\yb)$); }
+
+    \draw[msj] (0,-1.2) -- (3.1,-1.2);
+    \node[etl, anchor=south west] at (0.05,-1.15)
+      {\texttt{POST /optimization/jobs/} ($T_{\min}$, $T_{\max}$, $s$)};
+    \draw[msj] (3.1,-2.1) -- (15.2,-2.1) node[et] {crea la \texttt{RoutingConfig} y seis \texttt{OptimizationJob} en estado \texttt{queued}};
+    \draw[msj] (3.1,-3.0) -- (6.2,-3.0) node[et] {encola seis tareas};
+    \draw[ret] (3.1,-3.9) -- (0,-3.9);
+    \node[etl, anchor=south east] at (3.05,-3.85) {\texttt{201} con los seis trabajos};
+    \draw[msj] (6.2,-4.8) -- (9.3,-4.8) node[et] {entrega la tarea};
+    \draw[msj] (9.3,-5.7) -- (15.2,-5.7) node[et] {estado \texttt{running}};
+    \draw[msj] (9.3,-6.9) -- (12.4,-6.9) node[et, align=center]
+      {\texttt{/table}, solo si la matriz\\ no está en la caché};
+    \draw[ret] (12.4,-7.7) -- (9.3,-7.7) node[et] {matriz $n \times n$};
+    \node[nota, anchor=east, text width=2.6cm] at (9.15,-8.7)
+      {estima $k$ · resuelve el VRP · 2-opt intra-ruta};
+    \draw[msj] (9.2,-8.7) -- (9.3,-8.7);
+    \draw[msj] (9.3,-9.7) -- (15.2,-9.7) node[et, align=center]
+      {persiste \texttt{RoutingSolution}, \texttt{Route} y \texttt{RouteStop}\\ en una transacción; estado \texttt{completed}};
+    \draw[msj] (0,-10.6) -- (3.1,-10.6);
+    \node[etl, anchor=south west] at (0.05,-10.55)
+      {\texttt{GET /optimization/jobs/} cada $3$\,s};
+    \draw[ret] (3.1,-11.4) -- (0,-11.4);
+    \node[etl, anchor=south east] at (3.05,-11.35)
+      {estado y métricas; el \textit{polling} cesa en estado terminal};
+  \end{tikzpicture}
+  \caption[Ciclo de vida de un \texttt{OptimizationJob}]{Ciclo de vida de un
+  \texttt{OptimizationJob}, desde la solicitud del administrador hasta la solución
+  persistida. La petición HTTP retorna al encolar; el \textit{worker} avanza el estado
+  del trabajo, y el panel lo observa por \textit{polling} hasta un estado terminal
+  (\texttt{completed} o \texttt{failed}).}
+  \label{fig:secuencia}
+\end{figure}
+
+Considerando la naturaleza del problema de optimización, cuyo desarrollo requiere
+una cantidad considerable de pruebas y experimentos para evaluar y ajustar la
+solución, las decisiones de \textit{stack} se tomaron antes de la construcción del
+sistema y se guiaron por tres criterios, formulados de acuerdo con las necesidades
+previstas para la iteración y el proceso de desarrollo.
+
+\begin{enumerate}
+  \item \textbf{Costo.} Se anticipó un volumen elevado de ejecuciones durante el
+        desarrollo y la evaluación experimental del sistema. Bajo ese escenario, un
+        componente tarificado por consulta convierte cualquier precio unitario en un
+        gasto difícil de acotar. El criterio fue mantener en cero el gasto de la
+        etapa de desarrollo. Este criterio califica las alternativas para esa etapa;
+        no excluye adoptar más adelante un componente de pago cuyo aporte al
+        producto en operación justifique su costo recurrente.
+  \item \textbf{Tiempo de ejecución.} Se descartan las latencias que no provienen
+        del trabajo útil: la ida y vuelta a un servicio remoto por cada consulta de
+        ruteo, o una implementación que recalcule lo ya calculado. El presupuesto de
+        tiempo del sistema se reserva para el trabajo propio del problema.
+  \item \textbf{Simplicidad del desarrollo.} Entre soluciones de resultado
+        equivalente se prefiere la que deja menos piezas que operar y mantener, dado
+        que en la iteración actual del proyecto se cuenta con un solo desarrollador.
+        La simplicidad cede cuando la alternativa compleja aporta una capacidad que
+        el producto necesita.
+\end{enumerate}
+
+Los tres criterios se aplican de forma conjunta, sin un orden de prioridad fijo. La
+Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada
+componente y el criterio que resolvió la elección.
 
 \begin{table}[H]
   \centering
   \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
   \label{tab:stack-decisions}
   \small
-  \begin{tabularx}{\textwidth}{@{}l l X@{}}
+  \begin{tabularx}{\textwidth}{@{}l X X@{}}
     \toprule
-    Decisión & Alternativa considerada & Criterio de elección \\
+    Decisión & Alternativas consideradas & Criterio de elección \\
     \midrule
-    Django + GeoDjango & FastAPI (iteración anterior) & GeoDjango aporta soporte nativo de PostGIS y operaciones espaciales vía el ORM; la iteración anterior del proyecto usaba FastAPI, que no tiene equivalente integrado. \\[4pt]
-    Celery + Redis & Ejecución síncrona & La construcción de la matriz de costos y la ejecución del \textit{solver} pueden tardar varios minutos; resolverlos en el ciclo de la petición HTTP excede los tiempos de respuesta aceptables de un servidor web. \\[4pt]
-    OSRM & Valhalla, GraphHopper & Disponibilidad de perfil peatonal preprocesable localmente a partir de datos de \textit{OpenStreetMap}; elimina costos de API y dependencias de red durante la optimización. \\[4pt]
-    \textit{Leaflet} & \textit{MapLibre GL} & API madura con integración directa en \textit{React} sin requerir un servidor de teselas vectoriales propio, suficiente para el alcance de visualización del producto. \\
+    Django + GeoDjango & FastAPI (empleado por la iteración anterior), Flask, \textit{Ruby on Rails} & Simplicidad. GeoDjango es la única de las cuatro que integra PostGIS en el ORM: tipos geográficos, consultas espaciales y migraciones vienen resueltos. FastAPI y Flask exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\[4pt]
+    \textit{OR-Tools} & \textit{Gurobi}, \textit{CPLEX}, heurística propia & Costo y simplicidad. \textit{Gurobi} y \textit{CPLEX} resuelven mejor el VRP exacto, pero su licencia comercial es un gasto recurrente y su licencia académica no acompaña al producto fuera de la titulación. \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el mismo proceso Python; la heurística propia se descartó por costo de construcción frente a un aporte incierto. \\[4pt]
+    OSRM & \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}), \textit{Mapbox Directions}, Valhalla, GraphHopper & Costo y tiempo de ejecución. Las dos primeras cobran por consulta, y el tamaño esperado del problema hacía previsible el orden de magnitud: una matriz de $1\,607$ árboles supera el millón de pares origen-destino, y esa cifra se paga entera cada vez que se reconstruye. A ello se suma que cada bloque de consultas paga latencia de red y cuotas de tasa, que fijan un piso al tiempo de construcción de la matriz. El beneficio marginal sobre OSRM es acotado, porque el perfil peatonal se resuelve sobre la misma red de \textit{OpenStreetMap}. OSRM se preprocesa localmente, responde sin salir del \textit{host} y deja la red congelada en un archivo, condición sin la cual los experimentos del Capítulo~\ref{cap:resultados} no serían repetibles meses después sobre la misma base. \\[4pt]
+    \textit{React} 18 + Vite & \textit{Vue}, \textit{Angular}, \textit{Svelte} & Simplicidad. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el ecosistema con integración más directa con \textit{Leaflet} (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\[4pt]
+    \textit{Leaflet} & \textit{MapLibre GL}, \textit{Google Maps JavaScript API} & Costo y simplicidad. La API de \textit{Google} requiere clave facturada por carga de mapa. \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, una pieza más de infraestructura que el alcance de visualización no justifica. \textit{Leaflet} consume teselas de \textit{OpenStreetMap} sin costo. \\[4pt]
+    Celery + Redis & Ejecución síncrona, \textit{cron} sobre tabla de tareas & Tiempo de ejecución y simplicidad. La construcción de la matriz de costos y la ejecución del \textit{solver} tardan varios minutos: resolverlas dentro de la petición HTTP excede los tiempos de respuesta aceptables de un servidor web, y un sondeo periódico sobre una tabla de tareas añade al trabajo la espera hasta el siguiente ciclo. Celery ejecuta el trabajo apenas se encola y libera la petición de inmediato, a cambio de dos procesos adicionales ---\textit{worker} y \textit{broker}--- que se declaran en la misma composición de contenedores que el resto del sistema. \\[4pt]
+    Monolito modular & Servicios separados por dominio & Simplicidad. Las operaciones de importación y optimización cruzan módulos en una sola transacción; el proyecto cuenta con un único desarrollador, y la escala prevista no justifica la complejidad operacional de desplegar servicios independientes. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-En los cuatro casos el criterio dominante fue la integración con el resto del
-\textit{stack} y no el rendimiento aislado del componente.
+El patrón que recorre la tabla es que ninguna decisión se resolvió por rendimiento
+aislado del componente: donde existía una alternativa de pago, su aporte no
+compensaba el gasto proyectado sobre el volumen de ejecuciones que el desarrollo
+haría necesario ni la latencia que introduce, y entre las alternativas libres
+decidió la simplicidad de operarlas. Ninguna de estas elecciones es definitiva: en
+operación regular el sistema reconstruye la matriz solo al cambiar el conjunto de
+árboles activos, de modo que el volumen de consultas cae varios órdenes de magnitud
+respecto de la etapa de desarrollo y componentes hoy descartados por costo admiten
+reevaluarse bajo ese régimen. La restricción RE-04 acota esa reevaluación con un
+antecedente propio del proyecto: las fotografías del sistema anterior son hoy
+inaccesibles porque el plan de facturación del servicio que las alojaba se cerró, de
+modo que la dependencia de un servicio facturado debe limitarse a componentes cuya
+pérdida no comprometa los datos.
 
 % ---- 3.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
@@ -99,7 +204,7 @@ Los modelos de dominio centrales son los siguientes:
   \item \textbf{Tree}: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}. Registra además su procedencia mediante los campos \texttt{source} y \texttt{external\_id}, que identifican la fuente legada y el identificador que el árbol tenía en ella (Sección~\ref{sec:legacy}).
   \item \textbf{RoutingConfig}: parámetros de una sesión de optimización ($T_{\min}$, $T_{\max}$, $s$).
   \item \textbf{OptimizationJob}: tarea de optimización con estado (\texttt{queued}, \texttt{running}, \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
-  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre unión) del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo \texttt{timing}).
+  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre unión) del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo \texttt{timing}). La relación \texttt{participants} registra los censadores que participan de la solución y alimenta el cálculo de carga acumulada por censador (Sección~\ref{sec:ui}).
   \item \textbf{Route}: ruta individual con tiempos estimados; su asignación a un censador (\texttt{surveyor}) es opcional.
   \item \textbf{RouteStop}: visita de un árbol en una ruta, con número de secuencia y estado de visita.
   \item \textbf{TreeObservation}: registro histórico del estado de un árbol en un instante dado (Sección~\ref{sec:recenso}). Es la entidad que convierte el sistema en una herramienta de re-censo y no solo de censo inicial.
@@ -285,8 +390,8 @@ parametrizables por el administrador. La cota inferior $T_{\min}$
 no es una restricción del modelo sino un objetivo blando: se penaliza el
 déficit en la función objetivo en lugar de prohibirlo, por la razón que se detalla
 en la Sección~\ref{sec:solver}. En consecuencia, una solución puede presentar rutas
-de duración inferior a $T_{\min}$, y de hecho las presenta: la solución de
-producción reportada en el Capítulo~\ref{cap:resultados} tiene tres.
+de duración inferior a $T_{\min}$, y las presenta en la solución de producción
+(Capítulo~\ref{cap:resultados}).
 
 \subsubsection*{Función objetivo}
 
@@ -417,9 +522,7 @@ límite de tabla. El sistema fija por ello un tope de $350$ árboles por solicit
 Cuando el \textit{dataset} lo supera, la matriz se construye por fragmentación
 (\textit{chunking}): los puntos se dividen en bloques de $175$ coordenadas
 ---la mitad del tope, ya que cada petición fragmentada transporta simultáneamente
-las coordenadas del bloque origen y las del bloque destino--- y se solicita un
-bloque $(i,j)$ de la matriz por cada par de bloques, empleando los parámetros
-\texttt{sources} y \texttt{destinations} de OSRM. El número de solicitudes crece
+las coordenadas del bloque origen y las del bloque destino---. El número de solicitudes crece
 de forma cuadrática con el número de bloques, lo que domina el costo de la primera
 construcción de la matriz para \textit{datasets} grandes
 (Capítulo~\ref{cap:resultados}). Un tope adicional de $2\,000$ árboles acota la
@@ -438,8 +541,8 @@ cuánto puede durar una jornada ($T_{\min}$, $T_{\max}$) y cuánto toma censar u
 árbol ($s$), y el sistema deriva la flota necesaria. Esta decisión de diseño evita
 el enfoque de iteración externa ---resolver el modelo con $1, 2, 3, \ldots$
 vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de
-cómputo por el número de intentos y resulta frágil, pues una corrida infactible no
-distingue entre «faltan vehículos» y «el modelo no admite solución».
+cómputo por el número de intentos y resulta frágil, dado que una corrida infactible
+no distingue entre «faltan vehículos» y «el modelo no admite solución».
 
 En su lugar, el sistema entrega a \textit{OR-Tools} un techo $N_{\max}$ de vehículos
 disponibles y deja que el \textit{solver} decida cuántos activa. El techo se calcula a partir
@@ -461,28 +564,40 @@ Se emplea el vecino más cercano y no el promedio de todos los pares porque una 
 real encadena árboles contiguos, no pares arbitrarios: el promedio general
 sobreestima el desplazamiento por árbol en un factor que crece con la extensión
 geográfica del \textit{dataset}, e inflaría $N_{\max}$ innecesariamente. El término
-$b$ es un margen de holgura de $5$ vehículos ---fijo y pequeño frente al $N_{\max}$
-típico, que absorbe la subestimación del estimador de vecino más cercano sin ampliar
-el espacio de búsqueda de forma apreciable--- y el mínimo con $n$ impide que el
-techo supere el caso degenerado de un árbol por ruta.
+$b$ es un margen de holgura de $5$ vehículos, que absorbe la subestimación del
+estimador de vecino más cercano sin ampliar el espacio de búsqueda de forma
+apreciable ---es fijo y pequeño frente al techo de $N_{\max}=36$ que la
+Ecuación~\ref{eq:nmax} produce sobre la instancia de referencia---; el mínimo con
+$n$ impide que el techo supere el caso degenerado de un árbol por ruta.
 
 $N_{\max}$ es una cota superior, no una
 predicción: solo debe ser lo bastante amplia como para no excluir la solución óptima.
 La minimización efectiva de $k$ ocurre dentro del \textit{solver}, mediante el costo fijo de
 $100\,000$\,s por vehículo activo (Sección~\ref{sec:solver}): activar una ruta
 adicional es tan caro que el \textit{solver} solo lo hace cuando las restricciones temporales
-lo obligan. El número de rutas de la solución final es, en la práctica,
-sustancialmente menor que $N_{\max}$.
+lo obligan. El número de rutas de la solución final es, en la práctica, muy inferior
+al techo: sobre los $1\,607$ árboles de la evaluación, con un techo de
+$N_{\max}=36$ vehículos, el \textit{solver} activa $25$ rutas
+(Capítulo~\ref{cap:resultados}).
 
 La misma estimación alimenta un segundo uso, orientado a la planificación operativa
 y no al \textit{solver}: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite
 al administrador consultar, antes de lanzar una optimización, cuántos censadores
 requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. En
-este caso la Ecuación~\ref{eq:nmax} se evalúa con margen nulo ($b=0$), pues aquí sí
+este caso la Ecuación~\ref{eq:nmax} se evalúa con margen nulo ($b=0$), dado que aquí
 interesa una estimación ajustada y no un techo. La consulta reutiliza la matriz de
 costos en caché y no dispara ninguna consulta a OSRM: si el \textit{dataset} aún no
 tiene matriz calculada, el sistema responde que la estimación no está disponible en
 lugar de incurrir en el costo de construirla.
+
+La misma invocación comprueba la factibilidad de la configuración antes de crear el
+trabajo, mediante la función \texttt{check\_config}. Esta distingue dos categorías:
+bloqueos, que son condiciones que garantizan infactibilidad (tiempo de servicio mayor
+que $T_{\max}$, conjunto de árboles insuficiente), y advertencias, que son condiciones
+de riesgo pero no determinantes (régimen de relleno activado, trabajo total muy por
+debajo del piso de jornada). El \textit{endpoint} \texttt{GET /api/optimization/estimate/}
+devuelve ambas categorías junto a la estimación de flota, de modo que el administrador
+puede detectar configuraciones problemáticas antes de lanzar la optimización.
 
 % ---- 3.3.4 ------------------------------------------------------
 \subsection{\textit{Solver} VRP con \textit{OR-Tools}}
@@ -574,20 +689,16 @@ la solución completa por culpa de los imposibles.
 
 Los árboles descartados no se pierden ni se ocultan: el \textit{pipeline} los extrae
 de la solución ---son los nodos cuya variable de sucesión apunta a sí misma--- y los
-propaga como parte del resultado del trabajo de optimización (campo
-\texttt{dropped\_trees}), de modo que el administrador sabe exactamente qué árboles
-quedaron fuera del plan y puede tratarlos como excepciones. El Capítulo~\ref{cap:resultados}
+propaga como parte del resultado: el conteo en el campo \texttt{dropped\_trees} y el
+conjunto concreto en la relación \texttt{dropped} de la \texttt{RoutingSolution},
+de modo que el administrador sabe exactamente qué árboles quedaron fuera del plan y
+puede tratarlos como excepciones. El Capítulo~\ref{cap:resultados}
 caracteriza la frontera en que esta calibración deja de garantizar cobertura total.
 
 El costo de esta garantía es de espacio de búsqueda: cada nodo incorpora una
-decisión binaria adicional ---visitarlo u omitirlo---, lo que amplía el vecindario
-que la metaheurística debe explorar en cada iteración. Dado que la búsqueda local
-está acotada por un límite de tiempo de reloj y que el GLS concentra prácticamente
-todo el tiempo de ejecución del \textit{pipeline}
-(Capítulo~\ref{cap:resultados}), cabe esperar que el efecto no se manifieste como un
-mayor tiempo total sino como una menor calidad alcanzable dentro del mismo
-presupuesto. Esa expectativa no se verificó experimentalmente y se asume como
-limitación del trabajo (Sección~\ref{sec:limitaciones}).
+decisión binaria adicional que amplía el vecindario que el GLS debe explorar.
+Si ello reduce la calidad alcanzable dentro del mismo presupuesto de tiempo se
+asume como limitación del trabajo (Sección~\ref{sec:limitaciones}).
 
 % ---- 3.3.6 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
@@ -598,16 +709,23 @@ la duración de las rutas, pero no incorpora ningún criterio geográfico explí
 en la partición de los nodos. Como consecuencia, las rutas se agrupan por
 proximidad temporal y no espacial, lo que produce \textit{solapamiento}
 (\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
-(Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias de
-partición, seleccionables al crear el trabajo de optimización mediante el campo
-\texttt{strategy}. Un cuarto valor, \texttt{compare}, ejecuta las tres sobre el mismo
-conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por
-estrategia, lo que permite contrastarlas bajo una misma matriz de costos y un mismo
-presupuesto de \textit{solver}; es el modo con que se produjeron las comparaciones del
-Capítulo~\ref{cap:resultados}. La estrategia \texttt{global} reproduce el
-comportamiento de la formulación anterior sin cambios y constituye la línea base;
-la estrategia seleccionada por defecto es \texttt{spatial\_term}, a la luz de los
-resultados de la comparación (Capítulo~\ref{cap:resultados}).
+(Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres
+estrategias de partición, registradas en el campo \texttt{strategy} del trabajo de
+optimización. La estrategia \texttt{global} reproduce el comportamiento de la
+formulación anterior sin cambios y constituye la línea base.
+
+Las tres estrategias no se ofrecen como una elección del administrador. Un valor
+adicional del campo, \texttt{compare}, ejecuta las tres sobre el mismo conjunto de
+árboles y persiste una \texttt{RoutingSolution} independiente por estrategia, lo que
+permite contrastarlas bajo una misma matriz de costos y un mismo presupuesto de
+\textit{solver}; es el modo con que se produjeron las comparaciones del
+Capítulo~\ref{cap:resultados} y queda reservado a ese uso experimental. El
+lanzamiento ordinario despliega en cambio un abanico fijo de combinaciones, descrito
+en la Sección~\ref{sec:ui}, del que \texttt{cluster\_first} está excluida: el
+Capítulo~\ref{cap:resultados} la descarta con datos ---deja árboles fuera de la
+solución y degrada el balance--- y mantenerla en el abanico de producción gastaría
+un tercio del cómputo en una candidata que el criterio de selección nunca elige.
+Permanece accesible por la vía experimental, no por la del administrador.
 
 \begin{itemize}
   \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
@@ -678,10 +796,8 @@ Su costo computacional es despreciable frente al del \textit{solver}. Cada barri
 examina $O(m_r^2)$ pares para una ruta de $m_r$ paradas y el procedimiento repite
 barridos hasta el óptimo local; como la carga de servicio acota $m_r$ a unas
 decenas de árboles en las configuraciones operacionales, el costo es del orden de
-milisegundos: la Tabla~\ref{tab:comparativa} reporta $0{,}09$\,s para el
-\textit{greedy} con post-pass frente a $0{,}007$\,s sin él, lo que sitúa el
-post-proceso en aproximadamente $0{,}08$\,s sobre los $1\,607$ árboles de la
-evaluación, cuatro órdenes de magnitud bajo el presupuesto del \textit{solver}.
+milisegundos, cuatro órdenes de magnitud bajo el presupuesto del \textit{solver}
+(Capítulo~\ref{cap:resultados}).
 
 La adopción de este post-proceso como comportamiento por defecto no fue inmediata:
 una primera evaluación lo rechazó por empeorar la métrica de auto-cruces, y solo la
@@ -689,6 +805,100 @@ corrección posterior de esa métrica ---que medía sobre cuerdas rectas y no so
 trazado real de calles--- permitió establecer que el algoritmo mejora
 simultáneamente el tiempo de viaje y la geometría real. Esa historia, y la medición
 que la cierra, se documentan en la Sección~\ref{sec:discusion-calidad}.
+
+% ---- 3.3.8 ------------------------------------------------------
+\subsection{Perfiles de precios y abanico de producción}
+\label{sec:abanico}
+
+Los coeficientes de la función objetivo no admiten un único valor correcto: cada
+ajuste compra una propiedad de la solución al precio de otra, y qué propiedad
+conviene comprar depende de la densidad del \textit{dataset} y de la holgura de la
+jornada (Capítulo~\ref{cap:resultados}). El sistema resuelve esa indeterminación sin
+trasladarla al administrador: en lugar de exponer los coeficientes como parámetros,
+define tres perfiles de precios cerrados, con nombre y descripción en el lenguaje
+del usuario, y los ejecuta todos.
+
+\begin{itemize}
+  \item \textbf{Equilibrada} (\texttt{default}): los precios de producción tal como
+        se describieron en las secciones anteriores. Es el punto de partida y la
+        combinación de control.
+  \item \textbf{Rutas más parejas} (\texttt{temporal\_span\_100}): activa el costo
+        sobre el \textit{span} de la dimensión temporal con coeficiente $100$, lo
+        que iguala la duración entre rutas a costa de caminata adicional.
+  \item \textbf{Menos zigzag} (\texttt{arc\_linear\_30}): eleva a $30$ el peso
+        lineal del arco, lo que penaliza los tramos largos y compacta el trazado
+        cuando sobra tiempo de desplazamiento.
+\end{itemize}
+
+Una única solicitud de optimización despliega el producto cartesiano de los tres
+perfiles por las dos estrategias de producción ---\texttt{global} y
+\texttt{spatial\_term}, con \texttt{cluster\_first} excluida
+(Sección~\ref{sec:estrategias})---, es decir, seis trabajos que comparten la misma
+\texttt{RoutingConfig} y, por tanto, la misma matriz de costos en caché. El costo
+marginal de las cinco combinaciones adicionales es el del \textit{solver}, no el de
+OSRM, que es la fase cara de la primera construcción
+(Sección~\ref{sec:matriz}). Las seis soluciones resultantes se ordenan y se presentan
+al administrador como candidatas comparables (Sección~\ref{sec:ui}). La
+Ilustración~\ref{fig:abanico} resume el despliegue del abanico y el criterio
+lexicográfico que ordena sus candidatas.
+
+\begin{figure}[H]
+  \centering
+  \shorthandoff{<>}%
+  \begin{tikzpicture}[
+      scale=0.82, transform shape,
+      cab/.style={font=\small},
+      celda/.style={draw, rounded corners=2pt, align=center, font=\small,
+                    minimum width=3.1cm, minimum height=0.95cm},
+      origen/.style={draw, rounded corners=2pt, align=center, font=\small,
+                     minimum width=8.4cm, minimum height=1.1cm},
+      paso/.style={draw, rounded corners=2pt, align=center, font=\scriptsize,
+                   minimum width=2.45cm, minimum height=1.25cm},
+      final/.style={draw, thick, rounded corners=2pt, align=center, font=\small,
+                    minimum width=5.4cm, minimum height=1.0cm},
+      flujo/.style={->, >=stealth, thick}
+    ]
+    \node[origen] (cfg) at (3.6,2.5)
+      {Una solicitud de optimización\\ una \texttt{RoutingConfig} · una matriz OSRM en caché};
+
+    \node[cab] at (1.6,1.15) {\texttt{global}};
+    \node[cab] at (5.6,1.15) {\texttt{spatial\_term}};
+    \node[cab, align=right] at (-1.7,0.3)  {Equilibrada};
+    \node[cab, align=right] at (-1.7,-1.0) {Rutas más parejas};
+    \node[cab, align=right] at (-1.7,-2.3) {Menos zigzag};
+
+    \node[celda] (c1) at (1.6,0.3)   {candidata 1};
+    \node[celda] (c2) at (5.6,0.3)   {candidata 2};
+    \node[celda] (c3) at (1.6,-1.0)  {candidata 3};
+    \node[celda] (c4) at (5.6,-1.0)  {candidata 4};
+    \node[celda] (c5) at (1.6,-2.3)  {candidata 5};
+    \node[celda] (c6) at (5.6,-2.3)  {candidata 6};
+
+    \draw[flujo] (cfg.south) -- (3.6,1.6) -- (1.6,1.6) -- (c1.north);
+    \draw[flujo] (3.6,1.6) -- (5.6,1.6) -- (c2.north);
+
+    \node[paso] (p1) at (-2.6,-4.6) {sin árboles\\ fuera de ruta};
+    \node[paso] (p2) at (0.2,-4.6)  {sin rutas\\ degeneradas};
+    \node[paso] (p3) at (3.0,-4.6)  {balance\\ $\geq 0{,}60$};
+    \node[paso] (p4) at (5.8,-4.6)  {menor tiempo de\\ desplazamiento};
+    \node[paso] (p5) at (8.6,-4.6)  {menor número\\ de rutas};
+
+    \draw[flujo] (1.6,-2.85) -- (1.6,-3.3) -- (-2.6,-3.3) -- (p1.north);
+    \draw[flujo] (p1) -- (p2);
+    \draw[flujo] (p2) -- (p3);
+    \draw[flujo] (p3) -- (p4);
+    \draw[flujo] (p4) -- (p5);
+
+    \node[final] (rec) at (3.0,-6.4) {candidata recomendada};
+    \draw[flujo] (p5.south) -- (8.6,-6.4) -- (rec.east);
+  \end{tikzpicture}
+  \caption[Abanico de producción y criterio de selección]{Abanico de producción: tres
+  perfiles de precios por dos estrategias de partición dan seis candidatas que
+  comparten configuración y matriz de costos. El criterio lexicográfico las ordena
+  aplicando los cinco desempates en secuencia; la primera se marca como recomendada
+  y las restantes se informan con su costo adicional en caminata.}
+  \label{fig:abanico}
+\end{figure}
 
 % ---- 3.4 -------------------------------------------------------
 \section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
@@ -717,18 +927,28 @@ el campo \texttt{source} del modelo \texttt{Tree}:
         un conjunto de muestras (\textit{samples}) tomadas en terreno, cada una con
         su propia lectura de GPS. La posición de cada árbol se reconstruye como la
         mediana de las latitudes y longitudes de sus muestras, agrupadas por
-        código QR, descartando las lecturas sin coordenada y aquellas con latitud
-        igual a cero ---el valor con que la aplicación previa dejaba constancia de una
-        lectura de GPS fallida---. Se emplea la
-        mediana y no el promedio por su robustez frente a lecturas de GPS atípicas. De este modo se
-        obtienen $1\,178$ árboles con posición utilizable.
+        código QR, descartando las lecturas sin coordenada, las que caen fuera del
+        rango de Chile continental ---con lo que se eliminan las lecturas de GPS
+        fallidas, que la aplicación previa registraba como coordenada nula--- y los
+        códigos QR compuestos solo de ceros. Se emplea la
+        mediana y no el promedio por su robustez frente a lecturas de GPS atípicas. De
+        este modo se obtienen $12\,941$ árboles con posición utilizable, sobre un total
+        de $17\,208$ muestras.
   \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): posterior a la
         anterior, aporta $429$ árboles con posición explícita y especie, organizados en
         áreas pertenecientes a campañas de censo.
 \end{itemize}
 
-El \textit{dataset} definitivo de la evaluación reúne ambas fuentes y totaliza
-$n = 1\,607$ árboles. El acceso a las bases legadas es estrictamente de solo
+Ambas fuentes se solapan geográficamente, por lo que se descarta el árbol de
+\texttt{legacy\_app} que se encuentre a $5$\,m o menos de uno de \texttt{legacy\_api}
+---se conserva este último, que aporta especie y área---. El explorador expone así
+$13\,319$ árboles importables: $429$ de \texttt{legacy\_api} y $12\,890$ de
+\texttt{legacy\_app}. Ese es el universo disponible; el \textit{dataset} de
+$n = 1\,607$ árboles con que se evalúa el sistema
+(Capítulo~\ref{cap:resultados}) es una instancia congelada de ese universo, elegida
+por reproducibilidad, y no su totalidad.
+
+El acceso a las bases legadas es estrictamente de solo
 lectura (la conexión se abre con \texttt{readonly}), dado que se trata de sistemas
 que no pertenecen al alcance de esta iteración del proyecto y cuya integridad no debe verse
 comprometida por el proceso de importación.
@@ -736,8 +956,9 @@ comprometida por el proceso de importación.
 \subsection{Selección previa a la creación del \textit{dataset}}
 
 La decisión de diseño central de este módulo es que la importación no crea
-un \textit{dataset} de forma inmediata. Importar áreas completas a ciegas ---el
-enfoque inicial--- resultaba inadecuado en la práctica: el usuario no sabe, antes de
+un \textit{dataset} de forma inmediata. La primera versión del importador de esta
+iteración traía áreas completas a ciegas, lo que resultó inadecuado en la
+práctica: el usuario no sabe, antes de
 importar, qué árboles trae un área, cuáles ya están en el sistema ni si el conjunto
 resultante corresponde al territorio que efectivamente quiere censar. El flujo se
 divide por ello en dos etapas: primero explorar y seleccionar, y solo después
@@ -769,6 +990,11 @@ observaciones asociado (Sección~\ref{sec:recenso}) dentro de una misma transacc
 de modo que un fallo parcial no deja \textit{datasets} a medio poblar.
 \end{sloppypar}
 
+El explorador admite además filtrar el arbolado por estado (\texttt{already\_imported}
+o disponible) y por fuente de origen, y permite seleccionar un árbol que ya fue
+importado en otro \textit{dataset}, de modo que una misma posición geográfica puede
+integrarse en campañas distintas cuando el territorio se solapa.
+
 Existe además un \textit{endpoint} auxiliar,
 \texttt{POST /api/datasets/import-legacy/}, que importa un área completa o la
 totalidad de la fuente sin selección previa. No forma parte del flujo del usuario y
@@ -789,9 +1015,20 @@ combinables:
 \begin{enumerate}
   \item \textbf{Por área}: al hacer clic sobre el polígono de un área se alternan de
         una vez todos los árboles contenidos en ella.
-  \item \textbf{Por rectángulo} (\textit{bounding box}): un modo de arrastre permite
-        trazar un rectángulo sobre el mapa y agregar a la selección todos los árboles
-        comprendidos en sus límites, con independencia del área a la que pertenezcan.
+  \item \textbf{Por figura dibujada}: el administrador traza sobre el mapa la región
+        que quiere censar y se agregan a la selección todos los árboles contenidos en
+        ella, con independencia del área a la que pertenezcan. La figura se traza de
+        dos maneras: un polígono arbitrario, marcando sus vértices con clics
+        sucesivos y cerrándolo sobre el primero, o un rectángulo, arrastrando el
+        cursor entre dos esquinas. Ambas producen la misma entidad ---un anillo de
+        vértices---, de modo que un rectángulo recién trazado se edita después como
+        cualquier polígono: cada vértice se arrastra para moverlo, el punto medio de
+        cada lado se pulsa para insertar un vértice nuevo y el clic derecho sobre un
+        vértice lo elimina. La pertenencia de cada árbol se reevalúa por
+        punto-en-polígono al soltar el vértice, y no de forma continua durante el
+        arrastre, para no recorrer todo el arbolado legado en cada cuadro de
+        animación. Pueden coexistir varias figuras, cuya unión constituye la
+        selección.
   \item \textbf{Por árbol individual}: el clic sobre un marcador agrega o quita ese
         árbol de la selección.
 \end{enumerate}
@@ -804,11 +1041,11 @@ creación. El resultado es que el recorte territorial del censo es una decisión
 explícita del administrador, tomada sobre la evidencia cartográfica, y no una
 consecuencia de cómo estaban organizadas las áreas en el sistema anterior.
 
-La Ilustración~\ref{fig:ui_legacy} muestra el mapa de selección con una sesión en curso.
+El mapa de selección con una sesión en curso aparece en la Ilustración~\ref{fig:ui_legacy}.
 
-\capturaui{ui-legacy-import.png}{Mapa de selección de arbolado legado}{Mapa de selección de arbolado legado (\texttt{/admin/datasets/legacy-import}): polígonos de las áreas de censo, marcadores coloreados por estado (disponible, seleccionado, ya importado) y panel lateral de la selección acumulada.}{fig:ui_legacy}
+\capturaui{ui-legacy-import.png}{Mapa de selección de arbolado legado}{Mapa de selección de arbolado legado (\texttt{/admin/datasets/legacy-import}): un polígono editable sobre el arbolado disponible, marcadores coloreados por estado (disponible, seleccionado, ya importado) y panel lateral con la selección acumulada.}{fig:ui_legacy}
 
-El color de cada marcador codifica el estado del árbol en el sistema: verde para disponible, azul para seleccionado en la sesión actual y gris para ya importado en otro \textit{dataset}. El panel lateral lista la selección acumulada ---2\,328 árboles en la sesión de la ilustración--- y permite revisarla árbol por árbol antes de confirmar la creación del \textit{dataset}.
+El color de cada marcador codifica el estado del árbol en el sistema: verde para disponible, azul para seleccionado en la sesión actual y gris para ya importado en otro \textit{dataset}. El panel lateral lista la selección acumulada ---126 árboles en la sesión de la ilustración--- y permite revisarla árbol por árbol antes de confirmar la creación del \textit{dataset}.
 
 % ---- 3.5 -------------------------------------------------------
 \section{RE-CENSO Y REGISTRO DE OBSERVACIONES}
@@ -854,7 +1091,7 @@ evidencia gráfica de toda afirmación positiva sobre el estado de un árbol, y 
 constatación de su ausencia.
 
 Conviene precisar el alcance de esa garantía. La fotografía es la evidencia
-\textit{documental} de la observación ---sin ella el estado declarado no es
+documental de la observación ---sin ella el estado declarado no es
 contrastable a posteriori por el administrador---, pero no acredita por sí sola que el
 censador haya estado frente al árbol correcto: no se verifica su contenido, ni sus
 metadatos de posición, ni el instante de captura. El control de proximidad de
@@ -872,7 +1109,7 @@ La captura se realiza con la cámara del dispositivo desde el propio navegador
 ---solicitando la cámara trasera y comprimiendo el fotograma a JPEG--- y la
 observación viaja al servidor como \textit{multipart} cuando incluye imagen. Al
 omitir una parada, en cambio, el censador debe indicar un motivo (árbol inexistente,
-acceso bloqueado u otro) y la fotografía no se exige, pues el motivo típico
+acceso bloqueado u otro) y la fotografía no se exige, dado que el motivo típico
 de la omisión es justamente que no hay árbol que fotografiar. El estado de la
 observación se deriva del motivo: la omisión por árbol inexistente produce una
 observación \texttt{not\_found}, y cualquier otro motivo, una observación
@@ -888,16 +1125,16 @@ resultado es que un árbol recién importado ya llega al sistema con su historia
 campañas anteriores, y la primera visita del censador se registra como una
 observación más en esa serie ---esto es, como un re-censo y no como un censo inicial.
 
-El vínculo entre una observación legada y su árbol difiere según la fuente, pues los
-esquemas de origen no comparten estructura: en \texttt{legacy\_api} las muestras
+El vínculo entre una observación legada y su árbol difiere según la fuente, debido a que
+los esquemas de origen no comparten estructura: en \texttt{legacy\_api} las muestras
 referencian al árbol directamente, mientras que en \texttt{legacy\_app} lo hacen a
 través del código QR físico adherido al árbol. En cuanto a las fotografías
 históricas, se conserva su URL (campo \texttt{photo\_url}) y no el archivo, ya que
 las imágenes residen en el almacenamiento del sistema anterior. En \texttt{legacy\_app}
 solo se importan aquellas cuya referencia comienza con \texttt{http}, descartando las
 rutas locales del dispositivo que la aplicación previa registraba y que hoy no
-apuntan a nada; en \texttt{legacy\_api} basta con que la referencia no esté vacía, pues
-esa fuente solo almacena URL remotas.
+apuntan a nada; en \texttt{legacy\_api} basta con que la referencia no esté vacía,
+dado que esa fuente solo almacena URL remotas.
 El estado se deriva del único campo disponible en el origen ---si la muestra fue o no
 completada---, mapeando la muestra completada a \texttt{alive} y el resto a
 \texttt{unknown}, en lugar de inferir un estado que la fuente no consigna.
@@ -918,8 +1155,8 @@ grupos de recursos:
 \begin{itemize}
   \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de \textit{tokens} \textit{JSON Web Token} (JWT) mediante \textit{djangorestframework-simplejwt}, consulta del usuario en sesión y administración de las cuentas de censadores.
   \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV o JSON con detección automática de las columnas de coordenadas, exploración de las fuentes legadas y creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y exportación de árboles como \textit{GeoJSON FeatureCollection}.
-  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el \textit{frontend}), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
-  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
+  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota y comprobación de factibilidad de la configuración (bloqueos y advertencias) previa a la optimización, creación de trabajos ---una sola solicitud crea los seis del abanico de producción (Sección~\ref{sec:abanico}) y responde con la lista completa---, consulta de estado (para \textit{polling} desde el \textit{frontend}), acceso a las métricas de cada \texttt{RoutingSolution} ordenadas por el criterio de recomendación, y publicación o despublicación de la solución vigente por \textit{dataset}.
+  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, carga acumulada por censador con sugerencia de asignación voraz, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
 El sistema implementa dos roles: Administrador (acceso completo) y Censador
@@ -941,8 +1178,8 @@ el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
     \midrule
     Autenticación & \texttt{/api/auth/} & Tokens JWT, consulta del usuario en sesión y gestión de cuentas de censadores. \\
     \textit{Datasets} & \texttt{/api/datasets/} & Importación CSV/JSON y desde fuentes legadas, exploración, exportación \textit{GeoJSON} e historial de observaciones. \\
-    Optimización & \texttt{/api/optimization/} & Estimación de flota, creación de trabajos, \textit{polling} de estado, métricas de soluciones y publicación del plan vigente. \\
-    Rutas & \texttt{/api/routes/} & Listado con métricas, exportación \textit{GeoJSON}, asignación de censadores, ruta propia del censador y registro de visitas y omisiones. \\
+    Optimización & \texttt{/api/optimization/} & Estimación de flota y comprobación de factibilidad, creación de trabajos, \textit{polling} de estado, métricas de soluciones y publicación del plan vigente. \\
+    Rutas & \texttt{/api/routes/} & Listado con métricas, exportación \textit{GeoJSON}, asignación de censadores, carga acumulada por censador con sugerencia de asignación, ruta propia del censador y registro de visitas y omisiones. \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -964,60 +1201,34 @@ estado de sesión (autenticación, notificaciones) con Zustand; los mapas emplea
 \citep{openstreetmap}. La aplicación distingue dos experiencias según el rol del usuario:
 el panel de administración y el portal del censador.
 
-El panel de administración comprende cinco etapas. En primer lugar, el administrador
-inicia sesión y obtiene un \textit{token} JWT. En segundo lugar, constituye un
-\textit{dataset} de árboles, ya sea importando un archivo CSV o seleccionando el
-arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos
-el resultado se visualiza como puntos sobre un mapa (\texttt{DatasetMap}). En tercer
-lugar, configura los parámetros temporales ($T_{\min}$, $T_{\max}$, tiempo de
-servicio), elige la estrategia de partición ---o la opción \textit{«Comparar las
-3»}--- y lanza el trabajo de optimización. En
-cuarto lugar, el estado del trabajo se monitorea mediante \textit{polling} automático
-con \textit{React Query}, que consulta el \textit{endpoint} de estado cada 3 segundos mientras el
-trabajo se encuentra en estado \texttt{queued} o \texttt{running} y detiene las
-consultas al alcanzar un estado terminal o al superar los 15 minutos desde su
-creación, de modo que un trabajo colgado no deja al navegador consultando
-indefinidamente. El abandono es del cliente: el registro del trabajo permanece en
-estado \texttt{running} si el \textit{worker} muere después de iniciar la tarea,
-pues el sistema no implementa reconciliación por latido ni por marca de inicio. Es
-una limitación asumida (Sección~\ref{sec:limitaciones}). Finalmente, se presentan las rutas resultantes: cuando el trabajo
-ejecutó más de una estrategia, un componente de pestañas (\texttt{StrategyTabs})
-permite alternar entre las soluciones \texttt{global}, \texttt{spatial\_term} y
-\texttt{cluster\_first} y comparar sus métricas; cuando ejecutó una sola, la muestra
-como una etiqueta fija. Las rutas se dibujan como polilíneas coloreadas que siguen la
-red de calles real, obtenidas del trazado peatonal que devuelve OSRM. Desde esta vista
-el administrador publica la solución elegida como plan vigente y asigna cada ruta a un
-censador.
+El panel de administración comprende cinco etapas:
 
-La Ilustración~\ref{fig:ui_datasets} presenta el listado de \textit{datasets} disponibles en el sistema.
+\begin{enumerate}
+  \item \textbf{Sesión.} El administrador inicia sesión y obtiene un \textit{token} JWT.
+  \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles aparece en la Ilustración~\ref{fig:ui_datasets} del Anexo~\ref{anx:capturas}.
+  \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del objetivo: una sola solicitud despliega el abanico de seis combinaciones descrito en la Sección~\ref{sec:abanico}. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} se consulta a medida que el administrador escribe y comprueba la factibilidad de la configuración antes de que se cree el trabajo: las advertencias se muestran junto al formulario y los bloqueos inhabilitan el botón de lanzamiento.
+  \item \textbf{Monitoreo.} \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el \textit{worker} muere (Sección~\ref{sec:limitaciones}).
+  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real. El componente \texttt{SolutionCandidatesList} lista las seis soluciones como candidatas a plan, ordenadas de mejor a peor por el criterio lexicográfico que implementa \texttt{order\_by\_criterion} ---sin árboles fuera de ruta, luego sin rutas degeneradas, luego puntaje de balance no inferior a $0{,}60$, luego menor tiempo de desplazamiento y menor número de rutas---. La primera se marca como recomendada y las demás informan cuánta caminata adicional cuestan respecto de ella; una candidata cuyo desplazamiento difiere de la recomendada en menos del $3$\,\% se rotula como empate técnico, de modo que el administrador distingue una ventaja real de una diferencia dentro del ruido del \textit{solver}. La recomendación no es vinculante: el administrador publica la candidata que estime conveniente. Publicado el plan, \texttt{suggest\_assignment} propone una asignación de rutas a censadores que reduce el déficit de carga acumulado entre campañas, y el administrador la acepta o la modifica ruta por ruta.
+\end{enumerate}
 
-\capturaui{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de \textit{datasets} e importación de archivos (\texttt{/admin/datasets}).}{fig:ui_datasets}
+La Ilustración~\ref{fig:ui_optimization} corresponde al panel de optimización del \textit{dataset}.
 
-La tabla muestra el nombre de cada \textit{dataset}, el número de árboles y la fecha de importación; los botones superiores dan acceso a las dos rutas de creación: subida de archivo y selección desde las fuentes legadas.
+\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: panel de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), panel de optimización: el mapa muestra la solución recomendada sobre la red peatonal y el panel lateral lista las candidatas a plan ordenadas por el criterio de selección, cada una con sus métricas y con la caminata adicional que cuesta respecto de la recomendada. El formulario de parámetros temporales encabeza el mismo panel.}{fig:ui_optimization}
 
-La Ilustración~\ref{fig:ui_optimization} muestra la pestaña de optimización del \textit{dataset}.
+El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$ y tiempo de servicio) y el estado de la última optimización; el clic sobre un marcador del mapa despliega el historial de observaciones de ese árbol, lo que permite al administrador verificar si ya fue censado antes de lanzar la optimización.
 
-\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa con las rutas de la última optimización, el comparador de estrategias y el formulario de parámetros temporales y de estrategia.}{fig:ui_optimization}
+El panel de asignación aparece en la Ilustración~\ref{fig:ui_routes}.
 
-El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$, tiempo de servicio y estrategia) y el estado de la última optimización; el clic sobre un marcador del mapa despliega el historial de observaciones de ese árbol, lo que permite al administrador verificar si ya fue censado antes de lanzar la optimización.
+\capturaui{ui-routes.png}{Detalle de un \textit{dataset}: panel de asignación}{El mismo detalle en su panel de asignación: el plan publicado como polilíneas coloreadas sobre la red peatonal y, por cada ruta, sus paradas, su duración estimada y el censador asignado.}{fig:ui_routes}
 
-La Ilustración~\ref{fig:ui_routes} muestra la pestaña de asignación con las tres estrategias comparables.
+Cada candidata resume tres métricas ---número de rutas, tiempo de caminata y puntaje de balance--- y destaca en cuáles de ellas es la mejor de la corrida; los árboles que quedan fuera de ruta, las rutas degeneradas y el balance bajo el umbral no se presentan como cifras sino como advertencias en lenguaje llano, porque son condiciones que descalifican a la candidata y no magnitudes que el administrador deba ponderar. El panel derecho materializa la asignación de cada ruta a un censador. Como dos corridas con parámetros temporales distintos no son comparables entre sí, la lista muestra una sola corrida a la vez y un selector permite alternar entre ellas.
 
-\capturaui{ui-routes.png}{Detalle de un \textit{dataset}: pestaña de asignación}{El mismo detalle en su pestaña de asignación: pestañas de estrategia con sus métricas, polilíneas coloreadas sobre la red peatonal y asignación de cada ruta a un censador. El trabajo se lanzó en modo \texttt{compare}, de ahí las tres soluciones comparables.}{fig:ui_routes}
-
-Las tres pestañas superiores resumen las métricas de cada estrategia ---número de rutas y tiempo total de jornada--- lo que permite al administrador seleccionar la solución que publicará; el panel derecho materializa la asignación de cada ruta a un censador antes de publicar el plan.
-
-Publicado el plan, el administrador supervisa el avance del censo en terreno desde
-la pestaña de progreso del \textit{dataset}. El tablero resume el porcentaje de
-árboles censados, omitidos y pendientes, los sitúa sobre el mapa coloreados según su
-estado y desglosa el avance por ruta y por censador, de modo que el administrador
-puede identificar qué rutas van retrasadas y redistribuir la carga.
-
-La Ilustración~\ref{fig:ui_progress} muestra el tablero de avance de un \textit{dataset} en curso.
-
-\capturaui{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}): porcentaje de árboles censados, omitidos y pendientes; mapa coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.}{fig:ui_progress}
-
-La barra de progreso global y el desglose por ruta permiten identificar qué rutas se han detenido; el mapa colorea cada árbol según su estado ---censado, omitido o pendiente--- para ubicar geográficamente el avance del censo.
+Publicado el plan, el administrador supervisa el avance del censo desde la pestaña
+de progreso: el tablero resume el porcentaje de árboles censados, omitidos y
+pendientes, los sitúa sobre el mapa según su estado y desglosa el avance por ruta y
+por censador, de modo que se identifican qué rutas van retrasadas. Esta vista
+realiza RF-19 y RF-20; la ilustración correspondiente se incluye en el
+Anexo~\ref{anx:capturas} (Ilustración~\ref{fig:ui_progress}).
 
 El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first}
 orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente

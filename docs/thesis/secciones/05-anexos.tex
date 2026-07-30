@@ -484,4 +484,32 @@ donde se documenta su realización y, cuando corresponde, al inventario de
   RF-19 & \S\ref{sec:ui} \\
   RF-20 & \S\ref{sec:ui} \\
   RF-21 & \S\ref{sec:api} \\
+  RF-22 & \S\ref{sec:flota} \\
+  RF-23 & \S\ref{sec:ui} \\
+  RF-24 & \S\ref{sec:ui} \\
+  RF-25 & \S\ref{sec:legacy} \\
+  RF-26 & \S\ref{sec:api} \\
 \end{xltabular}
+
+\phantomsection
+\section*{Anexo 6. Capturas complementarias de la interfaz}
+\addcontentsline{toc}{section}{Anexo 6. Capturas complementarias de la interfaz}
+\label{anx:capturas}
+
+% La cota de altura replica la del capítulo de diseño (capturaui).
+\newcommand{\capturaanexo}[4]{%
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth,height=0.75\textheight,keepaspectratio]{media/#1}
+    \caption[#2]{#3}
+    \label{#4}
+  \end{figure}%
+}
+
+La Ilustración~\ref{fig:ui_datasets} muestra el listado de \textit{datasets} disponibles en el sistema.
+
+\capturaanexo{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de \textit{datasets} e importación de archivos (\texttt{/admin/datasets}): tabla con nombre, número de árboles y fecha de importación; los botones superiores dan acceso a las dos rutas de creación.}{fig:ui_datasets}
+
+El tablero de avance del censo se muestra en la Ilustración~\ref{fig:ui_progress}.
+
+\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}): porcentaje de árboles censados, omitidos y pendientes; mapa coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.}{fig:ui_progress}
