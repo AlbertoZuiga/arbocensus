@@ -15,7 +15,7 @@
 \section{ARQUITECTURA DEL SISTEMA}
 \label{sec:arquitectura}
 La arquitectura del sistema sigue el patrón de monolito modular: un único servicio
-Django \citep{django} con módulos claramente separados por dominio
+Django \citep{django} con módulos separados por dominio
 (\texttt{accounts}, \texttt{datasets}, \texttt{optimization}, \texttt{routes}).
 
 Las tareas de optimización se ejecutan de forma asíncrona mediante Celery
@@ -468,8 +468,8 @@ cuánto puede durar una jornada ($T_{\min}$, $T_{\max}$) y cuánto toma censar u
 árbol ($s$), y el sistema deriva la flota necesaria. Esta decisión de diseño evita
 el enfoque de iteración externa ---resolver el modelo con $1, 2, 3, \ldots$
 vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de
-cómputo por el número de intentos y resulta frágil, pues una corrida infactible no
-distingue entre «faltan vehículos» y «el modelo no admite solución».
+cómputo por el número de intentos y resulta frágil, dado que una corrida infactible
+no distingue entre «faltan vehículos» y «el modelo no admite solución».
 
 En su lugar, el sistema entrega a \textit{OR-Tools} un techo $N_{\max}$ de vehículos
 disponibles y deja que el \textit{solver} decida cuántos activa. El techo se calcula a partir
@@ -511,7 +511,7 @@ La misma estimación alimenta un segundo uso, orientado a la planificación oper
 y no al \textit{solver}: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite
 al administrador consultar, antes de lanzar una optimización, cuántos censadores
 requeriría un \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. En
-este caso la Ecuación~\ref{eq:nmax} se evalúa con margen nulo ($b=0$), pues aquí sí
+este caso la Ecuación~\ref{eq:nmax} se evalúa con margen nulo ($b=0$), dado que aquí
 interesa una estimación ajustada y no un techo. La consulta reutiliza la matriz de
 costos en caché y no dispara ninguna consulta a OSRM: si el \textit{dataset} aún no
 tiene matriz calculada, el sistema responde que la estimación no está disponible en
@@ -623,14 +623,9 @@ puede tratarlos como excepciones. El Capítulo~\ref{cap:resultados}
 caracteriza la frontera en que esta calibración deja de garantizar cobertura total.
 
 El costo de esta garantía es de espacio de búsqueda: cada nodo incorpora una
-decisión binaria adicional ---visitarlo u omitirlo---, lo que amplía el vecindario
-que la metaheurística debe explorar en cada iteración. Dado que la búsqueda local
-está acotada por un límite de tiempo de reloj y que el GLS concentra prácticamente
-todo el tiempo de ejecución del \textit{pipeline}
-(Capítulo~\ref{cap:resultados}), cabe esperar que el efecto no se manifieste como un
-mayor tiempo total sino como una menor calidad alcanzable dentro del mismo
-presupuesto. Esa expectativa no se verificó experimentalmente y se asume como
-limitación del trabajo (Sección~\ref{sec:limitaciones}).
+decisión binaria adicional que amplía el vecindario que el GLS debe explorar.
+Si ello reduce la calidad alcanzable dentro del mismo presupuesto de tiempo se
+asume como limitación del trabajo (Sección~\ref{sec:limitaciones}).
 
 % ---- 3.3.6 ------------------------------------------------------
 \subsection{Estrategias de partición espacial}
@@ -900,7 +895,7 @@ evidencia gráfica de toda afirmación positiva sobre el estado de un árbol, y 
 constatación de su ausencia.
 
 Conviene precisar el alcance de esa garantía. La fotografía es la evidencia
-\textit{documental} de la observación ---sin ella el estado declarado no es
+documental de la observación ---sin ella el estado declarado no es
 contrastable a posteriori por el administrador---, pero no acredita por sí sola que el
 censador haya estado frente al árbol correcto: no se verifica su contenido, ni sus
 metadatos de posición, ni el instante de captura. El control de proximidad de
@@ -918,7 +913,7 @@ La captura se realiza con la cámara del dispositivo desde el propio navegador
 ---solicitando la cámara trasera y comprimiendo el fotograma a JPEG--- y la
 observación viaja al servidor como \textit{multipart} cuando incluye imagen. Al
 omitir una parada, en cambio, el censador debe indicar un motivo (árbol inexistente,
-acceso bloqueado u otro) y la fotografía no se exige, pues el motivo típico
+acceso bloqueado u otro) y la fotografía no se exige, dado que el motivo típico
 de la omisión es justamente que no hay árbol que fotografiar. El estado de la
 observación se deriva del motivo: la omisión por árbol inexistente produce una
 observación \texttt{not\_found}, y cualquier otro motivo, una observación
@@ -934,16 +929,16 @@ resultado es que un árbol recién importado ya llega al sistema con su historia
 campañas anteriores, y la primera visita del censador se registra como una
 observación más en esa serie ---esto es, como un re-censo y no como un censo inicial.
 
-El vínculo entre una observación legada y su árbol difiere según la fuente, pues los
-esquemas de origen no comparten estructura: en \texttt{legacy\_api} las muestras
+El vínculo entre una observación legada y su árbol difiere según la fuente, debido a que
+los esquemas de origen no comparten estructura: en \texttt{legacy\_api} las muestras
 referencian al árbol directamente, mientras que en \texttt{legacy\_app} lo hacen a
 través del código QR físico adherido al árbol. En cuanto a las fotografías
 históricas, se conserva su URL (campo \texttt{photo\_url}) y no el archivo, ya que
 las imágenes residen en el almacenamiento del sistema anterior. En \texttt{legacy\_app}
 solo se importan aquellas cuya referencia comienza con \texttt{http}, descartando las
 rutas locales del dispositivo que la aplicación previa registraba y que hoy no
-apuntan a nada; en \texttt{legacy\_api} basta con que la referencia no esté vacía, pues
-esa fuente solo almacena URL remotas.
+apuntan a nada; en \texttt{legacy\_api} basta con que la referencia no esté vacía,
+dado que esa fuente solo almacena URL remotas.
 El estado se deriva del único campo disponible en el origen ---si la muestra fue o no
 completada---, mapeando la muestra completada a \texttt{alive} y el resto a
 \texttt{unknown}, en lugar de inferir un estado que la fuente no consigna.
