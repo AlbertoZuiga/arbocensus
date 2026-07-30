@@ -796,7 +796,10 @@ Su costo computacional es despreciable frente al del \textit{solver}. Cada barri
 examina $O(m_r^2)$ pares para una ruta de $m_r$ paradas y el procedimiento repite
 barridos hasta el óptimo local; como la carga de servicio acota $m_r$ a unas
 decenas de árboles en las configuraciones operacionales, el costo es del orden de
-milisegundos, cuatro órdenes de magnitud bajo el presupuesto del \textit{solver}
+milisegundos: la Tabla~\ref{tab:comparativa} reporta $0{,}09$\,s para el
+\textit{greedy} con post-proceso frente a $0{,}007$\,s sin él, lo que sitúa el
+post-proceso en aproximadamente $0{,}08$\,s sobre los $1\,607$ árboles de la
+evaluación, tres órdenes de magnitud bajo el presupuesto del \textit{solver}
 (Capítulo~\ref{cap:resultados}).
 
 La adopción de este post-proceso como comportamiento por defecto no fue inmediata:
@@ -1205,7 +1208,7 @@ El panel de administración comprende cinco etapas:
 
 \begin{enumerate}
   \item \textbf{Sesión.} El administrador inicia sesión y obtiene un \textit{token} JWT.
-  \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles aparece en la Ilustración~\ref{fig:ui_datasets} del Anexo~\ref{anx:capturas}.
+  \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles aparece en la Ilustración~\ref{fig:ui_datasets} del \hyperref[anx:capturas]{Anexo 6}.
   \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del objetivo: una sola solicitud despliega el abanico de seis combinaciones descrito en la Sección~\ref{sec:abanico}. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} se consulta a medida que el administrador escribe y comprueba la factibilidad de la configuración antes de que se cree el trabajo: las advertencias se muestran junto al formulario y los bloqueos inhabilitan el botón de lanzamiento.
   \item \textbf{Monitoreo.} \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el \textit{worker} muere (Sección~\ref{sec:limitaciones}).
   \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real. El componente \texttt{SolutionCandidatesList} lista las seis soluciones como candidatas a plan, ordenadas de mejor a peor por el criterio lexicográfico que implementa \texttt{order\_by\_criterion} ---sin árboles fuera de ruta, luego sin rutas degeneradas, luego puntaje de balance no inferior a $0{,}60$, luego menor tiempo de desplazamiento y menor número de rutas---. La primera se marca como recomendada y las demás informan cuánta caminata adicional cuestan respecto de ella; una candidata cuyo desplazamiento difiere de la recomendada en menos del $3$\,\% se rotula como empate técnico, de modo que el administrador distingue una ventaja real de una diferencia dentro del ruido del \textit{solver}. La recomendación no es vinculante: el administrador publica la candidata que estime conveniente. Publicado el plan, \texttt{suggest\_assignment} propone una asignación de rutas a censadores que reduce el déficit de carga acumulado entre campañas, y el administrador la acepta o la modifica ruta por ruta.
@@ -1228,7 +1231,7 @@ de progreso: el tablero resume el porcentaje de árboles censados, omitidos y
 pendientes, los sitúa sobre el mapa según su estado y desglosa el avance por ruta y
 por censador, de modo que se identifican qué rutas van retrasadas. Esta vista
 realiza RF-19 y RF-20; la ilustración correspondiente se incluye en el
-Anexo~\ref{anx:capturas} (Ilustración~\ref{fig:ui_progress}).
+\hyperref[anx:capturas]{Anexo 6} (Ilustración~\ref{fig:ui_progress}).
 
 El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first}
 orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente

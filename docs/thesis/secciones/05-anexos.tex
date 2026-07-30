@@ -436,9 +436,69 @@ El criterio de rutas degeneradas original mezclaba dos fenómenos: un aislamient
 geográfico que captura el conteo de paradas (menos de cinco) y un perjuicio operativo real
 que captura la duración (menos de 1\,800 segundos). Una ruta con tres paradas y
 10\,485\,s de duración ocupa el 97\,\% del presupuesto diario y constituye una jornada
-completa, aunque viole el conteo. La revisión descartó la cláusula de paradas por
+completa, aunque viole el conteo. En la revisión se descartó la cláusula de paradas por
 indirecta, con lo que cuarenta y cinco de las ciento seis filas re-juzgables quedan
 absueltas y sesenta y una persisten por duración.
+
+\phantomsection
+\subsubsection*{Alcance de las réplicas y de las barras de error}
+\label{anx:alcance-replicas}
+
+La sensibilidad al orden de entrada que la Sección~\ref{sec:metricas-calidad} mide
+sobre el tiempo de desplazamiento no se limita a esa métrica. Mediciones posteriores
+sobre la suite de instancias congeladas, con réplicas construidas del mismo modo,
+arrojan dispersiones de otro orden de
+magnitud sobre las métricas de calidad: el índice de balance de carga de una
+configuración experimental, medido en 0{,}727 sobre una corrida única, resulta ser
+0{,}181 $\pm$ 0{,}215 sobre cinco réplicas
+(\texttt{docs/experiments/sweep-metrology-20260720.md}). La cifra no es
+comparable con el 5{,}1\,\% de la Sección~\ref{sec:metricas-calidad} ---aquella es
+un índice adimensional y esta dispersión del tiempo de desplazamiento---, pero fija
+el orden de la sensibilidad al orden de entrada, y resulta coherente con la
+diferencia de 3{,}9\,\% entre corridas distintas que tiene ese mismo origen.
+
+Una medición posterior acota, a su vez, el alcance de esas réplicas. Sobre el
+conjunto de evaluación agregado, las cinco semillas de una misma corrida arrojan
+barras de error de entre $\pm 745$ y $\pm 1\,062$\,s sobre el tiempo de
+desplazamiento, pero la media de una misma configuración experimental se desplazó
+de $59\,971$ a $62\,751$\,s entre dos corridas distintas
+(\texttt{docs/experiments/stops-penalty-sweep-20260722.md}), un salto mayor que
+esa dispersión entre semillas. Las barras de error publicadas acotan, por tanto,
+la varianza entre semillas dentro de una corrida, no la varianza entre corridas;
+comparar medias de corridas distintas queda fuera de lo que la instrumentación
+actual justifica.
+
+\phantomsection
+\subsubsection*{Efectos no medidos}
+\label{anx:efectos-no-medidos}
+
+\textbf{Costo de las disyunciones de nodos.}
+Declarar cada árbol como una disyunción unitaria (Sección~\ref{sec:disyunciones})
+añade una decisión binaria por nodo y amplía el vecindario que la búsqueda local
+debe explorar en cada iteración. Como el GLS se corta por reloj de pared y no por
+convergencia, cabe esperar que ese costo no se manifieste en un tiempo total mayor
+sino en una calidad menor alcanzable dentro del mismo presupuesto. La magnitud del
+efecto no se midió: aislarla exige una ablación con y sin disyunciones sobre el mismo
+\textit{dataset}, el mismo presupuesto de \textit{solver} y las mismas semillas,
+experimento que no se ejecutó. La limitación se asume porque el mecanismo no es
+prescindible ---sin él un solo árbol inalcanzable deja al \textit{solver} sin solución
+para todo el \textit{dataset}---, de modo que la alternativa medida no sería una
+configuración operable sino una referencia de laboratorio.
+
+\textbf{Exactitud del estimador de distancias.}
+El perfil peatonal (\texttt{foot}) de OSRM sobre datos de \textit{OpenStreetMap}
+estima el tiempo de caminata a partir de la representación de la red vial y de un
+factor de velocidad constante, de modo que se aparta necesariamente de la caminata
+real de terreno: no modela pendientes, semáforos, congestión peatonal, obras ni el
+ritmo de una persona que se detiene a censar. La magnitud de esa desviación no está
+medida en este trabajo, y no podría estarlo sin una jornada de terreno con registro de
+tiempos, que queda fuera del alcance (Sección~\ref{sec:verificacion}). Cabe esperar,
+eso sí, que el error sea sistemático más que aleatorio ---todas las rutas se estiman
+con el mismo perfil sobre la misma red---, lo que lo hace sensible para las cifras
+absolutas de duración de jornada y mucho menos sensible para las comparaciones
+relativas entre configuraciones, que son las que sostienen las conclusiones del
+capítulo de resultados. Contrastar la estimación contra tiempos reales de terreno es
+la validación pendiente de mayor valor para el uso operativo de la plataforma.
 
 \phantomsection
 \section*{Anexo 5. Trazabilidad de requisitos al diseño}
