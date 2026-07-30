@@ -1512,152 +1512,162 @@ descansan en magnitudes ajenas a ellas.
 \section{LIMITACIONES DEL SISTEMA}
 \label{sec:limitaciones}
 
-Se documentan a continuación las limitaciones aceptadas en el alcance de esta
-iteración de Arbocensus.
-
 \begin{itemize}
-  \item \textbf{Seguridad de sesión}: los \textit{tokens} JWT se almacenan en
-  \texttt{localStorage}, lo que simplifica la implementación a costa de una
-  mayor exposición ante ataques de tipo \textit{cross-site scripting} en
-  comparación con el almacenamiento en \textit{cookies} con atributo
-  \texttt{HttpOnly}. El riesgo es aceptado para un sistema de intranet
-  operado por personal interno.
 
-  \item \textbf{Escala de la matriz de costos}: la matriz se construye por
-  fragmentación (\textit{chunking}) en bloques cuando el \textit{dataset}
-  supera las $350$ coordenadas que admite una única solicitud a OSRM
-  (Sección~\ref{sec:matriz}), de modo que censos de miles de árboles ---como
-  el conjunto de evaluación de $n = 1\,607$--- se procesan sin dificultad. El
-  límite vigente es un tope de $2\,000$ árboles sobre la dimensión de la
-  matriz, impuesto porque su tamaño en disco crece como $O(n^2)$; procesar
-  \textit{datasets} que lo excedan requeriría almacenamiento disperso o la
-  segmentación previa del arbolado.
+  \item \textbf{Límites del producto}
+  \begin{itemize}
+    \item \textbf{Seguridad de sesión}: los \textit{tokens} JWT se almacenan en
+    \texttt{localStorage}, lo que simplifica la implementación a costa de una
+    mayor exposición ante ataques de tipo \textit{cross-site scripting} en
+    comparación con el almacenamiento en \textit{cookies} con atributo
+    \texttt{HttpOnly}. El riesgo es aceptado para un sistema de intranet
+    operado por personal interno.
 
-  \item \textbf{Alcance del problema de ruteo}: el motor optimiza el
-  \textit{dataset} completo como un único problema, sin segmentación previa
-  por área geográfica. Cuando el \textit{dataset} reúne arbolado de múltiples
-  áreas de censo ---como el conjunto de evaluación de $n = 1\,607$ árboles,
-  que abarca $10{,}3$\,km de extensión en longitud--- las rutas resultantes
-  reflejan esa extensión agregada, con los efectos de auto-cruce discutidos en la
-  Sección~\ref{sec:discusion-calidad}. En la operación habitual, donde cada
-  optimización corresponde a un área individual de extensión
-  $\leq 1{,}32$\,km, esa limitación no se manifiesta; sin embargo, la
-  plataforma no automatiza la segmentación previa por área, de modo que
-  la correcta delimitación del \textit{dataset} de entrada recae en el
-  administrador. Particionar el arbolado por área antes de rutear es la mejora
-  de mayor impacto geométrico identificada para versiones futuras, y su costo
-  está medido sobre las áreas reales (Sección~\ref{sec:areas-reales}): una ruta
-  adicional, tres jornadas bajo $T_{\min}$ y el triple de cómputo, sin costo en
-  desplazamiento.
+    \item \textbf{Escala de la matriz de costos}: la matriz se construye por
+    fragmentación (\textit{chunking}) en bloques cuando el \textit{dataset}
+    supera las $350$ coordenadas que admite una única solicitud a OSRM
+    (Sección~\ref{sec:matriz}), de modo que censos de miles de árboles ---como
+    el conjunto de evaluación de $n = 1\,607$--- se procesan sin dificultad. El
+    límite vigente es un tope de $2\,000$ árboles sobre la dimensión de la
+    matriz, impuesto porque su tamaño en disco crece como $O(n^2)$; procesar
+    \textit{datasets} que lo excedan requeriría almacenamiento disperso o la
+    segmentación previa del arbolado.
 
-  \item \textbf{Captura sin conectividad}: el portal de censo implementa una cola
-  \textit{offline} básica mediante \texttt{persistQueryClient} sobre
-  \textit{IndexedDB}, suficiente para preservar los datos ante pérdidas de conexión
-  momentáneas; no se implementó un \textit{service worker} para la gestión de teselas
-  de mapa ni para la sincronización diferida robusta bajo conectividad intermitente
-  prolongada. Esa extensión se documenta en el apartado
-  de posibles mejoras.
+    \item \textbf{Alcance del problema de ruteo}: el motor optimiza el
+    \textit{dataset} completo como un único problema, sin segmentación previa
+    por área geográfica. Cuando el \textit{dataset} reúne arbolado de múltiples
+    áreas de censo ---como el conjunto de evaluación de $n = 1\,607$ árboles,
+    que abarca $10{,}3$\,km de extensión en longitud--- las rutas resultantes
+    reflejan esa extensión agregada, con los efectos de auto-cruce discutidos en la
+    Sección~\ref{sec:discusion-calidad}. En la operación habitual, donde cada
+    optimización corresponde a un área individual de extensión
+    $\leq 1{,}32$\,km, esa limitación no se manifiesta; sin embargo, la
+    plataforma no automatiza la segmentación previa por área, de modo que
+    la correcta delimitación del \textit{dataset} de entrada recae en el
+    administrador. Particionar el arbolado por área antes de rutear es la mejora
+    de mayor impacto geométrico identificada para versiones futuras, y su costo
+    está medido sobre las áreas reales (Sección~\ref{sec:areas-reales}): una ruta
+    adicional, tres jornadas bajo $T_{\min}$ y el triple de cómputo, sin costo en
+    desplazamiento.
 
-  \item \textbf{Accesibilidad de la base de datos legada}: la base de datos histórica del
-  proyecto Arbocensus se encuentra activa en Heroku y se accede en modo de solo lectura
-  para la importación de arbolado. Las fotografías de campo almacenadas en Firebase son
-  inaccesibles por cierre del plan de facturación asociado; únicamente los metadatos y
-  las coordenadas están disponibles para su uso en la plataforma.
+    \item \textbf{Captura sin conectividad}: el portal de censo implementa una cola
+    \textit{offline} básica mediante \texttt{persistQueryClient} sobre
+    \textit{IndexedDB}, suficiente para preservar los datos ante pérdidas de conexión
+    momentáneas; no se implementó un \textit{service worker} para la gestión de teselas
+    de mapa ni para la sincronización diferida robusta bajo conectividad intermitente
+    prolongada. Esa extensión se documenta en el apartado de posibles mejoras.
 
-  \item \textbf{Alcance de la integración con Arbocensus}: la incorporación del
-  catastro existente se resuelve mediante una conexión de solo lectura a las bases
-  legadas y una importación puntual del arbolado seleccionado
-  (Sección~\ref{sec:legacy}), en lugar de una integración en vivo con las bases de
-  datos operativas del proyecto. El corte es adecuado al alcance de esta iteración,
-  pero deja fuera la sincronización continua del arbolado entre plataformas.
+    \item \textbf{Accesibilidad de la base de datos legada}: la base de datos histórica
+    del proyecto Arbocensus se encuentra activa en Heroku y se accede en modo de solo
+    lectura para la importación de arbolado. Las fotografías de campo almacenadas en
+    Firebase son inaccesibles por cierre del plan de facturación asociado; únicamente
+    los metadatos y las coordenadas están disponibles para su uso en la plataforma.
 
-  \item \textbf{Reconciliación de trabajos abandonados}: el registro de un
-  trabajo de optimización permanece en estado \texttt{running} si el
-  \textit{worker} muere después de iniciar la tarea; el sistema no implementa
-  reconciliación por latido ni por marca de inicio, y el cliente abandona el
-  sondeo a los 15 minutos (Sección~\ref{sec:ui}). La consecuencia es un registro
-  colgado en la lista de trabajos, sin efecto sobre las soluciones ya
-  publicadas.
+    \item \textbf{Alcance de la integración con Arbocensus}: la incorporación del
+    catastro existente se resuelve mediante una conexión de solo lectura a las bases
+    legadas y una importación puntual del arbolado seleccionado
+    (Sección~\ref{sec:legacy}), en lugar de una integración en vivo con las bases de
+    datos operativas del proyecto. El corte es adecuado al alcance de esta iteración,
+    pero deja fuera la sincronización continua del arbolado entre plataformas.
 
-  \item \textbf{Estrategia \texttt{cluster\_first}}: la estrategia de particionamiento
-  previo mediante $k$-medias quedó descartada como opción de producción a partir de los
-  resultados de la Sección~\ref{sec:comparacion-estrategias}. Incluso en su versión
-  corregida, degrada el balance a $0{,}698$, incrementa el viaje en un $16{,}9$\,\% y
-  descarta 12 árboles frente a \texttt{spatial\_term}, sin ventaja en ninguna dimensión
-  que el criterio de decisión protege; se conserva en el código como opción de comparación
-  para investigación, no como alternativa de censo.
+    \item \textbf{Reconciliación de trabajos abandonados}: el registro de un
+    trabajo de optimización permanece en estado \texttt{running} si el
+    \textit{worker} muere después de iniciar la tarea; el sistema no implementa
+    reconciliación por latido ni por marca de inicio, y el cliente abandona el
+    sondeo a los 15 minutos (Sección~\ref{sec:ui}). La consecuencia es un registro
+    colgado en la lista de trabajos, sin efecto sobre las soluciones ya publicadas.
 
-  \item \textbf{Cobertura bajo presupuesto temporal estrecho}: la formulación admite
-  descartes mediante disyunciones penalizadas ($1\,000\,000$\,s por árbol no cubierto),
-  de modo que la cobertura total no está garantizada a priori cuando la carga de servicio
-  excede la capacidad de la flota bajo $T_{\max}$. En la grilla de variantes operacionales,
-  las configuraciones con $T_{\max}=2$\,h y tiempo de servicio alto descartan uno o dos
-  árboles de forma consistente (Tabla~\ref{tab:grilla-spatial}); para garantizar cobertura
-  total se requiere operar con $T_{\max}=3$\,h bajo esas condiciones.
+    \item \textbf{Estrategia \texttt{cluster\_first}}: la estrategia de
+    particionamiento previo mediante $k$-medias quedó descartada como opción de
+    producción a partir de los resultados de la
+    Sección~\ref{sec:comparacion-estrategias}. Incluso en su versión corregida,
+    degrada el balance a $0{,}698$, incrementa el viaje en un $16{,}9$\,\% y
+    descarta 12 árboles frente a \texttt{spatial\_term}, sin ventaja en ninguna
+    dimensión que el criterio de decisión protege; se conserva en el código como
+    opción de comparación para investigación, no como alternativa de censo.
 
-  \item \textbf{Costo no medido de las disyunciones de nodos}: declarar cada árbol
-  como una disyunción unitaria (Sección~\ref{sec:disyunciones}) amplía el vecindario
-  de búsqueda local; como el GLS se corta por reloj de pared, ese costo se traduce en
-  calidad menor alcanzable dentro del mismo presupuesto, no en tiempo mayor. La
-  ablación que mediría el efecto no se ejecutó porque la alternativa sin disyunciones
-  no es operable: sin ellas, un árbol inalcanzable deja al \textit{solver} sin solución
-  para todo el \textit{dataset} (Anexo~\ref{anx:efectos-no-medidos}).
+    \item \textbf{Cobertura bajo presupuesto temporal estrecho}: la formulación admite
+    descartes mediante disyunciones penalizadas ($1\,000\,000$\,s por árbol no
+    cubierto), de modo que la cobertura total no está garantizada a priori cuando la
+    carga de servicio excede la capacidad de la flota bajo $T_{\max}$. En la grilla de
+    variantes operacionales, las configuraciones con $T_{\max}=2$\,h y tiempo de
+    servicio alto descartan uno o dos árboles de forma consistente
+    (Tabla~\ref{tab:grilla-spatial}); para garantizar cobertura total se requiere
+    operar con $T_{\max}=3$\,h bajo esas condiciones.
+  \end{itemize}
 
-  \item \textbf{Solapamiento inter-ruta}: el par de rutas con mayor superposición espacial
-  presenta un \textit{IoU} de $0{,}55$ (Ilustración~\ref{fig:peor-par}). Este solapamiento
-  persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría local
-  del par, y ningún coeficiente global lo elimina sin degradar las rutas circundantes; la
-  solución estructural es la segmentación previa por área de censo.
+  \item \textbf{Límites de la evidencia}
+  \begin{itemize}
+    \item \textbf{Costo no medido de las disyunciones de nodos}: declarar cada árbol
+    como una disyunción unitaria (Sección~\ref{sec:disyunciones}) amplía el vecindario
+    de búsqueda local; como el GLS se corta por reloj de pared, ese costo se traduce en
+    calidad menor alcanzable dentro del mismo presupuesto, no en tiempo mayor. La
+    ablación que mediría el efecto no se ejecutó porque la alternativa sin disyunciones
+    no es operable: sin ellas, un árbol inalcanzable deja al \textit{solver} sin solución
+    para todo el \textit{dataset} (Anexo~\ref{anx:efectos-no-medidos}).
 
-  \item \textbf{Ausencia de una cota inferior de referencia para el relleno de
-  trayecto}: la Sección~\ref{sec:discusion-calidad} caracteriza el relleno de
-  trayecto por la variación relativa del desplazamiento entre configuraciones, sin
-  una cota inferior absoluta que separe qué fracción es geometría irreducible. El
-  Anexo 4 construye esa cota ($\text{MSF}_k$, el bosque generador mínimo de $k$
-  componentes) y un ancla alcanzable ($\text{UB}_k$) que mide su flojedad: el ancla
-  se sitúa entre un $13$\,\% y un $29$\,\% por encima de la cota en las instancias
-  reales, de modo que el exceso medido contra $\text{MSF}_k$ sobreestima el relleno
-  evitable en a lo sumo esa magnitud, sin que ninguna de las doce celdas re-juzgadas
-  cambie de veredicto. Queda pendiente reexpresar contra $\text{MSF}_k$ las cifras
-  de relleno de esta memoria, que siguen formuladas como desplazamiento relativo.
+    \item \textbf{Ausencia de una cota inferior de referencia para el relleno de
+    trayecto}: la Sección~\ref{sec:discusion-calidad} caracteriza el relleno de
+    trayecto por la variación relativa del desplazamiento entre configuraciones, sin
+    una cota inferior absoluta que separe qué fracción es geometría irreducible. El
+    Anexo 4 construye esa cota ($\text{MSF}_k$, el bosque generador mínimo de $k$
+    componentes) y un ancla alcanzable ($\text{UB}_k$) que mide su flojedad: el ancla
+    se sitúa entre un $13$\,\% y un $29$\,\% por encima de la cota en las instancias
+    reales, de modo que el exceso medido contra $\text{MSF}_k$ sobreestima el relleno
+    evitable en a lo sumo esa magnitud, sin que ninguna de las doce celdas re-juzgadas
+    cambie de veredicto. Queda pendiente reexpresar contra $\text{MSF}_k$ las cifras
+    de relleno de esta memoria, que siguen formuladas como desplazamiento relativo.
 
-  \item \textbf{Geometría de referencia de la métrica de auto-cruces}: el número de
-  auto-cruces se calcula sobre las cuerdas rectas entre paradas consecutivas, geometría
-  distinta de la que optimiza el \textit{solver} (tiempo de red de OSRM) y de la que
-  recorre el censador (trazado real de calles); la correspondencia entre las tres no
-  se ha comprobado. La métrica conserva su valor comparativo entre configuraciones
-  medidas con la misma vara, con la reserva que el Anexo 4 detalla.
+    \item \textbf{Geometría de referencia de la métrica de auto-cruces}: el número de
+    auto-cruces se calcula sobre las cuerdas rectas entre paradas consecutivas,
+    geometría distinta de la que optimiza el \textit{solver} (tiempo de red de OSRM) y
+    de la que recorre el censador (trazado real de calles); la correspondencia entre
+    las tres no se ha comprobado. La métrica conserva su valor comparativo entre
+    configuraciones medidas con la misma vara, con la reserva que el Anexo 4 detalla.
 
-  \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el ahorro de
-  \textit{OR-Tools} frente al heurístico del vecino más cercano, cuando este recibe el
-  mismo post-proceso de resecuenciación, es de solo un $4{,}8$\,\% del desplazamiento
-  total (Tabla~\ref{tab:comparativa}). Esta proximidad es un artefacto de saturación: el
-  \textit{greedy} llena cada ruta hasta un $98$\,\% de $T_{\max}$, de modo que su
-  reducción de caminata proviene de la cota temporal, no de la calidad del ordenamiento.
-  Por la misma razón, el índice de balance favorece al \textit{greedy} ($0{,}908$ frente
-  a $0{,}835$): saturar toda ruta hasta el borde de la cota iguala duraciones, y el
-  cociente $\min_r T_r / \max_r T_r$ no distingue esa igualación de un reparto
-  deliberado, lo que acota su valor como criterio de calidad. La diferencia entre ambos
-  enfoques se manifiesta en la holgura media de la jornada y en la menor severidad de la
-  ruta residual de \textit{OR-Tools}, no en el balance.
+    \item \textbf{Exactitud no medida del estimador de distancias}: el perfil peatonal
+    de OSRM se aparta de la caminata real de terreno por no modelar pendientes,
+    semáforos, congestión peatonal ni el ritmo de un censador; la magnitud de esa
+    desviación no se midió porque exigiría una jornada de terreno con registro de
+    tiempos, fuera del alcance de esta memoria (Sección~\ref{sec:verificacion}). Cabe
+    esperar que el error sea sistemático ---todas las rutas se estiman con el mismo
+    perfil sobre la misma red---, lo que lo hace más sensible para las cifras absolutas
+    de duración que para las comparaciones relativas entre configuraciones
+    (Anexo~\ref{anx:efectos-no-medidos}).
+  \end{itemize}
 
-  \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre el
-  coeficiente de la penalización inferior ($10\,000\,\text{s}^{-1}$) y el de la superior
-  ($500\,\text{s}^{-1}$) es un compromiso de diseño calibrado, no un defecto. El
-  experimento de sensibilidad demuestra que el término inferior sostiene el balance de
-  carga y evita la fragmentación en rutas cortas; reducirlo o suprimirlo degrada el
-  balance a $0{,}739$ y eleva la flota a $32$ rutas. La asimetría es intencional y su
-  efecto está medido.
+  \item \textbf{Resultados que acotan la lectura}
+  \begin{itemize}
+    \item \textbf{Solapamiento inter-ruta}: el par de rutas con mayor superposición
+    espacial presenta un \textit{IoU} de $0{,}55$ (Ilustración~\ref{fig:peor-par}).
+    Este solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde
+    a la geometría local del par, y ningún coeficiente global lo elimina sin degradar
+    las rutas circundantes; la solución estructural es la segmentación previa por área
+    de censo.
 
-  \item \textbf{Exactitud no medida del estimador de distancias}: el perfil peatonal
-  de OSRM se aparta de la caminata real de terreno por no modelar pendientes,
-  semáforos, congestión peatonal ni el ritmo de un censador; la magnitud de esa
-  desviación no se midió porque exigiría una jornada de terreno con registro de
-  tiempos, fuera del alcance de esta memoria (Sección~\ref{sec:verificacion}). Cabe
-  esperar que el error sea sistemático ---todas las rutas se estiman con el mismo
-  perfil sobre la misma red---, lo que lo hace más sensible para las cifras absolutas
-  de duración que para las comparaciones relativas entre configuraciones
-  (Anexo~\ref{anx:efectos-no-medidos}).
+    \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el ahorro de
+    \textit{OR-Tools} frente al heurístico del vecino más cercano, cuando este recibe
+    el mismo post-proceso de resecuenciación, es de solo un $4{,}8$\,\% del
+    desplazamiento total (Tabla~\ref{tab:comparativa}). Esta proximidad es un artefacto
+    de saturación: el \textit{greedy} llena cada ruta hasta un $98$\,\% de $T_{\max}$,
+    de modo que su reducción de caminata proviene de la cota temporal, no de la calidad
+    del ordenamiento. Por la misma razón, el índice de balance favorece al
+    \textit{greedy} ($0{,}908$ frente a $0{,}835$): saturar toda ruta hasta el borde
+    de la cota iguala duraciones, y el cociente $\min_r T_r / \max_r T_r$ no distingue
+    esa igualación de un reparto deliberado, lo que acota su valor como criterio de
+    calidad. La diferencia entre ambos enfoques se manifiesta en la holgura media de la
+    jornada y en la menor severidad de la ruta residual de \textit{OR-Tools}, no en el
+    balance.
+
+    \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre
+    el coeficiente de la penalización inferior ($10\,000\,\text{s}^{-1}$) y el de la
+    superior ($500\,\text{s}^{-1}$) es un compromiso de diseño calibrado, no un defecto.
+    El experimento de sensibilidad demuestra que el término inferior sostiene el balance
+    de carga y evita la fragmentación en rutas cortas; reducirlo o suprimirlo degrada el
+    balance a $0{,}739$ y eleva la flota a $32$ rutas. La asimetría es intencional y su
+    efecto está medido.
+  \end{itemize}
+
 \end{itemize}
 
 \section{POSIBLES MEJORAS}
