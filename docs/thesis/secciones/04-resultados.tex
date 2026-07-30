@@ -111,29 +111,10 @@ desviación estándar de 559\,s en la duración de las rutas individuales
 (Tabla~\ref{tab:metricas}) es el promedio de las desviaciones estándar calculadas
 dentro de cada repetición, no la desviación del conjunto agregado de rutas.
 
-Corresponde acotar el alcance de esa sensibilidad, que no se limita al tiempo de
-desplazamiento. Mediciones posteriores sobre la suite de instancias congeladas,
-con réplicas construidas del mismo modo, arrojan dispersiones de otro orden de
-magnitud sobre las métricas de calidad: el índice de balance de carga de una
-configuración experimental, medido en 0{,}727 sobre una corrida única, resulta ser
-0{,}181 $\pm$ 0{,}215 sobre cinco réplicas
-(\texttt{docs/experiments/sweep-metrology-20260720.md}). La cifra no es
-comparable con el 5{,}1\,\% de esta sección ---aquella es un índice adimensional y
-esta dispersión del tiempo de desplazamiento---, pero fija el orden de la
-sensibilidad al orden de entrada, y resulta coherente con la diferencia de
-3{,}9\,\% entre corridas distintas que se describe más abajo y que tiene ese mismo
-origen.
-
-Una medición posterior acota, a su vez, el alcance de esas réplicas. Sobre el
-conjunto de evaluación agregado, las cinco semillas de una misma corrida arrojan
-barras de error de entre $\pm 745$ y $\pm 1\,062$\,s sobre el tiempo de
-desplazamiento, pero la media de una misma configuración experimental se desplazó
-de $59\,971$ a $62\,751$\,s entre dos corridas distintas
-(\texttt{docs/experiments/stops-penalty-sweep-20260722.md}), un salto mayor que
-esa dispersión entre semillas. Las barras de error publicadas acotan, por tanto,
-la varianza entre semillas dentro de una corrida, no la varianza entre corridas;
-comparar medias de corridas distintas queda fuera de lo que la instrumentación
-actual justifica.
+La sensibilidad al orden de entrada no se limita al tiempo de desplazamiento: sobre
+las métricas de calidad alcanza un orden de magnitud mayor, y las barras de error
+entre semillas de una corrida no acotan la varianza entre corridas distintas
+(Anexo~\ref{anx:grilla-variantes}).
 
 El criterio de $< 5$ minutos se aplica al tiempo de cómputo del \textit{solver}. El
 tiempo total del \textit{pipeline} depende de si la matriz de costos está en
