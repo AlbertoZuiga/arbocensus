@@ -16,22 +16,23 @@ $T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol y los
 ---que agrega al objetivo un término de dispersión geográfica, véase la
 Sección~\ref{sec:estrategias}--- y un tiempo límite de \textit{solver} de 120\,s, que es
 el valor que produce la heurística $\min(30 + 1{,}5\,n,\ 120)$ para cualquier
-\textit{dataset} de este tamaño. Se reportan ocho indicadores: el número de
-rutas $k$ generado de forma automática por el \textit{solver}, el tiempo promedio por
-ruta $\bar{T}$, el índice de balance de carga ---cociente entre la duración de la
-ruta más corta y la de la más larga, cuyo criterio de aceptación es que alcance al
-menos $0{,}80$ (CA-03)---, la desviación estándar de los tiempos de ruta, que
-describe la dispersión de las duraciones sin criterio asociado, el número de rutas
-que exceden la cota dura $T_{\max}$ ---que debe ser cero por construcción--- y el
-número de rutas que quedan por debajo de la cota blanda $T_{\min}$ ---que no tiene
-criterio asociado,
-por tratarse de un objetivo penalizado y no de una restricción---. A ellos se suman
-el número de árboles descartados ---el modelo admite descartes mediante disyunciones
-penalizadas, de modo que la cobertura total no está garantizada a priori--- y el
-tiempo de cómputo del \textit{solver}. La Tabla~\ref{tab:metricas} resume estos
-resultados como el promedio de tres repeticiones (semillas 42, 43 y 44) y remite,
-en su columna de criterio, a los criterios de aceptación comprometidos en la
-Sección~\ref{sec:criterios-aceptacion}.
+\textit{dataset} de este tamaño. Se reportan ocho indicadores:
+\begin{enumerate}[label=\alph*)]
+  \item el número de rutas $k$, salida automática del \textit{solver};
+  \item el tiempo promedio por ruta $\bar{T}$;
+  \item el índice de balance de carga, cociente entre la ruta más corta y la más
+    larga, con criterio $\geq 0{,}80$ (CA-03);
+  \item la desviación estándar de los tiempos de ruta, descriptiva y sin criterio;
+  \item el número de rutas que exceden $T_{\max}$, que debe ser cero por
+    construcción;
+  \item el número de rutas que quedan por debajo de $T_{\min}$, sin criterio por
+    tratarse de un objetivo penalizado;
+  \item el número de árboles descartados;
+  \item el tiempo de cómputo del \textit{solver}.
+\end{enumerate}
+La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de tres
+repeticiones (semillas 42, 43 y 44) y remite, en su columna de criterio, a los
+criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptacion}.
 
 \begin{table}[H]
   \centering
@@ -399,13 +400,9 @@ explícito en la partición.
 \subsubsection*{Estrategias evaluadas}
 
 A partir de ese diagnóstico se evaluaron las dos estrategias de partición
-espacial descritas en la Sección~\ref{sec:estrategias} ---\texttt{spatial\_term},
-que penaliza el \textit{span} geográfico de cada ruta dentro del mismo modelo
-global, y \texttt{cluster\_first}, que particiona los nodos con $k$-medias
-\citep{lloyd1982least,arthur2007kmeans} antes de resolver un VRP independiente por
-grupo, según el esquema \textit{cluster-first, route-second} que formularon Fisher y
-Jaikumar \citeyearpar{fisher1981generalized}--- contra la formulación vigente
-(\texttt{global}) sobre el \textit{dataset} real de $n = 1\,607$ árboles.
+espacial ---\texttt{spatial\_term} y \texttt{cluster\_first}
+(Sección~\ref{sec:estrategias})--- contra la formulación vigente (\texttt{global})
+sobre el \textit{dataset} real de $n = 1\,607$ árboles.
 
 Medir \texttt{cluster\_first} exigió corregir antes dos defectos de su
 implementación: la estimación de $k$ usaba el viaje promedio entre
@@ -1452,13 +1449,23 @@ propiedad, es el resultado.
 
 Cada ciclo fijó su criterio de decisión antes de ejecutarse, versionó sus datos crudos
 y publicó su veredicto con independencia de si confirmaba o refutaba la hipótesis que
-lo motivaba. De los dieciséis ciclos, doce cerraron con un descarte ---pisos de
-balance escalados y factibles, piso por número de paradas, piso combinado, supresión
-del piso, anclaje del objetivo blando superior en $T_{\max}$, peso convexo y peso
-lineal del arco, agrupamiento previo con restricción blanda, \textit{warm start},
-multi-arranque y compuerta de régimen a priori---, dos fueron correcciones del propio
-instrumento de medición, uno caracterizó la flojedad de la cota inferior de referencia
-y uno adoptó un cambio. La conclusión que emerge del conjunto no es que no se encontró
+lo motivaba. De los dieciséis ciclos, doce cerraron con un descarte, dos fueron
+correcciones del propio instrumento de medición, uno caracterizó la flojedad de la
+cota inferior de referencia y uno adoptó un cambio. Los doce descartes fueron:
+\begin{enumerate}[label=\alph*)]
+  \item piso de balance escalado;
+  \item piso de balance factible;
+  \item piso por número de paradas;
+  \item piso combinado;
+  \item supresión del piso;
+  \item anclaje del objetivo blando superior en $T_{\max}$;
+  \item peso convexo del arco;
+  \item peso lineal del arco;
+  \item agrupamiento previo con restricción blanda;
+  \item \textit{warm start};
+  \item multi-arranque;
+  \item compuerta de régimen a priori.
+\end{enumerate} La conclusión que emerge del conjunto no es que no se encontró
 nada, sino que la configuración de producción ya era la adecuada para su régimen de
 operación, y que el margen de mejora que se le suponía a la función objetivo no
 existía. Descartar doce alternativas plausibles con criterio pre-registrado es un
