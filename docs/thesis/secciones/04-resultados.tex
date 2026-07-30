@@ -1093,16 +1093,17 @@ medición. El análisis completo se documenta en
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 \label{sec:perfil-rendimiento}
 
-Esta sección caracteriza el comportamiento temporal del motor de optimización:
-en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
-varían las soluciones ante los parámetros operacionales (tiempo de servicio por
-árbol y cota dura $T_{\max}$) y cuál es la sensibilidad del sistema al tamaño
-del problema y al presupuesto del \textit{solver}. Todas las cifras provienen del
-experimento de perfilado ejecutado el 11--12 de julio de 2026, cuyo protocolo y
-datos crudos se encuentran versionados en el directorio
-\texttt{docs/experiments/} del repositorio (reporte
-\texttt{profiling-20260711.md} y archivos CSV asociados), y son reproducibles
-mediante el comando de gestión \texttt{baseline\_sweep}, verificado
+El tiempo de ejecución se concentra en la metaheurística: con caché caliente el
+GLS acapara el $98{,}1$\,\% del tiempo total y el perfil pasa a estar dominado por
+OSRM en frío. Esta sección documenta ese comportamiento: en qué fases del
+\textit{pipeline} se concentra el tiempo de ejecución, cómo varían las soluciones
+ante los parámetros operacionales (tiempo de servicio por árbol y cota dura
+$T_{\max}$) y cuál es la sensibilidad del sistema al tamaño del problema y al
+presupuesto del \textit{solver}. Todas las cifras provienen del experimento de
+perfilado ejecutado el 11--12 de julio de 2026, cuyo protocolo y datos crudos se
+encuentran versionados en el directorio \texttt{docs/experiments/} del repositorio
+(reporte \texttt{profiling-20260711.md} y archivos CSV asociados), y son
+reproducibles mediante el comando de gestión \texttt{baseline\_sweep}, verificado
 previamente sobre una corrida sintética de $n=80$
 (\texttt{baseline-sweep-20260711.md}).
 
