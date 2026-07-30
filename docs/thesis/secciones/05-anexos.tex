@@ -320,7 +320,7 @@ docker compose -f docker-compose.prod.yml run --rm backend \
 \label{anx:grilla-variantes}
 
 Este anexo complementa las Secciones~\ref{sec:variantes-duracion}
-y~\ref{sec:comparacion-estrategias} con el detalle de la grilla de variantes operacionales
+y~\ref{sec:discusion-calidad} con el detalle de la grilla de variantes operacionales
 y la descripción completa de los cuatro defectos de instrumentación detectados
 en la serie experimental.
 
@@ -363,20 +363,19 @@ con $T_{\max}=2$\,h), que deja un árbol fuera de la solución de forma consiste
 tres semillas.
 
 Respecto de las semillas, corresponde precisar su rol: a diferencia de
-\texttt{baseline\_sweep} (Anexo 3), donde la semilla
-solo etiqueta la repetición, \texttt{config\_algorithm\_sweep} sí la propaga al
-\textit{solver}, que la usa para construir la permutación del orden de entrada de los
-nodos y que por tanto altera la trayectoria del GLS. La varianza observada entre
-repeticiones (columna sd de \texttt{solve} en la tabla) combina ese efecto con el corte
-por tiempo de reloj (\textit{wall-clock}) de la búsqueda local: en las variantes en que
-la búsqueda agota el presupuesto, las tres repeticiones convergen a soluciones casi
-idénticas y la dispersión restante es de origen temporal más que algorítmico.
+\texttt{config\_algorithm\_sweep} (Sección~\ref{sec:discusion-calidad}), donde la
+semilla sí se propaga al \textit{solver} y altera la trayectoria del GLS, esta grilla se
+ejecutó con \texttt{baseline\_sweep} (Anexo 3), donde la semilla solo etiqueta la
+repetición. La varianza observada entre repeticiones (columna sd de \texttt{solve} en
+la tabla) proviene íntegramente del corte por tiempo de reloj (\textit{wall-clock}) de
+la búsqueda local: en las variantes en que la búsqueda agota el presupuesto, las tres
+repeticiones convergen a soluciones casi idénticas.
 
 \phantomsection
 \subsubsection*{Auditoría de robustez metodológica --- detalle}
 \label{anx:auditoria-robustez}
 
-La Sección~\ref{sec:comparacion-estrategias} resume los cuatro defectos de
+La Sección~\ref{sec:discusion-calidad} resume los cuatro defectos de
 instrumentación detectados en la serie experimental. Este apartado los describe
 con el detalle necesario para reproducir las correcciones.
 
