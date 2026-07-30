@@ -18,7 +18,7 @@ import argparse
 import csv
 import json
 import math
-from itertools import combinations
+from itertools import combinations, count
 from pathlib import Path
 
 import matplotlib
@@ -464,6 +464,83 @@ class Panel:
         )
 
 
+SOURCE_STYLES = {
+    "legacy_api": {"color": COLORS[0], "marker": "o"},
+    "legacy_app": {"color": COLORS[1], "marker": "s"},
+}
+
+
+def render_instance(args):
+    points_by_source = {}
+    with open(args.csv, encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            source = row["source"]
+            points_by_source.setdefault(source, []).append(
+                (float(row["lon"]), float(row["lat"]))
+            )
+
+    all_lonlat = [(lon, lat) for pts in points_by_source.values() for lon, lat in pts]
+    if not all_lonlat:
+        raise SystemExit(f"No points loaded from {args.csv}")
+    lat0 = sum(lat for _, lat in all_lonlat) / len(all_lonlat)
+
+    fallback_slot = count(len(SOURCE_STYLES))
+    fig, ax = plt.subplots(figsize=(6.0, 5.2))
+    handles = []
+    all_projected = []
+
+    for source in sorted(points_by_source):
+        pts = points_by_source[source]
+        projected = project(pts, lat0)
+        all_projected.extend(projected)
+        style = SOURCE_STYLES.get(source)
+        if style is None:
+            slot = next(fallback_slot)
+            style = {
+                "color": COLORS[slot % len(COLORS)],
+                "marker": MARKERS[slot % len(MARKERS)],
+            }
+        xs, ys = zip(*projected, strict=True)
+        ax.scatter(
+            xs,
+            ys,
+            c=style["color"],
+            marker=style["marker"],
+            s=4,
+            linewidths=0,
+            zorder=3,
+        )
+        handles.append(
+            Line2D(
+                [],
+                [],
+                color=style["color"],
+                linestyle="none",
+                marker=style["marker"],
+                markersize=5,
+                label=f"{source} ({es_int(len(pts))} árboles)",
+            )
+        )
+
+    set_square_limits(ax, all_projected, args.pad)
+    style_axes(ax, args.label)
+    draw_scale_bar(ax)
+    draw_north_arrow(ax)
+
+    xs_all = [x for x, _ in all_projected]
+    ys_all = [y for _, y in all_projected]
+    span_m = max(max(xs_all) - min(xs_all), max(ys_all) - min(ys_all))
+    print(f"span: {span_m:.0f} m ({span_m / 1000:.1f} km)")
+
+    ax.legend(
+        handles=handles, loc="upper left", fontsize=6.5, framealpha=0.9, borderpad=0.5
+    )
+    if args.title:
+        fig.suptitle(args.title, fontsize=10)
+    fig.tight_layout()
+    return save(fig, args.out)
+
+
 def save(fig, out):
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -586,6 +663,19 @@ def build_parser():
     compare.add_argument("--legend-max", type=int, default=6)
     compare.add_argument("--out", required=True, help="Output path without extension")
     compare.set_defaults(func=render_compare)
+
+    instance = sub.add_parser("instance", help="Points-only map of an instance CSV")
+    instance.add_argument(
+        "--csv", required=True, help="Instance CSV (source,external_id,lat,lon,species)"
+    )
+    instance.add_argument("--title", default=None, help="Figure title")
+    instance.add_argument("--label", default=None, help="Panel title")
+    instance.add_argument(
+        "--pad", type=float, default=0.05, help="Padding fraction around points"
+    )
+    instance.add_argument("--out", required=True, help="Output path without extension")
+    instance.set_defaults(func=render_instance)
+
     return parser
 
 
