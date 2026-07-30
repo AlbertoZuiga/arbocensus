@@ -1,16 +1,18 @@
 import csv
 import io
-from datetime import datetime
 
-from apps.optimization.config_presets import DEFAULT_CONFIG_PRESET
 from apps.optimization.models import OptimizationJob, RoutingSolution
 from apps.optimization.recommendation import (
+    BALANCE_GATE,
     TRAVEL_TIE_PCT,
     order_by_criterion,
     pick_recommended_bulk,
 )
-from django.core.management.base import BaseCommand
+from apps.optimization.strategies import PRODUCTION_JOB_PAIRS
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
+from django.utils import timezone
 
 
 class Command(BaseCommand):
@@ -18,7 +20,7 @@ class Command(BaseCommand):
         "Tally how often each (config_preset, strategy) cell wins the recommendation "
         "criterion over the persisted RoutingSolutions. Writes a CSV to "
         "docs/experiments/ and prints any cell that won but would be pruned by the "
-        "planned fanout reduction."
+        "current PRODUCTION_JOB_PAIRS fanout."
     )
 
     def add_arguments(self, parser):
@@ -33,8 +35,6 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        from django.conf import settings
-
         dataset_ids = list(
             RoutingSolution.objects.filter(job__status=OptimizationJob.Status.COMPLETED)
             .values_list("dataset_id", flat=True)
@@ -78,9 +78,7 @@ class Command(BaseCommand):
             )
         )
 
-        from apps.optimization.recommendation import BALANCE_GATE
-
-        # Best travel per dataset (first row per dataset, order guaranteed by query).
+        # Best by criterion per dataset (first row per dataset, order from the query).
         winner_travel_by_dataset = {}
         winner_id_by_dataset = {}
         for dataset_id, sol_id, travel, _preset, _strategy, *_ in rows:
@@ -90,18 +88,12 @@ class Command(BaseCommand):
 
         recommended_by_dataset = pick_recommended_bulk(dataset_ids)
 
-        # Cells to be pruned: cluster_first or any pair not in the production set.
         production_pairs = {
-            (DEFAULT_CONFIG_PRESET, "global"),
-            (DEFAULT_CONFIG_PRESET, "spatial_term"),
-            ("temporal_span_100", "spatial_term"),
-            ("arc_linear_30", "spatial_term"),
+            (preset, str(strategy)) for preset, strategy in PRODUCTION_JOB_PAIRS
         }
-        pruned_strategies = {"cluster_first"}
 
-        # Tally per (config_preset, strategy) cell across all datasets.
-        cell_stats = {}  # (preset, strategy) → {wins, near_wins, datasets}
-        pruned_winners = []  # cells that would be pruned but are the winner
+        cell_stats = {}
+        pruned_winners = []  # cells outside the fanout that are the recommended winner
 
         for (
             dataset_id,
@@ -115,7 +107,13 @@ class Command(BaseCommand):
         ) in rows:
             cell = (preset, strategy)
             if cell not in cell_stats:
-                cell_stats[cell] = {"wins": 0, "near_wins": 0, "datasets": 0}
+                cell_stats[cell] = {
+                    "recommended": 0,
+                    "strict_winner": 0,
+                    "near_winner": 0,
+                    "datasets": 0,
+                }
+            stats = cell_stats[cell]
 
             winner_travel = winner_travel_by_dataset[dataset_id]
             is_winner = sol_id == winner_id_by_dataset[dataset_id]
@@ -125,17 +123,15 @@ class Command(BaseCommand):
                 and abs(travel - winner_travel) / winner_travel <= TRAVEL_TIE_PCT
             )
 
+            stats["datasets"] += 1
             if is_winner:
-                cell_stats[cell]["datasets"] += 1
-
+                stats["strict_winner"] += 1
             if is_recommended:
-                cell_stats[cell]["wins"] += 1
-
+                stats["recommended"] += 1
             if within_margin and not is_winner:
-                cell_stats[cell]["near_wins"] += 1
+                stats["near_winner"] += 1
 
-            pruned = strategy in pruned_strategies or cell not in production_pairs
-            if is_recommended and pruned:
+            if is_recommended and cell not in production_pairs:
                 if drops > 0:
                     gate = "dropped_trees"
                 elif degens > 0:
@@ -161,31 +157,29 @@ class Command(BaseCommand):
                 "config_preset",
                 "strategy",
                 "times_recommended",
-                "times_near_winner_not_recommended",
+                "times_strict_winner",
+                "times_near_winner_not_winner",
                 "datasets_appearing",
-                "pruned_by_plan",
+                "in_production_fanout",
             ]
         )
-        for (preset, strategy), stats in sorted(cell_stats.items()):
-            pruned = (
-                strategy in pruned_strategies
-                or (preset, strategy) not in production_pairs
-            )
+        for cell, stats in sorted(cell_stats.items()):
             writer.writerow(
                 [
-                    preset,
-                    strategy,
-                    stats["wins"],
-                    stats["near_wins"],
+                    cell[0],
+                    cell[1],
+                    stats["recommended"],
+                    stats["strict_winner"],
+                    stats["near_winner"],
                     stats["datasets"],
-                    pruned,
+                    cell in production_pairs,
                 ]
             )
         csv_text = out.getvalue()
 
         self.stdout.write(csv_text)
 
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        timestamp = timezone.localtime().strftime("%Y%m%d-%H%M%S")
         out_rel = (
             options["output"]
             or f"docs/experiments/{timestamp}-recommendation-census.csv"
@@ -196,12 +190,6 @@ class Command(BaseCommand):
         self.stdout.write(f"CSV: {out_path}")
 
         if pruned_winners:
-            self.stdout.write(
-                self.style.ERROR(
-                    "\nSTOP: the following pruned cells are the recommended winner "
-                    "in at least one dataset. Do not proceed with fanout reduction:\n"
-                )
-            )
             for pw in pruned_winners:
                 self.stdout.write(
                     self.style.ERROR(
@@ -211,11 +199,13 @@ class Command(BaseCommand):
                         f"travel={pw['travel_sec']:.0f}s  gate={pw['gate']}"
                     )
                 )
-            raise SystemExit(1)
-        else:
-            self.stdout.write(
-                self.style.SUCCESS(
-                    "OK: no pruned cell is the recommended winner in any dataset. "
-                    "Safe to proceed with fanout reduction."
-                )
+            raise CommandError(
+                "Cells outside PRODUCTION_JOB_PAIRS are the recommended winner in the "
+                "datasets listed above. Do not prune them."
             )
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "OK: every recommended winner is inside PRODUCTION_JOB_PAIRS."
+            )
+        )

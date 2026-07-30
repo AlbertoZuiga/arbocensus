@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/table";
 
 // Display order only — cluster_first is kept for historical jobs; it is no
-// longer launched by the production fanout (see views.py _PRODUCTION_JOB_PAIRS).
+// longer launched by the production fanout (strategies.py PRODUCTION_JOB_PAIRS).
 const STRATEGY_ORDER = ["global", "spatial_term", "cluster_first"];
 
 function ComparisonTable({ strategies, solutionsByStrategy }) {

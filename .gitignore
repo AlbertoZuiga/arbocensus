@@ -55,6 +55,3 @@ node_modules/
 .github/instructions/
 
 data/osm
-
-# Allow docs/OPTIMIZATION.local.md despite global *.local* pattern
-!docs/OPTIMIZATION.local.md
