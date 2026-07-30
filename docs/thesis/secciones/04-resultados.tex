@@ -1410,10 +1410,10 @@ que exigiría una intermitencia prolongada. El atributo se cumple en su forma d�
 ---no se pierde lo registrado ante un corte breve--- y queda pendiente en la fuerte.
 
 La eficiencia de cómputo se cumple en sus dos componentes. Planificar la instancia
-completa cuesta $120$\,s con la matriz en caché, muy por debajo de la cota, y el
+cuesta $122{,}3$\,s de reloj con la matriz en caché, muy por debajo de la cota, y el
 análisis de sensibilidad de la Tabla~\ref{tab:sensibilidad-tl} muestra que ese
 presupuesto captura prácticamente toda la mejora alcanzable: ampliarlo a $180$\,s
-altera el desplazamiento total en un $0{,}2$\,\% y no cambia ni el número de rutas ni
+altera el desplazamiento total en un $0{,}1$\,\% y no cambia ni el número de rutas ni
 el balance. La salvedad pertinente es que la cifra de $120$\,s es el tope configurado
 y no una medición de convergencia, de modo que el primer componente se satisface por
 construcción y es el segundo el que aporta la evidencia.
@@ -1721,7 +1721,7 @@ propio capítulo que condicionan cómo debe leerse.
 
 Las mejoras enumeradas a continuación se derivan de los resultados del capítulo.
 La primera es la de mayor valor para el proyecto; las dos siguientes tienen además
-anclaje en mediciones propias de esta memoria. Las cuatro restantes abordan
+anclaje en mediciones propias de esta memoria. Las cinco restantes abordan
 limitaciones funcionales independientes de la serie experimental. Cada una indica
 la evidencia que la respalda, su costo y qué habría que construir.
 
@@ -1785,7 +1785,7 @@ la evidencia que la respalda, su costo y qué habría que construir.
   mediante Playwright.
 \end{itemize}
 
-Una octava extensión se evaluó y quedó descartada por la propia medición, lo
+Una novena extensión se evaluó y quedó descartada por la propia medición, lo
 que justifica dejarla registrada. La compuerta de régimen por saturación
 consistía en activar el brazo \texttt{upper-tmax-tmin9000} por encima de un
 umbral $\overline{\text{sat}} \gtrsim 0{,}9$, ya que el barrido de la
