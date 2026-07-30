@@ -850,7 +850,7 @@ creación. El resultado es que el recorte territorial del censo es una decisión
 explícita del administrador, tomada sobre la evidencia cartográfica, y no una
 consecuencia de cómo estaban organizadas las áreas en el sistema anterior.
 
-La Ilustración~\ref{fig:ui_legacy} muestra el mapa de selección con una sesión en curso.
+El mapa de selección con una sesión en curso aparece en la Ilustración~\ref{fig:ui_legacy}.
 
 \capturaui{ui-legacy-import.png}{Mapa de selección de arbolado legado}{Mapa de selección de arbolado legado (\texttt{/admin/datasets/legacy-import}): polígonos de las áreas de censo, marcadores coloreados por estado (disponible, seleccionado, ya importado) y panel lateral de la selección acumulada.}{fig:ui_legacy}
 
@@ -1014,41 +1014,30 @@ El panel de administración comprende cinco etapas:
 
 \begin{enumerate}
   \item \textbf{Sesión.} El administrador inicia sesión y obtiene un \textit{token} JWT.
-  \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}).
+  \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles aparece en la Ilustración~\ref{fig:ui_datasets} del Anexo~\ref{anx:capturas}.
   \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol, elige la estrategia ---o la opción \textit{«Comparar las 3»}--- y lanza el trabajo. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} comprueba la factibilidad de la configuración (bloqueos y advertencias) antes de que se cree el trabajo.
   \item \textbf{Monitoreo.} \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el \textit{worker} muere (Sección~\ref{sec:limitaciones}).
-  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real; \texttt{StrategyTabs} permite contrastar las soluciones de cada estrategia. La función \texttt{pick\_recommended} señala automáticamente la solución preferible según criterio lexicográfico; \texttt{suggest\_assignment} propone la asignación de rutas a censadores que minimiza el déficit de carga acumulado entre campañas. El administrador publica la solución elegida y asigna las rutas.
+  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real; \texttt{StrategyTabs} permite contrastar las soluciones de cada estrategia. La función \texttt{pick\_recommended} señala automáticamente la solución preferible según criterio lexicográfico; \texttt{suggest\_assignment} propone la asignación de rutas a censadores que minimiza el déficit de carga acumulado entre campañas. El administrador publica la solución elegida y asigna las rutas. El tablero de avance del censo se muestra en la Ilustración~\ref{fig:ui_progress} del Anexo~\ref{anx:capturas}.
 \end{enumerate}
 
-La Ilustración~\ref{fig:ui_datasets} presenta el listado de \textit{datasets} disponibles en el sistema.
-
-\capturaui{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de \textit{datasets} e importación de archivos (\texttt{/admin/datasets}).}{fig:ui_datasets}
-
-La tabla muestra el nombre de cada \textit{dataset}, el número de árboles y la fecha de importación; los botones superiores dan acceso a las dos rutas de creación: subida de archivo y selección desde las fuentes legadas.
-
-La Ilustración~\ref{fig:ui_optimization} muestra la pestaña de optimización del \textit{dataset}.
+La Ilustración~\ref{fig:ui_optimization} corresponde a la pestaña de optimización del \textit{dataset}.
 
 \capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa con las rutas de la última optimización, el comparador de estrategias y el formulario de parámetros temporales y de estrategia.}{fig:ui_optimization}
 
 El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$, tiempo de servicio y estrategia) y el estado de la última optimización; el clic sobre un marcador del mapa despliega el historial de observaciones de ese árbol, lo que permite al administrador verificar si ya fue censado antes de lanzar la optimización.
 
-La Ilustración~\ref{fig:ui_routes} muestra la pestaña de asignación con las tres estrategias comparables.
+La pestaña de asignación con las tres estrategias comparables aparece en la Ilustración~\ref{fig:ui_routes}.
 
 \capturaui{ui-routes.png}{Detalle de un \textit{dataset}: pestaña de asignación}{El mismo detalle en su pestaña de asignación: pestañas de estrategia con sus métricas, polilíneas coloreadas sobre la red peatonal y asignación de cada ruta a un censador. El trabajo se lanzó en modo \texttt{compare}, de ahí las tres soluciones comparables.}{fig:ui_routes}
 
 Las tres pestañas superiores resumen las métricas de cada estrategia ---número de rutas y tiempo total de jornada--- lo que permite al administrador seleccionar la solución que publicará; el panel derecho materializa la asignación de cada ruta a un censador antes de publicar el plan.
 
-Publicado el plan, el administrador supervisa el avance del censo en terreno desde
-la pestaña de progreso del \textit{dataset}. El tablero resume el porcentaje de
-árboles censados, omitidos y pendientes, los sitúa sobre el mapa coloreados según su
-estado y desglosa el avance por ruta y por censador, de modo que el administrador
-puede identificar qué rutas van retrasadas y redistribuir la carga.
-
-La Ilustración~\ref{fig:ui_progress} muestra el tablero de avance de un \textit{dataset} en curso.
-
-\capturaui{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}): porcentaje de árboles censados, omitidos y pendientes; mapa coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.}{fig:ui_progress}
-
-La barra de progreso global y el desglose por ruta permiten identificar qué rutas se han detenido; el mapa colorea cada árbol según su estado ---censado, omitido o pendiente--- para ubicar geográficamente el avance del censo.
+Publicado el plan, el administrador supervisa el avance del censo desde la pestaña
+de progreso: el tablero resume el porcentaje de árboles censados, omitidos y
+pendientes, los sitúa sobre el mapa según su estado y desglosa el avance por ruta y
+por censador, de modo que se identifican qué rutas van retrasadas. Esta vista
+realiza RF-19 y RF-20; la ilustración correspondiente se incluye en el
+Anexo~\ref{anx:capturas} (Ilustración~\ref{fig:ui_progress}).
 
 El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first}
 orientada al trabajo en terreno. Recupera únicamente las rutas del plan vigente
