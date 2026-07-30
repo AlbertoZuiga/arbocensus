@@ -1,4 +1,5 @@
 import numpy as np
+from apps.optimization.config_presets import CONFIG_PRESETS
 from apps.optimization.models import RoutingSolution
 from apps.optimization.n_estimator import (
     estimate_max_vehicles,
@@ -22,6 +23,28 @@ except ImportError:
 # Meters of route geographic span cost one unit of objective per coefficient.
 # Higher → tighter, less overlapping routes at the price of more total travel time.
 SPATIAL_SPAN_COEF = 3
+
+# Strategies the default job fanout pairs every preset with.
+# cluster_first is excluded: dropping it costs no travel in any real dataset (where it
+# won, another cell tied its travel and it only took the id tiebreak) and its balance
+# is 0.21-0.24 below the control. A COMPARE job still runs all three.
+PRODUCTION_STRATEGIES = (
+    RoutingSolution.Strategy.GLOBAL,
+    RoutingSolution.Strategy.SPATIAL_TERM,
+)
+
+# Default fanout of a POST to /optimization/jobs/: one job per pair.
+# Every preset x every production strategy. Measured over the 16 real datasets with
+# all 9 cells present, this recovers the winner of the full fanout in every dataset
+# at zero travel cost, while dropping cluster_first saves a third of the CPU.
+# Hand-picking a shorter list is what costs travel: keeping only spatial_term on the
+# alternate presets gave up the winner in 4 of 15 datasets, up to +2.54%.
+# The single source of truth: views.py and recommendation_census both read this.
+PRODUCTION_JOB_PAIRS = tuple(
+    (preset, strategy)
+    for preset in CONFIG_PRESETS
+    for strategy in PRODUCTION_STRATEGIES
+)
 
 
 def solve_by_strategy(

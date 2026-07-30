@@ -74,6 +74,8 @@ const baseSolution = {
   degenerate_routes: 0,
   published_at: null,
   recommended: false,
+  travel_margin_pct: null,
+  technical_tie: false,
 };
 
 // API-ordered best-first: s2 ranks ahead of s1.

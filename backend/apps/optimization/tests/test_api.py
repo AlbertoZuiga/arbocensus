@@ -4,6 +4,7 @@ import pytest
 from apps.optimization.config_presets import CONFIG_PRESETS
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.recommendation import BALANCE_GATE
+from apps.optimization.strategies import PRODUCTION_JOB_PAIRS
 from rest_framework.test import APIClient
 from tests.factories import CustomUserFactory
 
@@ -25,7 +26,9 @@ def _payload(dataset):
     }
 
 
-def test_admin_creates_one_job_per_preset(make_dataset_with_trees, monkeypatch):
+def test_default_create_produces_the_production_job_pairs(
+    make_dataset_with_trees, monkeypatch
+):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
     delay = MagicMock()
     monkeypatch.setattr("apps.optimization.views.run_optimization.delay", delay)
@@ -35,13 +38,53 @@ def test_admin_creates_one_job_per_preset(make_dataset_with_trees, monkeypatch):
     )
 
     assert response.status_code == 201
-    assert len(response.data) == len(CONFIG_PRESETS)
+    assert len(response.data) == len(PRODUCTION_JOB_PAIRS)
     config = RoutingConfig.objects.get(dataset=dataset)
     assert config.min_route_time_sec == 3600
-    jobs = OptimizationJob.objects.filter(config=config)
+    jobs = list(OptimizationJob.objects.filter(config=config))
+    assert {(job.config_preset, job.strategy) for job in jobs} == {
+        (preset, str(strategy)) for preset, strategy in PRODUCTION_JOB_PAIRS
+    }
+    strategies = {job.strategy for job in jobs}
+    assert OptimizationJob.Strategy.COMPARE not in strategies
+    assert OptimizationJob.Strategy.CLUSTER_FIRST not in strategies
+    assert all(job.status == OptimizationJob.Status.QUEUED for job in jobs)
+    assert delay.call_count == len(PRODUCTION_JOB_PAIRS)
+
+
+def test_form_encoded_full_comparison_false_keeps_the_production_fanout(
+    make_dataset_with_trees, monkeypatch
+):
+    # A form-encoded "false" is a truthy string: it must be parsed as a boolean.
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", MagicMock())
+
+    response = _client("admin").post(
+        "/api/optimization/jobs/",
+        {**_payload(dataset), "full_comparison": "false"},
+    )
+
+    assert response.status_code == 201
+    assert len(response.data) == len(PRODUCTION_JOB_PAIRS)
+    jobs = OptimizationJob.objects.filter(config__dataset=dataset)
+    assert not jobs.filter(strategy=OptimizationJob.Strategy.COMPARE).exists()
+
+
+def test_full_comparison_creates_compare_jobs_for_all_presets(
+    make_dataset_with_trees, monkeypatch
+):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    delay = MagicMock()
+    monkeypatch.setattr("apps.optimization.views.run_optimization.delay", delay)
+
+    payload = {**_payload(dataset), "full_comparison": True}
+    response = _client("admin").post("/api/optimization/jobs/", payload, format="json")
+
+    assert response.status_code == 201
+    assert len(response.data) == len(CONFIG_PRESETS)
+    jobs = list(OptimizationJob.objects.filter(config__dataset=dataset))
     assert {job.config_preset for job in jobs} == set(CONFIG_PRESETS)
     assert all(job.strategy == OptimizationJob.Strategy.COMPARE for job in jobs)
-    assert all(job.status == OptimizationJob.Status.QUEUED for job in jobs)
     assert delay.call_count == len(CONFIG_PRESETS)
 
 
@@ -161,6 +204,8 @@ def test_get_solution_shape(make_dataset_with_trees):
         "balance_below_gate",
         "dropped_trees",
         "dropped_tree_ids",
+        "travel_margin_pct",
+        "technical_tie",
         "degenerate_routes",
         "sum_max_radius_m",
         "interleave_total",
@@ -247,6 +292,73 @@ def test_list_solutions_filters_by_dataset_and_flags_recommended(
     recommended = {row["id"]: row["recommended"] for row in response.data["results"]}
     assert recommended[str(fast.id)] is True
     assert recommended[str(slow.id)] is False
+
+
+def test_technical_tie_is_relative_to_the_recommended_solution(make_dataset_with_trees):
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    config = RoutingConfig.objects.create(dataset=dataset)
+    job = OptimizationJob.objects.create(
+        config=config, status=OptimizationJob.Status.COMPLETED
+    )
+    recommended = RoutingSolution.objects.create(
+        job=job, strategy="spatial_term", total_routes=1, total_travel_time_sec=1000.0
+    )
+    tied = RoutingSolution.objects.create(
+        job=job, strategy="global", total_routes=1, total_travel_time_sec=1010.0
+    )
+    far = RoutingSolution.objects.create(
+        job=job, strategy="cluster_first", total_routes=1, total_travel_time_sec=1500.0
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/solutions/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    rows = {row["id"]: row for row in response.data["results"]}
+    assert rows[str(recommended.id)]["recommended"] is True
+    # The recommended solution is never its own technical tie.
+    assert rows[str(recommended.id)]["technical_tie"] is False
+    assert rows[str(recommended.id)]["travel_margin_pct"] == 0.0
+    assert rows[str(tied.id)]["technical_tie"] is True
+    assert rows[str(tied.id)]["travel_margin_pct"] == 1.0
+    assert rows[str(far.id)]["technical_tie"] is False
+    assert rows[str(far.id)]["travel_margin_pct"] == 50.0
+
+
+def test_travel_margin_is_null_for_a_solution_of_an_older_config(
+    make_dataset_with_trees,
+):
+    # An older RoutingConfig has different time bounds, so its travel is not
+    # comparable to the ranked sweep: no margin and no tie badge.
+    dataset, _ = make_dataset_with_trees([(-70.65, -33.45)])
+    old_config = RoutingConfig.objects.create(dataset=dataset)
+    new_config = RoutingConfig.objects.create(dataset=dataset)
+    old_job = OptimizationJob.objects.create(
+        config=old_config, status=OptimizationJob.Status.COMPLETED
+    )
+    new_job = OptimizationJob.objects.create(
+        config=new_config, status=OptimizationJob.Status.COMPLETED
+    )
+    old_solution = RoutingSolution.objects.create(
+        job=old_job, strategy="spatial_term", total_routes=1, total_travel_time_sec=10.0
+    )
+    current = RoutingSolution.objects.create(
+        job=new_job,
+        strategy="spatial_term",
+        total_routes=1,
+        total_travel_time_sec=900.0,
+    )
+
+    response = _client("admin").get(
+        "/api/optimization/solutions/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    rows = {row["id"]: row for row in response.data["results"]}
+    assert rows[str(current.id)]["recommended"] is True
+    assert rows[str(old_solution.id)]["travel_margin_pct"] is None
+    assert rows[str(old_solution.id)]["technical_tie"] is False
 
 
 def test_list_solutions_ordered_best_first(make_dataset_with_trees):

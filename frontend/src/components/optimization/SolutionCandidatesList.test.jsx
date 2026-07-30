@@ -47,6 +47,8 @@ const baseSolution = {
   generated_at: "2026-07-28T12:00:00Z",
   published_at: null,
   recommended: false,
+  travel_margin_pct: null,
+  technical_tie: false,
 };
 
 beforeEach(() => {
@@ -72,6 +74,52 @@ describe("SolutionCandidatesList", () => {
 
     expect(await screen.findByText("★ Recomendada")).toBeInTheDocument();
     expect(screen.getByText(/Equilibrada · Global/)).toBeInTheDocument();
+  });
+
+  it("shows technical-tie badge on non-recommended tie solution", async () => {
+    fetchSolutionsForDataset.mockResolvedValue([
+      { ...baseSolution, id: "s1", recommended: true },
+      { ...baseSolution, id: "s2", strategy: "spatial_term", technical_tie: true },
+    ]);
+
+    renderList();
+
+    expect(await screen.findByText("Empate técnico")).toBeInTheDocument();
+  });
+
+  it("shows travel margin on non-recommended solution with positive margin", async () => {
+    fetchSolutionsForDataset.mockResolvedValue([
+      { ...baseSolution, id: "s1", recommended: true, travel_margin_pct: 0 },
+      {
+        ...baseSolution,
+        id: "s2",
+        strategy: "spatial_term",
+        travel_margin_pct: 2.5,
+      },
+    ]);
+
+    renderList();
+
+    expect(await screen.findByText(/\+2\.5% caminata vs\. recomendada/)).toBeInTheDocument();
+  });
+
+  it("shows a negative margin when the tie rule recommends a slower solution", async () => {
+    fetchSolutionsForDataset.mockResolvedValue([
+      { ...baseSolution, id: "s1", recommended: true, travel_margin_pct: 0 },
+      {
+        ...baseSolution,
+        id: "s2",
+        strategy: "spatial_term",
+        travel_margin_pct: -1.5,
+        technical_tie: true,
+      },
+    ]);
+
+    renderList();
+
+    expect(
+      await screen.findByText(/−1\.5% caminata vs\. recomendada/),
+    ).toBeInTheDocument();
   });
 
   it("warns about dropped trees and degenerate routes", async () => {

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .config_presets import CONFIG_PRESETS
 from .feasibility import check_config
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
-from .recommendation import BALANCE_GATE, pick_recommended
+from .recommendation import BALANCE_GATE, TRAVEL_TIE_PCT, pick_recommended
 
 
 class RoutingConfigSerializer(serializers.ModelSerializer):
@@ -76,6 +76,8 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
     config_preset_label = serializers.SerializerMethodField()
     balance_below_gate = serializers.SerializerMethodField()
     recommended = serializers.SerializerMethodField()
+    travel_margin_pct = serializers.SerializerMethodField()
+    technical_tie = serializers.SerializerMethodField()
     dropped_tree_ids = serializers.SerializerMethodField()
 
     class Meta:
@@ -93,6 +95,8 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
             "balance_below_gate",
             "dropped_trees",
             "dropped_tree_ids",
+            "travel_margin_pct",
+            "technical_tie",
             "degenerate_routes",
             "sum_max_radius_m",
             "interleave_total",
@@ -130,6 +134,35 @@ class RoutingSolutionSerializer(serializers.ModelSerializer):
         if "recommended_by_dataset" in self.context:
             return self.context["recommended_by_dataset"].get(obj.dataset_id) == obj.id
         return pick_recommended(obj.dataset_id) == obj.id
+
+    def _rec_ctx(self, obj):
+        # Solutions from an older RoutingConfig are not comparable to the ranked sweep
+        # (different max_route_time_sec, service_time_sec): no margin is meaningful.
+        ctx = (self.context.get("rec_context_by_dataset") or {}).get(obj.dataset_id)
+        if ctx is None or obj.job.config_id != ctx["sweep_config_id"]:
+            return None
+        return ctx
+
+    def get_travel_margin_pct(self, obj):
+        ctx = self._rec_ctx(obj)
+        if ctx is None:
+            return None
+        rec_travel = ctx["recommended_travel_sec"]
+        if not rec_travel:
+            return None
+        return round(
+            (obj.total_travel_time_sec - rec_travel) / rec_travel * 100,
+            1,
+        )
+
+    def get_technical_tie(self, obj):
+        ctx = self._rec_ctx(obj)
+        if ctx is None or obj.id == ctx["recommended_id"]:
+            return False
+        rec_travel = ctx["recommended_travel_sec"]
+        if not rec_travel:
+            return False
+        return abs(obj.total_travel_time_sec - rec_travel) / rec_travel < TRAVEL_TIE_PCT
 
     def get_dropped_tree_ids(self, obj):
         return [str(t.id) for t in obj.dropped.all() if t.is_active]

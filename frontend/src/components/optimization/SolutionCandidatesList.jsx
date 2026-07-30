@@ -76,6 +76,9 @@ function CandidateCard({
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {solution.recommended && <Badge variant="success">★ Recomendada</Badge>}
+        {!solution.recommended && solution.technical_tie && (
+          <Badge variant="outline">Empate técnico</Badge>
+        )}
         {solution.published_at && <Badge variant="secondary">✓ Publicada</Badge>}
         {isActive && <Badge variant="outline">En el mapa</Badge>}
       </div>
@@ -92,6 +95,12 @@ function CandidateCard({
         />
       </div>
 
+      {solution.travel_margin_pct != null && solution.travel_margin_pct !== 0 && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {solution.travel_margin_pct > 0 ? "+" : "−"}
+          {Math.abs(solution.travel_margin_pct)}% caminata vs. recomendada
+        </p>
+      )}
       {warnings.length > 0 && (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-500">
           ⚠ {warnings.join(" · ")}

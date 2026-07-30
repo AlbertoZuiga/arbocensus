@@ -105,12 +105,12 @@ def test_pipeline_sequences_start_at_one_per_route(requests_mock):
         assert sequences == list(range(1, len(sequences) + 1))
 
 
-def test_pipeline_cluster_first_persists_all_trees(requests_mock):
+def test_pipeline_cluster_first_explicit_persists_all_trees(requests_mock):
     tree_count = 20
     job = make_job(tree_count)
     requests_mock.get(ANY, json=osrm_durations(tree_count))
 
-    OptimizationPipeline(job).run()
+    OptimizationPipeline(job).run(strategy="cluster_first")
 
     solution = job.solutions.get(strategy=RoutingSolution.Strategy.CLUSTER_FIRST)
     stops = RouteStop.objects.filter(route__solution=solution)
