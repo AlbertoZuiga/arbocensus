@@ -99,7 +99,7 @@ Los modelos de dominio centrales son los siguientes:
   \item \textbf{Tree}: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}. Registra además su procedencia mediante los campos \texttt{source} y \texttt{external\_id}, que identifican la fuente legada y el identificador que el árbol tenía en ella (Sección~\ref{sec:legacy}).
   \item \textbf{RoutingConfig}: parámetros de una sesión de optimización ($T_{\min}$, $T_{\max}$, $s$).
   \item \textbf{OptimizationJob}: tarea de optimización con estado (\texttt{queued}, \texttt{running}, \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
-  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre unión) del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo \texttt{timing}).
+  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre unión) del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo \texttt{timing}). La relación \texttt{participants} registra los censadores que participan de la solución y alimenta el cálculo de carga acumulada por censador (Sección~\ref{sec:ui}).
   \item \textbf{Route}: ruta individual con tiempos estimados; su asignación a un censador (\texttt{surveyor}) es opcional.
   \item \textbf{RouteStop}: visita de un árbol en una ruta, con número de secuencia y estado de visita.
   \item \textbf{TreeObservation}: registro histórico del estado de un árbol en un instante dado (Sección~\ref{sec:recenso}). Es la entidad que convierte el sistema en una herramienta de re-censo y no solo de censo inicial.
@@ -484,6 +484,15 @@ costos en caché y no dispara ninguna consulta a OSRM: si el \textit{dataset} a�
 tiene matriz calculada, el sistema responde que la estimación no está disponible en
 lugar de incurrir en el costo de construirla.
 
+La misma invocación comprueba la factibilidad de la configuración antes de crear el
+trabajo, mediante la función \texttt{check\_config}. Esta distingue dos categorías:
+bloqueos, que son condiciones que garantizan infactibilidad (tiempo de servicio mayor
+que $T_{\max}$, conjunto de árboles insuficiente), y advertencias, que son condiciones
+de riesgo pero no determinantes (régimen de relleno activado, trabajo total muy por
+debajo del piso de jornada). El \textit{endpoint} \texttt{GET /api/optimization/estimate/}
+devuelve ambas categorías junto a la estimación de flota, de modo que el administrador
+puede detectar configuraciones problemáticas antes de lanzar la optimización.
+
 % ---- 3.3.4 ------------------------------------------------------
 \subsection{\textit{Solver} VRP con \textit{OR-Tools}}
 \label{sec:solver}
@@ -770,6 +779,11 @@ observaciones asociado (Sección~\ref{sec:recenso}) dentro de una misma transacc
 de modo que un fallo parcial no deja \textit{datasets} a medio poblar.
 \end{sloppypar}
 
+El explorador admite además filtrar el arbolado por estado (\texttt{already\_imported}
+o disponible) y por fuente de origen, y permite seleccionar un árbol que ya fue
+importado en otro \textit{dataset}, de modo que una misma posición geográfica puede
+integrarse en campañas distintas cuando el territorio se solapa.
+
 Existe además un \textit{endpoint} auxiliar,
 \texttt{POST /api/datasets/import-legacy/}, que importa un área completa o la
 totalidad de la fuente sin selección previa. No forma parte del flujo del usuario y
@@ -919,8 +933,8 @@ grupos de recursos:
 \begin{itemize}
   \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de \textit{tokens} \textit{JSON Web Token} (JWT) mediante \textit{djangorestframework-simplejwt}, consulta del usuario en sesión y administración de las cuentas de censadores.
   \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV o JSON con detección automática de las columnas de coordenadas, exploración de las fuentes legadas y creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y exportación de árboles como \textit{GeoJSON FeatureCollection}.
-  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el \textit{frontend}), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
-  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
+  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota y comprobación de factibilidad de la configuración (bloqueos y advertencias) previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el \textit{frontend}), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
+  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, carga acumulada por censador con sugerencia de asignación voraz, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
 El sistema implementa dos roles: Administrador (acceso completo) y Censador
@@ -942,8 +956,8 @@ el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
     \midrule
     Autenticación & \texttt{/api/auth/} & Tokens JWT, consulta del usuario en sesión y gestión de cuentas de censadores. \\
     \textit{Datasets} & \texttt{/api/datasets/} & Importación CSV/JSON y desde fuentes legadas, exploración, exportación \textit{GeoJSON} e historial de observaciones. \\
-    Optimización & \texttt{/api/optimization/} & Estimación de flota, creación de trabajos, \textit{polling} de estado, métricas de soluciones y publicación del plan vigente. \\
-    Rutas & \texttt{/api/routes/} & Listado con métricas, exportación \textit{GeoJSON}, asignación de censadores, ruta propia del censador y registro de visitas y omisiones. \\
+    Optimización & \texttt{/api/optimization/} & Estimación de flota y comprobación de factibilidad, creación de trabajos, \textit{polling} de estado, métricas de soluciones y publicación del plan vigente. \\
+    Rutas & \texttt{/api/routes/} & Listado con métricas, exportación \textit{GeoJSON}, asignación de censadores, carga acumulada por censador con sugerencia de asignación, ruta propia del censador y registro de visitas y omisiones. \\
     \bottomrule
   \end{tabularx}
 \end{table}
