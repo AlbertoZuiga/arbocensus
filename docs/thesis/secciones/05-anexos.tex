@@ -10,10 +10,10 @@
 
 La API se implementa con Django REST Framework y se publica bajo el prefijo
 \texttt{/api/}. La autenticación es por \textit{JSON Web Token} mediante
-\textit{djangorestframework-simplejwt}: el cliente obtiene un par de tokens en
-\texttt{POST /api/auth/token/} y envía el token de acceso en la cabecera
+\textit{djangorestframework-simplejwt}: el cliente obtiene un par de \textit{tokens} en
+\texttt{POST /api/auth/token/} y envía el \textit{token} de acceso en la cabecera
 \texttt{Authorization: Bearer <token>}. La vigencia por defecto es de 60 minutos
-para el token de acceso y de 7 días para el de refresco, ambas configurables por
+para el \textit{token} de acceso y de 7 días para el de refresco, ambas configurables por
 variable de entorno.
 
 La autorización se resuelve sobre el campo \texttt{role} del usuario mediante dos
@@ -38,15 +38,15 @@ importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
 
 \begin{table}[H]
   \centering
-  \caption{Endpoints de autenticación y administración de usuarios.}
+  \caption{\textit{Endpoints} de autenticación y administración de usuarios.}
   \label{tab:anexo_api_auth}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
     \toprule
     Método y ruta & Permiso & Devuelve \\
     \midrule
-    \texttt{POST \slash api\slash auth\slash token\slash }          & Público      & Par de tokens JWT (\texttt{access}, \texttt{refresh}) a partir de usuario y contraseña. \\
-    \texttt{POST \slash api\slash auth\slash token\slash refresh\slash }  & Público      & Nuevo token de acceso a partir de un token de refresco válido. \\
+    \texttt{POST \slash api\slash auth\slash token\slash }          & Público      & Par de \textit{tokens} JWT (\texttt{access}, \texttt{refresh}) a partir de usuario y contraseña. \\
+    \texttt{POST \slash api\slash auth\slash token\slash refresh\slash }  & Público      & Nuevo \textit{token} de acceso a partir de un \textit{token} de refresco válido. \\
     \texttt{GET \slash api\slash auth\slash me\slash }              & Autenticado  & Usuario en sesión: \texttt{id}, \texttt{username}, \texttt{email} y \texttt{role}. Es la consulta que usa el \textit{frontend} para decidir qué interfaz mostrar. \\
     \texttt{GET \slash api\slash auth\slash surveyors\slash }       & Admin        & Censadores registrados, para poblar el selector de asignación de rutas. \\
     \texttt{GET \slash api\slash auth\slash users\slash }           & Admin        & Listado paginado de usuarios. \\
@@ -60,7 +60,7 @@ importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
 
 \begin{table}[H]
   \centering
-  \caption{Endpoints de \textit{datasets} e importación legada.}
+  \caption{\textit{Endpoints} de \textit{datasets} e importación legada.}
   \label{tab:anexo_api_datasets}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
@@ -84,7 +84,7 @@ importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
 
 \begin{table}[H]
   \centering
-  \caption{Endpoints del motor de optimización.}
+  \caption{\textit{Endpoints} del motor de optimización.}
   \label{tab:anexo_api_optimization}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
@@ -104,7 +104,7 @@ importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
 
 \begin{table}[H]
   \centering
-  \caption{Endpoints de rutas y captura en terreno.}
+  \caption{\textit{Endpoints} de rutas y captura en terreno.}
   \label{tab:anexo_api_routes}
   \small
   \begin{tabularx}{\textwidth}{@{}p{5.5cm} p{1.9cm} X@{}}
@@ -166,8 +166,8 @@ docker compose exec backend python manage.py seed_demo \
   \end{tabularx}
 \end{table}
 
-El comando crea un \texttt{Dataset} y sus \texttt{Tree} (un \texttt{PointField} por
-árbol, SRID 4326) y, cuando el perfil o el \textit{flag} lo indican, crea además la
+El comando crea un \texttt{Dataset} y sus \texttt{Tree}, un \texttt{PointField} por
+árbol con SRID 4326. Cuando el perfil o el \textit{flag} lo indican, crea además la
 \texttt{RoutingConfig} con los parámetros por defecto ($T_{\min} = 7\,200$\,s,
 $T_{\max} = 10\,800$\,s, tiempo de servicio $120$\,s), el \texttt{OptimizationJob}
 correspondiente y ejecuta el \textit{pipeline} de forma síncrona ---sin pasar por
@@ -334,7 +334,7 @@ semillas 42, 43 y 44 y un límite de \textit{solver} de 180\,s; la tabla reporta
 
 \begin{table}[H]
   \centering
-  \caption{Grilla de seis variantes sobre el \textit{dataset} real ($n=1\,607$; media de 3 semillas; límite de \textit{solver} de 180\,s). El total del \textit{pipeline} equivale al tiempo de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
+  \caption{Grilla de seis variantes sobre el \textit{dataset} real ($n=1\,607$; media de 3 semillas; estrategia \texttt{global}; límite de \textit{solver} de 180\,s; código previo a la corrección del redondeo del tránsito). El total del \textit{pipeline} equivale al tiempo de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
   \label{tab:grilla-variantes}
   \small
   \begin{tabularx}{\textwidth}{rrXXXXXXX}
@@ -405,7 +405,7 @@ La distancia entre esa cota y lo que un recorrido concreto alcanza está medida.
 experimento posterior construyó, para cada instancia, un ancla alcanzable
 $\text{UB}_k$ ---los $k$ recorridos abiertos que resultan de partir un recorrido
 \textit{TSP} sobre los mismos $n$ nodos por sus $k-1$ tramos más caros--- y la
-contrastó contra $\text{MSF}_k$: ese recorrido queda entre un $13$\,\% y un $29$\,\%
+contrastó contra $\text{MSF}_k$. Ese recorrido queda entre un $13$\,\% y un $29$\,\%
 por encima de la cota en las instancias reales, con $13{,}3$\,\% en
 \texttt{area-27-n72}, $18{,}6$\,\% en \texttt{area-26-n157}, $21{,}1$\,\% en
 \texttt{area-29-n43} y a lo sumo $28{,}8$\,\% en \texttt{reference-n1607}
