@@ -796,11 +796,8 @@ Su costo computacional es despreciable frente al del \textit{solver}. Cada barri
 examina $O(m_r^2)$ pares para una ruta de $m_r$ paradas y el procedimiento repite
 barridos hasta el óptimo local; como la carga de servicio acota $m_r$ a unas
 decenas de árboles en las configuraciones operacionales, el costo es del orden de
-milisegundos: la Tabla~\ref{tab:comparativa} reporta $0{,}09$\,s para el
-\textit{greedy} con post-proceso frente a $0{,}007$\,s sin él, lo que sitúa el
-post-proceso en aproximadamente $0{,}08$\,s sobre los $1\,607$ árboles de la
-evaluación, tres órdenes de magnitud bajo el presupuesto del \textit{solver}
-(Capítulo~\ref{cap:resultados}).
+milisegundos, tres órdenes de magnitud bajo el presupuesto del \textit{solver}; la
+Sección~\ref{sec:comparacion-greedy} lo cuantifica sobre la instancia de evaluación.
 
 La adopción de este post-proceso como comportamiento por defecto no fue inmediata:
 una primera evaluación lo rechazó por empeorar la métrica de auto-cruces, y solo la
