@@ -449,9 +449,7 @@ límite de tabla. El sistema fija por ello un tope de $350$ árboles por solicit
 Cuando el \textit{dataset} lo supera, la matriz se construye por fragmentación
 (\textit{chunking}): los puntos se dividen en bloques de $175$ coordenadas
 ---la mitad del tope, ya que cada petición fragmentada transporta simultáneamente
-las coordenadas del bloque origen y las del bloque destino--- y se solicita un
-bloque $(i,j)$ de la matriz por cada par de bloques, empleando los parámetros
-\texttt{sources} y \texttt{destinations} de OSRM. El número de solicitudes crece
+las coordenadas del bloque origen y las del bloque destino---. El número de solicitudes crece
 de forma cuadrática con el número de bloques, lo que domina el costo de la primera
 construcción de la matriz para \textit{datasets} grandes
 (Capítulo~\ref{cap:resultados}). Un tope adicional de $2\,000$ árboles acota la
@@ -1011,30 +1009,15 @@ estado de sesión (autenticación, notificaciones) con Zustand; los mapas emplea
 \citep{openstreetmap}. La aplicación distingue dos experiencias según el rol del usuario:
 el panel de administración y el portal del censador.
 
-El panel de administración comprende cinco etapas. En primer lugar, el administrador
-inicia sesión y obtiene un \textit{token} JWT. En segundo lugar, constituye un
-\textit{dataset} de árboles, ya sea importando un archivo CSV o seleccionando el
-arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos
-el resultado se visualiza como puntos sobre un mapa (\texttt{DatasetMap}). En tercer
-lugar, configura los parámetros temporales ($T_{\min}$, $T_{\max}$, tiempo de
-servicio), elige la estrategia de partición ---o la opción \textit{«Comparar las
-3»}--- y lanza el trabajo de optimización. En
-cuarto lugar, el estado del trabajo se monitorea mediante \textit{polling} automático
-con \textit{React Query}, que consulta el \textit{endpoint} de estado cada 3 segundos mientras el
-trabajo se encuentra en estado \texttt{queued} o \texttt{running} y detiene las
-consultas al alcanzar un estado terminal o al superar los 15 minutos desde su
-creación, de modo que un trabajo colgado no deja al navegador consultando
-indefinidamente. El abandono es del cliente: el registro del trabajo permanece en
-estado \texttt{running} si el \textit{worker} muere después de iniciar la tarea,
-pues el sistema no implementa reconciliación por latido ni por marca de inicio. Es
-una limitación asumida (Sección~\ref{sec:limitaciones}). Finalmente, se presentan las rutas resultantes: cuando el trabajo
-ejecutó más de una estrategia, un componente de pestañas (\texttt{StrategyTabs})
-permite alternar entre las soluciones \texttt{global}, \texttt{spatial\_term} y
-\texttt{cluster\_first} y comparar sus métricas; cuando ejecutó una sola, la muestra
-como una etiqueta fija. Las rutas se dibujan como polilíneas coloreadas que siguen la
-red de calles real, obtenidas del trazado peatonal que devuelve OSRM. Desde esta vista
-el administrador publica la solución elegida como plan vigente y asigna cada ruta a un
-censador.
+El panel de administración comprende cinco etapas:
+
+\begin{enumerate}
+  \item \textbf{Sesión.} El administrador inicia sesión y obtiene un \textit{token} JWT.
+  \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}).
+  \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol, elige la estrategia ---o la opción \textit{«Comparar las 3»}--- y lanza el trabajo. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} comprueba la factibilidad de la configuración (bloqueos y advertencias) antes de que se cree el trabajo.
+  \item \textbf{Monitoreo.} \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el \textit{worker} muere (Sección~\ref{sec:limitaciones}).
+  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real; \texttt{StrategyTabs} permite contrastar las soluciones de cada estrategia. La función \texttt{pick\_recommended} señala automáticamente la solución preferible según criterio lexicográfico; \texttt{suggest\_assignment} propone la asignación de rutas a censadores que minimiza el déficit de carga acumulado entre campañas. El administrador publica la solución elegida y asigna las rutas.
+\end{enumerate}
 
 La Ilustración~\ref{fig:ui_datasets} presenta el listado de \textit{datasets} disponibles en el sistema.
 
