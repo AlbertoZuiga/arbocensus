@@ -636,16 +636,23 @@ la duración de las rutas, pero no incorpora ningún criterio geográfico explí
 en la partición de los nodos. Como consecuencia, las rutas se agrupan por
 proximidad temporal y no espacial, lo que produce \textit{solapamiento}
 (\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
-(Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias de
-partición, seleccionables al crear el trabajo de optimización mediante el campo
-\texttt{strategy}. Un cuarto valor, \texttt{compare}, ejecuta las tres sobre el mismo
-conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por
-estrategia, lo que permite contrastarlas bajo una misma matriz de costos y un mismo
-presupuesto de \textit{solver}; es el modo con que se produjeron las comparaciones del
-Capítulo~\ref{cap:resultados}. La estrategia \texttt{global} reproduce el
-comportamiento de la formulación anterior sin cambios y constituye la línea base;
-la estrategia seleccionada por defecto es \texttt{spatial\_term}, a la luz de los
-resultados de la comparación (Capítulo~\ref{cap:resultados}).
+(Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres
+estrategias de partición, registradas en el campo \texttt{strategy} del trabajo de
+optimización. La estrategia \texttt{global} reproduce el comportamiento de la
+formulación anterior sin cambios y constituye la línea base.
+
+Las tres estrategias no se ofrecen como una elección del administrador. Un valor
+adicional del campo, \texttt{compare}, ejecuta las tres sobre el mismo conjunto de
+árboles y persiste una \texttt{RoutingSolution} independiente por estrategia, lo que
+permite contrastarlas bajo una misma matriz de costos y un mismo presupuesto de
+\textit{solver}; es el modo con que se produjeron las comparaciones del
+Capítulo~\ref{cap:resultados} y queda reservado a ese uso experimental. El
+lanzamiento ordinario despliega en cambio un abanico fijo de combinaciones, descrito
+en la Sección~\ref{sec:ui}, del que \texttt{cluster\_first} está excluida: el
+Capítulo~\ref{cap:resultados} la descarta con datos ---deja árboles fuera de la
+solución y degrada el balance--- y mantenerla en el abanico de producción gastaría
+un tercio del cómputo en una candidata que el criterio de selección nunca elige.
+Permanece accesible por la vía experimental, no por la del administrador.
 
 \begin{itemize}
   \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
@@ -725,6 +732,100 @@ corrección posterior de esa métrica ---que medía sobre cuerdas rectas y no so
 trazado real de calles--- permitió establecer que el algoritmo mejora
 simultáneamente el tiempo de viaje y la geometría real. Esa historia, y la medición
 que la cierra, se documentan en la Sección~\ref{sec:discusion-calidad}.
+
+% ---- 3.3.8 ------------------------------------------------------
+\subsection{Perfiles de precios y abanico de producción}
+\label{sec:abanico}
+
+Los coeficientes de la función objetivo no admiten un único valor correcto: cada
+ajuste compra una propiedad de la solución al precio de otra, y qué propiedad
+conviene comprar depende de la densidad del \textit{dataset} y de la holgura de la
+jornada (Capítulo~\ref{cap:resultados}). El sistema resuelve esa indeterminación sin
+trasladarla al administrador: en lugar de exponer los coeficientes como parámetros,
+define tres perfiles de precios cerrados, con nombre y descripción en el lenguaje
+del usuario, y los ejecuta todos.
+
+\begin{itemize}
+  \item \textbf{Equilibrada} (\texttt{default}): los precios de producción tal como
+        se describieron en las secciones anteriores. Es el punto de partida y la
+        combinación de control.
+  \item \textbf{Rutas más parejas} (\texttt{temporal\_span\_100}): activa el costo
+        sobre el \textit{span} de la dimensión temporal con coeficiente $100$, lo
+        que iguala la duración entre rutas a costa de caminata adicional.
+  \item \textbf{Menos zigzag} (\texttt{arc\_linear\_30}): eleva a $30$ el peso
+        lineal del arco, lo que penaliza los tramos largos y compacta el trazado
+        cuando sobra tiempo de desplazamiento.
+\end{itemize}
+
+Una única solicitud de optimización despliega el producto cartesiano de los tres
+perfiles por las dos estrategias de producción ---\texttt{global} y
+\texttt{spatial\_term}, con \texttt{cluster\_first} excluida
+(Sección~\ref{sec:estrategias})---, es decir, seis trabajos que comparten la misma
+\texttt{RoutingConfig} y, por tanto, la misma matriz de costos en caché. El costo
+marginal de las cinco combinaciones adicionales es el del \textit{solver}, no el de
+OSRM, que es la fase cara de la primera construcción
+(Sección~\ref{sec:matriz}). Las seis soluciones resultantes se ordenan y se presentan
+al administrador como candidatas comparables (Sección~\ref{sec:ui}). La
+Ilustración~\ref{fig:abanico} resume el despliegue del abanico y el criterio
+lexicográfico que ordena sus candidatas.
+
+\begin{figure}[H]
+  \centering
+  \shorthandoff{<>}%
+  \begin{tikzpicture}[
+      scale=0.82, transform shape,
+      cab/.style={font=\small},
+      celda/.style={draw, rounded corners=2pt, align=center, font=\small,
+                    minimum width=3.1cm, minimum height=0.95cm},
+      origen/.style={draw, rounded corners=2pt, align=center, font=\small,
+                     minimum width=8.4cm, minimum height=1.1cm},
+      paso/.style={draw, rounded corners=2pt, align=center, font=\scriptsize,
+                   minimum width=2.45cm, minimum height=1.25cm},
+      final/.style={draw, thick, rounded corners=2pt, align=center, font=\small,
+                    minimum width=5.4cm, minimum height=1.0cm},
+      flujo/.style={->, >=stealth, thick}
+    ]
+    \node[origen] (cfg) at (3.6,2.5)
+      {Una solicitud de optimización\\ una \texttt{RoutingConfig} · una matriz OSRM en caché};
+
+    \node[cab] at (1.6,1.15) {\texttt{global}};
+    \node[cab] at (5.6,1.15) {\texttt{spatial\_term}};
+    \node[cab, align=right] at (-1.7,0.3)  {Equilibrada};
+    \node[cab, align=right] at (-1.7,-1.0) {Rutas más parejas};
+    \node[cab, align=right] at (-1.7,-2.3) {Menos zigzag};
+
+    \node[celda] (c1) at (1.6,0.3)   {candidata 1};
+    \node[celda] (c2) at (5.6,0.3)   {candidata 2};
+    \node[celda] (c3) at (1.6,-1.0)  {candidata 3};
+    \node[celda] (c4) at (5.6,-1.0)  {candidata 4};
+    \node[celda] (c5) at (1.6,-2.3)  {candidata 5};
+    \node[celda] (c6) at (5.6,-2.3)  {candidata 6};
+
+    \draw[flujo] (cfg.south) -- (3.6,1.6) -- (1.6,1.6) -- (c1.north);
+    \draw[flujo] (3.6,1.6) -- (5.6,1.6) -- (c2.north);
+
+    \node[paso] (p1) at (-2.6,-4.6) {sin árboles\\ fuera de ruta};
+    \node[paso] (p2) at (0.2,-4.6)  {sin rutas\\ degeneradas};
+    \node[paso] (p3) at (3.0,-4.6)  {balance\\ $\geq 0{,}60$};
+    \node[paso] (p4) at (5.8,-4.6)  {menor tiempo de\\ desplazamiento};
+    \node[paso] (p5) at (8.6,-4.6)  {menor número\\ de rutas};
+
+    \draw[flujo] (1.6,-2.85) -- (1.6,-3.3) -- (-2.6,-3.3) -- (p1.north);
+    \draw[flujo] (p1) -- (p2);
+    \draw[flujo] (p2) -- (p3);
+    \draw[flujo] (p3) -- (p4);
+    \draw[flujo] (p4) -- (p5);
+
+    \node[final] (rec) at (3.0,-6.4) {candidata recomendada};
+    \draw[flujo] (p5.south) -- (8.6,-6.4) -- (rec.east);
+  \end{tikzpicture}
+  \caption[Abanico de producción y criterio de selección]{Abanico de producción: tres
+  perfiles de precios por dos estrategias de partición dan seis candidatas que
+  comparten configuración y matriz de costos. El criterio lexicográfico las ordena
+  aplicando los cinco desempates en secuencia; la primera se marca como recomendada
+  y las restantes se informan con su costo adicional en caminata.}
+  \label{fig:abanico}
+\end{figure}
 
 % ---- 3.4 -------------------------------------------------------
 \section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
@@ -959,7 +1060,7 @@ grupos de recursos:
 \begin{itemize}
   \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de \textit{tokens} \textit{JSON Web Token} (JWT) mediante \textit{djangorestframework-simplejwt}, consulta del usuario en sesión y administración de las cuentas de censadores.
   \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV o JSON con detección automática de las columnas de coordenadas, exploración de las fuentes legadas y creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y exportación de árboles como \textit{GeoJSON FeatureCollection}.
-  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota y comprobación de factibilidad de la configuración (bloqueos y advertencias) previa a la optimización, creación de trabajos, consulta de estado (para \textit{polling} desde el \textit{frontend}), acceso a las métricas de cada \texttt{RoutingSolution} y publicación o despublicación de la solución vigente por \textit{dataset}.
+  \item \textbf{Optimización} (\texttt{/api/optimization/}): estimación de flota y comprobación de factibilidad de la configuración (bloqueos y advertencias) previa a la optimización, creación de trabajos ---una sola solicitud crea los seis del abanico de producción (Sección~\ref{sec:abanico}) y responde con la lista completa---, consulta de estado (para \textit{polling} desde el \textit{frontend}), acceso a las métricas de cada \texttt{RoutingSolution} ordenadas por el criterio de recomendación, y publicación o despublicación de la solución vigente por \textit{dataset}.
   \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON} para visualización cartográfica, asignación de censadores, carga acumulada por censador con sugerencia de asignación voraz, consulta de la ruta propia del censador, y registro de visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
@@ -1010,22 +1111,22 @@ El panel de administración comprende cinco etapas:
 \begin{enumerate}
   \item \textbf{Sesión.} El administrador inicia sesión y obtiene un \textit{token} JWT.
   \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles aparece en la Ilustración~\ref{fig:ui_datasets} del Anexo~\ref{anx:capturas}.
-  \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol, elige la estrategia ---o la opción \textit{«Comparar las 3»}--- y lanza el trabajo. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} comprueba la factibilidad de la configuración (bloqueos y advertencias) antes de que se cree el trabajo.
+  \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del objetivo: una sola solicitud despliega el abanico de seis combinaciones descrito en la Sección~\ref{sec:abanico}. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} se consulta a medida que el administrador escribe y comprueba la factibilidad de la configuración antes de que se cree el trabajo: las advertencias se muestran junto al formulario y los bloqueos inhabilitan el botón de lanzamiento.
   \item \textbf{Monitoreo.} \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el \textit{worker} muere (Sección~\ref{sec:limitaciones}).
-  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real; \texttt{StrategyTabs} permite contrastar las soluciones de cada estrategia. La función \texttt{pick\_recommended} señala automáticamente la solución preferible según criterio lexicográfico; \texttt{suggest\_assignment} propone la asignación de rutas a censadores que minimiza el déficit de carga acumulado entre campañas. El administrador publica la solución elegida y asigna las rutas. El tablero de avance del censo se muestra en la Ilustración~\ref{fig:ui_progress} del Anexo~\ref{anx:capturas}.
+  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real. El componente \texttt{SolutionCandidatesList} lista las seis soluciones como candidatas a plan, ordenadas de mejor a peor por el criterio lexicográfico que implementa \texttt{order\_by\_criterion} ---sin árboles fuera de ruta, luego sin rutas degeneradas, luego puntaje de balance no inferior a $0{,}60$, luego menor tiempo de desplazamiento y menor número de rutas---. La primera se marca como recomendada y las demás informan cuánta caminata adicional cuestan respecto de ella; una candidata cuyo desplazamiento difiere de la recomendada en menos del $3$\,\% se rotula como empate técnico, de modo que el administrador distingue una ventaja real de una diferencia dentro del ruido del \textit{solver}. La recomendación no es vinculante: el administrador publica la candidata que estime conveniente. Publicado el plan, \texttt{suggest\_assignment} propone una asignación de rutas a censadores que reduce el déficit de carga acumulado entre campañas, y el administrador la acepta o la modifica ruta por ruta.
 \end{enumerate}
 
 La Ilustración~\ref{fig:ui_optimization} corresponde a la pestaña de optimización del \textit{dataset}.
 
-\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa con las rutas de la última optimización, el comparador de estrategias y el formulario de parámetros temporales y de estrategia.}{fig:ui_optimization}
+\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: pestaña de optimización}{Detalle de un \textit{dataset} (\texttt{/admin/datasets/\{id\}}), pestaña de optimización: mapa con las rutas de la última optimización, la lista de candidatas a plan y el formulario de parámetros temporales.}{fig:ui_optimization}
 
-El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$, tiempo de servicio y estrategia) y el estado de la última optimización; el clic sobre un marcador del mapa despliega el historial de observaciones de ese árbol, lo que permite al administrador verificar si ya fue censado antes de lanzar la optimización.
+El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$ y tiempo de servicio) y el estado de la última optimización; el clic sobre un marcador del mapa despliega el historial de observaciones de ese árbol, lo que permite al administrador verificar si ya fue censado antes de lanzar la optimización.
 
-La pestaña de asignación con las tres estrategias comparables aparece en la Ilustración~\ref{fig:ui_routes}.
+La pestaña de asignación aparece en la Ilustración~\ref{fig:ui_routes}.
 
-\capturaui{ui-routes.png}{Detalle de un \textit{dataset}: pestaña de asignación}{El mismo detalle en su pestaña de asignación: pestañas de estrategia con sus métricas, polilíneas coloreadas sobre la red peatonal y asignación de cada ruta a un censador. El trabajo se lanzó en modo \texttt{compare}, de ahí las tres soluciones comparables.}{fig:ui_routes}
+\capturaui{ui-routes.png}{Detalle de un \textit{dataset}: pestaña de asignación}{El mismo detalle en su pestaña de asignación: candidatas a plan con sus métricas, polilíneas coloreadas sobre la red peatonal y asignación de cada ruta a un censador.}{fig:ui_routes}
 
-Las tres pestañas superiores resumen las métricas de cada estrategia ---número de rutas y tiempo total de jornada--- lo que permite al administrador seleccionar la solución que publicará; el panel derecho materializa la asignación de cada ruta a un censador antes de publicar el plan.
+Cada candidata resume tres métricas ---número de rutas, tiempo de caminata y puntaje de balance--- y destaca en cuáles de ellas es la mejor de la corrida; los árboles que quedan fuera de ruta, las rutas degeneradas y el balance bajo el umbral no se presentan como cifras sino como advertencias en lenguaje llano, porque son condiciones que descalifican a la candidata y no magnitudes que el administrador deba ponderar. El panel derecho materializa la asignación de cada ruta a un censador. Como dos corridas con parámetros temporales distintos no son comparables entre sí, la lista muestra una sola corrida a la vez y un selector permite alternar entre ellas.
 
 Publicado el plan, el administrador supervisa el avance del censo desde la pestaña
 de progreso: el tablero resume el porcentaje de árboles censados, omitidos y
