@@ -336,14 +336,12 @@ inactivo no contribuye a ninguno de los seis términos.
 
 Los tres propósitos que la Ecuación~\ref{eq:objetivo} escalariza son:
 
-\renewcommand{\labelenumi}{\alph{enumi})}
 \begin{enumerate}
   \item Minimizar el número de rutas $k = \sum_r z_r$, a través del término de flota.
   \item Minimizar el tiempo total de desplazamiento, a través del costo de arco.
   \item Reducir el desbalance de carga entre rutas, a través de las dos penalizaciones
         blandas que empujan cada $T_r$ hacia el intervalo $[T_{\min},\,\tau]$.
 \end{enumerate}
-\renewcommand{\labelenumi}{\arabic{enumi}.}
 
 Corresponde precisar el tercero, porque su enunciado usual ---«minimizar la
 desviación estándar de $T_r$»--- no describe lo que el modelo hace. Una desviación
@@ -722,8 +720,7 @@ el campo \texttt{source} del modelo \texttt{Tree}:
         código QR, descartando las lecturas sin coordenada y aquellas con latitud
         igual a cero ---el valor con que la aplicación previa dejaba constancia de una
         lectura de GPS fallida---. Se emplea la
-        mediana y no el promedio por su robustez frente a lecturas de GPS
-        atípicas, habituales en captura urbana bajo copa arbórea. De este modo se
+        mediana y no el promedio por su robustez frente a lecturas de GPS atípicas. De este modo se
         obtienen $1\,178$ árboles con posición utilizable.
   \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): posterior a la
         anterior, aporta $429$ árboles con posición explícita y especie, organizados en
@@ -789,7 +786,6 @@ estos últimos, además, no son interactivos, lo que hace imposible seleccionar 
 veces el mismo árbol---. La selección puede componerse mediante tres mecanismos
 combinables:
 
-\renewcommand{\labelenumi}{\alph{enumi})}
 \begin{enumerate}
   \item \textbf{Por área}: al hacer clic sobre el polígono de un área se alternan de
         una vez todos los árboles contenidos en ella.
@@ -799,7 +795,6 @@ combinables:
   \item \textbf{Por árbol individual}: el clic sobre un marcador agrega o quita ese
         árbol de la selección.
 \end{enumerate}
-\renewcommand{\labelenumi}{\arabic{enumi}.}
 
 Un panel lateral mantiene visible la selección acumulada y permite la
 deselección manual de cualquier árbol, de forma que los tres mecanismos
@@ -1093,14 +1088,12 @@ ejercitan tal como operan en producción. Las del motor de optimización comprue
 propiedades del modelo y no valores concretos ---que dependerían del corte por reloj
 de pared del \textit{solver}---:
 
-\renewcommand{\labelenumi}{\alph{enumi})}
 \begin{enumerate}
   \item el depósito ficticio no aparece en ninguna ruta extraída;
   \item la suma de paradas más descartes cubre el conjunto de árboles;
   \item la clave de caché de la matriz es independiente del orden de consulta;
   \item ninguna ruta excede $T_{\max}$ en la aritmética entera del \textit{solver}.
 \end{enumerate}
-\renewcommand{\labelenumi}{\arabic{enumi}.}
 
 Corresponde acotar el alcance de esta verificación. No existen pruebas automatizadas
 de extremo a extremo: los flujos completos de administrador y de censador se comprueban por partes, nunca
