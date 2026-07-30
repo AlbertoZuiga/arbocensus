@@ -76,3 +76,5 @@ seed:
 # as external — their compose files stop resolving until the infra is back up.
 shared-down:
 	docker compose $(SHARED) stop db osrm
+
+-include Makefile.local
