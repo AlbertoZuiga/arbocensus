@@ -371,7 +371,7 @@ paradas (\texttt{RouteStop}), usando la distancia de \textit{haversine}
   pertenecientes a \textit{otras} rutas que caen dentro de la caja envolvente
   (\textit{bounding box}) de una ruta dada, sumado sobre todas las rutas. Se
   reporta tanto el total como su valor normalizado por número de rutas
-  ($\overline{\text{solap}} = \text{total}/k$), para permitir comparar entre
+  ($\overline{\text{solap}} = \text{total}/k$), para comparar entre
   tamaños de \textit{dataset}. Mayor indica peor partición espacial.
   \item \textbf{IoU peor par}: intersección sobre unión de las cajas
   envolventes del par de rutas con mayor superposición. Mayor indica mayor
@@ -506,7 +506,7 @@ alcanzable, pero lo hace incumpliendo dos de las tres salvaguardas del criterio:
 a) degrada el balance a $0{,}698$ frente al $0{,}838$ de \texttt{global}; b) encarece
 el desplazamiento total en un $16{,}9$\,\%, por sobre el margen del $10$\,\% admitido.
 A ello se suman dos costos que el criterio no pondera y un censo sí: deja 12 árboles
-fuera de la solución ---la estrategia es determinista, pues el $k$-medias emplea
+fuera de la solución ---la estrategia es determinista, dado que el $k$-medias emplea
 una semilla propia fija y las tres repeticiones producen exactamente la misma
 partición--- y usa $k=34$ rutas ($+36$\,\% de flota).
 La causa es estructural: el particionamiento duro impide reasignar
@@ -1088,7 +1088,7 @@ con el trazado real de $\rho = 0{,}527$ a nivel global e invertida en el \textit
 principal ($\rho = -0{,}575$); el aumento de auto-cruces atribuido al 2-opt intra-ruta
 sobre cuerdas se convierte, sobre la geometría real de calles, en una reducción o empate en
 104 de 108 filas comparadas. Las diferencias relativas entre brazos dentro de cada ciclo
-permanecen válidas, pues todos se contrastaron con la misma vara.
+permanecen válidas, dado que todos se contrastaron con la misma vara.
 \textbf{(4) Criterio de degeneración mixto:} la cláusula de paradas (menos de cinco) y la
 de duración (menos de 1\,800 segundos) capturan fenómenos distintos; la primera fue
 descartada por indirecta, con lo que cuarenta y cinco de las ciento seis filas re-juzgables
@@ -1785,7 +1785,7 @@ la evidencia que la respalda, su costo y qué habría que construir.
 Una novena extensión se evaluó y quedó descartada por la propia medición, lo
 que justifica dejarla registrada. La compuerta de régimen por saturación
 consistía en activar el brazo \texttt{upper-tmax-tmin9000} por encima de un
-umbral $\overline{\text{sat}} \gtrsim 0{,}9$, ya que el barrido de la
+umbral $\overline{\text{sat}} \gtrsim 0{,}9$, dado que el barrido de la
 Sección~\ref{sec:discusion-calidad} le atribuye una reducción de auto-cruces del
 $92{,}5$\,\% en el régimen denso sin incremento de desplazamiento. Esa reducción
 está medida sobre la métrica de cuerdas, a la que aplica la reserva de

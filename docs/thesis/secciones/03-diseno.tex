@@ -521,7 +521,7 @@ petición, de modo que la solicitud falla por longitud de URL antes de alcanzar 
 límite de tabla. El sistema fija por ello un tope de $350$ árboles por solicitud.
 Cuando el \textit{dataset} lo supera, la matriz se construye por fragmentación
 (\textit{chunking}): los puntos se dividen en bloques de $175$ coordenadas
----la mitad del tope, ya que cada petición fragmentada transporta simultáneamente
+---la mitad del tope, dado que cada petición fragmentada transporta simultáneamente
 las coordenadas del bloque origen y las del bloque destino---. El número de solicitudes crece
 de forma cuadrática con el número de bloques, lo que domina el costo de la primera
 construcción de la matriz para \textit{datasets} grandes
@@ -1052,9 +1052,9 @@ El color de cada marcador codifica el estado del árbol en el sistema: verde par
 \label{sec:recenso}
 
 Un censo de arbolado urbano no es un evento único sino un proceso recurrente: el
-valor del catastro está en poder comparar el estado de un árbol entre campañas
-sucesivas. El modelo de datos separa por ello dos conceptos que resulta tentador
-confundir. El \texttt{RouteStop} es una unidad de trabajo: pertenece a una
+valor del catastro está en la comparación del estado de un árbol entre campañas
+sucesivas. El modelo de datos separa por ello dos conceptos que suelen confundirse.
+El \texttt{RouteStop} es una unidad de trabajo: pertenece a una
 ruta, tiene una secuencia y un estado de avance (\texttt{pending}, \texttt{visited},
 \texttt{skipped}), y su vida termina cuando la ruta se completa. La
 \texttt{TreeObservation}, en cambio, es un hecho histórico: registra el
@@ -1129,7 +1129,7 @@ El vínculo entre una observación legada y su árbol difiere según la fuente, 
 los esquemas de origen no comparten estructura: en \texttt{legacy\_api} las muestras
 referencian al árbol directamente, mientras que en \texttt{legacy\_app} lo hacen a
 través del código QR físico adherido al árbol. En cuanto a las fotografías
-históricas, se conserva su URL (campo \texttt{photo\_url}) y no el archivo, ya que
+históricas, se conserva su URL (campo \texttt{photo\_url}) y no el archivo, dado que
 las imágenes residen en el almacenamiento del sistema anterior. En \texttt{legacy\_app}
 solo se importan aquellas cuya referencia comienza con \texttt{http}, descartando las
 rutas locales del dispositivo que la aplicación previa registraba y que hoy no
@@ -1310,7 +1310,7 @@ Corresponde acotar el alcance de esta verificación. No existen pruebas automati
 de extremo a extremo: los flujos completos de administrador y de censador se comprueban por partes, nunca
 encadenados sobre el sistema en pie. La cobertura de código está configurada en el
 proyecto pero no se ejecuta como parte de la integración continua, de modo que esta
-memoria no reporta una cifra de cobertura. Y, sobre todo, lo que se verifica es que
+memoria no reporta una cifra de cobertura. Sobre todo, lo que se verifica es que
 el sistema hace lo que su diseño dice: la validación con usuarios reales ---una
 jornada de censo ejecutada con censadores en terreno--- queda fuera del alcance de
 esta iteración y es la comprobación que ninguna suite de pruebas sustituye.
