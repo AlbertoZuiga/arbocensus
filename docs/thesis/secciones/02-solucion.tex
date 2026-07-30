@@ -148,7 +148,7 @@ incorporar el catastro existente, nueve para planificar, tres para publicar y as
 seis para la captura en terreno y cuatro para el seguimiento. RF-07 es el que separa a
 esta solución de la práctica actual, dado que convierte el número de equipos en un
 resultado del sistema y no en una decisión previa del administrador. El
-Anexo~\ref{anx:trazabilidad} remite cada requisito a la sección de diseño que lo
+\hyperref[anx:trazabilidad]{Anexo 5} remite cada requisito a la sección de diseño que lo
 realiza.
 
 \section{ATRIBUTOS DE CALIDAD}
@@ -282,11 +282,19 @@ después contra lo medido.
     CA-02 & Respeto de la jornada máxima. & Ninguna ruta excede $T_{\max}$. \\
     CA-03 & Balance de carga entre equipos, medido con el índice definido más arriba. & Índice de al menos $0{,}80$. \\
     CA-04 & Determinación de la flota. & El número de rutas $k$ es una salida del \textit{solver} y no un dato que el administrador declare. \\
-    CA-05 & Costo de planificar una campaña, con la matriz de costos en caché. & Menos de 5 minutos. \\
+    CA-05 & Costo de planificar una campaña: tiempo de reloj de una corrida completa del proceso de optimización, con la matriz de costos en caché. Comprende el presupuesto de tiempo que se configura al \textit{solver}, de modo que el criterio acota esa configuración además de su resultado. & Menos de 5 minutos. \\
     CA-06 & Mejora frente a la alternativa trivial. & Reducción estrictamente positiva del tiempo total de desplazamiento frente a un heurístico de vecino más cercano, sobre la misma instancia y la misma matriz de costos. \\
     \bottomrule
   \end{tabularx}
 \end{table}
+
+CA-05 exige una precisión de alcance. El presupuesto del \textit{solver} es un tope
+duro, no un tiempo de convergencia: cualquier presupuesto inferior a cinco minutos
+satisface el criterio sin que ello diga nada sobre la calidad de la solución que se
+alcanza dentro de él. Por eso el criterio se enuncia sobre la corrida completa y no
+sobre la metaheurística aislada, y su verificación debe acompañarse de la evidencia
+de que el presupuesto elegido basta, esto es, de que ampliarlo no mejora la solución
+de forma apreciable.
 
 CA-06 exige una precisión de método, porque un margen es comparable solo si ambos
 enfoques reciben el mismo trato: la comparación debe fijar la instancia, la matriz de
