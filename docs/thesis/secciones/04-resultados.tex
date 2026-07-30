@@ -502,13 +502,14 @@ $45$\,\%, por lo que la conclusión no depende de la agregación.
 versión corregida. Alcanza, como era esperable, la mejor separación espacial de
 las tres ---solapamiento de $20$ por ruta ($-88$\,\%) y $\sum r_{\max}$ de
 $9\,714$\,m ($-57$\,\%)---, cifras que sirven como cota de la separación
-alcanzable, pero lo hace a un costo inadmisible en las tres dimensiones que el
-criterio protege: deja 12 árboles fuera de la solución ---la estrategia
-es determinista, pues el $k$-medias emplea una semilla propia fija y las tres
-repeticiones producen exactamente la misma partición---, usa $k=34$ rutas
-($+36$\,\% de flota), degrada el balance a $0{,}698$ y encarece el
-desplazamiento total en un
-$16{,}9$\,\%. La causa es estructural: el particionamiento duro impide reasignar
+alcanzable, pero lo hace incumpliendo dos de las tres salvaguardas del criterio:
+a) degrada el balance a $0{,}698$ frente al $0{,}838$ de \texttt{global}; b) encarece
+el desplazamiento total en un $16{,}9$\,\%, por sobre el margen del $10$\,\% admitido.
+A ello se suman dos costos que el criterio no pondera y un censo sí: deja 12 árboles
+fuera de la solución ---la estrategia es determinista, pues el $k$-medias emplea
+una semilla propia fija y las tres repeticiones producen exactamente la misma
+partición--- y usa $k=34$ rutas ($+36$\,\% de flota).
+La causa es estructural: el particionamiento duro impide reasignar
 árboles de borde cuando el grupo que los contiene no alcanza a cubrirlos dentro
 de $T_{\max}$, y los sub-problemas ---que ahora reciben una fracción del
 presupuesto de tiempo, repartida entre los $\approx 34$ grupos--- activan las
