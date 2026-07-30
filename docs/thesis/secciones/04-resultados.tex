@@ -940,9 +940,7 @@ procesaran múltiples áreas de censo como un único problema.
   \centering
   \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
   \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación
-    ($n = 1\,607$, estrategia \texttt{spatial\_term}, configuración de producción).
-    El cruzamiento refleja la extensión del conjunto agregado, sin correlato
-    operativo en el censo histórico, no una limitación de la formulación.}
+    ($n = 1\,607$, estrategia \texttt{spatial\_term}, configuración de producción).}
   \label{fig:ruta-vueltas-r1}
 \end{figure}
 
@@ -951,8 +949,7 @@ procesaran múltiples áreas de censo como un único problema.
   \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
   \caption{Régimen disperso (extensión $\approx 10{,}3$\,km, \textit{dataset} de
     evaluación agregado) frente a régimen real (extensión $\leq 1{,}32$\,km, áreas
-    individuales del arbolado legado). En el régimen real la configuración de
-    producción genera rutas sin auto-cruces.}
+    individuales del arbolado legado).}
   \label{fig:regimen-disperso-vs-real}
 \end{figure}
 
@@ -960,12 +957,14 @@ procesaran múltiples áreas de censo como un único problema.
   \centering
   \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
   \caption{Par de rutas con mayor solapamiento espacial
-    (\textit{IoU} del peor par $= 0{,}55$) en el \textit{dataset} de evaluación.
-    El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde
-    a la geometría local del par, y ningún coeficiente global lo elimina sin penalizar
-    las rutas circundantes.}
+    (\textit{IoU} del peor par $= 0{,}55$) en el \textit{dataset} de evaluación.}
   \label{fig:peor-par}
 \end{figure}
+
+El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde a
+la geometría local del par, y ningún coeficiente global lo elimina sin penalizar las
+rutas circundantes; la solución estructural es la segmentación previa por área de
+censo.
 
 De los resultados anteriores se derivan dos respuestas directas a las preguntas de
 evaluación más frecuentes. La pregunta «¿por qué las rutas no se ven compactas
