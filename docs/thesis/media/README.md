@@ -93,6 +93,19 @@ GitHub). Desde `docs/thesis/`:
 \end{figure}
 ```
 
+### `fig-instancia-legada` — puntos de la instancia de referencia (§1.2)
+
+Los 1 607 árboles de `reference-n1607.csv` diferenciados por fuente (`legacy_api` /
+`legacy_app`). Sin rutas ni basemap; proyección equirectangular local. Span del recuadro:
+10,3 km.
+
+```bash
+.venv-figures/bin/python scripts/route_figures.py instance \
+  --csv docs/experiments/instances/reference-n1607.csv \
+  --label "Instancia de referencia: 1 607 árboles (dos fuentes)" \
+  --out docs/thesis/media/fig-instancia-legada
+```
+
 ## Notas de diseño
 
 - Impresión en blanco y negro: cada ruta se distingue por color **y** por estilo de línea **y**
