@@ -1626,12 +1626,11 @@ propio capítulo que condicionan cómo debe leerse.
 
     \item \textbf{Estrategia \texttt{cluster\_first}}: la estrategia de
     particionamiento previo mediante $k$-medias quedó descartada como opción de
-    producción a partir de los resultados de la
-    Sección~\ref{sec:comparacion-estrategias}. Incluso en su versión corregida,
-    degrada el balance a $0{,}698$, incrementa el viaje en un $16{,}9$\,\% y
-    descarta 12 árboles frente a \texttt{spatial\_term}, sin ventaja en ninguna
-    dimensión que el criterio de decisión protege; se conserva en el código como
-    opción de comparación para investigación, no como alternativa de censo.
+    producción por incumplir, frente a \texttt{spatial\_term}, dos de las tres
+    salvaguardas del criterio de decisión ---balance y desplazamiento total--- y dejar
+    además 12 árboles sin asignar (Sección~\ref{sec:comparacion-estrategias}); se
+    conserva en el código como opción de comparación para investigación, no como
+    alternativa de censo.
 
     \item \textbf{Cobertura bajo presupuesto temporal estrecho}: la formulación admite
     descartes mediante disyunciones penalizadas ($1\,000\,000$\,s por árbol no
@@ -1691,27 +1690,21 @@ propio capítulo que condicionan cómo debe leerse.
     coeficiente global lo corrige y la vía estructural es la segmentación previa por
     área de censo (Sección~\ref{sec:discusion-calidad}).
 
-    \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el ahorro de
-    \textit{OR-Tools} frente al heurístico del vecino más cercano, cuando este recibe
-    el mismo post-proceso de resecuenciación, es de solo un $4{,}8$\,\% del
-    desplazamiento total (Tabla~\ref{tab:comparativa}). Esta proximidad es un artefacto
-    de saturación: el \textit{greedy} llena cada ruta hasta un $98$\,\% de $T_{\max}$,
-    de modo que su reducción de caminata proviene de la cota temporal, no de la calidad
-    del ordenamiento. Por la misma razón, el índice de balance favorece al
-    \textit{greedy} ($0{,}908$ frente a $0{,}835$): saturar toda ruta hasta el borde
-    de la cota iguala duraciones, y el cociente $\min_r T_r / \max_r T_r$ no distingue
-    esa igualación de un reparto deliberado, lo que acota su valor como criterio de
-    calidad. La diferencia entre ambos enfoques se manifiesta en la holgura media de la
-    jornada y en la menor severidad de la ruta residual de \textit{OR-Tools}, no en el
-    balance.
+    \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el margen de
+    \textit{OR-Tools} frente al heurístico del vecino más cercano con el mismo
+    post-proceso de resecuenciación es estrecho ---un $4{,}8$\,\% del desplazamiento
+    total (Tabla~\ref{tab:comparativa})---, y es un
+    artefacto de saturación: el \textit{greedy} llena cada ruta hasta el borde de
+    $T_{\max}$, lo que también infla su índice de balance sin que medie un reparto
+    deliberado (Sección~\ref{sec:comparacion-greedy}).
 
     \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre
-    el coeficiente de la penalización inferior ($10\,000\,\text{s}^{-1}$) y el de la
-    superior ($500\,\text{s}^{-1}$) es un compromiso de diseño calibrado, no un defecto.
-    El experimento de sensibilidad demuestra que el término inferior sostiene el balance
-    de carga y evita la fragmentación en rutas cortas; reducirlo o suprimirlo degrada el
-    balance a $0{,}739$ y eleva la flota a $32$ rutas. La asimetría es intencional y su
-    efecto está medido.
+    el coeficiente de la penalización inferior y el de la superior es un compromiso de
+    diseño calibrado, no un defecto; el experimento de sensibilidad de la
+    Sección~\ref{sec:discusion-calidad} muestra que el término inferior es el que
+    sostiene el balance de carga y
+    evita la fragmentación en rutas cortas. La asimetría es intencional y su efecto
+    está medido.
   \end{itemize}
 
 \end{itemize}
