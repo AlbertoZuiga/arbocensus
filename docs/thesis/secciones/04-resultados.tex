@@ -437,10 +437,11 @@ corresponden a la versión corregida.
 Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones
 idénticas: mismo \textit{dataset} ($n = 1\,607$), misma variante operacional
 (tiempo de servicio de 2\,min y $T_{\max} = 3$\,h, la configuración censal de
-referencia), mismo límite de \textit{solver} (120\,s, justificado en la
+referencia) y mismo límite de \textit{solver} (120\,s, justificado en la
 Tabla~\ref{tab:sensibilidad-tl}, que acota el presupuesto de tiempo del \textit{solver} y
-no compara estrategias entre sí), las mismas tres semillas (42, 43 y 44) y la
-misma versión del código, posterior a la corrección del redondeo del tránsito.
+no compara estrategias entre sí). También se fijaron las mismas tres semillas
+(42, 43 y 44) y la misma versión del código, posterior a la corrección del
+redondeo del tránsito.
 El criterio de decisión se fijó antes de ejecutar el experimento: una estrategia
 supera a la \textit{baseline} si reduce el solapamiento por ruta o mejora el IoU
 del peor par \textit{sin} degradar el balance temporal respecto de
@@ -1789,7 +1790,7 @@ umbral $\overline{\text{sat}} \gtrsim 0{,}9$, dado que el barrido de la
 Sección~\ref{sec:discusion-calidad} le atribuye una reducción de auto-cruces del
 $92{,}5$\,\% en el régimen denso sin incremento de desplazamiento. Esa reducción
 está medida sobre la métrica de cuerdas, a la que aplica la reserva de
-instrumento de esa misma sección, y la re-medición del brazo sobre
+instrumento de esa misma sección. La re-medición del brazo sobre
 \texttt{crossings\_road} invierte el signo del efecto precisamente en el régimen
 que la compuerta habilitaría: la mediana de auto-cruces sobre el trazado de
 calles sube de $43$ a $69$ en \texttt{reference-n1607}
