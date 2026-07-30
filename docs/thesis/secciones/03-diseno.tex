@@ -574,9 +574,10 @@ la solución completa por culpa de los imposibles.
 
 Los árboles descartados no se pierden ni se ocultan: el \textit{pipeline} los extrae
 de la solución ---son los nodos cuya variable de sucesión apunta a sí misma--- y los
-propaga como parte del resultado del trabajo de optimización (campo
-\texttt{dropped\_trees}), de modo que el administrador sabe exactamente qué árboles
-quedaron fuera del plan y puede tratarlos como excepciones. El Capítulo~\ref{cap:resultados}
+propaga como parte del resultado: el conteo en el campo \texttt{dropped\_trees} y el
+conjunto concreto en la relación \texttt{dropped} de la \texttt{RoutingSolution},
+de modo que el administrador sabe exactamente qué árboles quedaron fuera del plan y
+puede tratarlos como excepciones. El Capítulo~\ref{cap:resultados}
 caracteriza la frontera en que esta calibración deja de garantizar cobertura total.
 
 El costo de esta garantía es de espacio de búsqueda: cada nodo incorpora una
