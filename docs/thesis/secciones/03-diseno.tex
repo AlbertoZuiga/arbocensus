@@ -942,9 +942,20 @@ combinables:
 \begin{enumerate}
   \item \textbf{Por área}: al hacer clic sobre el polígono de un área se alternan de
         una vez todos los árboles contenidos en ella.
-  \item \textbf{Por rectángulo} (\textit{bounding box}): un modo de arrastre permite
-        trazar un rectángulo sobre el mapa y agregar a la selección todos los árboles
-        comprendidos en sus límites, con independencia del área a la que pertenezcan.
+  \item \textbf{Por figura dibujada}: el administrador traza sobre el mapa la región
+        que quiere censar y se agregan a la selección todos los árboles contenidos en
+        ella, con independencia del área a la que pertenezcan. La figura se traza de
+        dos maneras: un polígono arbitrario, marcando sus vértices con clics
+        sucesivos y cerrándolo sobre el primero, o un rectángulo, arrastrando el
+        cursor entre dos esquinas. Ambas producen la misma entidad ---un anillo de
+        vértices---, de modo que un rectángulo recién trazado se edita después como
+        cualquier polígono: cada vértice se arrastra para moverlo, el punto medio de
+        cada lado se pulsa para insertar un vértice nuevo y el clic derecho sobre un
+        vértice lo elimina. La pertenencia de cada árbol se reevalúa por
+        punto-en-polígono al soltar el vértice, y no de forma continua durante el
+        arrastre, para no recorrer todo el arbolado legado en cada cuadro de
+        animación. Pueden coexistir varias figuras, cuya unión constituye la
+        selección.
   \item \textbf{Por árbol individual}: el clic sobre un marcador agrega o quita ese
         árbol de la selección.
 \end{enumerate}
