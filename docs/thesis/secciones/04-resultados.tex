@@ -101,7 +101,7 @@ total: ninguna de las tres repeticiones descartó árboles, pese a que el modelo
 lo permite mediante disyunciones penalizadas.
 
 Las tres repeticiones agotaron el presupuesto completo de 120\,s del
-metaheurístico GLS (\textit{guided local search}). Los tiempos de desplazamiento fueron
+metaheurístico GLS. Los tiempos de desplazamiento fueron
 59\,690\,s, 56\,707\,s y 58\,696\,s (media 58\,364\,s), con una diferencia de
 2\,983\,s entre el mejor y el peor resultado, esto es, un 5{,}1\,\% de la media. El
 número de rutas $k$ coincide en las tres repeticiones y el índice de balance varía
@@ -364,7 +364,7 @@ Se definieron los siguientes indicadores sobre las coordenadas reales de las
 paradas (\texttt{RouteStop}), usando la distancia de \textit{haversine}
 \citep{sinnott1984virtues}:
 
-\begin{itemize}
+\begin{itemize}[label=--]
   \item \textbf{Compacidad} ($\sum r_{\max}$): suma, sobre las rutas, del radio
   máximo de cada ruta (distancia del centroide a su parada más lejana). Menor es mejor.
   \item \textbf{Solapamiento} (\textit{interleaving}): número de paradas
@@ -1158,7 +1158,7 @@ realizaron sobre una réplica local del entorno de producción definida en
 recarga en caliente, con usuario no privilegiado), una instancia real de OSRM
 cargada con el extracto completo de Chile de \textit{OpenStreetMap}
 (\texttt{chile-latest.osm.pbf}), preprocesado con el algoritmo
-\textit{Multi-Level Dijkstra} (MLD) \citep{delling2017customizable} y perfil
+\textit{Multi-Level Dijkstra} \citep{delling2017customizable} y perfil
 peatonal, además de PostGIS \citep{postgis} 15--3.3 y Redis 7. Las versiones
 empleadas fueron Python 3.12.11, Django \citep{django} 6.0, \textit{OR-Tools}
 \citep{ortools} 9.15 y NumPy 2.4.6.
@@ -1190,7 +1190,7 @@ de distancias: en operación normal (caché caliente) el \textit{pipeline} está
 acotado por el \textit{solver} (\textit{solve-bound}), y solo en el primer contacto con
 un \textit{dataset} está acotado por OSRM (\textit{OSRM-bound}).
 
-Con la caché caliente, la metaheurística \textit{Guided Local Search} (GLS)
+Con la caché caliente, la metaheurística GLS
 concentra el 98,1\,\% del tiempo total, y todas las demás fases combinadas
 representan menos del 2\,\% (Tabla~\ref{tab:fases-caliente}). Optimizar la
 construcción del modelo, la extracción o el cálculo de métricas no tendría,
@@ -1394,7 +1394,7 @@ atributos de la Sección~\ref{sec:atributos-calidad} son afirmaciones más ampli
 el producto, y conviene declarar con qué grado y con qué salvedades se sostienen.
 
 La robustez del plan se sostiene con una excepción caracterizada. Sobre la grilla de
-configuraciones operacionales del Anexo 4 ---las combinaciones de tiempo de servicio y
+configuraciones operacionales del \hyperref[anx:grilla-variantes]{Anexo 4} ---las combinaciones de tiempo de servicio y
 jornada máxima con que puede configurarse una campaña---, cinco de las seis mantienen
 cobertura total y el índice de balance por sobre $0{,}80$. La sexta es la más
 restrictiva, con tiempo de servicio de 3\,min bajo $T_{\max}=2$\,h: allí la carga de
@@ -1557,7 +1557,7 @@ iteración de Arbocensus, agrupadas en tres bloques: las que acotan el producto
 construido, las que acotan la evidencia recogida sobre él y los resultados del
 propio capítulo que condicionan cómo debe leerse.
 
-\begin{itemize}
+\begin{itemize}[label=--]
 
   \item \textbf{Límites del producto}
   \begin{itemize}
@@ -1660,7 +1660,7 @@ propio capítulo que condicionan cómo debe leerse.
     trayecto}: la Sección~\ref{sec:discusion-calidad} caracteriza el relleno de
     trayecto por la variación relativa del desplazamiento entre configuraciones, sin
     una cota inferior absoluta que separe qué fracción es geometría irreducible. El
-    Anexo 4 construye esa cota ($\text{MSF}_k$, el bosque generador mínimo de $k$
+    \hyperref[anx:auditoria-robustez]{Anexo 4} construye esa cota ($\text{MSF}_k$, el bosque generador mínimo de $k$
     componentes) y un ancla alcanzable ($\text{UB}_k$) que mide su flojedad: el ancla
     se sitúa entre un $13$\,\% y un $29$\,\% por encima de la cota en las instancias
     reales, de modo que el exceso medido contra $\text{MSF}_k$ sobreestima el relleno
@@ -1673,7 +1673,7 @@ propio capítulo que condicionan cómo debe leerse.
     geometría distinta de la que optimiza el \textit{solver} (tiempo de red de OSRM) y
     de la que recorre el censador (trazado real de calles); la correspondencia entre
     las tres no se ha comprobado. La métrica conserva su valor comparativo entre
-    configuraciones medidas con la misma vara, con la reserva que el Anexo 4 detalla.
+    configuraciones medidas con la misma vara, con la reserva que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla.
 
     \item \textbf{Exactitud no medida del estimador de distancias}: el perfil peatonal
     de OSRM se aparta de la caminata real de terreno por no modelar pendientes,
@@ -1722,7 +1722,7 @@ anclaje en mediciones propias de esta memoria. Las cinco restantes abordan
 limitaciones funcionales independientes de la serie experimental. Cada una indica
 la evidencia que la respalda, su costo y qué habría que construir.
 
-\begin{itemize}
+\begin{itemize}[label=--]
   \item \textbf{Validación en terreno}: las conclusiones de este capítulo
   verifican que el producto hace lo que su diseño declara, pero no que resuelva en
   operación el problema logístico que lo motivó (Sección~\ref{sec:verificacion}).
