@@ -36,20 +36,22 @@ time_limit = min(30 + 1.5 × n, 120)   [segundos]
 
 ### Default (`full_comparison=false`)
 
-Un POST a `/api/optimization/jobs/` crea un job por par de `strategies.PRODUCTION_JOB_PAIRS` (fuente única; `views.py` y `recommendation_census` la leen de ahí), cada uno con estrategia explícita:
+Un POST a `/api/optimization/jobs/` crea un job por par de `strategies.PRODUCTION_JOB_PAIRS` = `CONFIG_PRESETS × PRODUCTION_STRATEGIES` (fuente única; `views.py` y `recommendation_census` la leen de ahí), cada uno con estrategia explícita: **6 jobs**, los 3 presets × {`global`, `spatial_term`}. Cada job corre una sola estrategia (`pipeline.run(strategy=...)`).
 
-| preset | strategy |
-|---|---|
-| `default` | `global` |
-| `default` | `spatial_term` |
-| `temporal_span_100` | `spatial_term` |
-| `arc_linear_30` | `spatial_term` |
+**Por qué 6 y no 4 ni 9** (medido 2026-07-30 sobre los 16 datasets reales con las 9 celdas presentes en todos):
 
-Cada job corre una sola estrategia (`pipeline.run(strategy=...)`).
+| fanout | solves | costo de travel vs. la ganadora del abanico completo | datasets afectados |
+|---|---|---|---|
+| 6 pares (actual) | 6 | **0,00 %** | 0 de 15 |
+| 4 pares (solo `spatial_term` en los presets alternos) | 4 | +0,35 % medio, +2,54 % peor | 4 de 15 |
 
-**Por qué estos pares y no los que ganan el census.** El `preset` es una opción de producto: su label se muestra en la UI y el admin la elige *después* del sweep, así que cada preset recibe un job aunque nunca haya ganado la recomendación. La `strategy` es una perilla interna del solver, invisible al usuario: de ahí solo se abanica la ganadora (`spatial_term`), más `global` sobre `default` como control. `cluster_first` queda fuera y solo se alcanza con `strategy=` explícito.
+Podar `cluster_first` es gratis: en los 2 datasets donde "ganó", otra celda empata su travel y solo se llevó el desempate por `id`; su balance está 0,21–0,24 bajo el control. Podar las celdas `× global` de los presets alternos sí cuesta: `temporal_span_100 × global` gana 3 datasets y `arc_linear_30 × global` gana 1.
 
-**Alcance del census** (`python manage.py recommendation_census`): tabula sobre las soluciones persistidas del último sweep de cada dataset. La columna `datasets_appearing` es la que acota la evidencia — hoy solo `default × spatial_term` aparece en los 16 datasets; el resto de las celdas aparece en 2–3. Cualquier afirmación del tipo "0 wins en 16 datasets" debe leer esa columna primero. El comando falla (`CommandError`) si alguna celda fuera de `PRODUCTION_JOB_PAIRS` es la recomendada en algún dataset.
+**Trampa del census** (`python manage.py recommendation_census`): tabula sobre las soluciones persistidas del último sweep de cada dataset, así que **la tasa de victorias solo significa algo si todas las celdas corrieron en todos los datasets**. Antes del barrido del 2026-07-30, 13 de 16 datasets tenían una sola solución y `default × spatial_term` "ganaba" 14/16 por walkover; con el abanico completo gana 1/16 y es la celda más lenta (todas las demás están −3,8 % a −6,4 % de travel contra ella). Leer `datasets_appearing` antes de cualquier conclusión.
+
+Además la tasa de victorias no puede juzgar a un preset que compra parejura pagando travel: el criterio está dominado por travel, así que pierde por construcción. Para eso están `mean_travel_delta_pct_vs_control` y `mean_balance_delta_vs_control`.
+
+El comando falla (`CommandError`) si la mejor celda **dentro** del fanout cede travel contra la ganadora del abanico completo en algún dataset. Mide costo, no identidad: un empate exacto que la celda podada gana por `id` no cuesta nada y no bloquea. Los datasets que botan todos sus árboles en todas las celdas se reportan aparte — no informan nada.
 
 ### Modo investigación (`full_comparison=true`)
 

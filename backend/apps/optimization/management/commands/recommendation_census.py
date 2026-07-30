@@ -1,5 +1,6 @@
 import csv
 import io
+from collections import defaultdict
 
 from apps.optimization.models import OptimizationJob, RoutingSolution
 from apps.optimization.recommendation import (
@@ -15,6 +16,12 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.utils import timezone
+
+
+def _gates(row):
+    # (dropped_trees, degenerate_routes, balance below gate) — the lexicographic
+    # steps that come before travel in order_by_criterion.
+    return (row[5], row[6], row[7] < BALANCE_GATE)
 
 
 class Command(BaseCommand):
@@ -84,9 +91,12 @@ class Command(BaseCommand):
         )
 
         # Best by criterion per dataset (first row per dataset, order from the query).
+        dataset_rows_by_id = defaultdict(list)
         winner_travel_by_dataset = {}
         winner_id_by_dataset = {}
-        for dataset_id, sol_id, travel, _preset, _strategy, *_ in rows:
+        for row in rows:
+            dataset_id, sol_id, travel = row[:3]
+            dataset_rows_by_id[dataset_id].append(row)
             if dataset_id not in winner_travel_by_dataset:
                 winner_travel_by_dataset[dataset_id] = travel
                 winner_id_by_dataset[dataset_id] = sol_id
@@ -110,8 +120,20 @@ class Command(BaseCommand):
             (preset, str(strategy)) for preset, strategy in PRODUCTION_JOB_PAIRS
         }
 
+        # Cost of the pruning, per dataset: how much travel the best cell still inside
+        # the fanout gives up against the winner of the whole grid. Identity of the
+        # winner is the wrong test — a pruned cell that ties the in-fanout best on
+        # travel and only wins the id tiebreak costs nothing and must not block.
+        best_in_fanout = {}  # dataset_id → (travel, gates)
+        for row in rows:
+            dataset_id, _sol_id, travel, preset, strategy = row[:5]
+            if (
+                dataset_id not in best_in_fanout
+                and (preset, strategy) in production_pairs
+            ):
+                best_in_fanout[dataset_id] = (travel, _gates(row))
+
         cell_stats = {}
-        pruned_winners = []  # cells outside the fanout that are the recommended winner
 
         for (
             dataset_id,
@@ -119,8 +141,8 @@ class Command(BaseCommand):
             travel,
             preset,
             strategy,
-            drops,
-            degens,
+            _drops,
+            _degens,
             balance,
         ) in rows:
             cell = (preset, strategy)
@@ -160,23 +182,27 @@ class Command(BaseCommand):
             if within_margin and not is_winner:
                 stats["near_winner"] += 1
 
-            if is_recommended and cell not in production_pairs:
-                if drops > 0:
-                    gate = "dropped_trees"
-                elif degens > 0:
-                    gate = "degenerate_routes"
-                elif balance < BALANCE_GATE:
-                    gate = "balance_below_gate"
-                else:
-                    gate = "travel"
-                pruned_winners.append(
-                    {
-                        "dataset_id": str(dataset_id),
-                        "config_preset": preset,
-                        "strategy": strategy,
-                        "travel_sec": travel,
-                        "gate": gate,
-                    }
+        # Datasets where every cell drops every tree carry no information: the whole
+        # grid ties at travel=0 and the recommendation comes out of the id tiebreak.
+        prune_cost = []  # (dataset_id, winner cell, cost_pct, gate_loss)
+        degenerate = []
+        for dataset_id, dataset_rows in dataset_rows_by_id.items():
+            winner = dataset_rows[0]
+            winner_travel = winner[2]
+            if winner_travel <= 0:
+                degenerate.append((dataset_id, winner[5]))
+                continue
+            in_fanout = best_in_fanout.get(dataset_id)
+            if in_fanout is None:
+                continue
+            in_travel, in_gates = in_fanout
+            # A cheaper in-fanout cell is not a win if it got there by failing a gate
+            # the full grid's winner clears: travel alone would report a negative cost.
+            gate_loss = in_gates != _gates(winner)
+            cost = (in_travel - winner_travel) / winner_travel * 100
+            if cost > 0.01 or gate_loss:
+                prune_cost.append(
+                    (dataset_id, f"{winner[3]}x{winner[4]}", cost, gate_loss)
                 )
 
         out = io.StringIO()
@@ -228,23 +254,34 @@ class Command(BaseCommand):
         out_path.write_text(csv_text, encoding="utf-8")
         self.stdout.write(f"CSV: {out_path}")
 
-        if pruned_winners:
-            for pw in pruned_winners:
+        for dataset_id, drops in degenerate:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  dataset={dataset_id} best cell has zero travel "
+                    f"(dropped_trees={drops}) — carries no information about the fanout."
+                )
+            )
+
+        if prune_cost:
+            for dataset_id, winner_cell, cost, gate_loss in sorted(
+                prune_cost, key=lambda t: -t[2]
+            ):
+                detail = " and fails a gate the full grid clears" if gate_loss else ""
                 self.stdout.write(
                     self.style.ERROR(
-                        f"  dataset={pw['dataset_id']}  "
-                        f"preset={pw['config_preset']}  "
-                        f"strategy={pw['strategy']}  "
-                        f"travel={pw['travel_sec']:.0f}s  gate={pw['gate']}"
+                        f"  dataset={dataset_id}  winner={winner_cell}  "
+                        f"cost of pruning: {cost:+.2f}% travel{detail}"
                     )
                 )
             raise CommandError(
-                "Cells outside PRODUCTION_JOB_PAIRS are the recommended winner in the "
-                "datasets listed above. Do not prune them."
+                "PRODUCTION_JOB_PAIRS gives up travel against the full grid in the "
+                "datasets listed above. Widen the fanout or accept the cost knowingly."
             )
 
         self.stdout.write(
             self.style.SUCCESS(
-                "OK: every recommended winner is inside PRODUCTION_JOB_PAIRS."
+                "OK: PRODUCTION_JOB_PAIRS matches the full grid's winner at zero "
+                f"travel cost in every dataset ({len(dataset_rows_by_id) - len(degenerate)} "
+                "informative)."
             )
         )
