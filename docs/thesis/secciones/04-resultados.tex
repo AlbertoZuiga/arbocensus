@@ -1194,12 +1194,14 @@ con los dos ejes que esta sección mide.
 
 Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
 configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
-sobre la suite de instancias congeladas (\texttt{route-config-algorithm-sweep-20260718.csv}; 96
-celdas ---ocho configuraciones sobre 12 instancias, $43 \leq n \leq 1\,607$--- registradas en 288
-filas). Cada celda se registró con tres repeticiones nominales, pero el comando de gestión que
-ejecutó el barrido escribía la semilla en el CSV sin propagarla al \textit{solver}, de modo que las
-tres filas de una misma celda no son réplicas independientes: difieren solo por el corte por reloj
-de pared descrito en la Sección~\ref{sec:metricas-calidad}. En 78 de las 96 celdas las tres filas
+sobre la suite de instancias congeladas que describe el \hyperref[anx:suite-instancias]{Anexo 4}
+---doce instancias reales entre $n=43$ y $n=1\,607$, con dos controles de densidad a extensión
+constante--- (\texttt{route-config-algorithm-sweep-20260718.csv}: ocho configuraciones sobre cada
+una de ellas, esto es 96 celdas, registradas en 288 filas). Cada celda se registró con tres
+repeticiones nominales, pero el comando de gestión que ejecutó el barrido escribía la semilla en el
+CSV sin propagarla al \textit{solver}, de modo que las tres filas de una misma celda no son réplicas
+independientes: difieren solo por el corte por reloj de pared descrito en la
+Sección~\ref{sec:metricas-calidad}. En 78 de las 96 celdas las tres filas
 coinciden exactamente; en las 18 restantes el desplazamiento total varía hasta un $3{,}4$\,\%. Las
 cifras que siguen provienen, por tanto, de una medición por celda sin réplica de semilla y no llevan
 barras de error.
@@ -1701,12 +1703,12 @@ Sección~\ref{sec:restricciones}.
 
 Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción del
 diagnóstico geográfico inicial de la Tabla~\ref{tab:baseline-geo}, medido sobre nodos sintéticos de
-distribución uniforme--- y sobre el rango de tamaños comprendido entre $43$ y $1\,607$ nodos; no se
-emplearon los bancos de referencia de la literatura \citep{solomon1987algorithms}. Las comparaciones
-son internas: contrastan el sistema contra otras configuraciones de sí mismo y contra un heurístico
-de vecino más cercano escrito para este trabajo. No hay anclaje externo, ni una cota de optimalidad
-aplicada al resultado principal, de modo que las afirmaciones son de mejora relativa y nunca de
-proximidad al óptimo.
+distribución uniforme--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
+densidad controlada; no se emplearon los bancos de referencia de la literatura
+\citep{solomon1987algorithms}. Las comparaciones son internas: contrastan el sistema contra otras
+configuraciones de sí mismo y contra un heurístico de vecino más cercano escrito para este trabajo.
+No hay anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo que las
+afirmaciones son de mejora relativa y nunca de proximidad al óptimo.
 
 Las cifras absolutas de tiempo provienen de un entorno de medición emulado y no de un servidor de
 producción, y el sistema no fue desplegado ni operado en una jornada real de censo. En consecuencia,
