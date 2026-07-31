@@ -893,8 +893,8 @@ crudos se encuentran versionados en \texttt{docs/experiments/} (reporte
 \subsection{Discusión de calidad de rutas}
 \label{sec:discusion-calidad}
 
-La función objetivo que minimiza el \textit{solver} combina cuatro componentes
-de escala diferente. El término principal es el costo de arco, proporcional al tiempo
+La función objetivo que minimiza el \textit{solver} combina seis componentes
+de escala diferente (Ecuación~\ref{eq:objetivo}). El término principal es el costo de arco, proporcional al tiempo
 de tránsito entre paradas consecutivas (aproximadamente 1\,s por segundo de caminata
 según la red peatonal de OSRM). Sobre él actúan dos penalizaciones blandas en la
 dimensión temporal de cada ruta: la penalización inferior, con coeficiente
@@ -904,7 +904,10 @@ duración supere el punto medio del intervalo $[T_{\min},\,T_{\max}]$. Se añade
 además un costo fijo de $100\,000$\,s por vehículo activo, que desincentiva el uso
 de rutas adicionales, y una penalización de $1\,000\,000$\,s por árbol no cubierto,
 que garantiza que la cobertura total sea siempre preferible a cualquier mejora marginal
-en los demás términos.
+en los demás términos. El sexto componente es el costo de extensión geográfica, con
+coeficiente $\lambda_{\text{span}} = 3$ por metro de \textit{span} \textit{haversine} de
+cada ruta, que solo actúa bajo la estrategia \texttt{spatial\_term} y es lo que la
+distingue de \texttt{global}.
 
 La razón entre ambas penalizaciones blandas es de $20\mathord{:}1$ ($10\,000 / 500$),
 y el experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se
