@@ -1621,11 +1621,9 @@ propio capítulo que condicionan cómo debe leerse.
     $\leq 1{,}32$\,km, esa limitación no se manifiesta; sin embargo, la
     plataforma no automatiza la segmentación previa por área, de modo que
     la correcta delimitación del \textit{dataset} de entrada recae en el
-    administrador. Particionar el arbolado por área antes de rutear es la mejora
-    de mayor impacto geométrico identificada para versiones futuras, y su costo
-    está medido sobre las áreas reales (Sección~\ref{sec:areas-reales}): una ruta
-    adicional, tres jornadas bajo $T_{\min}$ y el triple de cómputo, sin costo en
-    desplazamiento.
+    administrador. Automatizarla es la mejora de mayor impacto geométrico
+    identificada para versiones futuras, con el costo que mide la
+    Sección~\ref{sec:areas-reales}.
 
     \item \textbf{Captura sin conectividad}: el portal de censo implementa una cola
     \textit{offline} básica mediante \texttt{persistQueryClient} sobre
@@ -1736,11 +1734,8 @@ propio capítulo que condicionan cómo debe leerse.
 
     \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre
     el coeficiente de la penalización inferior y el de la superior es un compromiso de
-    diseño calibrado, no un defecto; el experimento de sensibilidad de la
-    Sección~\ref{sec:discusion-calidad} muestra que el término inferior es el que
-    sostiene el balance de carga y
-    evita la fragmentación en rutas cortas. La asimetría es intencional y su efecto
-    está medido.
+    diseño calibrado y no un defecto; su efecto está medido en la
+    Sección~\ref{sec:discusion-calidad}.
   \end{itemize}
 
 \end{itemize}
