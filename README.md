@@ -5,6 +5,7 @@ Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 - [Arbocensus: Optimización de Rutas para Censo de Árboles Urbanos](#arbocensus-optimización-de-rutas-para-censo-de-árboles-urbanos)
   - [Desarrollo Rápido](#desarrollo-rápido)
     - [Con Docker (recomendado)](#con-docker-recomendado)
+      - [Datos de prueba (seed automático)](#datos-de-prueba-seed-automático)
     - [Desarrollo Local](#desarrollo-local)
     - [Comandos Comunes](#comandos-comunes)
     - [Estructura del Proyecto](#estructura-del-proyecto)
@@ -21,8 +22,8 @@ Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/AlbertoZuiga/arbocensus.git
-cd arbocensus
+git clone https://github.com/AlbertoZuiga/arbocensus-routing.git
+cd arbocensus-routing
 
 # 2. Configurar variables de entorno
 cp .env.example .env
@@ -56,11 +57,11 @@ Al levantar el backend, el `entrypoint` corre `seed_dev` de forma **idempotente*
 (no recrea lo que ya existe): crea usuarios de prueba y un dataset _light_ de
 15 árboles **sin** ejecutar el solver. Desactívalo con `SEED_DEV=false` en `.env`.
 
-| Usuario      | Rol      | Contraseña    |
-| ------------ | -------- | ------------- |
-| `admin1`     | admin    | `arbocensus`  |
-| `surveyor1`  | surveyor | `arbocensus`  |
-| `surveyor2`  | surveyor | `arbocensus`  |
+| Usuario     | Rol      | Contraseña   |
+| ----------- | -------- | ------------ |
+| `admin1`    | admin    | `arbocensus` |
+| `surveyor1` | surveyor | `arbocensus` |
+| `surveyor2` | surveyor | `arbocensus` |
 
 Cantidades y contraseña son configurables (`SEED_ADMIN_COUNT`,
 `SEED_SURVEYOR_COUNT`, `SEED_USER_PASSWORD`, `SEED_DEV_TREES`). El superusuario
@@ -244,15 +245,15 @@ integraciones con nuevas bases de datos.
 La tarea de re-censo presenta desafíos importantes:
 
 - **Ineficiencia en rutas**: Los censadores deben recorrer zonas extensas,
-  visitando árboles previamente registrados y nuevos puntos de interés
+visitando árboles previamente registrados y nuevos puntos de interés
 - **Balance de carga**: Es necesario distribuir equitativamente el trabajo
-  entre equipos de terreno considerando restricciones temporales por ruta
+entre equipos de terreno considerando restricciones temporales por ruta
 - **Actualización de información**: Se debe garantizar consistencia entre los
-  datos históricos y los nuevos registros
+datos históricos y los nuevos registros
 - **Complejidad combinatoria**: Encontrar rutas eficientes para múltiples
-  censadores corresponde a un problema NP-difícil
+censadores corresponde a un problema NP-difícil
 - **Costo operacional**: Reducir tiempos y costos de desplazamiento disminuye
-  costos operacionales y fatiga del personal
+costos operacionales y fatiga del personal
 
 ## Contexto
 
