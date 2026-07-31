@@ -895,8 +895,9 @@ lexicográfico que ordena sus candidatas.
   \caption[Abanico de producción y criterio de selección]{Abanico de producción: tres
   perfiles de precios por dos estrategias de partición dan seis candidatas que
   comparten configuración y matriz de costos. El criterio lexicográfico las ordena
-  aplicando los cinco desempates en secuencia; la primera se marca como recomendada
-  y las restantes se informan con su costo adicional en caminata.}
+  aplicando los cinco desempates en secuencia; la primera se marca como recomendada,
+  salvo empate técnico con el par de control, y las restantes se informan con su costo
+  adicional en caminata.}
   \label{fig:abanico}
 \end{figure}
 
@@ -1165,7 +1166,8 @@ El sistema implementa dos roles: Administrador (acceso completo) y Censador
 \texttt{role} del usuario y no sobre los permisos estándar del \textit{framework},
 que validan el atributo \texttt{is\_staff} de Django ---un concepto ajeno al rol de
 negocio. La Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes;
-el Anexo 1 contiene el inventario completo con sus permisos y respuestas.
+el \hyperref[anx:api]{Anexo 1} contiene el inventario completo con sus permisos y
+respuestas.
 
 \begin{table}[H]
   \centering
@@ -1208,7 +1210,7 @@ El panel de administración comprende cinco etapas:
   \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles aparece en la Ilustración~\ref{fig:ui_datasets} del \hyperref[anx:capturas]{Anexo 6}.
   \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del objetivo: una sola solicitud despliega el abanico de seis combinaciones descrito en la Sección~\ref{sec:abanico}. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} se consulta a medida que el administrador escribe y comprueba la factibilidad de la configuración antes de que se cree el trabajo: las advertencias se muestran junto al formulario y los bloqueos inhabilitan el botón de lanzamiento.
   \item \textbf{Monitoreo.} \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el \textit{worker} muere (Sección~\ref{sec:limitaciones}).
-  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real. El componente \texttt{SolutionCandidatesList} lista las seis soluciones como candidatas a plan, ordenadas de mejor a peor por el criterio lexicográfico que implementa \texttt{order\_by\_criterion}. El orden aplica en secuencia: sin árboles fuera de ruta, luego sin rutas degeneradas, luego puntaje de balance no inferior a $0{,}60$, luego menor tiempo de desplazamiento y menor número de rutas. La primera se marca como recomendada y las demás informan cuánta caminata adicional cuestan respecto de ella; una candidata cuyo desplazamiento difiere de la recomendada en menos del $3$\,\% se rotula como empate técnico, de modo que el administrador distingue una ventaja real de una diferencia dentro del ruido del \textit{solver}. La recomendación no es vinculante: el administrador publica la candidata que estime conveniente. Publicado el plan, \texttt{suggest\_assignment} propone una asignación de rutas a censadores que reduce el déficit de carga acumulado entre campañas, y el administrador la acepta o la modifica ruta por ruta.
+  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como polilíneas coloreadas sobre la red peatonal real. El componente \texttt{SolutionCandidatesList} lista las seis soluciones como candidatas a plan, ordenadas de mejor a peor por el criterio lexicográfico que implementa \texttt{order\_by\_criterion}. El orden aplica en secuencia: sin árboles fuera de ruta, luego sin rutas degeneradas, luego puntaje de balance no inferior a $0{,}60$, luego menor tiempo de desplazamiento y menor número de rutas. Sobre ese orden se aplica una última regla de estabilidad: si el par de control ---perfil \texttt{default} con estrategia \texttt{spatial\_term}--- supera las mismas compuertas que el primero y su desplazamiento no se aparta de él más de un $3$\,\%, se recomienda el control, con el fin de que un empate dentro del ruido del \textit{solver} no cambie la recomendación entre corridas. La candidata así elegida se marca como recomendada y las demás informan cuánta caminata adicional cuestan respecto de ella; una candidata cuyo desplazamiento difiere de la recomendada en menos del $3$\,\% se rotula como empate técnico, de modo que el administrador distingue una ventaja real de una diferencia dentro del ruido del \textit{solver}. La recomendación no es vinculante: el administrador publica la candidata que estime conveniente. Publicado el plan, \texttt{suggest\_assignment} propone una asignación de rutas a censadores que reduce el déficit de carga acumulado entre campañas, y el administrador la acepta o la modifica ruta por ruta.
 \end{enumerate}
 
 La Ilustración~\ref{fig:ui_optimization} corresponde al panel de optimización del \textit{dataset}.
@@ -1285,8 +1287,8 @@ acompañan.
   \endhead
   \bottomrule
   \endlastfoot
-  Pruebas de \textit{backend} & 442 funciones en 43 archivos & \textit{Solver} y \textit{pipeline} de optimización, estimación de flota, construcción y caché de la matriz de costos, importadores de CSV y de ambas fuentes legadas, ciclo de publicación, autorización por rol y registro de visitas y omisiones. \\
-  Pruebas de \textit{frontend} & 275 casos en 44 archivos & Componentes de la interfaz, cliente de API, cola \textit{offline}, utilidades de selección cartográfica y de progreso. \\
+  Pruebas de \textit{backend} & 524 funciones en 47 archivos & \textit{Solver} y \textit{pipeline} de optimización, estimación de flota, construcción y caché de la matriz de costos, importadores de CSV y de ambas fuentes legadas, ciclo de publicación, autorización por rol y registro de visitas y omisiones. \\
+  Pruebas de \textit{frontend} & 304 casos en 44 archivos & Componentes de la interfaz, cliente de API, cola \textit{offline}, utilidades de selección cartográfica y de progreso. \\
   Análisis estático & Tres verificaciones & Estilo y formato con \textit{Ruff}, tipos con \textit{Pyright} y estilo de \textit{JavaScript} con \textit{ESLint}. \\
   Integración continua & Tres flujos de trabajo & Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso del \textit{frontend}, la construcción del paquete de producción. \\
 \end{xltabular}

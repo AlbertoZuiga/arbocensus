@@ -51,7 +51,7 @@ criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptac
     Rutas por debajo de $T_{\min}$ & 3$^{\dagger}$ & sin criterio: cota blanda \\
     Árboles descartados & 0 (cobertura 1\,607/1\,607) & $= 0$ (CA-01) \\
     Tiempo de planificación & 122{,}3\,s$^{\ddagger}$ de corrida completa con la matriz en caché, de los cuales 120{,}0\,s son el presupuesto configurado del \textit{solver}, agotado en las tres repeticiones & $< 5$ min (CA-05) \\
-    Autocruces sobre calle$^{\S}$ & 37{,}7 (33--40 según la repetición) & sin criterio en esta corrida: descriptiva \\
+    Auto-cruces sobre calle$^{\S}$ & 37{,}7 (33--40 según la repetición) & sin criterio en esta corrida: descriptiva \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -79,8 +79,8 @@ configuración de producción (\texttt{20260713-real-case-metrics-spatial.csv}),
 corresponde a sus dos repeticiones con la matriz de costos ya en caché; se detalla
 más abajo, junto con el caso de caché fría.
 
-$^{\S}$ El barrido de referencia de esta sección no instrumenta autocruces sobre
-calle, solo autocruces sobre la cuerda recta entre paradas consecutivas. La cifra
+$^{\S}$ El barrido de referencia de esta sección no instrumenta auto-cruces sobre
+calle, solo auto-cruces sobre la cuerda recta entre paradas consecutivas. La cifra
 proviene de una repetición posterior sobre el mismo \textit{dataset} y la misma
 configuración de producción (\texttt{reference-n1607-20260730.csv}), que sí
 recupera la geometría real de cada tramo desde \textit{OSRM} y cuenta los cruces
@@ -478,8 +478,8 @@ repeticiones.
 \texttt{spatial\_term} reduce el solapamiento por ruta a menos de la mitad
 ($168{,}0 \rightarrow 77{,}3$, un $-54$\,\%) y comprime las rutas
 ($\sum r_{\max}$ cae un $12{,}8$\,\%), a cambio de un $+1{,}5$\,\% de tiempo
-total de desplazamiento ---muy por debajo del margen del 10\,\% admitido---, con
-el mismo número de rutas, cobertura total y un balance de $0{,}833$ frente a
+total de desplazamiento ---muy por debajo del margen del 10\,\% admitido---. Lo hace
+con el mismo número de rutas, cobertura total y un balance de $0{,}833$ frente a
 $0{,}838$ de la \textit{baseline}, diferencia inferior a la dispersión entre
 semillas de la propia \texttt{global}. Cumple, por tanto, el criterio de
 decisión.
@@ -788,11 +788,12 @@ $9\,000$\,s con coeficiente $500\,\text{s}^{-1}$.
 Instrumentar directamente el valor de la función objetivo del \textit{solver} en
 esta instancia ---inyectando la solución del \textit{greedy} como
 \textit{warm start} y comparando su costo contra el de la solución final de
-partición (\texttt{warmstart-area27-20260730.csv})--- muestra que las duraciones de las dos rutas que reporta
-\texttt{total\_estimated\_time\_sec} ---$5\,766$ y $5\,597$\,s arriba, $5\,299$ y
-$5\,819$\,s en la repetición instrumentada--- no son el valor que ve la dimensión
-Time del \textit{solver}: la diferencia es relleno de trayecto añadido gratis, y
-ambas rutas terminan exactamente en el piso $T_{\min} = 7\,200$\,s. Con esa cifra
+partición (\texttt{warmstart-area27-20260730.csv})--- muestra que las duraciones de
+las dos rutas que reporta \texttt{total\_estimated\_time\_sec} no son el valor que ve
+la dimensión Time del \textit{solver}. Esas duraciones son $5\,766$ y $5\,597$\,s en
+la corrida de esta sección, y $5\,299$ y $5\,819$\,s en la repetición instrumentada;
+la diferencia con la dimensión Time es relleno de trayecto añadido gratis, y ambas
+rutas terminan exactamente en el piso $T_{\min} = 7\,200$\,s. Con esa cifra
 la partición no paga penalización de piso, $(7\,200 - 7\,200) \times 10\,000 = 0$
 por vehículo, y su costo se reduce al fijo de dos vehículos, $200\,000$. La
 jornada única del \textit{greedy}, en cambio, paga
@@ -893,8 +894,8 @@ crudos se encuentran versionados en \texttt{docs/experiments/} (reporte
 \subsection{Discusión de calidad de rutas}
 \label{sec:discusion-calidad}
 
-La función objetivo que minimiza el \textit{solver} combina cuatro componentes
-de escala diferente. El término principal es el costo de arco, proporcional al tiempo
+La función objetivo que minimiza el \textit{solver} combina seis componentes
+de escala diferente (Ecuación~\ref{eq:objetivo}). El término principal es el costo de arco, proporcional al tiempo
 de tránsito entre paradas consecutivas (aproximadamente 1\,s por segundo de caminata
 según la red peatonal de OSRM). Sobre él actúan dos penalizaciones blandas en la
 dimensión temporal de cada ruta: la penalización inferior, con coeficiente
@@ -904,7 +905,10 @@ duración supere el punto medio del intervalo $[T_{\min},\,T_{\max}]$. Se añade
 además un costo fijo de $100\,000$\,s por vehículo activo, que desincentiva el uso
 de rutas adicionales, y una penalización de $1\,000\,000$\,s por árbol no cubierto,
 que garantiza que la cobertura total sea siempre preferible a cualquier mejora marginal
-en los demás términos.
+en los demás términos. El sexto componente es el costo de extensión geográfica, con
+coeficiente $\lambda_{\text{span}} = 3$ por metro de \textit{span} \textit{haversine} de
+cada ruta, que solo actúa bajo la estrategia \texttt{spatial\_term} y es lo que la
+distingue de \texttt{global}.
 
 La razón entre ambas penalizaciones blandas es de $20\mathord{:}1$ ($10\,000 / 500$),
 y el experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se
@@ -983,6 +987,8 @@ procesaran múltiples áreas de censo como un único problema.
     ($n = 1\,607$, estrategia \texttt{spatial\_term}, configuración de producción).}
   \label{fig:ruta-vueltas-r1}
 \end{figure}
+
+La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno.
 
 \begin{figure}[H]
   \centering
@@ -1618,11 +1624,9 @@ propio capítulo que condicionan cómo debe leerse.
     $\leq 1{,}32$\,km, esa limitación no se manifiesta; sin embargo, la
     plataforma no automatiza la segmentación previa por área, de modo que
     la correcta delimitación del \textit{dataset} de entrada recae en el
-    administrador. Particionar el arbolado por área antes de rutear es la mejora
-    de mayor impacto geométrico identificada para versiones futuras, y su costo
-    está medido sobre las áreas reales (Sección~\ref{sec:areas-reales}): una ruta
-    adicional, tres jornadas bajo $T_{\min}$ y el triple de cómputo, sin costo en
-    desplazamiento.
+    administrador. Automatizarla es la mejora de mayor impacto geométrico
+    identificada para versiones futuras, con el costo que mide la
+    Sección~\ref{sec:areas-reales}.
 
     \item \textbf{Captura sin conectividad}: el portal de censo implementa una cola
     \textit{offline} básica mediante \texttt{persistQueryClient} sobre
@@ -1733,11 +1737,8 @@ propio capítulo que condicionan cómo debe leerse.
 
     \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre
     el coeficiente de la penalización inferior y el de la superior es un compromiso de
-    diseño calibrado, no un defecto; el experimento de sensibilidad de la
-    Sección~\ref{sec:discusion-calidad} muestra que el término inferior es el que
-    sostiene el balance de carga y
-    evita la fragmentación en rutas cortas. La asimetría es intencional y su efecto
-    está medido.
+    diseño calibrado y no un defecto; su efecto está medido en la
+    Sección~\ref{sec:discusion-calidad}.
   \end{itemize}
 
 \end{itemize}
@@ -1773,8 +1774,8 @@ la evidencia que la respalda, su costo y qué habría que construir.
   diagnóstico de \texttt{area-27} en la Sección~\ref{sec:areas-reales} muestra que
   el régimen de relleno por $T_{\min}$ (Sección~\ref{sec:discusion-calidad}) surge
   porque \texttt{PenaltyConfig.vehicle\_bounds} fija $T_{\min}$ y el objetivo
-  superior sin considerar el trabajo real de la instancia, de modo que en censos
-  de baja densidad partir y rellenar hasta el piso resulta más barato que una
+  superior sin considerar el trabajo real de la instancia. En censos de baja
+  densidad, partir y rellenar hasta el piso resulta entonces más barato que una
   ruta única sobre el objetivo superior. Esa vía de recalibración ya fue
   explorada por esta memoria (piso de paradas, piso combinado) sin éxito bajo un
   coeficiente fijo; el costo pendiente es de diseño, no de cómputo: requiere una
