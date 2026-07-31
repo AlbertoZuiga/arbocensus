@@ -661,7 +661,8 @@ La misma invocación comprueba la factibilidad de la configuración antes de cre
 mediante la función \texttt{check\_config}. Esta distingue dos categorías: bloqueos, que son
 condiciones que garantizan infactibilidad (tiempo de servicio mayor que $T_{\max}$, conjunto de
 árboles insuficiente), y advertencias, que son condiciones de riesgo pero no determinantes (régimen
-de relleno activado, trabajo total muy por debajo del piso de jornada). El \textit{endpoint}
+de relleno ---caminata que el \textit{solver} añade sin visitar árboles, solo para alcanzar el piso
+de jornada--- activado, trabajo total muy por debajo de ese piso). El \textit{endpoint}
 \texttt{GET /api/optimization/estimate/} devuelve ambas categorías junto a la estimación de flota,
 de modo que el administrador puede detectar configuraciones problemáticas antes de lanzar la
 optimización.
@@ -1204,7 +1205,7 @@ respuestas.}
     \midrule
     Autenticación &
       \texttt{/api/auth/} &
-      Tokens JWT, consulta del usuario en sesión y gestión de cuentas de censadores. \\
+      \textit{Tokens} JWT, consulta del usuario en sesión y gestión de cuentas de censadores. \\
     \textit{Datasets} &
       \texttt{/api/datasets/} &
       Importación CSV/JSON y desde fuentes legadas, exploración, exportación \textit{GeoJSON} e
@@ -1418,13 +1419,12 @@ fuera del alcance de esta iteración y es la comprobación que ninguna suite de 
 
 A esta verificación del sistema se suma un compromiso distinto: la reproducibilidad de las cifras
 experimentales que reporta el Capítulo~\ref{cap:resultados}. La búsqueda local del \textit{solver}
-se corta por reloj de pared y la biblioteca no permite fijar una semilla ---el valor que determina
-el punto de partida de un generador de números pseudoaleatorios y que, al repetirse, permite
-reconstruir una corrida idéntica---, de modo que dos ejecuciones del mismo problema pueden diferir
-en los segundos finales de búsqueda. Ambas condiciones se registran entre las restricciones de la
-Sección~\ref{sec:restricciones}. El compromiso es que un tercero pueda regenerar las cifras
-publicadas desde el mismo comando de gestión y la misma instancia de datos congelada y versionada,
-no que el \textit{solver} sea determinista; las métricas por ruta se re-derivan con
+se corta por reloj de pared y la biblioteca no permite fijar una semilla, de modo que dos
+ejecuciones del mismo problema pueden diferir en los segundos finales de búsqueda. Ambas condiciones
+se registran entre las restricciones de la Sección~\ref{sec:restricciones}. El compromiso es que un
+tercero pueda regenerar las cifras publicadas desde el mismo comando de gestión y la misma instancia
+de datos congelada y versionada, no que el \textit{solver} sea determinista; las métricas por ruta
+se re-derivan con
 \texttt{route\_audit} sobre esa misma instancia. Reproducir una cifra tampoco significa que la
 solución sea óptima: acredita el procedimiento, no la calidad del plan, que es lo que miden los
 atributos de la Sección~\ref{sec:atributos-calidad}.
