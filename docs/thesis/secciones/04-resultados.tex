@@ -51,6 +51,7 @@ criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptac
     Rutas por debajo de $T_{\min}$ & 3$^{\dagger}$ & sin criterio: cota blanda \\
     Árboles descartados & 0 (cobertura 1\,607/1\,607) & $= 0$ (CA-01) \\
     Tiempo de planificación & 122{,}3\,s$^{\ddagger}$ de corrida completa con la matriz en caché, de los cuales 120{,}0\,s son el presupuesto configurado del \textit{solver}, agotado en las tres repeticiones & $< 5$ min (CA-05) \\
+    Autocruces sobre calle$^{\S}$ & 37{,}7 (33--40 según la repetición) & sin criterio en esta corrida: descriptiva \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -76,7 +77,15 @@ extremo a extremo, solo el del \textit{solver}. La cifra proviene de la corrida 
 julio de 2026 que sí lo instrumentó sobre el mismo \textit{dataset} y la misma
 configuración de producción (\texttt{20260713-real-case-metrics-spatial.csv}), y
 corresponde a sus dos repeticiones con la matriz de costos ya en caché; se detalla
-más abajo, junto con el caso de caché fría.}
+más abajo, junto con el caso de caché fría.
+
+$^{\S}$ El barrido de referencia de esta sección no instrumenta autocruces sobre
+calle, solo autocruces sobre la cuerda recta entre paradas consecutivas. La cifra
+proviene de una repetición posterior sobre el mismo \textit{dataset} y la misma
+configuración de producción (\texttt{reference-n1607-20260730.csv}), que sí
+recupera la geometría real de cada tramo desde \textit{OSRM} y cuenta los cruces
+sobre ella; se reporta como observación descriptiva, sin criterio de aceptación
+asociado en esta corrida.}
 \end{sloppypar}
 
 El número de rutas, $k=25$, es la flota que el
@@ -130,10 +139,8 @@ corrida la domina el presupuesto de 120\,s que se configura al \textit{solver}:
 mientras ese presupuesto se mantenga bajo el umbral el criterio no puede fallar, de
 modo que acota la configuración elegida antes que medir el sistema. La evidencia de
 que el presupuesto elegido basta es el análisis de sensibilidad de la
-Tabla~\ref{tab:sensibilidad-tl}, medido en el régimen anterior de la
-Sección~\ref{sec:perfil-rendimiento} ---estrategia \texttt{global} y código previo a
-la corrección del redondeo del tránsito, de donde proviene también su $k=24$---, y
-que la Sección~\ref{sec:cumplimiento-criterios} retoma.
+Tabla~\ref{tab:sensibilidad-tl}, remedido sobre el código y la estrategia
+vigentes, y que la Sección~\ref{sec:cumplimiento-criterios} retoma.
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en
 caché. En la corrida de referencia de julio de 2026 que instrumentó esos tiempos
 (\texttt{docs/experiments/20260713-real-case-metrics-spatial.csv}), con caché
@@ -767,35 +774,48 @@ jornadas en lugar de una completa. No hay aquí ruta degenerada que reprochar al
 exigía las tres áreas, el veredicto global frente al pre-registro es de
 incumplimiento, y así se reporta.
 
-\subsubsection*{El caso \texttt{area-27} es un fallo de búsqueda}
+\subsubsection*{El caso \texttt{area-27} es el régimen de relleno por $T_{\min}$}
 
-El resultado adverso admite un diagnóstico preciso: no dice lo que a primera vista parece decir. Con la configuración de producción
-las cotas blandas no dependen de la instancia: el método
-\texttt{PenaltyConfig.vehicle\_bounds} devuelve, para las cuatro instancias de
-este apartado, un piso en $T_{\min} = 7\,200$\,s con coeficiente
-$10\,000\,\text{s}^{-1}$ y un objetivo superior en el punto medio de
+El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de
+búsqueda: es el mismo régimen de relleno ya caracterizado en la
+Sección~\ref{sec:discusion-calidad} para instancias que no saturan su presupuesto
+temporal. Con la configuración de producción las cotas blandas no dependen de la
+instancia: el método \texttt{PenaltyConfig.vehicle\_bounds} devuelve, para las
+cuatro instancias de este apartado, un piso en $T_{\min} = 7\,200$\,s con
+coeficiente $10\,000\,\text{s}^{-1}$ y un objetivo superior en el punto medio de
 $9\,000$\,s con coeficiente $500\,\text{s}^{-1}$.
 
-Con esos precios la jornada única que encuentra el \textit{greedy} paga
-$(10\,209 - 9\,000) \times 500 = 604\,500$ de exceso sobre el objetivo superior,
-más $100\,000$ de costo fijo de vehículo: $704\,500$ en total. Las dos rutas del
-\textit{solver} caen por debajo del piso y pagan
-$(7\,200 - 5\,766) \times 10\,000 + (7\,200 - 5\,597) \times 10\,000 =
-30\,370\,000$, más $200\,000$ de costo fijo: $30\,570\,000$. La propia función
-objetivo prefiere la jornada única por un factor cercano a 43. Dicho de otro
-modo, el \textit{solver} no entregó lo que su propio modelo pide, de manera que
-la partición de \texttt{area-27} es un óptimo local de la búsqueda y no una
-preferencia del modelo.
+Instrumentar directamente el valor de la función objetivo del \textit{solver} en
+esta instancia ---inyectando la solución del \textit{greedy} como
+\textit{warm start} y comparando su costo contra el de la solución final de
+partición (\texttt{warmstart-area27-20260730.csv})--- muestra que las duraciones de las dos rutas que reporta
+\texttt{total\_estimated\_time\_sec} ---$5\,766$ y $5\,597$\,s arriba, $5\,299$ y
+$5\,819$\,s en la repetición instrumentada--- no son el valor que ve la dimensión
+Time del \textit{solver}: la diferencia es relleno de trayecto añadido gratis, y
+ambas rutas terminan exactamente en el piso $T_{\min} = 7\,200$\,s. Con esa cifra
+la partición no paga penalización de piso, $(7\,200 - 7\,200) \times 10\,000 = 0$
+por vehículo, y su costo se reduce al fijo de dos vehículos, $200\,000$. La
+jornada única del \textit{greedy}, en cambio, paga
+$(10\,694 - 9\,000) \times 500 = 847\,000$ de exceso sobre el objetivo superior
+más $100\,000$ de costo fijo; los $10\,694$\,s son la duración de la solución
+inyectada, que es la variante cruda del \textit{greedy}, y no los $10\,209$\,s de
+su variante con 2-opt de la Tabla~\ref{tab:areas-brazos}. El valor de la función objetivo lo confirma:
+$964\,903$ para la jornada única inyectada como \textit{warm start} frente a
+$229\,709$ para la partición que devuelve el \textit{solver}, un factor cercano a
+$4{,}2$ a favor de partir. El \textit{solver} la devuelve, en efecto, en las tres
+semillas, con y sin \textit{warm start} de la jornada única. No hay óptimo local que reprochar a la
+búsqueda: el GLS encontró y conservó la solución más barata bajo el precio
+vigente.
 
-El camino hacia la jornada única es cuesta arriba, lo que explica que la
-búsqueda no lo recorra. Trasladar paradas de una ruta a la otra empuja a la
-receptora contra el objetivo superior de $9\,000$\,s a la vez que hunde a la
-donante más abajo del piso, penalizado a $10\,000\,\text{s}^{-1}$, y el ahorro
-solo se cobra cuando la donante queda vacía, porque un vehículo sin paradas no
-paga el costo fijo ni ninguna de las dos cotas blandas. La búsqueda local guiada
-penaliza arcos y no valores de la dimensión temporal, de modo que carece de
-mecanismo para remontar ese valle; las tres semillas caen en el mismo mínimo
-local.
+El mecanismo es el mismo régimen de relleno por $T_{\min}$ documentado en la
+Sección~\ref{sec:discusion-calidad}: cuando $k \cdot T_{\min}$ excede
+holgadamente el trabajo real de la instancia ---aquí $2 \times 7\,200 =
+14\,400$\,s frente a los $10\,694$\,s que exige recorrer los 72 árboles en una
+sola ruta---, partir y rellenar hasta el piso resulta más barato que una única
+ruta que se pasa del objetivo superior. La palanca para este defecto ya se
+intentó por la vía de los pisos (piso de paradas, piso combinado) y quedó
+cerrada sin cambio de \textit{default}: no es un hueco de búsqueda nuevo que
+abra un ciclo de precios adicional.
 
 Las restantes instancias son consistentes con estos mismos precios. En
 \texttt{area-26} el \textit{solver} deja sus tres rutas dentro de la banda
@@ -804,10 +824,10 @@ cada semilla se queda en el $82$--$83$\,\% de $T_{\max}$, esto es, por debajo de
 los $9\,000$\,s del objetivo superior, con duraciones medias por semilla de
 $8\,204$, $8\,121$ y $8\,936$\,s.
 \texttt{area-29} es el caso sin salida: 43 árboles no alcanzan para $7\,200$\,s,
-así que su única ruta paga el piso porque no existe alternativa. La palanca que
-este diagnóstico señala es, en consecuencia, la búsqueda ---o un post-proceso de
-fusión de rutas--- y no la recalibración de los coeficientes, hipótesis esta
-última que la serie ya había descartado por otras vías
+así que su única ruta paga el piso porque no existe alternativa. Ni la búsqueda
+ni la recalibración de coeficientes son la palanca pertinente aquí: ambas vías
+---piso de paradas, piso combinado, recalibración de penalizaciones--- ya fueron
+exploradas y descartadas por otras razones
 (Sección~\ref{sec:discusion-calidad}).
 
 \subsubsection*{Precio de particionar}
@@ -932,8 +952,10 @@ directa sino evidencia consistente con la hipótesis de que la geometría de las
 responde a la configuración de la función objetivo y no al corte por tiempo del GLS.
 Dos observaciones independientes apuntan en la misma dirección y refuerzan esa
 lectura: el análisis de sensibilidad al presupuesto del \textit{solver}
-(Tabla~\ref{tab:sensibilidad-tl}), que muestra que duplicar el tiempo de cómputo no
-altera la solución, y la re-medición posterior sobre \texttt{crossings\_road}, que
+(Tabla~\ref{tab:sensibilidad-tl}), que muestra que ampliar el presupuesto por
+sobre los 120\,s no altera el número de rutas ni el balance y mueve el
+desplazamiento total menos que la dispersión entre semillas, y la re-medición
+posterior sobre \texttt{crossings\_road}, que
 sobre la geometría real invierte el signo del efecto de este mismo brazo. Establecer
 la afirmación en su forma fuerte exigiría re-correr el experimento con semillas
 efectivamente propagadas al \textit{solver} y reportar los auto-cruces sobre el
@@ -1135,9 +1157,9 @@ Sección~\ref{sec:comparacion-estrategias}: se obtuvieron con la estrategia
 la corrección del redondeo del tránsito (el truncamiento entero descrito al
 final de la Sección~\ref{sec:variantes-duracion}). Ese era el régimen vigente en
 producción al momento del perfilamiento, y son sus propios resultados los que lo
-dejaron obsoleto: el análisis de sensibilidad de la
-Tabla~\ref{tab:sensibilidad-tl} es el que motivó bajar el límite de \textit{solver} de
-180 a 120\,s, mientras que la adopción de \texttt{spatial\_term} como estrategia
+dejaron obsoleto: la sensibilidad al límite de \textit{solver} es la que motivó
+bajarlo de 180 a 120\,s ---remedida sobre el código vigente en la
+Tabla~\ref{tab:sensibilidad-tl}---, mientras que la adopción de \texttt{spatial\_term} como estrategia
 por defecto proviene del experimento de comparación de la
 Sección~\ref{sec:comparacion-estrategias}. El perfil documenta, por tanto, el
 estado previo a ambas decisiones y no se reejecutó bajo el régimen nuevo: sus
@@ -1259,8 +1281,8 @@ Se evaluaron las seis combinaciones de tiempo de servicio por árbol
 $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el
 \textit{dataset} real completo de $n=1\,607$ árboles, con tres semillas y un
 límite de \textit{solver} de 180\,s vigente al momento del perfilamiento; ese
-tope se bajó a 120\,s a partir del análisis de sensibilidad de la
-Tabla~\ref{tab:sensibilidad-tl}. El compromiso entre balance, flota y costo
+tope se bajó a 120\,s a partir del análisis de sensibilidad al presupuesto del
+\textit{solver}, remedido en la Tabla~\ref{tab:sensibilidad-tl}. El compromiso entre balance, flota y costo
 total, junto con el efecto de las semillas, se documenta en el
 \hyperref[anx:grilla-variantes]{Anexo 4} (Tabla~\ref{tab:grilla-variantes}).
 El hallazgo de esta grilla que no depende del régimen es que el GLS agota o no
@@ -1295,31 +1317,37 @@ $n$ es el costo de explorar cada vecindario, no el tiempo total observado.
 Dado que el GLS domina el tiempo en operación normal, su presupuesto es el
 parámetro de operación relevante. La Tabla~\ref{tab:sensibilidad-tl} muestra la
 sensibilidad de la calidad de la solución al límite de tiempo para la variante
-central (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$): el número de rutas y
-el balance quedan fijos desde los 60\,s, y la mejora de desplazamiento total
-entre 120\,s y 180\,s es de solo 0,1\,\%. Un límite de 120\,s captura por tanto
-$\approx 99$\,\% de la mejora alcanzable con 180\,s, lo que permitiría reducir
-el costo de cada corrida de producción en un tercio sin pérdida de calidad
-medible.
+central (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$, estrategia
+\texttt{spatial\_term} vigente, tres semillas por punto;
+\texttt{tl-sensitivity-20260730.csv}): el número de rutas queda fijo en $k=25$
+desde los 60\,s, y el desplazamiento total medio mejora un $3{,}5$\,\% entre
+60\,s y 120\,s y solo un $0{,}6$\,\% adicional entre 120\,s y 180\,s. Un límite
+de 120\,s captura por tanto la mayor parte de la mejora alcanzable con 180\,s,
+lo que justifica el valor de producción sin pérdida de calidad relevante.
 
 \begin{table}[H]
   \centering
-  \caption{Sensibilidad al límite de tiempo del \textit{solver} (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$; estrategia \texttt{global}, código previo a la corrección del redondeo del tránsito, de ahí que $k=24$ y no $25$ como en el resto del capítulo).}
+  \caption{Sensibilidad al límite de tiempo del \textit{solver} (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$, estrategia \texttt{spatial\_term}; media $\pm$ desviación estándar de tres semillas).}
   \label{tab:sensibilidad-tl}
   \begin{tabularx}{\textwidth}{rXXXX}
     \toprule
     Límite [s] & $k$ & Balance & Desplaz. total [s] & $\Delta$ desplaz. vs.\ 60\,s \\
     \midrule
-    60  & 24 & 0{,}867 & 61\,521 & --- \\
-    120 & 24 & 0{,}865 & 56\,830 & $-7{,}6$\,\% \\
-    180 & 24 & 0{,}865 & 56\,750 & $-7{,}8$\,\% \\
+    60  & 25 & 0{,}847 & 60\,465 $\pm$ 200  & --- \\
+    120 & 25 & 0{,}838 & 58\,320 $\pm$ 1\,359 & $-3{,}5$\,\% \\
+    180 & 25 & 0{,}838 & 57\,942 $\pm$ 1\,559 & $-4{,}2$\,\% \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-El $k=24$ de esta tabla proviene de una medición anterior a la corrección del
-redondeo del tránsito descrita en la Sección~\ref{sec:discusion-calidad}; no
-contradice el $k=25$ del resto del capítulo, que corresponde al código vigente.
+La dispersión entre semillas crece con el límite de tiempo (de $\pm 200$\,s a
+$\pm 1\,559$\,s): a mayor presupuesto, el GLS tiene más oportunidad de divergir
+hacia óptimos locales distintos según el orden de nodos de partida. El número de
+rutas no varía en este rango y el balance se mueve dentro de una banda estrecha
+($0{,}847$ a los 60\,s, $0{,}838$ a los 120\,s y 180\,s), siempre por sobre el
+umbral de CA-03; la mejora de desplazamiento es monótona pero de magnitud
+decreciente, y a partir de los 120\,s queda por debajo de la dispersión entre
+semillas del propio punto de medición.
 
 \section{CONCLUSIONES}
 \label{sec:conclusiones}
@@ -1359,10 +1387,10 @@ podría hacer crecer hasta incumplirlo, y el desglose por fases confirma que no 
 hace: el $98{,}1$\,\% del tiempo está en la metaheurística y no en la infraestructura
 que la rodea. Lo que sí constituye evidencia sobre la elección del tope es el
 análisis de sensibilidad de la Tabla~\ref{tab:sensibilidad-tl}, que muestra que
-captura prácticamente toda la mejora alcanzable con presupuestos mayores; conviene
-registrar que esa tabla se midió en el régimen anterior de la
-Sección~\ref{sec:perfil-rendimiento}, con la estrategia \texttt{global} y el código
-previo a la corrección del redondeo del tránsito, y que de ahí proviene su $k=24$.
+captura la mayor parte de la mejora alcanzable con presupuestos mayores; conviene
+registrar que la decisión de bajar el tope se tomó en el régimen anterior de la
+Sección~\ref{sec:perfil-rendimiento} y que esa tabla es la remedición posterior,
+ya sobre la estrategia \texttt{spatial\_term} y el código vigente.
 Con caché fría la corrida completa sube a $299{,}3$\,s por la construcción de la
 matriz contra OSRM, al borde del umbral; el criterio se enuncia sobre el caso con
 caché precisamente porque es el de operación normal, pero el margen en el primer
@@ -1417,9 +1445,9 @@ que exigiría una intermitencia prolongada. El atributo se cumple en su forma d�
 La eficiencia de cómputo se cumple en sus dos componentes. Planificar la instancia
 cuesta $122{,}3$\,s de reloj con la matriz en caché, muy por debajo de la cota, y el
 análisis de sensibilidad de la Tabla~\ref{tab:sensibilidad-tl} muestra que ese
-presupuesto captura prácticamente toda la mejora alcanzable: ampliarlo a $180$\,s
-altera el desplazamiento total en un $0{,}1$\,\% y no cambia ni el número de rutas ni
-el balance. La salvedad pertinente es que la cifra de $120$\,s es el tope configurado
+presupuesto captura la mayor parte de la mejora alcanzable: ampliarlo a $180$\,s
+altera el desplazamiento total en un $0{,}6$\,\% ---por debajo de la dispersión
+entre semillas--- y no cambia ni el número de rutas ni el balance. La salvedad pertinente es que la cifra de $120$\,s es el tope configurado
 y no una medición de convergencia, de modo que el primer componente se satisface por
 construcción y es el segundo el que aporta la evidencia.
 
@@ -1741,13 +1769,18 @@ la evidencia que la respalda, su costo y qué habría que construir.
   desplazamiento. Debe construirse la segmentación automática del \textit{dataset}
   por área antes de rutear, hoy responsabilidad manual del administrador.
 
-  \item \textbf{Post-proceso de fusión de rutas}: el diagnóstico de
-  \texttt{area-27} en la Sección~\ref{sec:areas-reales} muestra que el
-  \textit{solver} queda atrapado en un óptimo local cuya función objetivo lo
-  penaliza por un factor de $43$ frente a la solución del heurístico. El costo es
-  de implementación, no de cómputo adicional: opera sobre la solución ya
-  construida. Debe construirse un post-proceso de fusión de paradas entre rutas
-  que ataque ese valle sin incrementar el presupuesto del GLS.
+  \item \textbf{Cotas blandas sensibles a la densidad de la instancia}: el
+  diagnóstico de \texttt{area-27} en la Sección~\ref{sec:areas-reales} muestra que
+  el régimen de relleno por $T_{\min}$ (Sección~\ref{sec:discusion-calidad}) surge
+  porque \texttt{PenaltyConfig.vehicle\_bounds} fija $T_{\min}$ y el objetivo
+  superior sin considerar el trabajo real de la instancia, de modo que en censos
+  de baja densidad partir y rellenar hasta el piso resulta más barato que una
+  ruta única sobre el objetivo superior. Esa vía de recalibración ya fue
+  explorada por esta memoria (piso de paradas, piso combinado) sin éxito bajo un
+  coeficiente fijo; el costo pendiente es de diseño, no de cómputo: requiere una
+  cota que escale con una estimación del trabajo real de la instancia en lugar de
+  una constante. Debe explorarse esa dependencia antes de reabrir cualquier
+  ciclo de recalibración de coeficientes fijos.
 
   \item \textbf{Matrices de costos de gran escala}: el tope de $2\,000$ árboles
   que hoy acota la dimensión de la matriz de costos está impuesto por el
