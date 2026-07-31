@@ -6,6 +6,7 @@
 
 \phantomsection
 \section*{Anexo 1. Documentación de la API REST}
+\label{anx:api}
 \addcontentsline{toc}{section}{Anexo 1. Documentación de la API REST}
 
 La API se implementa con Django REST Framework y se publica bajo el prefijo
@@ -181,6 +182,7 @@ demostración funcional y las pruebas de carga sintéticas.
 
 \phantomsection
 \section*{Anexo 3. Comandos reproducibles de los experimentos}
+\label{anx:comandos}
 \addcontentsline{toc}{section}{Anexo 3. Comandos reproducibles de los experimentos}
 
 Los resultados del Capítulo~\ref{cap:resultados} se obtuvieron con tres comandos de
@@ -365,7 +367,8 @@ tres semillas.
 Respecto de las semillas, corresponde precisar su rol: a diferencia de
 \texttt{config\_algorithm\_sweep} (Sección~\ref{sec:discusion-calidad}), donde la
 semilla sí se propaga al \textit{solver} y altera la trayectoria del GLS, esta grilla se
-ejecutó con \texttt{baseline\_sweep} (Anexo 3), donde la semilla solo etiqueta la
+ejecutó con \texttt{baseline\_sweep} (\hyperref[anx:comandos]{Anexo 3}), donde la
+semilla solo etiqueta la
 repetición. La varianza observada entre repeticiones (columna sd de \texttt{solve} en
 la tabla) proviene íntegramente del corte por tiempo de reloj (\textit{wall-clock}) de
 la búsqueda local: en las variantes en que la búsqueda agota el presupuesto, las tres
@@ -507,7 +510,7 @@ la validación pendiente de mayor valor para el uso operativo de la plataforma.
 La Tabla~\ref{tab:trazabilidad} remite cada requisito funcional de la
 Sección~\ref{sec:requisitos-funcionales} a la sección del Capítulo~\ref{cap:diseno}
 donde se documenta su realización y, cuando corresponde, al inventario de
-\textit{endpoints} del Anexo 1.
+\textit{endpoints} del \hyperref[anx:api]{Anexo 1}.
 
 \begin{xltabular}{\textwidth}{@{}l X@{}}
   \caption{Trazabilidad de los requisitos funcionales al diseño.}
