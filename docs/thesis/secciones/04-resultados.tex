@@ -16,7 +16,7 @@ $T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol y los
 ---que agrega al objetivo un término de dispersión geográfica, véase la
 Sección~\ref{sec:estrategias}--- y un tiempo límite de \textit{solver} de 120\,s, que es
 el valor que produce la heurística $\min(30 + 1{,}5\,n,\ 120)$ para cualquier
-\textit{dataset} de este tamaño. Se reportan ocho indicadores:
+\textit{dataset} de este tamaño. Se reportan nueve indicadores:
 \begin{enumerate}[label=\alph*)]
   \item el número de rutas $k$, salida automática del \textit{solver};
   \item el tiempo promedio por ruta $\bar{T}$;
@@ -29,7 +29,8 @@ el valor que produce la heurística $\min(30 + 1{,}5\,n,\ 120)$ para cualquier
     tratarse de un objetivo penalizado;
   \item el número de árboles descartados;
   \item el tiempo de cómputo del \textit{solver}, acotado por construcción al
-    presupuesto que se le configura.
+    presupuesto que se le configura;
+  \item el número de auto-cruces sobre el trazado real de calles, descriptivo y sin criterio en esta corrida.
 \end{enumerate}
 La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de tres
 repeticiones (semillas 42, 43 y 44) y remite, en su columna de criterio, a los
@@ -137,8 +138,9 @@ entre semillas de una corrida no acotan la varianza entre corridas distintas
 El criterio de $< 5$ minutos (CA-05) se enuncia sobre la corrida completa, y esa
 corrida la domina el presupuesto de 120\,s que se configura al \textit{solver}:
 mientras ese presupuesto se mantenga bajo el umbral el criterio no puede fallar, de
-modo que acota la configuración elegida antes que medir el sistema. La evidencia de
-que el presupuesto elegido basta es el análisis de sensibilidad de la
+modo que acota la configuración elegida antes que medir el sistema.
+
+La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad de la
 Tabla~\ref{tab:sensibilidad-tl}, remedido sobre el código y la estrategia
 vigentes, y que la Sección~\ref{sec:cumplimiento-criterios} retoma.
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en
@@ -954,6 +956,7 @@ se paga en la dimensión que el criterio de aceptación CA-03 protege.
 Con esas tres reservas, la lectura que el material sostiene no es una relación causal
 directa sino evidencia consistente con la hipótesis de que la geometría de las rutas
 responde a la configuración de la función objetivo y no al corte por tiempo del GLS.
+
 Dos observaciones independientes apuntan en la misma dirección y refuerzan esa
 lectura: el análisis de sensibilidad al presupuesto del \textit{solver}
 (Tabla~\ref{tab:sensibilidad-tl}), que muestra que ampliar el presupuesto por
@@ -1077,8 +1080,8 @@ auto-cruce es un fenómeno exclusivo del régimen denso agregado
 (Ilustración~\ref{fig:regimen-disperso-vs-real}). El brazo \texttt{span-c100} ---penalización
 del \textit{span} sobre la dimensión temporal mediante
 \texttt{SetSpanCostCoefficientForAllVehicles}, que eleva el coeficiente de $0$ en
-producción a $100$ y deja intacta la penalización de $3$ sobre la dimensión espacial---
-confirma la predicción de nulidad: solo reduce los auto-cruces en $26{,}6$\,\% para
+producción a $100$ y deja intacta la penalización de $3$ sobre la dimensión espacial.
+Confirma la predicción de nulidad: solo reduce los auto-cruces en $26{,}6$\,\% para
 $n=1\,607$, por debajo del umbral del $30$\,\% exigido por el criterio a priori, porque
 penalizar la suma de duraciones de ruta no distingue el relleno del viaje productivo.
 Los brazos que reducen o suprimen el piso blando
@@ -1313,7 +1316,7 @@ Con el objetivo de aislar el efecto del tamaño del problema se repitió la gril
 consulta a OSRM en frío: de 1,7\,s con $n=157$ a 170,8\,s con $n=1\,607$
 ---un factor de $\approx 100\times$ para $10\times$ el número de nodos,
 consistente con el crecimiento $O(n^2)$ del número de celdas de la matriz---.
-La primera solución del \textit{solver} pasa de 0,02\,s a 1,4\,s ($\approx 63\times$).
+La primera solución del \textit{solver} pasa de 0,022\,s a 1,4\,s ($\approx 63\times$).
 La metaheurística, en cambio, no escala de forma monótona con $n$ a presupuesto
 fijo: con $n=157$ el GLS agota los 180\,s en casi todas las variantes (media de
 167\,s), mientras que con $n=1\,607$ corta antes en varias (media de 103\,s).
@@ -1503,9 +1506,11 @@ ruta adicional, tres jornadas por debajo de $T_{\min}$ y el triple de cómputo, 
 cambio de instancias con correlato operativo y de una varianza entre repeticiones
 sustancialmente menor. Esa misma medición expuso el límite del \textit{solver} en
 el otro extremo del rango: en un área de 72 árboles la búsqueda entrega dos medias
-jornadas donde su propia función objetivo prefiere una jornada única por un factor
-cercano a 43, de modo que el margen de mejora pendiente no está en los coeficientes
-del objetivo sino en la búsqueda.
+jornadas donde el \textit{greedy} cubre una jornada única, y la instrumentación del
+objetivo muestra que no es un fallo de búsqueda sino el precio vigente ---la
+partición resulta $4{,}2$ veces más barata bajo cotas blandas que no dependen de la
+instancia---, de modo que el margen de mejora pendiente está en hacer esas cotas
+sensibles a la densidad y no en la búsqueda.
 
 \subsection{Lo que aportó la metodología}
 
@@ -1704,9 +1709,12 @@ propio capítulo que condicionan cómo debe leerse.
     \item \textbf{Geometría de referencia de la métrica de auto-cruces}: el número de
     auto-cruces se calcula sobre las cuerdas rectas entre paradas consecutivas,
     geometría distinta de la que optimiza el \textit{solver} (tiempo de red de OSRM) y
-    de la que recorre el censador (trazado real de calles); la correspondencia entre
-    las tres no se ha comprobado. La métrica conserva su valor comparativo entre
-    configuraciones medidas con la misma vara, con la reserva que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla.
+    de la que recorre el censador (trazado real de calles). La correspondencia entre
+    las dos primeras no se ha comprobado; la de las cuerdas con el trazado real sí
+    está medida y es parcial ($\rho = 0{,}527$, invertida en el conjunto agregado),
+    de modo que las cifras de auto-cruces sobre cuerdas de este capítulo conservan su
+    valor comparativo entre configuraciones medidas con la misma vara, con la reserva
+    que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla.
 
     \item \textbf{Exactitud no medida del estimador de distancias}: el perfil peatonal
     de OSRM se aparta de la caminata real de terreno por no modelar pendientes,
