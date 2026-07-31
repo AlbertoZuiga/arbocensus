@@ -28,8 +28,8 @@ el valor que produce la heurística $\min(30 + 1{,}5\,n,\ 120)$ para cualquier
   \item el número de rutas que quedan por debajo de $T_{\min}$, sin criterio por
     tratarse de un objetivo penalizado;
   \item el número de árboles descartados;
-  \item el tiempo de cómputo del \textit{solver}, acotado por construcción al
-    presupuesto que se le configura;
+  \item el costo de planificación, tiempo de reloj de una corrida completa con la matriz de costos
+    en caché, del que el presupuesto configurado al \textit{solver} es el término dominante;
   \item el número de auto-cruces sobre el trazado real de calles, descriptivo y sin criterio en esta corrida.
 \end{enumerate}
 La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de tres
@@ -135,14 +135,13 @@ las métricas de calidad alcanza un orden de magnitud mayor, y las barras de err
 entre semillas de una corrida no acotan la varianza entre corridas distintas
 (\hyperref[anx:alcance-replicas]{Anexo 4}).
 
-El criterio de $< 5$ minutos (CA-05) se enuncia sobre la corrida completa, y esa
-corrida la domina el presupuesto de 120\,s que se configura al \textit{solver}:
-mientras ese presupuesto se mantenga bajo el umbral el criterio no puede fallar, de
-modo que acota la configuración elegida antes que medir el sistema.
+El criterio de $< 5$ minutos (CA-05) se enuncia sobre la corrida completa, y esa corrida la domina
+el presupuesto de 120\,s que se configura al \textit{solver}: mientras ese presupuesto se mantenga
+bajo el umbral el criterio no puede fallar, de modo que acota la configuración elegida antes que
+medir el sistema. La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad de
+la Tabla~\ref{tab:sensibilidad-tl}, remedido sobre el código y la estrategia vigentes, y que la
+Sección~\ref{sec:cumplimiento-criterios} retoma.
 
-La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad de la
-Tabla~\ref{tab:sensibilidad-tl}, remedido sobre el código y la estrategia
-vigentes, y que la Sección~\ref{sec:cumplimiento-criterios} retoma.
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en
 caché. En la corrida de referencia de julio de 2026 que instrumentó esos tiempos
 (\texttt{docs/experiments/20260713-real-case-metrics-spatial.csv}), con caché
@@ -956,7 +955,6 @@ se paga en la dimensión que el criterio de aceptación CA-03 protege.
 Con esas tres reservas, la lectura que el material sostiene no es una relación causal
 directa sino evidencia consistente con la hipótesis de que la geometría de las rutas
 responde a la configuración de la función objetivo y no al corte por tiempo del GLS.
-
 Dos observaciones independientes apuntan en la misma dirección y refuerzan esa
 lectura: el análisis de sensibilidad al presupuesto del \textit{solver}
 (Tabla~\ref{tab:sensibilidad-tl}), que muestra que ampliar el presupuesto por
@@ -1070,24 +1068,21 @@ impone \textit{detours} adicionales. En el eje de algoritmo, \texttt{global} pr�
 modifica los auto-cruces ($-2{,}6$\,\%) y \texttt{greedy} los empeora ($+14{,}6$\,\%), lo que
 ratifica \texttt{spatial\_term} como la estrategia correcta.
 
-Sin embargo, el mismo brazo produce el peor resultado en las áreas reales individuales,
-donde la instancia no satura $T_{\max}$ ($\overline{\text{sat}} \approx 0{,}67$--$0{,}73$):
-anclar la cota superior fuerza relleno de trayecto porque la carga de servicio disponible
-no llena el presupuesto, con incrementos de viaje de $+64{,}0$\,\%, $+62{,}6$\,\% y
-$+89{,}0$\,\% en las instancias de $n = 157$, $72$ y $43$, respectivamente. Bajo la
-configuración de producción, esas mismas áreas generan cero o casi cero auto-cruces; el
-auto-cruce es un fenómeno exclusivo del régimen denso agregado
-(Ilustración~\ref{fig:regimen-disperso-vs-real}). El brazo \texttt{span-c100} ---penalización
-del \textit{span} sobre la dimensión temporal mediante
-\texttt{SetSpanCostCoefficientForAllVehicles}, que eleva el coeficiente de $0$ en
-producción a $100$ y deja intacta la penalización de $3$ sobre la dimensión espacial.
-Confirma la predicción de nulidad: solo reduce los auto-cruces en $26{,}6$\,\% para
-$n=1\,607$, por debajo del umbral del $30$\,\% exigido por el criterio a priori, porque
-penalizar la suma de duraciones de ruta no distingue el relleno del viaje productivo.
-Los brazos que reducen o suprimen el piso blando
-(\texttt{tmin-scaled}, \texttt{service-floor} y \texttt{tmin-scaled+exempt-last}) quedan
-descalificados como configuración universal al romper la compuerta de balance $\geq 0{,}80$
-en siete, siete y cuatro instancias, respectivamente.
+Sin embargo, el mismo brazo produce el peor resultado en las áreas reales individuales, donde la
+instancia no satura $T_{\max}$ ($\overline{\text{sat}} \approx 0{,}67$--$0{,}73$): anclar la cota
+superior fuerza relleno de trayecto porque la carga de servicio disponible no llena el presupuesto,
+con incrementos de viaje de $+64{,}0$\,\%, $+62{,}6$\,\% y $+89{,}0$\,\% en las instancias de $n =
+157$, $72$ y $43$, respectivamente. Bajo la configuración de producción, esas mismas áreas generan
+cero o casi cero auto-cruces; el auto-cruce es un fenómeno exclusivo del régimen denso agregado
+(Ilustración~\ref{fig:regimen-disperso-vs-real}). El brazo \texttt{span-c100} ---penalización del
+\textit{span} sobre la dimensión temporal mediante \texttt{SetSpanCostCoefficientForAllVehicles},
+que eleva el coeficiente de $0$ en producción a $100$ y deja intacta la penalización de $3$ sobre la
+dimensión espacial--- confirma la predicción de nulidad: solo reduce los auto-cruces en $26{,}6$\,\%
+para $n=1\,607$, por debajo del umbral del $30$\,\% exigido por el criterio a priori, porque
+penalizar la suma de duraciones de ruta no distingue el relleno del viaje productivo. Los brazos que
+reducen o suprimen el piso blando (\texttt{tmin-scaled}, \texttt{service-floor} y
+\texttt{tmin-scaled+exempt-last}) quedan descalificados como configuración universal al romper la
+compuerta de balance $\geq 0{,}80$ en siete, siete y cuatro instancias, respectivamente.
 
 La conclusión del barrido es que no existe una configuración única ganadora para todos los
 regímenes sin una compuerta previa: la hipótesis queda refutada. El escenario donde
@@ -1145,19 +1140,16 @@ medición. El análisis completo se documenta en
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 \label{sec:perfil-rendimiento}
 
-El tiempo de ejecución se concentra en la metaheurística: con caché caliente el
-GLS acapara el $98{,}1$\,\% del tiempo total y el perfil pasa a estar dominado por
-OSRM en frío. Esta sección documenta ese comportamiento: en qué fases del
-\textit{pipeline} se concentra el tiempo de ejecución, cómo varían las soluciones
-ante los parámetros operacionales (tiempo de servicio por árbol y cota dura
-$T_{\max}$) y cuál es la sensibilidad del sistema al tamaño del problema y al
-presupuesto del \textit{solver}. Todas las cifras provienen del experimento de
-perfilado ejecutado el 11--12 de julio de 2026, cuyo protocolo y datos crudos se
-encuentran versionados en el directorio \texttt{docs/experiments/} del repositorio
-(reporte \texttt{profiling-20260711.md} y archivos CSV asociados), y son
-reproducibles mediante el comando de gestión \texttt{baseline\_sweep}, verificado
-previamente sobre una corrida sintética de $n=80$
-(\texttt{baseline-sweep-20260711.md}).
+El tiempo de ejecución se concentra en la metaheurística cuando la caché de la matriz está caliente
+---el GLS acapara el $98{,}1$\,\% del total--- y en OSRM cuando está fría. Esta sección documenta
+ese comportamiento: en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
+varían las soluciones ante los parámetros operacionales (tiempo de servicio por árbol y cota dura
+$T_{\max}$) y cuál es la sensibilidad del sistema al tamaño del problema y al presupuesto del
+\textit{solver}. Todas las cifras provienen del experimento de perfilado ejecutado el 11--12 de
+julio de 2026, cuyo protocolo y datos crudos se encuentran versionados en el directorio
+\texttt{docs/experiments/} del repositorio (reporte \texttt{profiling-20260711.md} y archivos CSV
+asociados), y son reproducibles mediante el comando de gestión \texttt{baseline\_sweep}, verificado
+previamente sobre una corrida sintética de $n=80$ (\texttt{baseline-sweep-20260711.md}).
 
 Corresponde advertir que las cifras de esta sección provienen de un
 régimen de medición anterior al de la
@@ -1580,14 +1572,13 @@ en terreno el problema logístico que lo motivó. Esa última comprobación qued
 pendiente y es, de todas las extensiones identificadas, la de mayor valor para el
 proyecto.
 
-Por último, dos reservas de instrumento acompañan a toda lectura de la geometría: la
-métrica de auto-cruces se calcula sobre cuerdas rectas y su correspondencia con el
-trazado real es parcial, y la replicación de los experimentos se obtiene permutando el
-orden de los nodos, lo que acota la varianza entre semillas de una corrida pero no la
-varianza entre corridas distintas. Ambas están cuantificadas en la auditoría de
-robustez de la Sección~\ref{sec:discusion-calidad}, y ninguna de las dos afecta a los
-criterios de aceptación ---cobertura, jornada, balance, flota y tiempo---, que
-descansan en magnitudes ajenas a ellas.
+Por último, dos reservas de instrumento acompañan a la lectura de la geometría: la mayor parte de
+las cifras de auto-cruces de este capítulo se calcula sobre cuerdas rectas, cuya correspondencia con
+el trazado real está medida y es parcial, y la replicación de los experimentos se obtiene permutando
+el orden de los nodos, lo que acota la varianza entre semillas de una corrida pero no la varianza
+entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez de la
+Sección~\ref{sec:discusion-calidad}, y ninguna de las dos afecta a los criterios de aceptación
+---cobertura, jornada, balance, flota y tiempo---, que descansan en magnitudes ajenas a ellas.
 
 \section{LIMITACIONES DEL SISTEMA}
 \label{sec:limitaciones}
