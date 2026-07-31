@@ -9,14 +9,13 @@
 
 A mi familia, por el apoyo sostenido a lo largo de toda la carrera.
 
-A los profesores de la Facultad de Ingeniería y Ciencias Aplicadas de la
-Universidad de los Andes, por la formación recibida durante estos años, y de
-manera especial al profesor guía de este trabajo, por su orientación y sus
-observaciones durante el desarrollo del proyecto.
+A los profesores de la Facultad de Ingeniería y Ciencias Aplicadas de la Universidad de los Andes,
+por la formación recibida durante estos años, y de manera especial al profesor guía de este trabajo,
+por su orientación y sus observaciones durante el desarrollo del proyecto.
 
-A quienes participaron en las etapas previas de Arbocensus: el levantamiento de
-datos realizado entonces es el que permitió evaluar este trabajo sobre un censo
-real y no sobre un conjunto sintético.
+A quienes participaron en las etapas previas de Arbocensus: el levantamiento de datos realizado
+entonces es el que permitió evaluar este trabajo sobre un censo real y no sobre un conjunto
+sintético.
 }
 
 \newpage
@@ -40,44 +39,39 @@ real y no sobre un conjunto sintético.
 \chapter*{RESUMEN}
 \addcontentsline{toc}{chapter}{RESUMEN}
 
-Arbocensus es un proyecto orientado a automatizar la gestión de censos de árboles
-urbanos. Sus iteraciones anteriores desarrollaron una plataforma web de censado basada
-en participación ciudadana, con elementos de ludificación y un modelo de estimación de
-cobertura del censo; la fase que documenta esta memoria agrega la etapa siguiente: la
-planificación de las jornadas en terreno. El propósito del proyecto exige un historial de
-observaciones por árbol, y construirlo obliga a volver sobre un conjunto conocido de
-ejemplares ya georreferenciados; ese re-censo estructurado convierte al censo en un
-problema de asignación de trabajo que las iteraciones anteriores no abordaron.
+Arbocensus es un proyecto orientado a automatizar la gestión de censos de árboles urbanos. Sus
+iteraciones anteriores desarrollaron una plataforma web de censado basada en participación
+ciudadana, con elementos de ludificación y un modelo de estimación de cobertura del censo; la fase
+que documenta esta memoria agrega la etapa siguiente: la planificación de las jornadas en terreno.
+El propósito del proyecto exige un historial de observaciones por árbol, y construirlo obliga a
+volver sobre un conjunto conocido de ejemplares ya georreferenciados; ese re-censo estructurado
+convierte al censo en un problema de asignación de trabajo que las iteraciones anteriores no
+abordaron.
 
-El problema se formula como un problema de ruteo de vehículos de rutas abiertas con
-visitas opcionales penalizadas y restricción de duración por ruta, y se resuelve
-mediante el \textit{solver} de ruteo vehicular de \textit{OR-Tools}. Los tiempos de
-desplazamiento peatonal se calculan sobre la red vial real de \textit{OpenStreetMap}
-mediante OSRM, lo que elimina costos de APIs externas. La plataforma cubre el ciclo
-operacional completo: el administrador importa los árboles, configura los parámetros,
-ejecuta la optimización y publica el plan; el censador accede desde su dispositivo
-móvil a la ruta asignada, con las paradas en secuencia y un enlace de navegación
-peatonal por parada. La formulación aborda restricciones operacionales reales:
-minimización automática del número de rutas, jornadas acotadas por ruta y balance de
-carga entre equipos.
+El problema se formula como un problema de ruteo de vehículos de rutas abiertas con visitas
+opcionales penalizadas y restricción de duración por ruta, y se resuelve mediante el \textit{solver}
+de ruteo vehicular de \textit{OR-Tools}. Los tiempos de desplazamiento peatonal se calculan sobre la
+red vial real de \textit{OpenStreetMap} mediante OSRM, lo que elimina costos de APIs externas. La
+plataforma cubre el ciclo operacional completo: el administrador importa los árboles, configura los
+parámetros, ejecuta la optimización y publica el plan; el censador accede desde su dispositivo móvil
+a la ruta asignada, con las paradas en secuencia y un enlace de navegación peatonal por parada. La
+formulación aborda restricciones operacionales reales: minimización automática del número de rutas,
+jornadas acotadas por ruta y balance de carga entre equipos.
 
-Sobre la instancia de referencia de 1\,607 árboles, Arbocensus genera 25 rutas en
-un presupuesto de cómputo de 120\,s, que captura prácticamente toda la mejora
-alcanzable con presupuestos mayores. El plan alcanza un índice de balance de carga de
-0{,}83, cobertura total y ninguna ruta que exceda la jornada máxima. Frente a un
-heurístico \textit{greedy} de vecino más cercano con el mismo refinamiento local,
-reduce el tiempo total de desplazamiento en un 4{,}8\,\% ---cerca de 48 minutos sobre esa
-instancia---, deja las jornadas al 93\,\% de su cota en lugar del 98\,\% y reparte
-mejor los árboles
-aislados. La evaluación sobre las áreas reales muestra además que la unidad operativa
+Sobre la instancia de referencia de 1\,607 árboles, Arbocensus genera 25 rutas en un presupuesto de
+cómputo de 120\,s, que captura prácticamente toda la mejora alcanzable con presupuestos mayores. El
+plan alcanza un índice de balance de carga de 0{,}83, cobertura total y ninguna ruta que exceda la
+jornada máxima. Frente a un heurístico \textit{greedy} de vecino más cercano con el mismo
+refinamiento local, reduce el tiempo total de desplazamiento en un 4{,}8\,\% ---cerca de 48 minutos
+sobre esa instancia---, deja las jornadas al 93\,\% de su cota en lugar del 98\,\% y reparte mejor
+los árboles aislados. La evaluación sobre las áreas reales muestra además que la unidad operativa
 correcta del motor es el área individual y no el arbolado agregado.
 
-Estas conclusiones descansan en dieciséis ciclos de evaluación con criterio de
-decisión fijado antes de cada corrida y datos crudos versionados, de los cuales doce
-cerraron con el descarte de la hipótesis que los motivaba, lo que acota el margen de
-mejora atribuible a la función objetivo en lugar de dejarlo supuesto. Se concluye que esta
-formulación produce planes de censo verificables sobre instancias reales en tiempos
-prácticos. Su validación en una jornada de terreno queda pendiente y es la extensión
-de mayor valor para el proyecto.
+Estas conclusiones descansan en dieciséis ciclos de evaluación con criterio de decisión fijado antes
+de cada corrida y datos crudos versionados, de los cuales doce cerraron con el descarte de la
+hipótesis que los motivaba, lo que acota el margen de mejora atribuible a la función objetivo en
+lugar de dejarlo supuesto. Se concluye que esta formulación produce planes de censo verificables
+sobre instancias reales en tiempos prácticos. Su validación en una jornada de terreno queda
+pendiente y es la extensión de mayor valor para el proyecto.
 
 \newpage
