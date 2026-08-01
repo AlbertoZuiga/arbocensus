@@ -17,12 +17,13 @@ Sin embargo, los problemas de ruteo urbano reales presentan características esp
   \item jornadas globales por ruta, no ventanas en nodos individuales;
   \item rutas abiertas sin depósito obligatorio;
   \item determinación automática del número de rutas necesarias;
-  \item distancias caminables sobre redes viales reales (\textit{OpenStreetMap}, OSM), no
-        euclidianas.
+  \item distancias caminables sobre redes viales reales (\textit{OpenStreetMap}
+        \citep{openstreetmap}, OSM), no euclidianas.
 \end{enumerate}
 
-Las herramientas de ruteo de propósito general ---entre ellas los módulos de análisis de redes de
-las suites GIS comerciales--- resuelven variantes del problema de ruteo de vehículos. Lo que no
+Las herramientas de ruteo de propósito general ---entre ellas los módulos de análisis de redes de las
+suites comerciales de sistemas de información geográfica (\textit{Geographic Information System},
+GIS)--- resuelven variantes del problema de ruteo de vehículos. Lo que no
 cubren es la integración con el flujo de trabajo de este proyecto: partir del catastro que dejaron
 las iteraciones anteriores de Arbocensus, publicar el plan como asignación de trabajo a censadores
 identificados y recoger de vuelta, parada por parada, la observación histórica de cada árbol. Esa
@@ -267,36 +268,33 @@ como la respuesta que el diseño les dio.
     Las bases de datos legadas pertenecen a sistemas ajenos al alcance de esta iteración y se
     acceden estrictamente en modo de solo lectura. \\
     RE-04 &
-    Las fotografías históricas de la fuente legada residen en un almacenamiento externo cuyo plan de
-    facturación fue cerrado y resultan inaccesibles: solo se conserva su referencia, no el archivo.
-    \\
+    El \textit{solver} de \textit{OR-Tools} resuelve mediante una metaheurística de búsqueda local:
+    no converge ni certifica optimalidad, y la biblioteca no ofrece un criterio de término por
+    calidad demostrada. Sin un límite de tiempo explícito no se detiene por sí sola, de modo que toda
+    solución que el sistema entrega es la mejor hallada dentro del presupuesto concedido, no la mejor
+    existente. \\
     RE-05 &
-    La búsqueda local del \textit{solver} se corta por reloj de pared y no por convergencia
-    demostrada, de modo que la calidad de la solución depende del presupuesto de tiempo asignado. \\
-    RE-06 &
     \textit{OR-Tools} no expone una semilla ---el valor que fija el punto de partida del generador
     de números pseudoaleatorios y que, al repetirse, reconstruye una corrida idéntica---, por lo que
     las réplicas de un experimento deben construirse permutando el orden de entrada de los nodos. \\
-    RE-07 &
+    RE-06 &
     La conectividad en terreno es intermitente, de modo que el portal del censador no puede suponer
     red disponible en el instante del registro. \\
-    RE-08 &
-    El único entorno de medición disponible es hardware de desarrollo, con los contenedores de base
-    de datos y de ruteo emulados sobre otra arquitectura, lo que impide extrapolar las cifras
-    absolutas de tiempo a un servidor de producción. \\
-    RE-09 &
-    El sistema no cuenta con un despliegue productivo dentro del alcance, de modo que toda medición
-    se realiza sobre una réplica local del entorno de producción. \\
+    RE-07 &
+    El sistema no cuenta con un despliegue productivo dentro del alcance: el único entorno de
+    medición disponible es hardware de desarrollo, con los contenedores de base de datos y de ruteo
+    emulados sobre otra arquitectura, de modo que toda medición se realiza sobre una réplica local y
+    las cifras absolutas de tiempo no son extrapolables a un servidor de producción. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-Las restricciones se reparten en tres grupos según a qué afectan. RE-01, RE-02 y RE-05 provienen de
-las herramientas de ruteo y de optimización y acotan lo que la plataforma puede calcular. RE-03,
-RE-04 y RE-07 provienen del entorno de operación y de los datos heredados, y acotan de qué
-información dispone el sistema y bajo qué condiciones se usa. RE-06, RE-08 y RE-09 no afectan al
-producto sino a la evidencia con que se lo juzga: limitan qué se puede medir y hasta dónde son
-extrapolables las cifras que se midan.
+Las restricciones se reparten en tres grupos según a qué afectan. RE-01, RE-02 y RE-04 provienen de
+las herramientas de ruteo y de optimización y acotan lo que la plataforma puede calcular. RE-03 y
+RE-06 provienen del entorno de operación y de los datos heredados, y acotan de qué información
+dispone el sistema y bajo qué condiciones se usa. RE-05 y RE-07 no afectan al producto sino a la
+evidencia con que se lo juzga: limitan qué se puede medir, qué tan comparables son las réplicas
+entre sí y hasta dónde son extrapolables las cifras que se midan.
 
 \section{CRITERIOS DE ACEPTACIÓN}
 \label{sec:criterios-aceptacion}
@@ -326,8 +324,8 @@ después contra lo medido.
     Respeto de la jornada máxima. &
     Ninguna ruta excede $T_{\max}$. \\
     CA-03 &
-    Balance de carga entre equipos, medido con el índice definido en la
-    Sección~\ref{sec:atributos-calidad}. &
+    Balance de carga entre equipos, medido como el cociente entre la duración de la ruta más corta
+    y la de la más larga. &
     Índice de al menos $0{,}80$. \\
     CA-04 &
     Determinación de la flota. &

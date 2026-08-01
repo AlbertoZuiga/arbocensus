@@ -5,10 +5,15 @@
 \subsection{Métricas de calidad de rutas}
 \label{sec:metricas-calidad}
 
-La calidad de la solución producida por el motor de optimización se evalúa sobre el \textit{dataset}
-legado completo descrito en la Sección~\ref{sec:legacy} (ambas fuentes, \texttt{legacy\_api} +
-\texttt{legacy\_app} con mediana de posición por código QR), de $N = 1\,607$ árboles. El conjunto no
-corresponde a una única comuna: reúne la totalidad del arbolado disponible en ambas bases legadas.
+La calidad de la solución producida por el motor de optimización se evalúa sobre la instancia de
+referencia congelada descrita en la Sección~\ref{sec:legacy} y en la Sección~\ref{sec:estado-actual}
+(ambas fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con mediana de posición por código QR),
+de $N = 1\,607$ árboles. La serie experimental completa mide además once instancias adicionales,
+entre $n = 43$ y $n = 1\,607$, sobre la suite de instancias congeladas del
+\hyperref[anx:suite-instancias]{Anexo 4}; esta sección reporta la instancia de referencia porque es
+la que fija los criterios de aceptación del Capítulo~\ref{cap:solucion}. El conjunto no corresponde
+a una única comuna: reúne una porción del arbolado disponible en ambas bases legadas, elegida por
+reproducibilidad y no la totalidad del universo importable (Sección~\ref{sec:legacy}).
 Se emplean los parámetros temporales por defecto ($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s),
 un tiempo de servicio de 2 minutos por árbol y los \textit{defaults} de producción del motor: la
 estrategia \texttt{spatial\_term} ---que agrega al objetivo un término de dispersión geográfica,
@@ -117,12 +122,9 @@ $T_{\max}$, mientras que las penalizaciones blandas del modelo empujan las durac
 medio del intervalo y dejan holgura operacional en promedio, aunque no en la ruta más larga. La
 discusión completa de ese compromiso se encuentra en la Sección~\ref{sec:comparacion-greedy}.
 
-Esta corrida se ejecutó ya con la corrección del cálculo del tiempo de tránsito aplicada (redondeo
-hacia arriba con \texttt{math.ceil} en el \textit{callback} de tránsito), lo que explica que el
-número de rutas que exceden $T_{\max}$ sea cero de forma limpia ---antes de esa corrección, el
-truncamiento entero del tránsito podía producir rutas que excedían la cota por el redondeo hacia
-abajo---. La cobertura fue total: ninguna de las tres repeticiones descartó árboles, pese a que el
-modelo lo permite mediante disyunciones penalizadas.
+Ninguna ruta excede $T_{\max}$, que el modelo impone como capacidad dura de la dimensión temporal
+(Sección~\ref{sec:formulacion}). La cobertura fue total: ninguna de las tres repeticiones descartó
+árboles, pese a que el modelo lo permite mediante disyunciones penalizadas.
 
 Las tres repeticiones agotaron el presupuesto completo de 120\,s del metaheurístico GLS. Los tiempos
 de desplazamiento fueron 59\,690\,s, 56\,707\,s y 58\,696\,s (media 58\,364\,s), con una diferencia
@@ -1534,15 +1536,14 @@ repeticiones de la corrida de referencia asignan los $1\,607$ árboles a una rut
 active la disyunción que le permitiría descartarlos. El criterio deja de cumplirse únicamente cuando
 la carga de servicio excede la capacidad de la flota bajo $T_{\max}=2$\,h, y esa frontera está
 caracterizada en la Tabla~\ref{tab:grilla-spatial}. La jornada máxima (CA-02) se respeta sin
-excepción: la cota es dura por construcción del modelo, y la corrección del redondeo del tránsito
-eliminó el artefacto de medición que antes producía excesos aparentes. El balance de carga (CA-03)
-queda dentro del criterio, con un índice de $0{,}829$ a $0{,}837$ según la repetición frente al
-$0{,}80$ exigido, acompañado de una desviación estándar de $559$\,s equivalente al $5{,}6$\,\% del
-promedio; el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un
-reparto equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La
-flota (CA-04) es en efecto una salida del sistema: el administrador declara la duración de la
-jornada y el tiempo de servicio, y el número de censadores necesarios se deriva de ellos, lo que
-constituye la diferencia funcional más nítida respecto de la planificación manual descrita en la
+excepción: la cota es dura por construcción del modelo. El balance de carga (CA-03) queda dentro
+del criterio, con un índice de $0{,}829$ a $0{,}837$ según la repetición frente al $0{,}80$
+exigido, acompañado de una desviación estándar de $559$\,s equivalente al $5{,}6$\,\% del promedio;
+el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto
+equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
+(CA-04) es en efecto una salida del sistema: el administrador declara la duración de la jornada y el
+tiempo de servicio, y el número de censadores necesarios se deriva de ellos, lo que constituye la
+diferencia funcional más nítida respecto de la planificación manual descrita en la
 Sección~\ref{sec:estado-actual}.
 
 El costo de planificación (CA-05) se cumple con $122{,}3$\,s de corrida completa sobre la matriz en
@@ -1772,9 +1773,10 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
     \item \textbf{Accesibilidad de la base de datos legada}: la base de datos histórica  del
         proyecto Arbocensus se encuentra activa en Heroku y se accede en modo de solo lectura para
-        la importación de arbolado. Las fotografías de campo almacenadas en Firebase son
-        inaccesibles por cierre del plan de facturación asociado; únicamente los metadatos y las
-        coordenadas están disponibles para su uso en la plataforma.
+        la importación de arbolado. Las fotografías de campo de \texttt{legacy\_api} ($10\,008$),
+        almacenadas en un proyecto Firebase cuyo plan de facturación fue cerrado, son inaccesibles;
+        únicamente su URL y los metadatos asociados están disponibles para su uso en la plataforma.
+        Las de \texttt{legacy\_app}, alojadas en un proyecto Firebase distinto, sí responden.
 
     \item \textbf{Alcance de la integración con Arbocensus}: la incorporación del  catastro
         existente se resuelve mediante una conexión de solo lectura a las bases legadas y una
