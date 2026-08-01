@@ -6,7 +6,7 @@
 \newcommand{\capturaui}[4]{%
   \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth,height=0.75\textheight,keepaspectratio]{media/#1}
+    \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/#1}
     \caption[#2]{#3}
     \label{#4}
   \end{figure}%
@@ -126,11 +126,9 @@ error distinto del de estado.
     \node[etl, anchor=south east] at (3.05,-11.35)
       {estado y métricas; el \textit{polling} cesa en estado terminal};
   \end{tikzpicture}
-\caption[Ciclo de vida de un \texttt{OptimizationJob}]{Ciclo de vida de un \texttt{OptimizationJob},
-  desde la solicitud del administrador hasta la
-    solución persistida. La petición HTTP retorna al encolar; el \textit{worker} avanza el estado
-    del trabajo, y el panel lo observa por \textit{polling} hasta un estado terminal
-  (\texttt{completed} o \texttt{failed}).}
+\caption[Ciclo de vida de un \texttt{OptimizationJob}]{
+  Ciclo de vida de un \texttt{OptimizationJob}.
+}
   \label{fig:secuencia}
 \end{figure}
 
@@ -160,31 +158,39 @@ Los tres criterios se aplican de forma conjunta, sin un orden de prioridad fijo.
 Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada componente y el
 criterio que resolvió la elección.
 
-\begin{table}[H]
-  \centering
+\small
+\begin{xltabular}{\textwidth}{@{}p{2.4cm} p{3.4cm} X@{}}
   \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
-  \label{tab:stack-decisions}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l X X@{}}
-    \toprule
-    Decisión &
-      Alternativas consideradas &
-      Criterio de elección \\
-    \midrule
+  \label{tab:stack-decisions} \\
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
     Django + GeoDjango &
-      FastAPI (empleado por la iteración anterior), Flask, \textit{Ruby on Rails} &
+      \textit{FastAPI}, \textit{Flask}, \textit{Ruby on Rails} &
       Simplicidad. GeoDjango es la única de las cuatro que integra PostGIS en el ORM: tipos
-      geográficos, consultas espaciales y migraciones vienen resueltos. FastAPI y Flask exigirían
-      construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con extensión espacial
-      equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un proyecto cuyo
-      \textit{solver} y cuya ciencia de datos son de Python. \\[4pt]
+      geográficos, consultas espaciales y migraciones vienen resueltos. \textit{FastAPI} y
+      \textit{Flask} exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con
+      extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un
+      proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\
+      \addlinespace
     \textit{OR-Tools} &
-      \textit{Gurobi}, \textit{CPLEX}, heurística propia &
-      Costo y simplicidad. \textit{Gurobi} y \textit{CPLEX} resuelven mejor el VRP exacto, pero su
-      licencia comercial es un gasto recurrente y su licencia académica no acompaña al producto
-      fuera de la titulación. \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas
-      y se invoca desde el mismo proceso Python; la heurística propia se descartó por costo de
-      construcción frente a un aporte incierto. \\[4pt]
+      Heurística propia, \textit{Gurobi}, \textit{CPLEX} &
+      Costo y simplicidad. La heurística propia se consideró seriamente, pero la magnitud del
+      problema ($n \leq 2\,000$, una campaña por vez) queda holgadamente dentro de lo que resuelve
+      un \textit{solver} especializado ya construido y probado, de modo que el costo de construirla
+      y validarla no compraba una capacidad que el producto necesitara. \textit{Gurobi} y
+      \textit{CPLEX} resuelven mejor el VRP exacto, pero su licencia comercial es un gasto
+      recurrente y su licencia académica no acompaña al producto fuera de la titulación.
+      \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el
+      mismo proceso Python. \\
+      \addlinespace
     OSRM &
       \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}),
       \textit{Mapbox Directions}, Valhalla, GraphHopper &
@@ -196,19 +202,22 @@ criterio que resolvió la elección.
       perfil peatonal se resuelve sobre la misma red de \textit{OpenStreetMap}. OSRM se preprocesa
       localmente, responde sin salir del \textit{host} y deja la red congelada en un archivo,
       condición sin la cual los experimentos del Capítulo~\ref{cap:resultados} no serían repetibles
-      meses después sobre la misma base. \\[4pt]
-    \textit{React} 18 + Vite &
+      meses después sobre la misma base. \\
+      \addlinespace
+    \textit{React}~18 \citep{react} + Vite &
       \textit{Vue}, \textit{Angular}, \textit{Svelte} &
       Simplicidad. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el
-      ecosistema con integración más directa con \textit{Leaflet} (\textit{react-leaflet}) y con la
-      biblioteca de estado de servidor adoptada (\textit{React Query}), y por ser el que el
-      desarrollador ya dominaba. \\[4pt]
+      ecosistema con integración más directa con \textit{Leaflet} \citep{leaflet}
+      (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada
+      (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\
+      \addlinespace
     \textit{Leaflet} &
       \textit{MapLibre GL}, \textit{Google Maps JavaScript API} &
       Costo y simplicidad. La API de \textit{Google} requiere clave facturada por carga de mapa.
       \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, una pieza más de
       infraestructura que el alcance de visualización no justifica. \textit{Leaflet} consume teselas
-      de \textit{OpenStreetMap} sin costo. \\[4pt]
+      de \textit{OpenStreetMap} sin costo. \\
+      \addlinespace
     Celery + Redis &
       Ejecución síncrona, \textit{cron} sobre tabla de tareas &
       Tiempo de ejecución y simplicidad. La construcción de la matriz de costos y la ejecución del
@@ -217,15 +226,15 @@ criterio que resolvió la elección.
       tareas añade al trabajo la espera hasta el siguiente ciclo. Celery ejecuta el trabajo apenas
       se encola y libera la petición de inmediato, a cambio de dos procesos adicionales
       ---\textit{worker} y \textit{broker}--- que se declaran en la misma composición de
-      contenedores que el resto del sistema. \\[4pt]
+      contenedores que el resto del sistema. \\
+      \addlinespace
     Monolito modular &
       Servicios separados por dominio &
       Simplicidad. Las operaciones de importación y optimización cruzan módulos en una sola
       transacción; el proyecto cuenta con un único desarrollador, y la escala prevista no justifica
       la complejidad operacional de desplegar servicios independientes. \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+\end{xltabular}
+\normalsize
 
 El patrón que recorre la tabla es que ninguna decisión se resolvió por rendimiento aislado del
 componente: donde existía una alternativa de pago, su aporte no compensaba el gasto proyectado sobre
@@ -233,11 +242,7 @@ el volumen de ejecuciones que el desarrollo haría necesario ni la latencia que 
 las alternativas libres decidió la simplicidad de operarlas. Ninguna de estas elecciones es
 definitiva: en operación regular el sistema reconstruye la matriz solo al cambiar el conjunto de
 árboles activos, de modo que el volumen de consultas cae varios órdenes de magnitud respecto de la
-etapa de desarrollo y componentes hoy descartados por costo admiten reevaluarse bajo ese régimen. La
-restricción RE-04 acota esa reevaluación con un antecedente propio del proyecto: las fotografías del
-sistema anterior son hoy inaccesibles porque el plan de facturación del servicio que las alojaba se
-cerró, de modo que la dependencia de un servicio facturado debe limitarse a componentes cuya pérdida
-no comprometa los datos.
+etapa de desarrollo y componentes hoy descartados por costo admiten reevaluarse bajo ese régimen.
 
 % ---- 3.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
@@ -451,7 +456,8 @@ inferior a $T_{\min}$, y las presenta en la solución de producción (Capítulo~
 
 El modelo es monobjetivo: los tres propósitos enunciados más abajo se escalarizan en una suma
 ponderada de seis términos, y no se resuelven de forma lexicográfica ni se construye un frente de
-Pareto. La función que el \textit{solver} minimiza es
+Pareto ---el conjunto de soluciones en que ningún objetivo puede mejorar sin empeorar otro---. La
+función que el \textit{solver} minimiza es
 
 \begin{equation}
   \begin{aligned}
@@ -569,7 +575,8 @@ Sección~\ref{sec:discusion-calidad}.
 \subsection{Construcción de la matriz de costos}
 \label{sec:matriz}
 
-La matriz de costos $C \in \mathbb{R}^{n \times n}$ se construye consultando el \textit{endpoint}
+La matriz de costos $C \in \mathbb{R}^{n \times n}$, donde cada fila y cada columna corresponde a
+uno de los $n$ árboles del \textit{dataset}, se construye consultando el \textit{endpoint}
 \texttt{/table/v1/foot} de OSRM \citep{osrm}, que devuelve los tiempos de caminata reales entre
 todos los pares de puntos en una única solicitud HTTP. El servicio resuelve esas consultas sobre el
 grafo de \textit{OpenStreetMap} preprocesado con el algoritmo \textit{Multi-Level Dijkstra}, que
@@ -578,9 +585,11 @@ consultas de camino mínimo en tiempo prácticamente independiente de la longitu
 \citep{delling2017customizable}.
 
 Con el fin de evitar recomputaciones costosas, la matriz se persiste en el modelo
-\texttt{DistanceMatrix} asociado al \textit{dataset}. La clave de caché es un hash SHA-256 calculado
+\texttt{DistanceMatrix} asociado al \textit{dataset}. La clave de caché es un \textit{hash} SHA-256
+\citep{sha256} ---una función criptográfica que resume una entrada arbitraria en una cadena de
+longitud fija, y que produce salidas distintas ante cualquier cambio de la entrada--- calculado
 sobre los identificadores de los árboles activos ordenados; si el conjunto de árboles cambia, el
-hash no coincide y la matriz se recalcula automáticamente.
+\textit{hash} no coincide y la matriz se recalcula automáticamente.
 
 Los nodos inalcanzables (devueltos como \texttt{null} por OSRM) se reemplazan por una penalización
 de $9\,999\,999$ segundos, lo que garantiza la viabilidad numérica del \textit{solver}: la matriz
@@ -594,14 +603,18 @@ El factor que limita el tamaño de una consulta no es el parámetro \texttt{--ma
 (fijado en $5\,000$), sino la longitud máxima de la URL: el servicio \texttt{/table} codifica cada
 coordenada en la propia ruta de la petición, de modo que la solicitud falla por longitud de URL
 antes de alcanzar el límite de tabla. El sistema fija por ello un tope de $350$ árboles por
-solicitud. Cuando el \textit{dataset} lo supera, la matriz se construye por fragmentación
-(\textit{chunking}): los puntos se dividen en bloques de $175$ coordenadas ---la mitad del tope,
-dado que cada petición fragmentada transporta simultáneamente las coordenadas del bloque origen y
-las del bloque destino---. El número de solicitudes crece de forma cuadrática con el número de
-bloques, lo que domina el costo de la primera construcción de la matriz para \textit{datasets}
-grandes (Capítulo~\ref{cap:resultados}). Un tope adicional de $2\,000$ árboles acota la dimensión de
-la matriz ---cuyo almacenamiento en JSON crece como $O(n^2)$ y es del orden de decenas de megabytes
-a ese tamaño---.
+solicitud: cada coordenada ocupa una veintena de caracteres en la ruta de la petición, de modo que
+sobre ese número la URL se aproxima al límite práctico de $8$\,kB que los servidores HTTP imponen a
+la línea de petición. Cuando el \textit{dataset} lo supera, la matriz se construye por
+fragmentación (\textit{chunking}): los puntos se dividen en bloques de $175$ coordenadas ---la mitad
+del tope, dado que cada petición fragmentada transporta simultáneamente las coordenadas del bloque
+origen y las del bloque destino---. El número de solicitudes crece como el cuadrado del número de
+bloques y no linealmente con él, porque cada bloque de origen debe consultarse contra cada bloque de
+destino: para los $1\,607$ árboles de la instancia de referencia, $10$ bloques de origen por $10$ de
+destino producen $100$ solicitudes, lo que domina el costo de la primera construcción de la matriz
+para \textit{datasets} grandes (Capítulo~\ref{cap:resultados}). Un tope adicional de $2\,000$
+árboles acota la dimensión de la matriz ---cuyo almacenamiento en JSON crece como $O(n^2)$ y es del
+orden de decenas de megabytes a ese tamaño---.
 
 % ---- 3.3.3 ------------------------------------------------------
 \subsection{Estimación del número de rutas}
@@ -611,7 +624,11 @@ a ese tamaño---.
 El número de rutas $k$ ---y por lo tanto el número de censadores que deben salir a terreno en una
 jornada--- no es un dato de entrada del sistema: es una salida del \textit{solver}. El administrador
 nunca declara cuántos equipos tiene disponibles; declara cuánto puede durar una jornada ($T_{\min}$,
-$T_{\max}$) y cuánto toma censar un árbol ($s$), y el sistema deriva la flota necesaria. Esta
+$T_{\max}$) y cuánto toma censar un árbol ($s$), y el sistema deriva la flota necesaria. El tiempo
+de servicio $s$ es un parámetro y no una constante del sistema porque el protocolo de censo no está
+fijado de una campaña a otra: el número de fotografías y de preguntas que un censador completa por
+árbol varía según lo que la campaña exija registrar, y esa variación es la que $s$ traslada al
+modelo. Esta
 decisión de diseño evita el enfoque de iteración externa ---resolver el modelo con $1, 2, 3, \ldots$
 vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de cómputo por el número
 de intentos y resulta frágil, dado que una corrida infactible no distingue entre «faltan vehículos»
@@ -645,8 +662,8 @@ excluir la solución óptima. La minimización efectiva de $k$ ocurre dentro del
 mediante el costo fijo de $100\,000$\,s por vehículo activo (Sección~\ref{sec:solver}): activar una
 ruta adicional es tan caro que el \textit{solver} solo lo hace cuando las restricciones temporales
 lo obligan. El número de rutas de la solución final es, en la práctica, muy inferior al techo: sobre
-los $1\,607$ árboles de la evaluación, con un techo de $N_{\max}=36$ vehículos, el \textit{solver}
-activa $25$ rutas (Capítulo~\ref{cap:resultados}).
+los $1\,607$ árboles de la instancia de referencia, con un techo de $N_{\max}=36$ vehículos, el
+\textit{solver} activa $25$ rutas (Capítulo~\ref{cap:resultados}).
 
 La misma estimación alimenta un segundo uso, orientado a la planificación operativa y no al
 \textit{solver}: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite al
@@ -695,10 +712,13 @@ Problem}, VRP) con las siguientes características:
   \item \textbf{Búsqueda local}: estrategia GLS \citep{voudouris1999guided} con solución inicial
         \textit{PATH\_CHEAPEST\_ARC} ---una construcción voraz por arco más barato, de la misma
         familia que el clásico algoritmo de ahorros \citep{clarke1964scheduling}---, con tiempo
-        límite configurable. A falta de un valor explícito, el \textit{pipeline} lo deriva del
-        tamaño del problema como $\min(30 + 1{,}5\,n,\ 120)$ segundos, de modo que un
-        \textit{dataset} pequeño no consume el presupuesto completo; para los tamaños de esta
-        memoria la expresión satura en su tope de $120$\,s.
+        límite configurable. El GLS es una metaheurística sin criterio de término por convergencia
+        demostrada (RE-04): sin un límite explícito no se detiene por sí sola, de modo que fijarlo
+        es una decisión de diseño y no un hecho que el \textit{solver} imponga. A falta de un valor
+        explícito, el \textit{pipeline} lo deriva del tamaño del problema como
+        $\min(30 + 1{,}5\,n,\ 120)$ segundos, de modo que un \textit{dataset} pequeño no consume el
+        presupuesto completo; para los tamaños de esta memoria la expresión satura en su tope de
+        $120$\,s.
 \end{itemize}
 
 Si el \textit{solver} no encuentra solución, el \textit{pipeline} no falla en silencio: emite un
@@ -719,12 +739,12 @@ penalización de $9\,999\,999$\,s en la matriz de costos (Sección~\ref{sec:matr
 de escape, un solo árbol de este tipo invalidaría la planificación de todo el \textit{dataset}, que
 es precisamente el modo de falla que el sistema debe evitar.
 
-La solución adoptada consiste en declarar cada nodo real como una \textit{disyunción} unitaria
-mediante \texttt{AddDisjunction}, asignándole una penalización $\pi$ por omisión. Formalmente, el
-modelo deja de exigir que todo árbol sea visitado y pasa a minimizar el costo de las rutas más $\pi$
-por cada árbol descartado. La factibilidad queda así garantizada por construcción: siempre existe al
-menos una solución ---aquella que descarta los nodos problemáticos--- y el \textit{solver} nunca
-queda sin respuesta por culpa de un puñado de árboles inalcanzables.
+La solución adoptada consiste en declarar cada nodo real como una disyunción unitaria mediante
+\texttt{AddDisjunction}, asignándole una penalización $\pi$ por omisión. Formalmente, el modelo deja
+de exigir que todo árbol sea visitado y pasa a minimizar el costo de las rutas más $\pi$ por cada
+árbol descartado. La factibilidad queda así garantizada por construcción: siempre existe al menos
+una solución ---aquella que descarta los nodos problemáticos--- y el \textit{solver} nunca queda sin
+respuesta por culpa de un puñado de árboles inalcanzables.
 
 La calibración de $\pi$ es la decisión de diseño relevante. El sistema fija
 
@@ -761,9 +781,9 @@ dentro del mismo presupuesto de tiempo se asume como limitación del trabajo
 La formulación global anterior minimiza el tiempo total de recorrido y equilibra la duración de las
 rutas, pero no incorpora ningún criterio geográfico explícito en la partición de los nodos. Como
 consecuencia, las rutas se agrupan por proximidad temporal y no espacial, lo que produce
-\textit{solapamiento} (\textit{interleaving}) entre rutas distintas que crece con la densidad de
-árboles (Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias
-de partición, registradas en el campo \texttt{strategy} del trabajo de optimización. La estrategia
+solapamiento (\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
+(Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias de
+partición, registradas en el campo \texttt{strategy} del trabajo de optimización. La estrategia
 \texttt{global} reproduce el comportamiento de la formulación anterior sin cambios y constituye la
 línea base.
 
@@ -781,9 +801,11 @@ por la del administrador.
 
 \begin{itemize}[label=--]
   \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
-        Sección~\ref{sec:solver}, sin término espacial. Constituye la línea base.
+        Sección~\ref{sec:solver}, sin término espacial. Recibe ese nombre porque resuelve el
+        \textit{dataset} completo como un único problema, sin ninguna partición previa del
+        territorio ni de los árboles. Constituye la línea base.
   \item \textbf{\texttt{spatial\_term}}: añade una segunda dimensión de
-        \textit{distancia geográfica} ---la fórmula de \textit{haversine} entre paradas
+        distancia geográfica ---la fórmula de \textit{haversine} entre paradas
         \citep{sinnott1984virtues}--- y penaliza la extensión geográfica de cada ruta mediante
         \texttt{SetSpanCostCoefficientForAllVehicles} con coeficiente $\lambda_{\text{span}} = 3$.
         El \textit{span} de una ruta es la diferencia entre el máximo y el mínimo acumulado de la
@@ -815,9 +837,9 @@ El procedimiento es un 2-opt de camino abierto \citep{croes1958method,lin1965com
 cada ruta de forma independiente. Dada la secuencia de paradas de una ruta, examina todo par de
 posiciones no adyacentes, invierte el segmento comprendido entre ellas y conserva la inversión
 cuando reduce el costo del camino; repite el barrido hasta que ninguna inversión mejora. La variante
-es de camino \textit{abierto} ---y no la clásica de circuito--- porque las rutas del problema no se
-cierran sobre un depósito: al invertir un segmento que llega hasta el último nodo, el costo del arco
-de retorno no existe y no debe contabilizarse.
+es de camino abierto ---y no la clásica de circuito--- porque las rutas del problema no se cierran
+sobre un depósito: al invertir un segmento que llega hasta el último nodo, el costo del arco de
+retorno no existe y no debe contabilizarse.
 
 Tres propiedades hacen que el post-proceso sea seguro incorporarlo de forma incondicional:
 
@@ -842,11 +864,12 @@ operacionales, el costo es del orden de milisegundos, tres órdenes de magnitud 
 del \textit{solver}; la Sección~\ref{sec:comparacion-greedy} lo cuantifica sobre la instancia de
 evaluación.
 
-La adopción de este post-proceso como comportamiento por defecto no fue inmediata: una primera
-evaluación lo rechazó por empeorar la métrica de auto-cruces, y solo la corrección posterior de esa
-métrica ---que medía sobre cuerdas rectas y no sobre el trazado real de calles--- permitió
-establecer que el algoritmo mejora simultáneamente el tiempo de viaje y la geometría real. Esa
-historia, y la medición que la cierra, se documentan en la Sección~\ref{sec:discusion-calidad}.
+Este post-proceso es hoy el comportamiento por defecto, pero no lo fue siempre: un ciclo de
+evaluación anterior lo rechazó porque empeoraba la métrica de auto-cruces vigente en ese momento.
+Esa métrica medía sobre cuerdas rectas entre paradas y no sobre el trazado real de calles; al
+corregirse el instrumento, se estableció que el algoritmo mejora simultáneamente el tiempo de viaje
+y la geometría real, lo que revirtió el rechazo inicial. Esa historia, y la medición que la cierra,
+se documentan en la Sección~\ref{sec:discusion-calidad}.
 
 % ---- 3.3.8 ------------------------------------------------------
 \subsection{Perfiles de precios y abanico de producción}
@@ -898,8 +921,8 @@ ordena sus candidatas.
     \node[origen] (cfg) at (3.6,2.5)
       {Una solicitud de optimización\\ una \texttt{RoutingConfig} · una matriz OSRM en caché};
 
-    \node[cab] at (1.6,1.15) {\texttt{global}};
-    \node[cab] at (5.6,1.15) {\texttt{spatial\_term}};
+    \node[cab] at (1.6,1.9) {\texttt{global}};
+    \node[cab] at (5.6,1.9) {\texttt{spatial\_term}};
     \node[cab, align=right] at (-1.7,0.3)  {Equilibrada};
     \node[cab, align=right] at (-1.7,-1.0) {Rutas más parejas};
     \node[cab, align=right] at (-1.7,-2.3) {Menos zigzag};
@@ -914,13 +937,16 @@ ordena sus candidatas.
     \draw[flujo] (cfg.south) -- (3.6,1.6) -- (1.6,1.6) -- (c1.north);
     \draw[flujo] (3.6,1.6) -- (5.6,1.6) -- (c2.north);
 
+    \node[cab] (todas) at (3.6,-3.3) {las seis candidatas};
     \node[paso] (p1) at (-2.6,-4.6) {sin árboles\\ fuera de ruta};
     \node[paso] (p2) at (0.2,-4.6)  {sin rutas\\ degeneradas};
     \node[paso] (p3) at (3.0,-4.6)  {balance\\ $\geq 0{,}60$};
     \node[paso] (p4) at (5.8,-4.6)  {menor tiempo de\\ desplazamiento};
     \node[paso] (p5) at (8.6,-4.6)  {menor número\\ de rutas};
 
-    \draw[flujo] (1.6,-2.85) -- (1.6,-3.3) -- (-2.6,-3.3) -- (p1.north);
+    \draw[flujo] (1.6,-2.85) -- (1.6,-3.3) -- (todas.west);
+    \draw[flujo] (5.6,-2.85) -- (5.6,-3.3) -- (todas.east);
+    \draw[flujo] (todas.south) -- (3.6,-3.7) -- (-2.6,-3.7) -- (p1.north);
     \draw[flujo] (p1) -- (p2);
     \draw[flujo] (p2) -- (p3);
     \draw[flujo] (p3) -- (p4);
@@ -929,11 +955,10 @@ ordena sus candidatas.
     \node[final] (rec) at (3.0,-6.4) {candidata recomendada};
     \draw[flujo] (p5.south) -- (8.6,-6.4) -- (rec.east);
   \end{tikzpicture}
-\caption[Abanico de producción y criterio de selección]{Abanico de producción: tres perfiles de
-  precios por dos estrategias de partición dan seis
-    candidatas que comparten configuración y matriz de costos. El criterio lexicográfico las ordena
-    aplicando los cinco desempates en secuencia; la primera se marca como recomendada, salvo empate
-técnico con el par de control, y las restantes se informan con su costo adicional en caminata.}
+%---------------------------------------------------------------------------------------------------
+\caption[Abanico de producción y criterio de selección]{
+  Abanico de producción y criterio lexicográfico de selección.
+}
   \label{fig:abanico}
 \end{figure}
 
@@ -974,8 +999,13 @@ el campo \texttt{source} del modelo \texttt{Tree}:
 
 Ambas fuentes se solapan geográficamente, por lo que se descarta el árbol de \texttt{legacy\_app}
 que se encuentre a $5$\,m o menos de uno de \texttt{legacy\_api} ---se conserva este último, que
-aporta especie y área---. El explorador expone así $13\,319$ árboles importables: $429$ de
-\texttt{legacy\_api} y $12\,890$ de \texttt{legacy\_app}. Ese es el universo disponible; el
+aporta especie y área---. La proximidad es el único criterio de correspondencia disponible entre
+ambas fuentes, dado que no comparten un identificador común: \texttt{legacy\_app} identifica cada
+árbol por código QR y \texttt{legacy\_api} por su fila en la base. El umbral de $5$\,m es del orden
+del error típico de una lectura de GPS de teléfono en terreno, de modo que separa el árbol
+efectivamente duplicado de uno distinto que, por azar, cae cerca del primero. El explorador expone
+así $13\,319$ árboles importables: $429$ de \texttt{legacy\_api} y $12\,890$ de
+\texttt{legacy\_app}. Ese es el universo disponible; el
 \textit{dataset} de $n = 1\,607$ árboles con que se evalúa el sistema
 (Capítulo~\ref{cap:resultados}) es una instancia congelada de ese universo, elegida por
 reproducibilidad, y no su totalidad.
@@ -987,10 +1017,10 @@ proyecto y cuya integridad no debe verse comprometida por el proceso de importac
 \subsection{Selección previa a la creación del \textit{dataset}}
 
 La decisión de diseño central de este módulo es que la importación no crea un \textit{dataset} de
-forma inmediata. La primera versión del importador de esta iteración traía áreas completas a ciegas,
-lo que resultó inadecuado en la práctica: el usuario no sabe, antes de importar, qué árboles trae un
-área, cuáles ya están en el sistema ni si el conjunto resultante corresponde al territorio que
-efectivamente quiere censar. El flujo se divide por ello en dos etapas: primero explorar y
+forma inmediata. La primera versión del importador de esta iteración traía áreas completas a ciegas
+(mediante CSV/JSON), lo que resulta inadecuado: el usuario no sabe, antes de importar, qué árboles
+trae un área, cuáles ya están en el sistema ni si el conjunto resultante corresponde al territorio
+que efectivamente quiere censar. El flujo se divide por ello en dos etapas: primero explorar y
 seleccionar, y solo después materializar el \textit{dataset} con la selección confirmada.
 
 La exploración se sirve de dos \textit{endpoints} de solo lectura que no escriben nada en la base de
@@ -1115,10 +1145,14 @@ contenido, ni sus metadatos de posición, ni el instante de captura. El control 
 $30$\,m que la interfaz aplica antes de habilitar el registro (Sección~\ref{sec:ui}) tampoco cierra
 esa brecha, porque se evalúa en el cliente ---que además ofrece la opción de forzar el registro
 cuando la señal de GPS es imprecisa--- y el servidor acepta las coordenadas que reciba sin
-contrastarlas con la posición del árbol. La trazabilidad que el sistema sí garantiza es de autoría y
-momento: cada observación queda ligada al usuario que la registró y a su marca temporal, y no puede
-alterarse retroactivamente. Verificar la presencia física en terreno exigiría un control del lado
-del servidor sobre la coordenada reportada, que esta iteración no implementa.
+contrastarlas con la posición del árbol. Ese control es deliberadamente una guía y no una compuerta:
+al censador en la calle puede fallarle la señal de GPS, y bloquear el registro en ese caso costaría
+la observación completa de la jornada. El árbol ya tiene una posición conocida desde su
+importación, de modo que la proximidad sirve para orientar al censador hacia la parada correcta y no
+para condicionar si el registro se acepta. La trazabilidad que el sistema sí garantiza es de autoría
+y momento: cada observación queda ligada al usuario que la registró y a su marca temporal, y no
+puede alterarse retroactivamente. Verificar la presencia física en terreno exigiría un control del
+lado del servidor sobre la coordenada reportada, que esta iteración no implementa.
 
 La captura se realiza con la cámara del dispositivo desde el propio navegador ---solicitando la
 cámara trasera y comprimiendo el fotograma a JPEG--- y la observación viaja al servidor como
@@ -1143,12 +1177,16 @@ esquemas de origen no comparten estructura: en \texttt{legacy\_api} las muestras
 árbol directamente, mientras que en \texttt{legacy\_app} lo hacen a través del código QR físico
 adherido al árbol. En cuanto a las fotografías históricas, se conserva su URL (campo
 \texttt{photo\_url}) y no el archivo, dado que las imágenes residen en el almacenamiento del sistema
-anterior. En \texttt{legacy\_app} solo se importan aquellas cuya referencia comienza con
-\texttt{http}, descartando las rutas locales del dispositivo que la aplicación previa registraba y
-que hoy no apuntan a nada; en \texttt{legacy\_api} basta con que la referencia no esté vacía, dado
-que esa fuente solo almacena URL remotas. El estado se deriva del único campo disponible en el
-origen ---si la muestra fue o no completada---, mapeando la muestra completada a \texttt{alive} y el
-resto a \texttt{unknown}, en lugar de inferir un estado que la fuente no consigna.
+anterior y no en la plataforma actual. En \texttt{legacy\_app} solo se importan aquellas cuya
+referencia comienza con \texttt{http}, descartando las rutas locales del dispositivo que la
+aplicación previa registraba y que hoy no apuntan a nada; en \texttt{legacy\_api} basta con que la
+referencia no esté vacía, dado que esa fuente solo almacena URL remotas. Las dos fuentes residen en
+proyectos de almacenamiento distintos: las de \texttt{legacy\_app} responden con normalidad, y las
+de \texttt{legacy\_api} son hoy inaccesibles porque el plan de facturación del proyecto que las
+aloja está cerrado (Sección~\ref{sec:limitaciones}). El estado se deriva del único campo disponible
+en el origen ---si la muestra fue o no completada---, mapeando la muestra completada a
+\texttt{alive} y el resto a \texttt{unknown}, en lugar de inferir un estado que la fuente no
+consigna.
 
 La identidad persistente del árbol entre campañas distintas es el par (\texttt{source},
 \texttt{external\_id}), que \texttt{Tree} conserva en toda importación. El identificador de fila es
@@ -1192,9 +1230,7 @@ Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes; el
 
 \begin{table}[H]
   \centering
-\caption{Grupos de recursos de la API REST. El Anexo 1 contiene el inventario completo con permisos
-  y
-respuestas.}
+\caption{Grupos de recursos de la API REST.}
   \label{tab:endpoints}
   \small
   \begin{tabularx}{\textwidth}{@{}l l X@{}}
@@ -1233,12 +1269,11 @@ ruta vigente.
 \section{INTERFAZ DE USUARIO}
 \label{sec:ui}
 
-La interfaz se implementa como una \textit{Single Page Application} con \textit{React}~18
-\citep{react} y Vite. El estado de servidor se gestiona con \textit{React Query} y el estado de
-sesión (autenticación, notificaciones) con Zustand; los mapas emplean \textit{Leaflet}
-\citep{leaflet} sobre teselas de \textit{OpenStreetMap} \citep{openstreetmap}. La aplicación
-distingue dos experiencias según el rol del usuario: el panel de administración y el portal del
-censador.
+La interfaz se implementa como una \textit{Single Page Application} con \textit{React}~18 y Vite. El
+estado de servidor se gestiona con \textit{React Query} y el estado de sesión (autenticación,
+notificaciones) con Zustand; los mapas emplean \textit{Leaflet} sobre teselas de
+\textit{OpenStreetMap} \citep{openstreetmap}. La aplicación distingue dos experiencias según el rol
+del usuario: el panel de administración y el portal del censador.
 
 El panel de administración comprende cinco etapas:
 
@@ -1335,9 +1370,16 @@ texto la perdería o multiplicaría su tamaño.
 
 La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censador en dispositivo móvil.
 
-\capturaui{ui-surveyor.png}{Portal del censador en vista \textit{mobile}}{Portal del censador
+% [H] forzado: con colocación flotante [htbp] esta captura (vertical, 0.55\textheight) queda
+% relegada tres páginas después de su mención.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/ui-surveyor.png}
+  \caption[Portal del censador en vista \textit{mobile}]{Portal del censador
 (\texttt{/}, vista \textit{mobile}): parada activa, distancia a la parada, captura fotográfica y
-registro de visita u omisión.}{fig:ui_surveyor}
+registro de visita u omisión.}
+  \label{fig:ui_surveyor}
+\end{figure}
 
 Los marcadores numerados sobre el mapa reflejan el orden de visita derivado de
 \texttt{RouteStop.sequence}; las paradas posteriores a la activa aparecen bloqueadas hasta que el
@@ -1388,7 +1430,7 @@ las comprobaciones que la acompañan.
     Tres verificaciones &
     Estilo y formato con \textit{Ruff}, tipos con \textit{Pyright} y estilo de \textit{JavaScript}
     con \textit{ESLint}. \\
-  Integración continua &
+  Integración continua (CI) &
     Tres flujos de trabajo &
     Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato
     de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso
@@ -1412,10 +1454,10 @@ dependerían del corte por reloj de pared del \textit{solver}---:
 Corresponde acotar el alcance de esta verificación. No existen pruebas automatizadas de extremo a
 extremo: los flujos completos de administrador y de censador se comprueban por partes, nunca
 encadenados sobre el sistema en pie. La cobertura de código está configurada en el proyecto pero no
-se ejecuta como parte de la integración continua, de modo que esta memoria no reporta una cifra de
-cobertura. Sobre todo, lo que se verifica es que el sistema hace lo que su diseño dice: la
-validación con usuarios reales ---una jornada de censo ejecutada con censadores en terreno--- queda
-fuera del alcance de esta iteración y es la comprobación que ninguna suite de pruebas sustituye.
+se ejecuta como parte del CI, de modo que esta memoria no reporta una cifra de cobertura. Sobre
+todo, lo que se verifica es que el sistema hace lo que su diseño dice: la validación con usuarios
+reales ---una jornada de censo ejecutada con censadores en terreno--- queda fuera del alcance de
+esta iteración y es la comprobación que ninguna suite de pruebas sustituye.
 
 A esta verificación del sistema se suma un compromiso distinto: la reproducibilidad de las cifras
 experimentales que reporta el Capítulo~\ref{cap:resultados}. La búsqueda local del \textit{solver}
