@@ -40,8 +40,8 @@ permisos propios del proyecto, \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, y
 sobre los permisos estándar de Django REST Framework: \texttt{IsAdminUser} valida el
 atributo \texttt{is\_staff}, que en este sistema no representa el rol de negocio. En
 las tablas siguientes, la columna \textbf{Permiso} distingue cuatro niveles:
-\textit{Público} (sin autenticación), \textit{Autenticado} (cualquier usuario con
-sesión válida), \textit{Admin} (\texttt{IsAdminRole}) y \textit{Censador}
+Público (sin autenticación), Autenticado (cualquier usuario con
+sesión válida), Admin (\texttt{IsAdminRole}) y Censador
 (\texttt{IsSurveyorRole}).
 
 Los listados se paginan con \texttt{PageNumberPagination} a 20 elementos por página.

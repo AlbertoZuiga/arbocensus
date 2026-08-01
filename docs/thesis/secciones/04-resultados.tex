@@ -55,63 +55,55 @@ semillas).}
     Número de rutas $k$ &
       25 &
       salida del \textit{solver}, no dato de entrada (CA-04) \\
+      \addlinespace
     Tiempo promedio por ruta &
       10\,048\,s ($\approx$ 2\,h 47\,min) &
       $T_{\min} \leq \bar{T} \leq T_{\max}$ \\
+      \addlinespace
     Índice de balance de carga &
       0{,}829--0{,}837 según la repetición &
       $\geq 0{,}80$ (CA-03) \\
+      \addlinespace
     Desviación estándar &
       559\,s (5{,}6\,\% del promedio) &
       sin criterio: descriptiva \\
+      \addlinespace
     Rutas que exceden $T_{\max}$ &
       0 &
       $= 0$ (CA-02) \\
+      \addlinespace
     Rutas por debajo de $T_{\min}$ &
-      3$^{\dagger}$ &
+      3$^{1}$ &
       sin criterio: cota blanda \\
+      \addlinespace
     Árboles descartados &
       0 (cobertura 1\,607/1\,607) &
       $= 0$ (CA-01) \\
+      \addlinespace
     Tiempo de planificación &
-      122{,}3\,s$^{\ddagger}$ de corrida completa con la matriz en caché, de los cuales 120{,}0\,s
+      122{,}3\,s$^{2}$ de corrida completa con la matriz en caché, de los cuales 120{,}0\,s
       son el presupuesto configurado del \textit{solver}, agotado en las tres repeticiones &
       $< 5$ min (CA-05) \\
-    Auto-cruces sobre calle$^{\S}$ &
+      \addlinespace
+    Auto-cruces sobre calle$^{3}$ &
       37{,}7 (33--40 según la repetición) &
       sin criterio en esta corrida: descriptiva \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-% Los nombres de los CSV no admiten guionado y desbordan la caja de texto con el interlineado de
-% \footnotesize; sloppypar permite estirar los espacios en su lugar.
-\begin{sloppypar}
-{\footnotesize$^{\dagger}$ La cota inferior $T_{\min}$ es blanda (Sección~\ref{sec:formulacion}), de
-modo que la solución puede quedar por debajo de ella y en efecto lo hace en tres rutas. El barrido
-de la corrida de referencia (\texttt{20260724-225420-postpass-baseline.csv}) no instrumenta esta
-columna; la cifra proviene del barrido de sensibilidad a las penalizaciones sobre el mismo
-\textit{dataset} y la misma configuración de producción
-(\texttt{penalty-sensitivity-20260713-reference.csv}, columna \texttt{tmin\_gap\_routes}). Ese
-barrido es anterior a la corrección de instrumento descrita en la
-Sección~\ref{sec:discusion-calidad} y sus filas no son réplicas independientes de una misma semilla;
-la cifra se reporta como observación única y sin dispersión. Se reporta aquí porque su omisión,
-junto con la fila anterior, sugeriría que el modelo respeta como dura una cota que relaja de forma
-deliberada.
+{\footnotesize
+$^{1}$ Cifra de un barrido distinto sobre el mismo \textit{dataset} y configuración, no de esta
+corrida de referencia (reserva de instrumento detallada en el
+\hyperref[anx:reservas-sensibilidad]{Anexo 4}).
 
-$^{\ddagger}$ La corrida de referencia de este capítulo no instrumenta el tiempo extremo a extremo,
-solo el del \textit{solver}. La cifra proviene de la corrida de julio de 2026 que sí lo instrumentó
-sobre el mismo \textit{dataset} y la misma configuración de producción
-(\texttt{20260713-real-case-metrics-spatial.csv}), y corresponde a sus dos repeticiones con la
-matriz de costos ya en caché; se detalla más abajo, junto con el caso de caché fría.
+$^{2}$ Corresponde a las dos repeticiones con la matriz de costos ya en caché de una corrida
+de julio de 2026 que sí instrumentó el tiempo extremo a extremo; se detalla más abajo junto con
+el caso de caché fría.
 
-$^{\S}$ El barrido de referencia de esta sección no instrumenta auto-cruces sobre calle, solo
-auto-cruces sobre la cuerda recta entre paradas consecutivas. La cifra proviene de una repetición
-posterior sobre el mismo \textit{dataset} y la misma configuración de producción
-(\texttt{reference-n1607-20260730.csv}), que sí recupera la geometría real de cada tramo desde
-\textit{OSRM} y cuenta los cruces sobre ella; se reporta como observación descriptiva, sin criterio
-de aceptación asociado en esta corrida.}
-\end{sloppypar}
+$^{3}$ Cifra de una repetición posterior que sí recupera la geometría real de cada tramo desde
+\textit{OSRM}; la corrida de referencia de esta sección solo instrumenta auto-cruces sobre la
+cuerda recta entre paradas.}
 
 El número de rutas, $k=25$, es la flota que el \textit{solver} activa bajo esta configuración, no
 una cota mínima demostrada. No se calcula ninguna cota inferior sobre $k$; el \textit{baseline}
@@ -378,8 +370,8 @@ del archivo y por lo tanto reproducibles en cualquier máquina.
 Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se caracterizó la calidad
 espacial de la solución producida por la formulación actual: un único \textit{Open mTSP} global
 resuelto con \textit{OR-Tools}, sin agrupamiento previo de los nodos. El interés no es el balance
-temporal ---ya controlado por la penalización blanda sobre $T_{\min}$--- sino la \textit{compacidad
-geográfica} de cada ruta y el grado de \textit{solapamiento} (\textit{interleaving}) entre rutas
+temporal ---ya controlado por la penalización blanda sobre $T_{\min}$--- sino la compacidad
+geográfica de cada ruta y el grado de solapamiento (\textit{interleaving}) entre rutas
 distintas.
 
 Se definieron los siguientes indicadores sobre las coordenadas reales de las paradas
@@ -601,6 +593,7 @@ mismo límite de 120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
       68\,410 &
       20\,937 &
       109{,}2 \\
+      \addlinespace
     1 &
       3 &
       16{,}0 &
@@ -610,6 +603,7 @@ mismo límite de 120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
       59\,491 &
       19\,905 &
       146{,}1 \\
+      \addlinespace
     2 &
       2 &
       36{,}0 &
@@ -619,6 +613,7 @@ mismo límite de 120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
       65\,727 &
       16\,917 &
       82{,}8  \\
+      \addlinespace
     2 &
       3 &
       25{,}0 &
@@ -628,6 +623,7 @@ mismo límite de 120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
       60\,588 &
       19\,588 &
       75{,}2  \\
+      \addlinespace
     3 &
       2 &
       49{,}0 &
@@ -637,6 +633,7 @@ mismo límite de 120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
       63\,146 &
       17\,347 &
       55{,}8  \\
+      \addlinespace
     3 &
       3 &
       34{,}0 &
@@ -706,11 +703,8 @@ variantes de la grilla.
       \node[below=2pt] at (axis cs:3,34) {\scriptsize $b=0{,}836$};
     \end{axis}
   \end{tikzpicture}
-\caption{Compromiso entre flota ($k$) y balance según el tiempo de servicio y la cota $T_{\max}$,
-  sobre
-    el \textit{dataset} de $n=1\,607$ árboles (estrategia \texttt{spatial\_term}; media de 3
-    semillas). El balance anotado en cada punto es la fracción $\min(T_i)/\max(T_i)$ sobre las rutas
-activas.}
+\caption{Compromiso entre flota ($k$) y balance ($b$) según el tiempo de servicio y la cota
+  $T_{\max}$.}
   \label{fig:grilla-spatial-k}
 \end{figure}
 

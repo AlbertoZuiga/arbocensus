@@ -179,6 +179,7 @@ criterio que resolvió la elección.
       \textit{Flask} exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con
       extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un
       proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\
+      \addlinespace
     \textit{OR-Tools} &
       Heurística propia, \textit{Gurobi}, \textit{CPLEX} &
       Costo y simplicidad. La heurística propia se consideró seriamente, pero la magnitud del
@@ -189,6 +190,7 @@ criterio que resolvió la elección.
       recurrente y su licencia académica no acompaña al producto fuera de la titulación.
       \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el
       mismo proceso Python. \\
+      \addlinespace
     OSRM &
       \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}),
       \textit{Mapbox Directions}, Valhalla, GraphHopper &
@@ -201,18 +203,21 @@ criterio que resolvió la elección.
       localmente, responde sin salir del \textit{host} y deja la red congelada en un archivo,
       condición sin la cual los experimentos del Capítulo~\ref{cap:resultados} no serían repetibles
       meses después sobre la misma base. \\
+      \addlinespace
     \textit{React}~18 \citep{react} + Vite &
       \textit{Vue}, \textit{Angular}, \textit{Svelte} &
       Simplicidad. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el
       ecosistema con integración más directa con \textit{Leaflet} \citep{leaflet}
       (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada
       (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\
+      \addlinespace
     \textit{Leaflet} &
       \textit{MapLibre GL}, \textit{Google Maps JavaScript API} &
       Costo y simplicidad. La API de \textit{Google} requiere clave facturada por carga de mapa.
       \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, una pieza más de
       infraestructura que el alcance de visualización no justifica. \textit{Leaflet} consume teselas
       de \textit{OpenStreetMap} sin costo. \\
+      \addlinespace
     Celery + Redis &
       Ejecución síncrona, \textit{cron} sobre tabla de tareas &
       Tiempo de ejecución y simplicidad. La construcción de la matriz de costos y la ejecución del
@@ -222,6 +227,7 @@ criterio que resolvió la elección.
       se encola y libera la petición de inmediato, a cambio de dos procesos adicionales
       ---\textit{worker} y \textit{broker}--- que se declaran en la misma composición de
       contenedores que el resto del sistema. \\
+      \addlinespace
     Monolito modular &
       Servicios separados por dominio &
       Simplicidad. Las operaciones de importación y optimización cruzan módulos en una sola
@@ -733,12 +739,12 @@ penalización de $9\,999\,999$\,s en la matriz de costos (Sección~\ref{sec:matr
 de escape, un solo árbol de este tipo invalidaría la planificación de todo el \textit{dataset}, que
 es precisamente el modo de falla que el sistema debe evitar.
 
-La solución adoptada consiste en declarar cada nodo real como una \textit{disyunción} unitaria
-mediante \texttt{AddDisjunction}, asignándole una penalización $\pi$ por omisión. Formalmente, el
-modelo deja de exigir que todo árbol sea visitado y pasa a minimizar el costo de las rutas más $\pi$
-por cada árbol descartado. La factibilidad queda así garantizada por construcción: siempre existe al
-menos una solución ---aquella que descarta los nodos problemáticos--- y el \textit{solver} nunca
-queda sin respuesta por culpa de un puñado de árboles inalcanzables.
+La solución adoptada consiste en declarar cada nodo real como una disyunción unitaria mediante
+\texttt{AddDisjunction}, asignándole una penalización $\pi$ por omisión. Formalmente, el modelo deja
+de exigir que todo árbol sea visitado y pasa a minimizar el costo de las rutas más $\pi$ por cada
+árbol descartado. La factibilidad queda así garantizada por construcción: siempre existe al menos
+una solución ---aquella que descarta los nodos problemáticos--- y el \textit{solver} nunca queda sin
+respuesta por culpa de un puñado de árboles inalcanzables.
 
 La calibración de $\pi$ es la decisión de diseño relevante. El sistema fija
 
@@ -799,7 +805,7 @@ por la del administrador.
         \textit{dataset} completo como un único problema, sin ninguna partición previa del
         territorio ni de los árboles. Constituye la línea base.
   \item \textbf{\texttt{spatial\_term}}: añade una segunda dimensión de
-        \textit{distancia geográfica} ---la fórmula de \textit{haversine} entre paradas
+        distancia geográfica ---la fórmula de \textit{haversine} entre paradas
         \citep{sinnott1984virtues}--- y penaliza la extensión geográfica de cada ruta mediante
         \texttt{SetSpanCostCoefficientForAllVehicles} con coeficiente $\lambda_{\text{span}} = 3$.
         El \textit{span} de una ruta es la diferencia entre el máximo y el mínimo acumulado de la
@@ -1224,9 +1230,7 @@ Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes; el
 
 \begin{table}[H]
   \centering
-\caption{Grupos de recursos de la API REST. El Anexo 1 contiene el inventario completo con permisos
-  y
-respuestas.}
+\caption{Grupos de recursos de la API REST.}
   \label{tab:endpoints}
   \small
   \begin{tabularx}{\textwidth}{@{}l l X@{}}
@@ -1366,9 +1370,16 @@ texto la perdería o multiplicaría su tamaño.
 
 La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censador en dispositivo móvil.
 
-\capturaui{ui-surveyor.png}{Portal del censador en vista \textit{mobile}}{Portal del censador
+% [H] forzado: con colocación flotante [htbp] esta captura (vertical, 0.55\textheight) queda
+% relegada tres páginas después de su mención.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/ui-surveyor.png}
+  \caption[Portal del censador en vista \textit{mobile}]{Portal del censador
 (\texttt{/}, vista \textit{mobile}): parada activa, distancia a la parada, captura fotográfica y
-registro de visita u omisión.}{fig:ui_surveyor}
+registro de visita u omisión.}
+  \label{fig:ui_surveyor}
+\end{figure}
 
 Los marcadores numerados sobre el mapa reflejan el orden de visita derivado de
 \texttt{RouteStop.sequence}; las paradas posteriores a la activa aparecen bloqueadas hasta que el
