@@ -36,7 +36,7 @@ El desafío logístico se formula así: dado un conjunto de $n$ puntos geográfi
 la cobertura total, minimicen tiempos de desplazamiento y respeten jornadas acotadas temporalmente.
 Los tres objetivos se derivan directamente del re-censo. La cobertura total es un requisito porque
 el historial exige una observación de cada árbol ya georreferenciado; la jornada acotada refleja que
-el censador es voluntario a pie, sin jornada completa (Sección~\ref{sec:usuarios}); y el tiempo de
+el censista es voluntario a pie, sin jornada completa (Sección~\ref{sec:usuarios}); y el tiempo de
 desplazamiento es el único costo que la planificación puede reducir, dado que el tiempo de
 inspección por árbol es fijo.
 
@@ -127,7 +127,7 @@ independientes.
 Ninguna de esas iteraciones abordó la planificación de rutas. En las campañas documentadas por
 Binder y Cortés \citeyearpar{binder-cortes2023} y Pizarro y Zumaeta
 \citeyearpar{pizarro-zumaeta2024}, la planificación de rutas quedó fuera del alcance. Las jornadas
-de terreno se organizaban sin un sistema de asignación formal, y los censadores recorrían las zonas
+de terreno se organizaban sin un sistema de asignación formal, y los censistas recorrían las zonas
 sin una secuencia de visitas predeterminada ni consideración de costos reales de desplazamiento o
 restricciones de jornada. Sobre ese estado, el re-censo estructurado que el proyecto necesita para
 construir el historial por árbol carece de la pieza que lo haría ejecutable en terreno.
@@ -146,9 +146,9 @@ de equipos no es un dato que se le entregue al motor sino un resultado que este 
 
 La segunda es el ciclo operacional que lleva ese plan al terreno: incorporar el arbolado desde las
 bases de datos que dejaron las iteraciones anteriores, fijar los parámetros de la jornada, publicar
-el plan como asignación de trabajo a censadores identificados y seguir su avance.
+el plan como asignación de trabajo a censistas identificados y seguir su avance.
 
-La tercera es el registro en terreno. El censador recorre desde su teléfono la secuencia de visitas
+La tercera es el registro en terreno. El censista recorre desde su teléfono la secuencia de visitas
 de su ruta y anota en cada parada lo que observa del árbol, de modo que el resultado de la jornada
 quede asociado al ejemplar ya catastrado y no a una muestra sin correspondencia entre campañas.
 
@@ -159,5 +159,5 @@ registradas---, mediante experimentos que comparan las configuraciones del motor
 una solución heurística\footnote{Procedimiento que construye una solución razonable mediante reglas
 simples, sin garantizar que sea la mejor posible.} simple. Queda fuera del alcance la operación del
 sistema en una jornada de censo real, con
-censadores en terreno: lo que esta memoria acredita es que el producto cumple lo que su diseño
+censistas en terreno: lo que esta memoria acredita es que el producto cumple lo que su diseño
 declara, no que resuelva en terreno el problema logístico que lo motiva.

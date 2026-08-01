@@ -1080,7 +1080,7 @@ los 72 árboles en una sola jornada de $10\,209$\,s ---el $94{,}5$\,\% de $T_{\m
 $1\,569$\,s de desplazamiento, mientras que el \textit{solver} abre dos rutas de $5\,766$ y
 $5\,597$\,s y gasta $2\,466$\,s, un $57$\,\% más de caminata y dos medias jornadas en lugar de una
 completa. No hay aquí ruta degenerada que reprochar al \textit{baseline}: su solución es la que un
-censador preferiría. Como el criterio exigía las tres áreas, el veredicto global frente al
+censista preferiría. Como el criterio exigía las tres áreas, el veredicto global frente al
 pre-registro es de incumplimiento, y así se reporta.
 
 \subsubsection*{El caso \texttt{area-27} es el régimen de relleno por $T_{\min}$}
@@ -1185,7 +1185,7 @@ La lectura que el material sostiene es que, al mismo presupuesto por corrida, la
 monolítica resulta menos estable, y no que particionar ahorre caminata. Ese presupuesto por corrida,
 además, no es comparable en total: la partición consumió el triple de cómputo.
 
-El precio medido de particionar es, entonces, una jornada de censador más, tres jornadas por debajo
+El precio medido de particionar es, entonces, una jornada de censista más, tres jornadas por debajo
 de $T_{\min}$ y el triple de cómputo, a cambio de instancias de aproximadamente $1{,}3$\,km que
 corresponden a una unidad operativa real y de una varianza entre repeticiones sustancialmente menor.
 Los auto-cruces y el solapamiento entre rutas se registraron como contexto y no formaron parte del
@@ -1496,7 +1496,7 @@ exigido, acompañado de una desviación estándar de $559$\,s equivalente al $5{
 el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto
 equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
 (CA-04) es en efecto una salida del sistema: el administrador declara la duración de la jornada y el
-tiempo de servicio, y el número de censadores necesarios se deriva de ellos, lo que constituye la
+tiempo de servicio, y el número de censistas necesarios se deriva de ellos, lo que constituye la
 diferencia funcional más nítida respecto de la planificación manual descrita en la
 Sección~\ref{sec:estado-actual}.
 
@@ -1550,7 +1550,7 @@ borde está documentado con la configuración que lo evita.
 
 La operabilidad en terreno es el atributo cuyo cumplimiento esta memoria acredita con menos fuerza,
 y por dos razones distintas. La primera es de alcance de la evidencia: el portal se verificó por
-partes y nunca en una jornada de censo con censadores reales, de modo que lo que se comprueba es que
+partes y nunca en una jornada de censo con censistas reales, de modo que lo que se comprueba es que
 el sistema hace lo que su diseño dice, no que resista la calle. La segunda es de grado de
 implementación: el registro sobrevive a pérdidas de conexión momentáneas mediante una cola local,
 pero no se implementó la sincronización diferida robusta ni el almacenamiento de teselas de mapa que
@@ -1798,7 +1798,7 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
     \item Geometría de referencia de la métrica de auto-cruces: el número de auto-cruces se calcula
         sobre las cuerdas rectas entre paradas consecutivas, geometría distinta de la que optimiza
-        el \textit{solver} (tiempo de red de OSRM) y de la que recorre el censador (trazado real de
+        el \textit{solver} (tiempo de red de OSRM) y de la que recorre el censista (trazado real de
         calles). La correspondencia entre las dos primeras no se ha comprobado; la de las cuerdas
         con el trazado real sí está medida y es parcial ($\rho = 0{,}527$, invertida en el conjunto
         agregado), de modo que las cifras de auto-cruces sobre cuerdas de este capítulo conservan su
@@ -1807,7 +1807,7 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
     \item Exactitud no medida del estimador de distancias: el perfil peatonal de OSRM se aparta de
         la caminata real de terreno por no modelar pendientes, semáforos, congestión peatonal ni el
-        ritmo de un censador; la magnitud de esa desviación no se midió porque exigiría una jornada
+        ritmo de un censista; la magnitud de esa desviación no se midió porque exigiría una jornada
         de terreno con registro de tiempos, fuera del alcance de esta memoria
         (Sección~\ref{sec:verificacion}). Cabe esperar que el error sea sistemático ---todas las
         rutas se estiman con el mismo perfil sobre la misma red---, lo que lo hace más sensible para
@@ -1847,7 +1847,7 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
 \begin{itemize}[label=--]
   \item Validación en terreno: las conclusiones de este capítulo verifican que el producto hace lo
       que su diseño declara, pero no que resuelva en operación el problema logístico que lo motivó
-      (Sección~\ref{sec:verificacion}). El costo es una jornada de censo real con censadores y un
+      (Sección~\ref{sec:verificacion}). El costo es una jornada de censo real con censistas y un
       área individual, con registro de tiempos de caminata. Debe construirse una jornada
       instrumentada que contraste el tiempo estimado por el perfil peatonal de OSRM contra el tiempo
       observado en terreno, y que ejercite la cola \textit{offline} bajo la conectividad real que
@@ -1911,7 +1911,7 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
   \item Pruebas de extremo a extremo: la Sección~\ref{sec:verificacion} cubre pruebas unitarias de
       \textit{backend} y \textit{frontend}, pero ningún flujo completo de usuario. El costo es de
       mantenimiento de la suite. Debe construirse la automatización de los flujos de administrador y
-      censador mediante Playwright.
+      censista mediante Playwright.
 
   \item Preferir rutas cortas antes que descartar árboles: subir el costo fijo por vehículo
       $C_{\text{fijo}}$ no es el mecanismo, y conviene decirlo así porque es la intuición más
