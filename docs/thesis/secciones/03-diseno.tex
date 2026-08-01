@@ -999,9 +999,15 @@ Ambas fuentes se solapan geográficamente, por lo que se descarta el árbol de \
 que se encuentre a $5$\,m o menos de uno de \texttt{legacy\_api} ---se conserva este último, que
 aporta especie y área---. La proximidad es el único criterio de correspondencia disponible entre
 ambas fuentes, dado que no comparten un identificador común: \texttt{legacy\_app} identifica cada
-árbol por código QR y \texttt{legacy\_api} por su fila en la base. El umbral de $5$\,m es del orden
-del error típico de una lectura de GPS de teléfono en terreno, de modo que separa el árbol
-efectivamente duplicado de uno distinto que, por azar, cae cerca del primero. El explorador expone
+árbol por código QR y \texttt{legacy\_api} por su fila en la base. El umbral de $5$\,m es un criterio
+operativo elegido por este diseño y no se deriva de la precisión del instrumento: la literatura
+reporta para receptores de teléfono en entorno urbano errores horizontales medios del orden de
+$7$--$13$\,m \citep{merry2019smartphone}, es decir, mayores que el propio umbral. La elección es por
+tanto deliberadamente conservadora, y su sesgo es conocido: al exigir una coincidencia más estrecha
+que el error de medición, el criterio deja pasar duplicados cuyas dos lecturas se separan más de
+$5$\,m antes que fusionar dos ejemplares distintos que caen cerca. Se prefiere ese error porque un
+árbol duplicado cuesta una visita redundante, mientras que uno fusionado por error desaparece del
+catastro. El explorador expone
 así $13\,319$ árboles importables: $429$ de \texttt{legacy\_api} y $12\,890$ de
 \texttt{legacy\_app}. Ese es el universo disponible; el
 \textit{dataset} de $n = 1\,607$ árboles con que se evalúa el sistema
