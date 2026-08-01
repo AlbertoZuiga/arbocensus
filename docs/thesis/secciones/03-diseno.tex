@@ -618,15 +618,18 @@ orden de decenas de megabytes a ese tamaño---.
 El número de rutas $k$ ---y por lo tanto el número de censadores que deben salir a terreno en una
 jornada--- no es un dato de entrada del sistema: es una salida del \textit{solver}. El administrador
 nunca declara cuántos equipos tiene disponibles; declara cuánto puede durar una jornada ($T_{\min}$,
-$T_{\max}$) y cuánto toma censar un árbol ($s$), y el sistema deriva la flota necesaria. El tiempo
-de servicio $s$ es un parámetro y no una constante del sistema porque el protocolo de censo no está
-fijado de una campaña a otra: el número de fotografías y de preguntas que un censador completa por
-árbol varía según lo que la campaña exija registrar, y esa variación es la que $s$ traslada al
-modelo. Esta
-decisión de diseño evita el enfoque de iteración externa ---resolver el modelo con $1, 2, 3, \ldots$
-vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de cómputo por el número
-de intentos y resulta frágil, dado que una corrida infactible no distingue entre «faltan vehículos»
-y «el modelo no admite solución».
+$T_{\max}$) y cuánto toma censar un árbol ($s$), y el sistema deriva la flota necesaria. Derivar $k$
+del \textit{solver} evita el enfoque de iteración externa ---resolver el modelo con
+$1, 2, 3, \ldots$ vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de
+cómputo por el número de intentos y resulta frágil, dado que una corrida infactible no distingue
+entre «faltan vehículos» y «el modelo no admite solución».
+
+El tiempo de servicio $s$, en cambio, sí es un dato de entrada, y es un parámetro y no una constante
+del sistema porque el protocolo de censo no está fijado de una campaña a otra: el número de
+fotografías y de preguntas que un censador completa por árbol varía según lo que la campaña exija
+registrar, y esa variación es la que $s$ traslada al modelo. Esa indefinición no es un detalle de
+calibración sino una cuestión abierta del proyecto, que la Sección~\ref{sec:recenso} retoma al
+discutir qué evidencia exige cada observación en terreno.
 
 En su lugar, el sistema entrega a \textit{OR-Tools} un techo $N_{\max}$ de vehículos disponibles y
 deja que el \textit{solver} decida cuántos activa. El techo se calcula a partir del trabajo total
