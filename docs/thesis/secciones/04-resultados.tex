@@ -1669,6 +1669,15 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
         porque su tamaño en disco crece como $O(n^2)$; procesar \textit{datasets} que lo excedan
         requeriría almacenamiento disperso o la segmentación previa del arbolado.
 
+    \item Persistencia de las fotografías: la imagen que acompaña a cada observación se guarda en un
+        campo \texttt{ImageField} sobre el sistema de archivos del contenedor de la aplicación
+        (Sección~\ref{sec:recenso}), sin almacenamiento de objetos ni respaldo, y el despliegue de
+        producción no declara un volumen que la preserve. La evidencia gráfica que el sistema exige
+        para toda visita positiva es, por tanto, la pieza de menor durabilidad del modelo de datos.
+        La limitación se asume porque el protocolo de censo aún no determina si la fotografía es
+        necesaria ni cuántas por árbol, y dimensionar el almacenamiento antes de esa definición
+        fijaría una arquitectura sobre un requisito que puede cambiar.
+
     \item Alcance del problema de ruteo: el motor optimiza el \textit{dataset} completo como un
         único problema, sin segmentación previa por área geográfica. Cuando el \textit{dataset}
         reúne arbolado de múltiples áreas de censo ---como el conjunto de evaluación de $n = 1\,607$
@@ -1794,7 +1803,7 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
 Las mejoras enumeradas a continuación se derivan de los resultados del capítulo. La primera es la de
 mayor valor para el proyecto; las dos siguientes tienen además anclaje en mediciones propias de esta
-memoria. Las ocho restantes abordan limitaciones funcionales o de diseño, independientes o no de la
+memoria. Las nueve restantes abordan limitaciones funcionales o de diseño, independientes o no de la
 serie experimental, y la última registra una alternativa evaluada y descartada. Cada una indica la
 evidencia que la respalda, su costo y qué habría que construir.
 
@@ -1836,6 +1845,20 @@ evidencia que la respalda, su costo y qué habría que construir.
       sincronización bajo conectividad intermitente prolongada. El costo es de desarrollo de un
       \textit{service worker} dedicado. Debe construirse la gestión de teselas y la sincronización
       diferida robusta que la versión actual no cubre.
+
+  \item Protocolo de censo y almacenamiento de fotografías: el sistema exige hoy una fotografía por
+      visita positiva y la persiste en el sistema de archivos del contenedor
+      (Sección~\ref{sec:limitaciones}), pero esa exigencia no se deriva del propósito del proyecto y
+      el protocolo que la fijaría no está definido. La evidencia de que el almacenamiento importa la
+      da el propio proyecto: las $10\,008$ fotografías de \texttt{legacy\_api} son hoy inaccesibles
+      porque se cerró el plan de facturación del proyecto \textit{Firebase} que las alojaba. El orden
+      correcto es primero decidir el protocolo ---si la fotografía es necesaria, cuántas por árbol y
+      con qué retención--- y solo entonces dimensionar la arquitectura, porque el costo de
+      almacenamiento y la política de respaldo dependen por completo de esa decisión. Debe
+      construirse, una vez fijada, la persistencia sobre un almacenamiento de objetos externo con
+      respaldo y control de acceso; un proyecto \textit{Firebase} propio de esta iteración es la vía
+      natural por continuidad con las dos fuentes legadas, con la reserva de que la propiedad de la
+      cuenta y su facturación queden bajo el proyecto y no bajo una persona.
 
   \item Importación de formatos adicionales: los \textit{datasets} se importan hoy desde archivos
       CSV o JSON, o desde las fuentes legadas (Sección~\ref{sec:legacy}), sin soporte de GeoJSON.

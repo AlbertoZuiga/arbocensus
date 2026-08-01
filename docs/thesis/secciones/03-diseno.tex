@@ -1154,6 +1154,17 @@ observación se deriva del motivo: la omisión por árbol inexistente produce un
 \texttt{not\_found}, y cualquier otro motivo, una observación \texttt{unknown}. Así, incluso una
 parada omitida deja constancia histórica de por qué no se pudo censar.
 
+Conviene separar dos cosas que la implementación hoy une. Que la fotografía sea obligatoria es una
+regla de esta iteración, no un requisito que se derive del propósito del proyecto: etiquetar un
+ejemplar como riesgoso o no riesgoso no exige necesariamente una imagen por visita, y el protocolo
+de censo que fijaría esa exigencia no está definido ---es la misma indefinición que obliga a tratar
+el tiempo de servicio $s$ como parámetro (Sección~\ref{sec:flota})---. Que el sistema la admita
+tampoco significa que la conserve bien: la imagen se persiste en un campo \texttt{ImageField} sobre
+el sistema de archivos del contenedor de la aplicación, que no es almacenamiento durable ni está
+respaldado. Esa combinación ---una exigencia que el propósito no impone y una persistencia que no
+garantiza permanencia--- es una limitación asumida y no un compromiso de diseño, y el
+Capítulo~\ref{cap:resultados} la retoma como tal.
+
 \subsection{Instantánea del histórico legado}
 
 La importación de una fuente legada no trae solo la posición de los árboles: trae también, en la
