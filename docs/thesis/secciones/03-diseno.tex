@@ -1077,7 +1077,11 @@ usuario y no tiene interfaz asociada: se conserva como atajo programático para 
 
 La interfaz de selección (\texttt{LegacyImport}, con el componente \texttt{LegacySelectionMap})
 presenta sobre un mapa \textit{Leaflet} la totalidad del arbolado legado y los polígonos de las
-áreas de censo. Cada árbol se dibuja como un marcador circular cuyo color codifica su estado:
+áreas de censo. Un área de censo es la unidad con que se organizó la operación histórica: son
+polígonos que vienen de \texttt{legacy\_api}, donde cada campaña agrupaba su arbolado por sector, y
+no una entidad que esta iteración defina. Se dibujan porque el administrador reconoce el territorio
+por ellas, y porque son la unidad que el Capítulo~\ref{cap:resultados} identifica como la escala
+natural del motor. Cada árbol se dibuja como un marcador circular cuyo color codifica su estado:
 disponible, seleccionado o ya importado --- estos últimos, además, no son interactivos, lo que hace
 imposible seleccionar dos veces el mismo árbol---. La selección puede componerse mediante tres
 mecanismos combinables:
@@ -1247,8 +1251,9 @@ La API REST se implementa con Django REST Framework y expone los siguientes grup
         visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
-El sistema implementa dos roles: Administrador (acceso completo) y Censador (lectura de las rutas
-propias del plan vigente y registro de visitas). La autorización se resuelve por rol mediante los
+Los dos usuarios objetivo de la Sección~\ref{sec:usuarios} se materializan en la API como dos roles:
+Administrador (acceso completo) y Censador (lectura de las rutas propias del plan vigente y registro
+de visitas). La autorización se resuelve por rol mediante los
 permisos propios \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, definidos sobre el campo
 \texttt{role} del usuario y no sobre los permisos estándar del \textit{framework}, que validan el
 atributo \texttt{is\_staff} de Django ---un concepto ajeno al rol de negocio. La
