@@ -5,6 +5,24 @@
 \captionsetup{list=false}
 
 \phantomsection
+\addcontentsline{toc}{section}{ÍNDICE DE ANEXOS}
+\begin{center}
+  {\bfseries ÍNDICE DE ANEXOS}
+\end{center}
+\vspace{6pt}
+\noindent
+\begin{tabularx}{\textwidth}{@{}X r@{}}
+  Anexo 1. Documentación de la API REST & \pageref{anx:api} \\
+  Anexo 2. Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
+  Anexo 3. Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
+  Anexo 4. Grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
+  Anexo 5. Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
+  Anexo 6. Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
+  Anexo 7. Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
+\end{tabularx}
+\newpage
+
+\phantomsection
 \section*{Anexo 1. Documentación de la API REST}
 \label{anx:api}
 \addcontentsline{toc}{section}{Anexo 1. Documentación de la API REST}
@@ -240,6 +258,7 @@ importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
 
 \phantomsection
 \section*{Anexo 2. Comando de demostración (\texttt{seed\_demo})}
+\label{anx:demo}
 \addcontentsline{toc}{section}{Anexo 2. Comando de demostración}
 
 El comando de gestión \texttt{seed\_demo} construye un \textit{dataset} sintético y
@@ -804,3 +823,71 @@ censador.}{fig:ui_progress}
 El desglose por censador es el que permite verificar en operación el reparto de
 carga que persigue el índice de balance definido en la
 Sección~\ref{sec:atributos-calidad}.
+
+\phantomsection
+\section*{Anexo 7. Modelo de datos de las bases legadas}
+\addcontentsline{toc}{section}{Anexo 7. Modelo de datos de las bases legadas}
+\label{anx:modelo-legado}
+
+Este anexo detalla las tablas de los dos esquemas legados que la Sección~\ref{sec:legacy} resume, y
+qué columna de cada una alimenta al sistema. Ninguna de las dos bases se escribe: el acceso es
+estrictamente de solo lectura (RE-03).
+
+\begin{table}[H]
+  \centering
+  \caption{Esquema \texttt{arbocensus\_api\_app\_*} (\texttt{legacy\_api}, 429 árboles).}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l r X@{}}
+    \toprule
+    Tabla & Filas & Columnas que usa el sistema \\
+    \midrule
+    \texttt{tree} & 429 &
+      \texttt{id} (identidad persistente, par con \texttt{source}), \texttt{latitude},
+      \texttt{longitude}, \texttt{tree\_species}. \\
+    \texttt{sample} & 3\,961 &
+      \texttt{real\_tree\_id} (vínculo directo al árbol), fecha, \texttt{completed} (deriva el
+      estado \texttt{alive}/\texttt{unknown} de la Sección~\ref{sec:recenso}). \\
+    \texttt{answer} & 12\,589 &
+      \texttt{sample\_id}, \texttt{answer\_url} y \texttt{crop\_url} (10\,008 con foto; se importa
+      la URL, no el archivo --- Sección~\ref{sec:recenso}). No se importan las respuestas de texto
+      libre. \\
+    \texttt{area} & 48 &
+      \texttt{coordinates} (lista de vértices, se reconstruye como polígono), \texttt{campaign\_id}.
+      27 sin arbolado, 21 no vacías que se reducen a 12 polígonos distintos por recreación entre
+      campañas (Sección~\ref{sec:estado-actual}). \\
+    \texttt{campaign} & 10 &
+      Nombre, usado solo como metadato de exploración; no se importa como entidad propia. \\
+    \texttt{step} & --- &
+      Definición de preguntas por campaña. No se importa: el sistema no reconstruye el cuestionario
+      histórico, solo el estado derivado de \texttt{completed}. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Esquema \texttt{arbocensus\_app\_*} (\texttt{legacy\_app}, 12\,941 árboles con posición
+    utilizable).}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l r X@{}}
+    \toprule
+    Tabla & Filas & Columnas que usa el sistema \\
+    \midrule
+    \texttt{sample} & 17\,208 &
+      Código QR (identidad persistente, par con \texttt{source}), latitud y longitud de cada lectura
+      de GPS. La posición del árbol se reconstruye como la mediana de las lecturas agrupadas por QR
+      (Sección~\ref{sec:legacy}). \\
+    \texttt{answer} & --- &
+      \texttt{answer\_url} (83\,614 URL \texttt{https}; se importan solo las que comienzan con
+      \texttt{http}, descartando rutas locales del dispositivo). \texttt{completed} deriva el mismo
+      estado que en \texttt{legacy\_api}. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+La diferencia estructural entre ambos esquemas es la que obliga al doble camino de vinculación
+descrito en la Sección~\ref{sec:recenso}: \texttt{legacy\_api} referencia el árbol directamente desde
+la observación (\texttt{sample.real\_tree\_id}), mientras que \texttt{legacy\_app} no tiene una tabla
+de árboles propia y el árbol se reconstruye a partir del código QR que agrupa sus muestras. La
+identidad persistente que \texttt{Tree} conserva en toda importación es, en ambos casos, el par
+(\texttt{source}, \texttt{external\_id}) y no el identificador de fila de la base legada.
