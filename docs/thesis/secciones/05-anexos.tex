@@ -430,6 +430,19 @@ docker compose -f docker-compose.prod.yml run --rm backend \
     --seeds 42,43,44
 \end{verbatim}
 
+\begin{sloppypar}
+Los datos crudos de la corrida de referencia de la Sección~\ref{sec:metricas-calidad} ---una fila
+por semilla--- son los que ese comando escribe en
+\texttt{20260724-225420-postpass-baseline.csv}. Las cifras que esa misma sección toma de corridas
+distintas provienen de \texttt{20260713-real-case-metrics-spatial.csv} (tiempo de reloj extremo a
+extremo con la matriz en caché), de \texttt{reference-n1607-20260730.csv} (auto-cruces sobre el
+trazado de calles) y de \texttt{penalty-sensitivity-20260713-reference.csv}, columna
+\texttt{tmin\_gap\_routes} (rutas por debajo de $T_{\min}$). Los resultados de la corrida de
+referencia anterior ---estrategia \texttt{global} y límite de $180$\,s, los \textit{defaults}
+previos al ajuste de la Sección~\ref{sec:comparacion-estrategias}--- se conservan en
+\texttt{20260712-real-case-metrics.csv}.
+\end{sloppypar}
+
 \begin{table}[H]
   \centering
   \caption{Parámetros del comando \texttt{baseline\_postpass}.}
@@ -606,6 +619,88 @@ cuarto: aíslan el efecto de la densidad del efecto del tamaño.
     \bottomrule
   \end{tabularx}
 \end{table}
+
+\phantomsection
+\subsubsection*{Reservas del experimento de sensibilidad a penalizaciones}
+\label{anx:reservas-sensibilidad}
+
+La Sección~\ref{sec:discusion-calidad} resume en una frase las tres reservas que acotan la lectura
+de la reducción de auto-cruces al redirigir la penalización blanda superior hacia $T_{\max}$
+(\texttt{docs/experiments/penalty-sensitivity-20260713-reference.csv}). Este apartado las detalla.
+
+La primera es de replicación. Las tres filas de cada configuración registran $76$, $77$ y $76$
+auto-cruces en un brazo y $6$, $7$ y $6$ en el otro: coinciden a la unidad porque no son réplicas
+independientes. Ese barrido es anterior a la corrección de instrumento del Defecto~1 más abajo, y el
+comando de gestión que lo ejecutó escribía la semilla en el CSV sin propagarla al \textit{solver}.
+Las cifras son, por tanto, una medición por celda y no la media de tres repeticiones, y la reducción
+no lleva barra de error.
+
+La segunda es de instrumento. La métrica de auto-cruces se calcula sobre cuerdas rectas entre
+paradas consecutivas, y la auditoría de instrumento de julio de 2026
+(\texttt{docs/experiments/evidence-audit-20260724.md}) midió su correlación con el trazado real de
+calles: un $\rho$ de Spearman global de $0{,}527$, propio de un indicador indirecto parcial, e
+\textit{invertido} en el \textit{dataset} de evaluación agregado ($\rho = -0{,}575$), que es
+precisamente la instancia sobre la que se midió esta reducción. La cifra de $91{,}7$\,\% describe lo
+que ocurre con las cuerdas, y en esta instancia la cuerda es un mal predictor del signo del cambio
+en la calle.
+
+La tercera es de costo omitido. El mismo CSV muestra que el brazo que redirige la penalización
+superior a $T_{\max}$ degrada el balance de carga de $0{,}838$ a $0{,}715$ y eleva de tres a cinco
+el número de rutas por debajo de $T_{\min}$. El balance es uno de los tres propósitos declarados del
+modelo (Sección~\ref{sec:formulacion}), de modo que la ganancia geométrica no es gratuita: se paga
+en la dimensión que el criterio de aceptación CA-03 protege.
+
+Establecer la afirmación en su forma fuerte exigiría re-correr el experimento con semillas
+efectivamente propagadas al \textit{solver} y reportar los auto-cruces sobre el trazado de calles,
+instrumentación que el repositorio ya soporta y que este trabajo no ejecutó.
+
+\phantomsection
+\subsubsection*{Barrido de configuración $\times$ algoritmo $\times$ tamaño --- detalle}
+\label{anx:barrido-configuraciones}
+
+La Sección~\ref{sec:discusion-calidad} resume el barrido ejecutado sobre las doce instancias
+congeladas de este anexo (\texttt{route-config-algorithm-sweep-20260718.csv}: ocho configuraciones
+sobre cada instancia, 96 celdas, registradas en 288 filas). Cada celda se registró con tres
+repeticiones nominales, pero el comando de gestión que ejecutó el barrido escribía la semilla en el
+CSV sin propagarla al \textit{solver}, de modo que las tres filas de una misma celda no son réplicas
+independientes: difieren solo por el corte por reloj de pared. En 78 de las 96 celdas las tres filas
+coinciden exactamente; en las 18 restantes el desplazamiento total varía hasta un $3{,}4$\,\%. Las
+cifras que siguen provienen, por tanto, de una medición por celda sin réplica de semilla y no llevan
+barras de error.
+
+El brazo \texttt{upper-tmax-tmin9000} ---que ancla la penalización blanda superior en $T_{\max}$ en
+lugar del punto medio del intervalo $[T_{\min},\,T_{\max}]$ y eleva el piso blando a $9\,000$\,s, a
+diferencia del brazo de sensibilidad anterior que solo redirigía la cota superior sin elevar el
+piso--- es el único que satisface el criterio de decisión para $n=1\,607$: los auto-cruces caen un
+$92{,}5$\,\% ($89{,}0 \to 6{,}7$) con una variación de viaje de $-0{,}3$\,\%, balance de $0{,}84$,
+$k=25$ y cero descartes. La razón es estructural: a esa densidad las rutas saturan el presupuesto
+temporal de forma natural ($\overline{\text{sat}} = 0{,}94$), de modo que anclar la cota superior en
+$T_{\max}$ no impone \textit{detours} adicionales. En el eje de algoritmo, \texttt{global}
+prácticamente no modifica los auto-cruces ($-2{,}6$\,\%) y \texttt{greedy} los empeora
+($+14{,}6$\,\%), lo que ratifica \texttt{spatial\_term} como la estrategia correcta.
+
+Sin embargo, el mismo brazo produce el peor resultado en las áreas reales individuales, donde la
+instancia no satura $T_{\max}$ ($\overline{\text{sat}} \approx 0{,}67$--$0{,}73$): anclar la cota
+superior fuerza relleno de trayecto porque la carga de servicio disponible no llena el presupuesto,
+con incrementos de viaje de $+64{,}0$\,\%, $+62{,}6$\,\% y $+89{,}0$\,\% en las instancias de $n =
+157$, $72$ y $43$, respectivamente. Bajo la configuración de producción, esas mismas áreas generan
+cero o casi cero auto-cruces; el auto-cruce es un fenómeno exclusivo del régimen denso agregado. El
+brazo \texttt{span-c100} ---penalización del \textit{span} sobre la dimensión temporal mediante
+\texttt{SetSpanCostCoefficientForAllVehicles}, que eleva el coeficiente de $0$ en producción a $100$
+y deja intacta la penalización de $3$ sobre la dimensión espacial--- confirma la predicción de
+nulidad: solo reduce los auto-cruces en $26{,}6$\,\% para $n=1\,607$, por debajo del umbral del
+$30$\,\% exigido por el criterio a priori, porque penalizar la suma de duraciones de ruta no
+distingue el relleno del viaje productivo. Los brazos que reducen o suprimen el piso blando
+(\texttt{tmin-scaled}, \texttt{service-floor} y \texttt{tmin-scaled+exempt-last}) quedan
+descalificados como configuración universal al romper la compuerta de balance $\geq 0{,}80$ en
+siete, siete y cuatro instancias, respectivamente.
+
+La Sección~\ref{sec:posibles-mejoras} menciona una compuerta de régimen por saturación, descartada,
+que activaría \texttt{upper-tmax-tmin9000} por encima de $\overline{\text{sat}} \gtrsim 0{,}9$. La
+re-medición sobre \texttt{crossings\_road} invierte el signo del efecto precisamente en el régimen
+que la compuerta habilitaría: la mediana de auto-cruces sobre el trazado de calles sube de $43$ a
+$69$ en \texttt{reference-n1607} ($\overline{\text{sat}} = 0{,}94$), de $46$ a $75$ en
+\texttt{battery-n1000} ($0{,}91$) y de $26$ a $59$ en \texttt{battery-n800} ($0{,}89$).
 
 \phantomsection
 \subsubsection*{Auditoría de robustez metodológica --- detalle}
