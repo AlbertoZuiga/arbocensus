@@ -43,38 +43,34 @@ iteraciones anteriores desarrollaron una plataforma web de censado con participa
 ludificación y un modelo de estimación de cobertura; esta memoria agrega la etapa siguiente: la
 planificación de las jornadas en terreno. El propósito del proyecto exige un historial de
 observaciones por árbol, y construirlo obliga a volver sobre un conjunto conocido de ejemplares ya
-georreferenciados; ese re-censo estructurado convierte el proceso en un problema de asignación de
-trabajo que las iteraciones anteriores no abordaron.
+georreferenciados. Planificar ese re-censo es un problema de asignación de trabajo que las
+iteraciones anteriores no abordaron.
 
 El problema se formula como un problema de ruteo de vehículos de rutas abiertas con visitas
-opcionales penalizadas y restricción de duración por ruta, y se resuelve mediante el \textit{solver}
-de ruteo vehicular de \textit{OR-Tools}. Los tiempos de desplazamiento peatonal se calculan sobre la
-red vial real de \textit{OpenStreetMap} mediante OSRM, lo que elimina costos de APIs externas. La
-plataforma cubre el ciclo operacional completo: el administrador importa los árboles, configura los
-parámetros, optimiza y publica el plan; el censista accede desde su teléfono a la ruta asignada, con
-las paradas en secuencia y navegación peatonal por parada. La formulación aborda restricciones
-operacionales reales: minimización automática del número de rutas, jornadas acotadas por ruta y
-balance de carga entre equipos.
+opcionales penalizadas y restricción de duración por ruta ---con el número de rutas, la jornada
+acotada y el balance de carga resueltos por el modelo y no declarados por el usuario---, y se
+resuelve mediante el \textit{solver} de ruteo vehicular de \textit{OR-Tools}. Los tiempos de
+desplazamiento peatonal se calculan sobre la red vial real de \textit{OpenStreetMap} mediante OSRM,
+lo que elimina costos de APIs externas. La plataforma cubre el ciclo operacional completo: el
+administrador importa los árboles, configura los parámetros, optimiza y publica el plan; el censista
+accede desde su teléfono a la ruta asignada, con las paradas en secuencia y navegación peatonal por
+parada.
 
-Sobre la instancia de referencia de 1\,607 árboles, Arbocensus genera 25 rutas en un presupuesto de
-cómputo de 120\,s, que captura prácticamente toda la mejora alcanzable con presupuestos mayores. El
-plan alcanza un índice de balance de carga de 0{,}83, cobertura total y ninguna ruta que exceda la
-jornada máxima. Frente a un heurístico \textit{greedy} de vecino más cercano con el mismo
-refinamiento local, reduce el tiempo total de desplazamiento en un 4{,}7\,\% ---cerca de 48 minutos
-sobre esa instancia---, deja las jornadas al 93\,\% de su cota en lugar del 98\,\% y reparte mejor
-los árboles aislados.
+Sobre la instancia de referencia de 1\,607 árboles el sistema genera 25 rutas con cobertura total,
+un índice de balance de carga de 0{,}83 y ninguna ruta que exceda la jornada máxima, en un
+presupuesto de cómputo de 120\,s que captura prácticamente toda la mejora alcanzable con
+presupuestos mayores; frente a un heurístico \textit{greedy} de vecino más cercano con el mismo
+refinamiento local reduce el tiempo total de desplazamiento en un 4{,}7\,\%, cerca de 48 minutos.
 
 Estas conclusiones descansan en dieciséis ciclos de evaluación con criterio fijado antes de cada
-corrida y datos crudos versionados, doce de los cuales cerraron con el descarte de la hipótesis que
-los motivaba, lo que acota el margen de mejora atribuible a la función objetivo. La serie no se
-limita a la instancia de $1\,607$ árboles: cubre doce instancias reales congeladas entre $n=43$ y
-$n=1\,607$, incluidas tres áreas de censo individuales de la operación histórica. Sobre esas áreas
-la configuración de producción genera rutas sin auto-cruces apreciables y sin descartes ---aunque el
-contraste con el heurístico de referencia, exigido en las tres, se cumple solo en dos---, lo que
-confirma que el área de censo individual, y no el arbolado agregado, es la unidad operativa correcta
-del motor; el compromiso geométrico que la instancia agregada expone es propio del régimen de
-escalamiento y no de la operación habitual. Se concluye que esta formulación produce planes de censo
-verificables sobre instancias reales en tiempos prácticos; su validación en una jornada de terreno
-queda pendiente y es la extensión de mayor valor para el proyecto.
+corrida y datos crudos versionados, doce de los cuales cerraron descartando la hipótesis que los
+motivaba, lo que acota el margen de mejora atribuible a la función objetivo. La serie cubre doce
+instancias reales congeladas entre $n=43$ y $n=1\,607$, incluidas tres áreas de censo individuales
+de la operación histórica; sobre ellas la configuración de producción no descarta árboles ni produce
+auto-cruces apreciables, aunque el contraste con el heurístico, exigido en las tres, se cumple solo
+en dos. El área individual, y no el arbolado agregado, resulta ser la unidad operativa correcta del
+motor. Se concluye que esta formulación produce planes de censo verificables sobre instancias reales
+en tiempos prácticos; su validación en una jornada de terreno queda pendiente y es la extensión de
+mayor valor para el proyecto.
 
 \newpage
