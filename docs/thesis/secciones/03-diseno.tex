@@ -964,10 +964,11 @@ ordena sus candidatas.
 \section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
 \label{sec:legacy}
 
-El sistema no parte de cero: existen dos bases de datos operativas de versiones anteriores del
-proyecto Arbocensus \citep{binder-cortes2023,pizarro-zumaeta2024}, que contienen el arbolado ya
-catastrado en campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
-el campo \texttt{source} del modelo \texttt{Tree}:
+Las dos bases de datos que dejaron las iteraciones anteriores, descritas en la
+Sección~\ref{sec:estado-actual}, se incorporan como fuentes de importación, identificadas por el
+campo \texttt{source} del modelo \texttt{Tree}. Lo que esta sección aporta no es su contenido sino
+lo que esta iteración hace con ellas: cómo se reconstruye una posición canónica donde no la hay,
+cómo se resuelve el solapamiento entre ambas y cómo el administrador elige qué subconjunto importar.
 
 % Orden cronológico confirmado por los volcados de las bases (migraciones y muestras): legacy_app
 % (esquema arbocensus_app_*, muestras por QR) es la más antigua: génesis de base 2021-10 y capturas
