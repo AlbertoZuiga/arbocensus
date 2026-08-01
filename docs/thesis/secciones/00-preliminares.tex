@@ -11,11 +11,10 @@ A mi familia, por el apoyo sostenido a lo largo de toda la carrera.
 
 A los profesores de la Facultad de Ingeniería y Ciencias Aplicadas de la Universidad de los Andes,
 por la formación recibida durante estos años, y de manera especial al profesor guía de este trabajo,
-por su orientación y sus observaciones durante el desarrollo del proyecto.
+Matías Recabarren, por su orientación y sus observaciones durante el desarrollo del proyecto.
 
-A quienes participaron en las etapas previas de Arbocensus: el levantamiento de datos realizado
-entonces es el que permitió evaluar este trabajo sobre un censo real y no sobre un conjunto
-sintético.
+A quienes participaron en las etapas previas de Arbocensus, por construir el proyecto que esta
+memoria continúa.
 }
 
 \newpage
@@ -68,9 +67,15 @@ correcta del motor es el área individual y no el arbolado agregado.
 
 Estas conclusiones descansan en dieciséis ciclos de evaluación con criterio fijado antes de cada
 corrida y datos crudos versionados, doce de los cuales cerraron con el descarte de la hipótesis que
-los motivaba, lo que acota el margen de mejora atribuible a la función objetivo. Se concluye que
-esta formulación produce planes de censo verificables sobre instancias reales en tiempos prácticos;
-su validación en una jornada de terreno queda pendiente y es la extensión de mayor valor para el
-proyecto.
+los motivaba, lo que acota el margen de mejora atribuible a la función objetivo. La serie no se
+limita a la instancia de $1\,607$ árboles: cubre doce instancias reales congeladas entre $n=43$ y
+$n=1\,607$, incluidas tres áreas de censo individuales de la operación histórica. Sobre esas áreas
+la configuración de producción genera rutas sin auto-cruces apreciables y sin descartes ---aunque el
+contraste con el heurístico de referencia, exigido en las tres, se cumple solo en dos---, lo que
+confirma que el área de censo individual, y no el arbolado agregado, es la unidad operativa correcta
+del motor; el compromiso geométrico que la instancia agregada expone es propio del régimen de
+escalamiento y no de la operación habitual. Se concluye que esta formulación produce planes de censo
+verificables sobre instancias reales en tiempos prácticos; su validación en una jornada de terreno
+queda pendiente y es la extensión de mayor valor para el proyecto.
 
 \newpage

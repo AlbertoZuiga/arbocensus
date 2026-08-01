@@ -1878,8 +1878,9 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
 Las mejoras enumeradas a continuación se derivan de los resultados del capítulo. La primera es la de
 mayor valor para el proyecto; las dos siguientes tienen además anclaje en mediciones propias de esta
-memoria. Las cinco restantes abordan limitaciones funcionales independientes de la serie
-experimental. Cada una indica la evidencia que la respalda, su costo y qué habría que construir.
+memoria. Las nueve restantes abordan limitaciones funcionales o de diseño, independientes o no de la
+serie experimental. Cada una indica la evidencia que la respalda, su costo y qué habría que
+construir.
 
 \begin{itemize}[label=--]
   \item \textbf{Validación en terreno}: las conclusiones de este capítulo verifican que el producto
@@ -1936,10 +1937,44 @@ experimental. Cada una indica la evidencia que la respalda, su costo y qué habr
       unitarias de \textit{backend} y \textit{frontend}, pero ningún flujo completo de usuario. El
       costo es de mantenimiento de la suite. Debe construirse la automatización de los flujos de
       administrador y censador mediante Playwright.
+
+  \item \textbf{Preferir rutas cortas antes que descartar árboles}: subir el costo fijo por vehículo
+      $C_{\text{fijo}}$ no es el mecanismo, y conviene decirlo así porque es la intuición más
+      inmediata. Descartar un árbol cuesta $\pi = 10^{6}$\,s, mientras que abrir la ruta que lo
+      absorbería cuesta $C_{\text{fijo}} = 10^{5}$\,s más la penalización de piso blando
+      $\alpha\,(T_{\min}-T_r)$, que para una ruta corta de tres paradas ronda los $7\times10^{7}$\,s
+      con el coeficiente $\alpha = 10\,000$ de producción: es el piso blando, no el costo de flota,
+      el término que domina esa decisión (Sección~\ref{sec:discusion-calidad}). La palanca correcta
+      es eximir del piso a la última ruta activa (\textit{exempt-last}) o escalar $T_{\min}$ con el
+      trabajo real de la instancia, vía que la mejora de cotas blandas sensibles a la densidad, más
+      arriba en esta lista, ya identifica como pendiente.
+
+  \item \textbf{Edición de árboles de un \textit{dataset}}: RF-26 permite hoy editar los metadatos
+      del \textit{dataset} y desactivar árboles, pero no corregir un árbol individual cuya posición,
+      especie o identificador externo llegó mal desde la fuente legada. El costo es un
+      \textit{endpoint} de edición y su validación en el formulario del panel. Debe construirse la
+      edición de los campos de \texttt{Tree} sobre el árbol ya importado.
+
+  \item \textbf{Ruta para los árboles descartados}: cuando una corrida descarta árboles por
+      disyunción (Sección~\ref{sec:disyunciones}), generar una ruta adicional resolviendo un TSP
+      abierto sobre ese resto con el mismo post-proceso 2-opt de la Sección~\ref{sec:postpass}. Esa
+      ruta queda desbalanceada frente a las demás de la campaña, pero el balance que el sistema
+      persigue es de largo plazo entre censistas y no por campaña individual, y ya lo sostiene
+      \texttt{suggest\_assignment} (RF-24). El costo es de \textit{pipeline}: reutilizar la matriz
+      de costos en caché y el 2-opt existente sobre el subconjunto descartado.
+
+  \item \textbf{Modelo de aprendizaje automático para generar rutas}: se evaluó como alternativa y
+      no se propone, por tres razones. Primera, las restricciones duras del problema ---cobertura,
+      $T_{\max}$, secuencia estricta--- no son garantizables por un modelo aprendido, mientras que
+      el VRP las impone por construcción. Segunda, entrenarlo exigiría un corpus de planes de censo
+      etiquetados que el proyecto no tiene, y que solo podría generarse ejecutando el propio
+      \textit{solver}, lo que vuelve circular el entrenamiento. Tercera, es sobreingeniería frente a
+      un problema que la formulación actual resuelve en $120$\,s con herramientas ya construidas y
+      probadas (Sección~\ref{sec:cumplimiento-criterios}).
 \end{itemize}
 
-Una novena extensión se evaluó y quedó descartada por la propia medición, lo que justifica dejarla
-registrada. La compuerta de régimen por saturación consistía en activar el brazo
+Una extensión adicional se evaluó y quedó descartada por la propia medición, lo que justifica
+dejarla registrada. La compuerta de régimen por saturación consistía en activar el brazo
 \texttt{upper-tmax-tmin9000} por encima de un umbral $\overline{\text{sat}} \gtrsim 0{,}9$, dado que
 el barrido de la Sección~\ref{sec:discusion-calidad} le atribuye una reducción de auto-cruces del
 $92{,}5$\,\% en el régimen denso sin incremento de desplazamiento. Esa reducción está medida sobre

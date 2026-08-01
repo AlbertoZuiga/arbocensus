@@ -50,6 +50,12 @@ carencias que las herramientas genéricas no abordan:
         desbalance de carga entre equipos.
 \end{enumerate}
 
+Se consideró también un enfoque \textit{route-first, cluster-second}: resolver un único TSP sobre
+los $n$ árboles y cortar el recorrido resultante en tramos de duración acumulada $\leq T_{\max}$. Se
+descartó porque el corte por duración no controla el balance ni la compacidad de cada tramo, y
+porque los extremos de cada tramo quedan fijados por un recorrido único que ignora, al construirse,
+la partición que luego se le impone.
+
 El sistema no se agota en el motor de optimización: cubre el ciclo operacional completo de una
 campaña, desde la constitución del conjunto de árboles a censar hasta el seguimiento del avance en
 terreno. El administrador importa el arbolado ---desde archivos o desde las dos bases de datos que
