@@ -17,13 +17,12 @@ Sin embargo, los problemas de ruteo urbano reales presentan características esp
   \item jornadas globales por ruta, no ventanas en nodos individuales;
   \item rutas abiertas sin depósito obligatorio;
   \item determinación automática del número de rutas necesarias;
-  \item distancias caminables sobre redes viales reales (\textit{OpenStreetMap}
-        \citep{openstreetmap}, OSM), no euclidianas.
+  \item distancias caminables sobre redes viales reales, no euclidianas.
 \end{enumerate}
 
 Las herramientas de ruteo de propósito general ---entre ellas los módulos de análisis de redes de las
-suites comerciales de sistemas de información geográfica (\textit{Geographic Information System},
-GIS)--- resuelven variantes del problema de ruteo de vehículos. Lo que no
+suites comerciales de sistemas de información geográfica--- resuelven variantes del problema de
+ruteo de vehículos. Lo que no
 cubren es la integración con el flujo de trabajo de este proyecto: partir del catastro que dejaron
 las iteraciones anteriores de Arbocensus, publicar el plan como asignación de trabajo a censadores
 identificados y recoger de vuelta, parada por parada, la observación histórica de cada árbol. Esa
@@ -32,7 +31,10 @@ producto aporta, y es específica del dominio y no del algoritmo. A ello se aña
 de costo: una instancia de 1\,607 árboles exige una matriz de más de dos millones y medio de tiempos
 de desplazamiento, volumen que con una API externa de pago implicaría un gasto recurrente en cada
 campaña, mientras que la alternativa adoptada lo elimina al desplegar el servicio localmente sobre
-datos cartográficos abiertos.
+datos cartográficos abiertos ---los de \textit{OpenStreetMap} \citep{openstreetmap}---.
+
+Hasta aquí el planteamiento: qué exige el problema y por qué las herramientas disponibles no lo
+cubren. Lo que sigue describe la solución que este trabajo construye sobre ese planteamiento.
 
 Se propone el desarrollo de una plataforma web que formula el problema de ruteo de censo como un
 problema de ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
@@ -72,17 +74,17 @@ La plataforma se dirige a dos perfiles de usuario con contextos de uso distintos
 gobierna las decisiones de diseño del Capítulo~\ref{cap:diseno}.
 
 \begin{itemize}[label=--]
-  \item Administrador de campaña. Coordina el censo dentro del proyecto Arbocensus. Su formación es
-        ambiental o de gestión y no incluye optimización combinatoria: no debe tener que declarar
-        cuántos equipos necesita ni ajustar coeficientes del \textit{solver}. Trabaja desde un
+  \item Administrador de campaña. Coordina el censo dentro del proyecto Arbocensus. No se supone en
+        él conocimiento de optimización combinatoria: no debe tener que declarar cuántos equipos
+        necesita ni ajustar coeficientes del \textit{solver}. Trabaja desde un
         computador de escritorio, con conexión estable, en sesiones de planificación previas a la
         jornada de terreno. Se espera un único administrador activo por campaña.
   \item Censador. Participa en la jornada de terreno recorriendo a pie la ruta que le fue asignada.
         Utiliza su propio teléfono con datos móviles, en la vía pública, durante una jornada acotada
         a dos o tres horas por la autonomía de la batería del dispositivo. La conectividad puede
-        degradarse de forma intermitente. Su número no es un dato de entrada sino una salida del
-        sistema, que depende del tiempo de servicio y de la jornada máxima que se configuren
-        (Capítulo~\ref{cap:resultados}).
+        degradarse de forma intermitente. Cuántos censadores requiere una campaña no es algo que el
+        administrador declare: lo determina el sistema a partir del tiempo de servicio y de la
+        jornada máxima que se configuren (RF-07 y Sección~\ref{sec:flota}).
 \end{itemize}
 
 De ese contraste se derivan tres exigencias concretas: el portal debe ser operable con una sola mano
@@ -272,8 +274,8 @@ auto-cruces sigue siendo ejecutable ---no invalida el censo, lo encarece---, y p
 desplazamiento, que sí es objetivo explícito del modelo, ya penaliza buena parte de esa
 ineficiencia.
 
-El grado en que el producto satisface estos cuatro atributos, y las salvedades con que cada uno se
-sostiene, se examina en la Sección~\ref{sec:cumplimiento-atributos} a la luz de lo medido.
+Los cuatro se retoman en la Sección~\ref{sec:cumplimiento-atributos}, ya con las mediciones a la
+vista.
 
 \section{RESTRICCIONES}
 \label{sec:restricciones}
@@ -316,7 +318,9 @@ como la respuesta que el diseño les dio.
     RE-05 &
     \textit{OR-Tools} no expone una semilla ---el valor que fija el punto de partida del generador
     de números pseudoaleatorios y que, al repetirse, reconstruye una corrida idéntica---, por lo que
-    las réplicas de un experimento deben construirse permutando el orden de entrada de los nodos. \\
+    las réplicas de un experimento deben construirse permutando el orden de entrada de los nodos:
+    ese orden es el que resuelve los empates de la heurística de construcción, de modo que
+    alterarlo cambia la solución inicial y con ella toda la trayectoria de la búsqueda local. \\
     \addlinespace
     RE-06 &
     La conectividad en terreno es intermitente, de modo que el portal del censador no puede suponer
