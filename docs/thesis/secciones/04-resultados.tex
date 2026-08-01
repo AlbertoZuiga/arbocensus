@@ -719,18 +719,28 @@ entre tres causas simultáneas (estrategia, redondeo y presupuesto de tiempo). S
 sus hallazgos de \textit{tiempo} ---la dominancia del GLS y el carácter \textit{OSRM-bound} en
 frío--- no dependen de ninguno de esos tres factores.
 
-No se ejecutó un ajuste fino del coeficiente \texttt{SPATIAL\_SPAN\_COEF}. La razón es que
-\texttt{spatial\_term} ya satisface el criterio de decisión con su valor de fábrica y consume solo
-$1{,}5$ de los 10 puntos porcentuales de desplazamiento adicional admitidos, mientras que el único
-eje con señal pendiente ---el IoU del peor par--- es, como se argumentó, un problema de geometría
-local que un coeficiente global no separa sin penalizar al resto de las rutas. La decisión que se
+El valor del coeficiente \texttt{SPATIAL\_SPAN\_COEF} se sometió a un barrido posterior sobre los
+valores $\{0,\,3,\,10,\,30\}$, con tres semillas por punto y las doce instancias congeladas del
+\hyperref[anx:suite-instancias]{Anexo 4}. Su resultado no habilita ningún valor mejor que el de
+fábrica, pero tampoco lo confirma como óptimo: sobre la instancia de referencia los auto-cruces
+sobre calle no varían de forma monótona con el coeficiente ---$39{,}7$ sin penalización espacial,
+$34{,}3$ en el valor de producción, y $46{,}0$ y $48{,}0$ al subirlo a $10$ y a $30$---, de modo que
+la mejora que el valor de producción obtiene sobre no penalizar, de un $13{,}6$\,\%, queda lejos del
+criterio de decisión y se revierte en cuanto el coeficiente crece. La lectura obliga además a una
+reserva sobre lo que la estrategia compra: en esa misma instancia, suprimir la penalización espacial
+entrega mejor tiempo de desplazamiento ($57\,352$\,s frente a $58\,948$\,s) y mejor balance ($0{,}874$
+frente a $0{,}839$). Lo que \texttt{spatial\_term} compra es compacidad y menor solapamiento entre
+rutas, y lo paga en tiempo y en balance; no es una mejora en todos los ejes a la vez. El único eje
+con señal pendiente ---el IoU del peor par--- es, como se argumentó, un problema de geometría local
+que un coeficiente global no separa sin penalizar al resto de las rutas. La decisión que se
 desprende del experimento es, en consecuencia, adoptar \texttt{spatial\_term} como estrategia por
 defecto del sistema, con \texttt{SPATIAL\_SPAN\_COEF} $=3$, un límite de \textit{solver} de 120\,s
 y la configuración censal de referencia de 2\,min de servicio con $T_{\max}=3$\,h;
 \texttt{cluster\_first} se mantiene disponible como opción de comparación, pero no como
 \textit{default} de producción. El protocolo completo, los comandos reproducibles y los datos crudos
-de este experimento se encuentran versionados en \texttt{docs/experiments/} (reporte
-\texttt{route-quality-20260712.md} y los archivos CSV asociados).
+de este experimento se encuentran versionados en \texttt{docs/experiments/} (reportes
+\texttt{route-quality-20260712.md} y \texttt{spatial-span-20260730.md}, con los archivos CSV
+asociados).
 
 % ---- 4.1.4 ------------------------------------------------------
 \subsection{Evaluación sobre áreas reales de censo y precio de la partición}
