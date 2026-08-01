@@ -832,6 +832,16 @@ cruces que un refinamiento local elimina de inmediato. El sistema explota esa as
 post-proceso que se aplica a toda solución antes de persistirla, sin condición ni parámetro que lo
 desactive.
 
+Hay una segunda razón, y es de precio y no de presupuesto. Por debajo de $T_{\min}$ el costo
+marginal del tiempo es negativo: alargar una ruta corta la acerca al piso y abarata la solución. Un
+\textit{solver} enfrentado a una instancia cuyo trabajo real no alcanza a llenar las rutas que abre
+no tiene entonces ningún incentivo para que el recorrido interno de esas rutas sea corto, y puede
+entregarlas con desvíos que solo existen para consumir tiempo. Como la dimensión temporal se declara
+sin holgura, ese consumo no es espera sino caminata: son metros que el censador recorrería. El
+2-opt, que optimiza el camino y no el objetivo del modelo, recupera buena parte de esa caminata sin
+tocar la asignación, y por eso su ganancia es mayor precisamente en las instancias de baja densidad
+donde ese régimen aparece (Sección~\ref{sec:areas-reales}).
+
 El procedimiento es un 2-opt de camino abierto \citep{croes1958method,lin1965computer}, aplicado a
 cada ruta de forma independiente. Dada la secuencia de paradas de una ruta, examina todo par de
 posiciones no adyacentes, invierte el segmento comprendido entre ellas y conserva la inversión
