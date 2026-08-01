@@ -1,0 +1,115 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: ${DB_NAME:-arbocensus}
+      POSTGRES_USER: ${DB_USER:-arbocensus}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-arbocensus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  osrm:
+    image: osrm/osrm-backend
+    volumes:
+      - ./data/osm:/data
+    command: >
+      sh -c "
+        if [ ! -f /data/${OSM_REGION:-santiago}.osrm ]; then
+          echo 'Processing OSM data (first run, may take several minutes)...' &&
+          osrm-extract -p /opt/foot.lua /data/${OSM_REGION:-santiago}.osm.pbf &&
+          osrm-partition /data/${OSM_REGION:-santiago}.osrm &&
+          osrm-customize /data/${OSM_REGION:-santiago}.osrm;
+        fi &&
+        osrm-routed --algorithm mld /data/${OSM_REGION:-santiago}.osrm --max-table-size 5000 --port 5000
+      "
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/5000; printf 'GET /nearest/v1/foot/-70.65,-33.45 HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '\"code\":\"Ok\"' <&3"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 1200s
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/${GHCR_OWNER}/arbocensus-backend:${IMAGE_TAG:-production}
+    # Fallback for bootstrap-droplet.sh when GHCR has no image yet; normal
+    # deploys pull the CI-built image and never build here.
+    build:
+      context: backend
+      target: prod
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "true"
+      COLLECT_STATIC: "true"
+      SEED_DEV: "false"
+    volumes:
+      - media_data:/app/media
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8000/api/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  celery:
+    image: ghcr.io/${GHCR_OWNER}/arbocensus-backend:${IMAGE_TAG:-production}
+    env_file: .env
+    environment:
+      RUN_MIGRATIONS: "false"
+      COLLECT_STATIC: "false"
+    command: celery -A config worker --loglevel=info --concurrency=2
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      osrm:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: ghcr.io/${GHCR_OWNER}/arbocensus-caddy:${IMAGE_TAG:-production}
+    build:
+      context: frontend
+      target: prod
+      args:
+        VITE_API_URL: /api
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - media_data:/srv/media:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+  redis_data:
+  media_data:
+  caddy_data:
+  caddy_config:
