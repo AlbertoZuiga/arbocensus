@@ -100,7 +100,12 @@ la Sección~\ref{sec:legacy}. De ese universo se congeló, por reproducibilidad,
 referencia empleada en los experimentos de esta memoria: 1\,607 nodos, los 429 árboles de
 \texttt{legacy\_api} con posición explícita más los 1\,178 de \texttt{legacy\_app} cuya posición
 reconstruida superaba, al momento de congelar la instancia, la validación automática de calidad que
-entonces aplicaba el importador. Ese filtro no forma parte del sistema vigente. La distribución
+entonces aplicaba el importador. Ese filtro no forma parte del sistema vigente, de modo que la
+instancia de referencia no es reproducible desde el importador actual. Por eso la serie experimental
+no descansa solo en ella: se congelaron además once instancias construidas directamente sobre la
+base completa de \texttt{legacy\_app} y sobre las áreas del censo histórico, que son las que dan a
+la evaluación su cobertura entre $n = 43$ y $n = 1\,607$ árboles
+(\hyperref[anx:suite-instancias]{Anexo 4}). La distribución
 geográfica de esos nodos, diferenciada por fuente de origen ---círculos para \texttt{legacy\_api} y
 cuadrados para \texttt{legacy\_app}---, se muestra en la Ilustración~\ref{fig:instancia-legada}. El
 recuadro abarca 10,3~km de extensión en longitud (12,5~km de diagonal).
