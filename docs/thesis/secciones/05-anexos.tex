@@ -27,33 +27,28 @@
 \label{anx:api}
 \addcontentsline{toc}{section}{Anexo 1. Documentación de la API REST}
 
-La API se implementa con Django REST Framework y se publica bajo el prefijo
-\texttt{/api/}. La autenticación es por \textit{JSON Web Token} mediante
-\textit{djangorestframework-simplejwt}: el cliente obtiene un par de \textit{tokens} en
-\texttt{POST /api/auth/token/} y envía el \textit{token} de acceso en la cabecera
-\texttt{Authorization: Bearer <token>}. La vigencia por defecto es de 60 minutos
-para el \textit{token} de acceso y de 7 días para el de refresco, ambas configurables por
-variable de entorno.
+La API se implementa con Django REST Framework y se publica bajo el prefijo \texttt{/api/}. La
+autenticación es por \textit{JSON Web Token} mediante \textit{djangorestframework-simplejwt}: el
+cliente obtiene un par de \textit{tokens} en \texttt{POST /api/auth/token/} y envía el
+\textit{token} de acceso en la cabecera \texttt{Authorization: Bearer <token>}. La vigencia por
+defecto es de 60 minutos para el \textit{token} de acceso y de 7 días para el de refresco, ambas
+configurables por variable de entorno.
 
-La autorización se resuelve sobre el campo \texttt{role} del usuario mediante dos
-permisos propios del proyecto, \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, y no
-sobre los permisos estándar de Django REST Framework: \texttt{IsAdminUser} valida el
-atributo \texttt{is\_staff}, que en este sistema no representa el rol de negocio. En
-las tablas siguientes, la columna \textbf{Permiso} distingue cuatro niveles:
-Público (sin autenticación), Autenticado (cualquier usuario con
-sesión válida), Admin (\texttt{IsAdminRole}) y Censador
-(\texttt{IsSurveyorRole}).
+La autorización se resuelve sobre el campo \texttt{role} del usuario mediante dos permisos propios
+del proyecto, \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, y no sobre los permisos estándar de
+Django REST Framework: \texttt{IsAdminUser} valida el atributo \texttt{is\_staff}, que en este
+sistema no representa el rol de negocio. En las tablas siguientes, la columna Permiso distingue
+cuatro niveles: Público (sin autenticación), Autenticado (cualquier usuario con sesión válida),
+Admin (\texttt{IsAdminRole}) y Censador (\texttt{IsSurveyorRole}).
 
-Los listados se paginan con \texttt{PageNumberPagination} a 20 elementos por página.
-Las respuestas geográficas siguen el formato \textit{GeoJSON}
-(\textit{FeatureCollection}), con coordenadas en el orden \texttt{[lon, lat]} que
-exige el estándar.
+Los listados se paginan con \texttt{PageNumberPagination} a 20 elementos por página. Las respuestas
+geográficas siguen el formato \textit{GeoJSON} (\textit{FeatureCollection}), con coordenadas en el
+orden \texttt{[lon, lat]} que exige el estándar.
 
-El inventario se reparte en cuatro tablas según el recurso:
-autenticación y usuarios (Tabla~\ref{tab:anexo_api_auth}), \textit{datasets} e
-importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
-(Tabla~\ref{tab:anexo_api_optimization}) y rutas y captura en terreno
-(Tabla~\ref{tab:anexo_api_routes}).
+El inventario se reparte en cuatro tablas según el recurso: autenticación y usuarios
+(Tabla~\ref{tab:anexo_api_auth}), \textit{datasets} e importación legada
+(Tabla~\ref{tab:anexo_api_datasets}), motor de optimización (Tabla~\ref{tab:anexo_api_optimization})
+y rutas y captura en terreno (Tabla~\ref{tab:anexo_api_routes}).
 
 \begin{table}[H]
   \centering
@@ -706,7 +701,7 @@ La Sección~\ref{sec:discusion-calidad} resume los cuatro defectos de
 instrumentación detectados en la serie experimental. Este apartado los describe
 con el detalle necesario para reproducir las correcciones.
 
-\textbf{Defecto 1 --- Semillas no propagadas.}
+Defecto 1 --- Semillas no propagadas.
 Las corridas iniciales de la serie no propagaban la semilla al \textit{solver}: las
 nominales tres réplicas por celda eran la misma corrida, de modo que la dispersión
 reportada ($\sigma \approx 0{,}03\,\%$) era un artefacto de replicación idéntica y no
@@ -714,7 +709,7 @@ describía la convergencia del algoritmo. Una corrida de recalibración posterio
 semillas reales al \textit{solver}, con lo que la dispersión subió a $\sigma \approx
 2{,}4\,\%$ y catorce de veintiocho veredictos de ese ciclo debieron re-juzgarse.
 
-\textbf{Defecto 2 --- Cota de relleno inalcanzable.}
+Defecto 2 --- Cota de relleno inalcanzable.
 Los ciclos iniciales usaban como piso de la métrica de relleno el producto
 $n \times \bar{n}$ (número de nodos por grado medio de la red), que viola la restricción
 de grado de los caminos y resulta por tanto inalcanzable. La métrica corregida usa el
@@ -744,7 +739,7 @@ del VRP y su papel es acotar la flojedad de la cota, no sustituirla como referen
 operacional. Re-juzgadas contra el ancla, ninguna de las doce celdas de área de los
 dos ciclos más recientes cambia de veredicto.
 
-\textbf{Defecto 3 --- Auto-cruces sobre cuerdas rectas.}
+Defecto 3 --- Auto-cruces sobre cuerdas rectas.
 La métrica de auto-cruces se calcula sobre cuerdas rectas entre paradas consecutivas, una
 geometría que no coincide ni con la red que el \textit{solver} optimiza ni con la
 polilínea real que se dibuja al censador. La correlación de Spearman entre ambas
@@ -757,7 +752,7 @@ su valor comparativo dentro de cada ciclo, dado que todos los brazos se contrast
 misma vara; las diferencias relativas permanecen válidas aunque el nivel absoluto quede
 acotado por esta limitación.
 
-\textbf{Defecto 4 --- Criterio de degeneración mixto.}
+Defecto 4 --- Criterio de degeneración mixto.
 El criterio de rutas degeneradas original mezclaba dos fenómenos: un aislamiento
 geográfico que captura el conteo de paradas (menos de cinco) y un perjuicio operativo real
 que captura la duración (menos de 1\,800 segundos). Una ruta con tres paradas y
@@ -798,7 +793,7 @@ actual justifica.
 \subsubsection*{Efectos no medidos}
 \label{anx:efectos-no-medidos}
 
-\textbf{Costo de las disyunciones de nodos.}
+Costo de las disyunciones de nodos.
 Declarar cada árbol como una disyunción unitaria (Sección~\ref{sec:disyunciones})
 añade una decisión binaria por nodo y amplía el vecindario que la búsqueda local
 debe explorar en cada iteración. Como el GLS se corta por reloj de pared y no por
@@ -811,7 +806,7 @@ prescindible ---sin él un solo árbol inalcanzable deja al \textit{solver} sin 
 para todo el \textit{dataset}---, de modo que la alternativa medida no sería una
 configuración operable sino una referencia de laboratorio.
 
-\textbf{Exactitud del estimador de distancias.}
+Exactitud del estimador de distancias.
 El perfil peatonal (\texttt{foot}) de OSRM sobre datos de \textit{OpenStreetMap}
 estima el tiempo de caminata a partir de la representación de la red vial y de un
 factor de velocidad constante, de modo que se aparta necesariamente de la caminata

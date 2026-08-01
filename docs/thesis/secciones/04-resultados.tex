@@ -377,15 +377,15 @@ Se definieron los siguientes indicadores sobre las coordenadas reales de las par
 (\texttt{RouteStop}), usando la distancia de \textit{haversine} \citep{sinnott1984virtues}:
 
 \begin{itemize}[label=--]
-  \item \textbf{Compacidad} ($\sum r_{\max}$): suma, sobre las rutas, del radio máximo de cada ruta
+  \item Compacidad ($\sum r_{\max}$): suma, sobre las rutas, del radio máximo de cada ruta
         (distancia del centroide a su parada más lejana). Menor es mejor.
-  \item \textbf{Solapamiento} (\textit{interleaving}): número de paradas pertenecientes a
-        \textit{otras} rutas que caen dentro de la caja envolvente (\textit{bounding box}) de una
-        ruta dada, sumado sobre todas las rutas. Se reporta tanto el total como su valor normalizado
-        por número de rutas ($\overline{\text{solap}} = \text{total}/k$), para comparar entre
-        tamaños de \textit{dataset}. Mayor indica peor partición espacial.
-  \item \textbf{IoU peor par}: intersección sobre unión de las cajas envolventes del par de rutas
-        con mayor superposición. Mayor indica mayor solapamiento espacial entre dos rutas.
+  \item Solapamiento (\textit{interleaving}): número de paradas pertenecientes a \textit{otras}
+        rutas que caen dentro de la caja envolvente (\textit{bounding box}) de una ruta dada, sumado
+        sobre todas las rutas. Se reporta tanto el total como su valor normalizado por número de
+        rutas ($\overline{\text{solap}} = \text{total}/k$), para comparar entre tamaños de
+        \textit{dataset}. Mayor indica peor partición espacial.
+  \item IoU peor par: intersección sobre unión de las cajas envolventes del par de rutas con mayor
+        superposición. Mayor indica mayor solapamiento espacial entre dos rutas.
 \end{itemize}
 
 El balance temporal se reporta como $\min_r T_r / \max_r T_r$ (\textit{balance\_score} del modelo).
@@ -1284,7 +1284,7 @@ métricas no tendría, por tanto, ningún efecto medible.
       1{,}3\,\% \\
     \texttt{solve} (metaheurística GLS) &
       103{,}4 &
-      \textbf{98{,}1\,\%} \\
+      98{,}1\,\% \\
     \texttt{solution\_extraction} &
       0{,}01 &
       $\approx 0$\,\% \\
@@ -1322,7 +1322,7 @@ de modo que toda corrida posterior es \textit{solve-bound}.
     \midrule
     \texttt{cost\_matrix} (consulta OSRM) &
       170{,}8 &
-      \textbf{97{,}6\,\%} \\
+      97{,}6\,\% \\
     \texttt{cost\_matrix} (ensamblado y caché) &
       0{,}2 &
       0{,}1\,\% \\
@@ -1641,15 +1641,15 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
 \begin{itemize}[label=--]
 
-  \item \textbf{Límites del producto}
+  \item Límites del producto
   \begin{itemize}
-    \item \textbf{Seguridad de sesión}: los \textit{tokens} JWT se almacenan en
-        \texttt{localStorage}, lo que simplifica la implementación a costa de una mayor exposición
-        ante ataques de tipo \textit{cross-site scripting} en comparación con el almacenamiento en
-        \textit{cookies} con atributo \texttt{HttpOnly}. El riesgo es aceptado para un sistema de
-        intranet operado por personal interno.
+    \item Seguridad de sesión: los \textit{tokens} JWT se almacenan en \texttt{localStorage}, lo que
+        simplifica la implementación a costa de una mayor exposición ante ataques de tipo
+        \textit{cross-site scripting} en comparación con el almacenamiento en \textit{cookies} con
+        atributo \texttt{HttpOnly}. El riesgo es aceptado para un sistema de intranet operado por
+        personal interno.
 
-    \item \textbf{Escala de la matriz de costos}: la matriz se construye por  fragmentación
+    \item Escala de la matriz de costos: la matriz se construye por fragmentación
         (\textit{chunking}) en bloques cuando el \textit{dataset} supera las $350$ coordenadas que
         admite una única solicitud a OSRM (Sección~\ref{sec:matriz}), de modo que censos de miles de
         árboles ---como el conjunto de evaluación de $n = 1\,607$--- se procesan sin dificultad. El
@@ -1657,77 +1657,76 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
         porque su tamaño en disco crece como $O(n^2)$; procesar \textit{datasets} que lo excedan
         requeriría almacenamiento disperso o la segmentación previa del arbolado.
 
-    \item \textbf{Alcance del problema de ruteo}: el motor optimiza el \textit{dataset} completo
-        como un único problema, sin segmentación previa por área geográfica. Cuando el
-        \textit{dataset} reúne arbolado de múltiples áreas de censo ---como el conjunto de
-        evaluación de $n = 1\,607$ árboles, que abarca $10{,}3$\,km de extensión en longitud--- las
-        rutas resultantes reflejan esa extensión agregada, con los efectos de auto-cruce discutidos
-        en la Sección~\ref{sec:discusion-calidad}. En la operación habitual, donde cada optimización
+    \item Alcance del problema de ruteo: el motor optimiza el \textit{dataset} completo como un
+        único problema, sin segmentación previa por área geográfica. Cuando el \textit{dataset}
+        reúne arbolado de múltiples áreas de censo ---como el conjunto de evaluación de $n = 1\,607$
+        árboles, que abarca $10{,}3$\,km de extensión en longitud--- las rutas resultantes reflejan
+        esa extensión agregada, con los efectos de auto-cruce discutidos en la
+        Sección~\ref{sec:discusion-calidad}. En la operación habitual, donde cada optimización
         corresponde a un área individual de extensión $\leq 1{,}32$\,km, esa limitación no se
         manifiesta; sin embargo, la plataforma no automatiza la segmentación previa por área, de
         modo que la correcta delimitación del \textit{dataset} de entrada recae en el administrador.
         Automatizarla es la mejora de mayor impacto geométrico identificada para versiones futuras,
         con el costo que mide la Sección~\ref{sec:areas-reales}.
 
-    \item \textbf{Captura sin conectividad}: el portal de censo implementa una cola \textit{offline}
-        básica mediante \texttt{persistQueryClient} sobre \textit{IndexedDB}, suficiente para
-        preservar los datos ante pérdidas de conexión momentáneas; no se implementó un
-        \textit{service worker} para la gestión de teselas de mapa ni para la sincronización
-        diferida robusta bajo conectividad intermitente prolongada. Esa extensión se documenta en el
-        apartado de posibles mejoras.
+    \item Captura sin conectividad: el portal de censo implementa una cola \textit{offline} básica
+        mediante \texttt{persistQueryClient} sobre \textit{IndexedDB}, suficiente para preservar los
+        datos ante pérdidas de conexión momentáneas; no se implementó un \textit{service worker}
+        para la gestión de teselas de mapa ni para la sincronización diferida robusta bajo
+        conectividad intermitente prolongada. Esa extensión se documenta en el apartado de posibles
+        mejoras.
 
-    \item \textbf{Accesibilidad de la base de datos legada}: la base de datos histórica  del
-        proyecto Arbocensus se encuentra activa en Heroku y se accede en modo de solo lectura para
-        la importación de arbolado. Las fotografías de campo de \texttt{legacy\_api} ($10\,008$),
+    \item Accesibilidad de la base de datos legada: la base de datos histórica del proyecto
+        Arbocensus se encuentra activa en Heroku y se accede en modo de solo lectura para la
+        importación de arbolado. Las fotografías de campo de \texttt{legacy\_api} ($10\,008$),
         almacenadas en un proyecto Firebase cuyo plan de facturación fue cerrado, son inaccesibles;
         únicamente su URL y los metadatos asociados están disponibles para su uso en la plataforma.
         Las de \texttt{legacy\_app}, alojadas en un proyecto Firebase distinto, sí responden.
 
-    \item \textbf{Alcance de la integración con Arbocensus}: la incorporación del  catastro
-        existente se resuelve mediante una conexión de solo lectura a las bases legadas y una
-        importación puntual del arbolado seleccionado (Sección~\ref{sec:legacy}), en lugar de una
-        integración en vivo con las bases de datos operativas del proyecto. El corte es adecuado al
-        alcance de esta iteración, pero deja fuera la sincronización continua del arbolado entre
-        plataformas.
+    \item Alcance de la integración con Arbocensus: la incorporación del catastro existente se
+        resuelve mediante una conexión de solo lectura a las bases legadas y una importación puntual
+        del arbolado seleccionado (Sección~\ref{sec:legacy}), en lugar de una integración en vivo
+        con las bases de datos operativas del proyecto. El corte es adecuado al alcance de esta
+        iteración, pero deja fuera la sincronización continua del arbolado entre plataformas.
 
-    \item \textbf{Reconciliación de trabajos abandonados}: la optimización se  ejecuta en un
-        \textit{worker} de Celery, de modo que es indiferente a que el administrador cierre la
-        página mientras corre; el trabajo termina igual y su resultado queda disponible al volver a
-        abrirla. El caso no cubierto es otro: si el proceso del \textit{worker} muere entre el
-        cambio a estado \texttt{running} y el registro del resultado ---por reinicio del contenedor
-        o por terminación forzada del proceso, situaciones en las que no llega a ejecutarse el
-        manejador de error de la tarea---, el registro queda en \texttt{running} de forma
-        indefinida, porque el sistema no implementa reconciliación por latido ni por marca de
-        inicio. La consecuencia es un registro colgado en la lista de trabajos, sin efecto sobre las
-        soluciones ya publicadas. La corrección se documenta en el apartado de posibles mejoras.
+    \item Reconciliación de trabajos abandonados: la optimización se ejecuta en un \textit{worker}
+        de Celery, de modo que es indiferente a que el administrador cierre la página mientras
+        corre; el trabajo termina igual y su resultado queda disponible al volver a abrirla. El caso
+        no cubierto es otro: si el proceso del \textit{worker} muere entre el cambio a estado
+        \texttt{running} y el registro del resultado ---por reinicio del contenedor o por
+        terminación forzada del proceso, situaciones en las que no llega a ejecutarse el manejador
+        de error de la tarea---, el registro queda en \texttt{running} de forma indefinida, porque
+        el sistema no implementa reconciliación por latido ni por marca de inicio. La consecuencia
+        es un registro colgado en la lista de trabajos, sin efecto sobre las soluciones ya
+        publicadas. La corrección se documenta en el apartado de posibles mejoras.
 
-    \item \textbf{Estrategia \texttt{cluster\_first}}: la estrategia de  particionamiento previo
-        mediante $k$-medias quedó descartada como opción de producción por incumplir, frente a
+    \item Estrategia \texttt{cluster\_first}: la estrategia de particionamiento previo mediante
+        $k$-medias quedó descartada como opción de producción por incumplir, frente a
         \texttt{spatial\_term}, dos de las tres salvaguardas del criterio de decisión ---balance y
         desplazamiento total--- y dejar además 12 árboles sin asignar
         (Sección~\ref{sec:comparacion-estrategias}); se conserva en el código como opción de
         comparación para investigación, no como alternativa de censo.
 
-    \item \textbf{Cobertura bajo presupuesto temporal estrecho}: la formulación admite  descartes
-        mediante disyunciones penalizadas ($1\,000\,000$\,s por árbol no cubierto), de modo que la
-        cobertura total no está garantizada a priori cuando la carga de servicio excede la capacidad
-        de la flota bajo $T_{\max}$. En la grilla de variantes operacionales, las configuraciones
-        con $T_{\max}=2$\,h y tiempo de servicio alto descartan uno o dos árboles de forma
-        consistente (Tabla~\ref{tab:grilla-spatial}); para garantizar cobertura total se requiere
-        operar con $T_{\max}=3$\,h bajo esas condiciones.
+    \item Cobertura bajo presupuesto temporal estrecho: la formulación admite descartes mediante
+        disyunciones penalizadas ($1\,000\,000$\,s por árbol no cubierto), de modo que la cobertura
+        total no está garantizada a priori cuando la carga de servicio excede la capacidad de la
+        flota bajo $T_{\max}$. En la grilla de variantes operacionales, las configuraciones con
+        $T_{\max}=2$\,h y tiempo de servicio alto descartan uno o dos árboles de forma consistente
+        (Tabla~\ref{tab:grilla-spatial}); para garantizar cobertura total se requiere operar con
+        $T_{\max}=3$\,h bajo esas condiciones.
   \end{itemize}
 
-  \item \textbf{Límites de la evidencia}
+  \item Límites de la evidencia
   \begin{itemize}
-    \item \textbf{Costo no medido de las disyunciones de nodos}: declarar cada árbol como una
-        disyunción unitaria (Sección~\ref{sec:disyunciones}) amplía el vecindario de búsqueda local;
-        como el GLS se corta por reloj de pared, ese costo se traduce en calidad menor alcanzable
-        dentro del mismo presupuesto, no en tiempo mayor. La ablación que mediría el efecto no se
-        ejecutó porque la alternativa sin disyunciones no es operable: sin ellas, un árbol
-        inalcanzable deja al \textit{solver} sin solución para todo el \textit{dataset}
+    \item Costo no medido de las disyunciones de nodos: declarar cada árbol como una disyunción
+        unitaria (Sección~\ref{sec:disyunciones}) amplía el vecindario de búsqueda local; como el
+        GLS se corta por reloj de pared, ese costo se traduce en calidad menor alcanzable dentro del
+        mismo presupuesto, no en tiempo mayor. La ablación que mediría el efecto no se ejecutó
+        porque la alternativa sin disyunciones no es operable: sin ellas, un árbol inalcanzable deja
+        al \textit{solver} sin solución para todo el \textit{dataset}
         (\hyperref[anx:efectos-no-medidos]{Anexo 4}).
 
-    \item \textbf{Ausencia de una cota inferior de referencia para el relleno de trayecto}: la
+    \item Ausencia de una cota inferior de referencia para el relleno de trayecto: la
         Sección~\ref{sec:discusion-calidad} caracteriza el relleno de trayecto por la variación
         relativa del desplazamiento entre configuraciones, sin una cota inferior absoluta que separe
         qué fracción es geometría irreducible. El \hyperref[anx:auditoria-robustez]{Anexo 4}
@@ -1739,41 +1738,41 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
         contra $\text{MSF}_k$ las cifras de relleno de esta memoria, que siguen formuladas como
         desplazamiento relativo.
 
-    \item \textbf{Geometría de referencia de la métrica de auto-cruces}: el número de auto-cruces se
-         calcula sobre las cuerdas rectas entre paradas consecutivas, geometría distinta de la que
-         optimiza el \textit{solver} (tiempo de red de OSRM) y de la que recorre el censador
-         (trazado real de calles). La correspondencia entre las dos primeras no se ha comprobado; la
-         de las cuerdas con el trazado real sí está medida y es parcial ($\rho = 0{,}527$, invertida
-         en el conjunto agregado), de modo que las cifras de auto-cruces sobre cuerdas de este
-         capítulo conservan su valor comparativo entre configuraciones medidas con la misma vara,
-         con la reserva que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla.
+    \item Geometría de referencia de la métrica de auto-cruces: el número de auto-cruces se calcula
+        sobre las cuerdas rectas entre paradas consecutivas, geometría distinta de la que optimiza
+        el \textit{solver} (tiempo de red de OSRM) y de la que recorre el censador (trazado real de
+        calles). La correspondencia entre las dos primeras no se ha comprobado; la de las cuerdas
+        con el trazado real sí está medida y es parcial ($\rho = 0{,}527$, invertida en el conjunto
+        agregado), de modo que las cifras de auto-cruces sobre cuerdas de este capítulo conservan su
+        valor comparativo entre configuraciones medidas con la misma vara, con la reserva que el
+        \hyperref[anx:auditoria-robustez]{Anexo 4} detalla.
 
-    \item \textbf{Exactitud no medida del estimador de distancias}: el perfil peatonal de OSRM se
-        aparta de la caminata real de terreno por no modelar pendientes, semáforos, congestión
-        peatonal ni el ritmo de un censador; la magnitud de esa desviación no se midió porque
-        exigiría una jornada de terreno con registro de tiempos, fuera del alcance de esta memoria
+    \item Exactitud no medida del estimador de distancias: el perfil peatonal de OSRM se aparta de
+        la caminata real de terreno por no modelar pendientes, semáforos, congestión peatonal ni el
+        ritmo de un censador; la magnitud de esa desviación no se midió porque exigiría una jornada
+        de terreno con registro de tiempos, fuera del alcance de esta memoria
         (Sección~\ref{sec:verificacion}). Cabe esperar que el error sea sistemático ---todas las
         rutas se estiman con el mismo perfil sobre la misma red---, lo que lo hace más sensible para
         las cifras absolutas de duración que para las comparaciones relativas entre configuraciones
         (\hyperref[anx:efectos-no-medidos]{Anexo 4}).
   \end{itemize}
 
-  \item \textbf{Resultados que acotan la lectura}
+  \item Resultados que acotan la lectura
   \begin{itemize}
-    \item \textbf{Solapamiento inter-ruta}: el par de rutas con mayor superposición espacial
-        presenta un \textit{IoU} de $0{,}55$ (Ilustración~\ref{fig:peor-par}). Su origen es la
-        geometría local del par y no la formulación, de modo que ningún coeficiente global lo
-        corrige y la vía estructural es la segmentación previa por área de censo
+    \item Solapamiento inter-ruta: el par de rutas con mayor superposición espacial presenta un
+        \textit{IoU} de $0{,}55$ (Ilustración~\ref{fig:peor-par}). Su origen es la geometría local
+        del par y no la formulación, de modo que ningún coeficiente global lo corrige y la vía
+        estructural es la segmentación previa por área de censo
         (Sección~\ref{sec:discusion-calidad}).
-    \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el margen de
-        \textit{OR-Tools} frente al heurístico del vecino más cercano con el mismo post-proceso de
-        resecuenciación es estrecho ---un $4{,}7$\,\% del desplazamiento total
-        (Tabla~\ref{tab:comparativa})---, y es un artefacto de saturación: el \textit{greedy} llena
-        cada ruta hasta el borde de $T_{\max}$, lo que también infla su índice de balance sin que
-        medie un reparto deliberado (Sección~\ref{sec:comparacion-greedy}).
-    \item \textbf{Jerarquía de penalizaciones blandas}: la razón $20\mathord{:}1$ entre el
-        coeficiente de la penalización inferior y el de la superior es un compromiso de diseño
-        calibrado y no un defecto; su efecto está medido en la Sección~\ref{sec:discusion-calidad}.
+    \item Cercanía del \textit{baseline greedy} en tiempo total: el margen de \textit{OR-Tools}
+        frente al heurístico del vecino más cercano con el mismo post-proceso de resecuenciación es
+        estrecho ---un $4{,}7$\,\% del desplazamiento total (Tabla~\ref{tab:comparativa})---, y es
+        un artefacto de saturación: el \textit{greedy} llena cada ruta hasta el borde de $T_{\max}$,
+        lo que también infla su índice de balance sin que medie un reparto deliberado
+        (Sección~\ref{sec:comparacion-greedy}).
+    \item Jerarquía de penalizaciones blandas: la razón $20\mathord{:}1$ entre el coeficiente de la
+        penalización inferior y el de la superior es un compromiso de diseño calibrado y no un
+        defecto; su efecto está medido en la Sección~\ref{sec:discusion-calidad}.
   \end{itemize}
 
 \end{itemize}
@@ -1788,62 +1787,61 @@ serie experimental, y la última registra una alternativa evaluada y descartada.
 evidencia que la respalda, su costo y qué habría que construir.
 
 \begin{itemize}[label=--]
-  \item \textbf{Validación en terreno}: las conclusiones de este capítulo verifican que el producto
-      hace lo que su diseño declara, pero no que resuelva en operación el problema logístico que lo
-      motivó (Sección~\ref{sec:verificacion}). El costo es una jornada de censo real con censadores
-      y un área individual, con registro de tiempos de caminata. Debe construirse una jornada
+  \item Validación en terreno: las conclusiones de este capítulo verifican que el producto hace lo
+      que su diseño declara, pero no que resuelva en operación el problema logístico que lo motivó
+      (Sección~\ref{sec:verificacion}). El costo es una jornada de censo real con censadores y un
+      área individual, con registro de tiempos de caminata. Debe construirse una jornada
       instrumentada que contraste el tiempo estimado por el perfil peatonal de OSRM contra el tiempo
       observado en terreno, y que ejercite la cola \textit{offline} bajo la conectividad real que
       describe la Sección~\ref{sec:ui}.
 
-  \item \textbf{Segmentación previa por área}: la Sección~\ref{sec:discusion-calidad} y la
+  \item Segmentación previa por área: la Sección~\ref{sec:discusion-calidad} y la
       Sección~\ref{sec:areas-reales} muestran que la unidad operativa correcta del motor es el área
       de censo individual, no el arbolado agregado. El costo está medido sobre las áreas reales: una
       ruta adicional, tres jornadas por debajo de $T_{\min}$ y el triple de cómputo, sin incremento
       en el desplazamiento. Debe construirse la segmentación automática del \textit{dataset} por
       área antes de rutear, hoy responsabilidad manual del administrador.
 
-  \item \textbf{Cotas blandas sensibles a la densidad de la instancia}: el diagnóstico de
-      \texttt{area-27} en la Sección~\ref{sec:areas-reales} muestra que el régimen de relleno por
-      $T_{\min}$ (Sección~\ref{sec:discusion-calidad}) surge porque
-      \texttt{PenaltyConfig.vehicle\_bounds} fija $T_{\min}$ y el objetivo superior sin considerar
-      el trabajo real de la instancia. En censos de baja densidad, partir y rellenar hasta el piso
-      resulta entonces más barato que una ruta única sobre el objetivo superior. Esa vía de
-      recalibración ya fue explorada por esta memoria (piso de paradas, piso combinado) sin éxito
-      bajo un coeficiente fijo; el costo pendiente es de diseño, no de cómputo: requiere una cota
-      que escale con una estimación del trabajo real de la instancia en lugar de una constante. Debe
-      explorarse esa dependencia antes de reabrir cualquier ciclo de recalibración de coeficientes
-      fijos.
+  \item Cotas blandas sensibles a la densidad de la instancia: el diagnóstico de \texttt{area-27} en
+      la Sección~\ref{sec:areas-reales} muestra que el régimen de relleno por $T_{\min}$
+      (Sección~\ref{sec:discusion-calidad}) surge porque \texttt{PenaltyConfig.vehicle\_bounds} fija
+      $T_{\min}$ y el objetivo superior sin considerar el trabajo real de la instancia. En censos de
+      baja densidad, partir y rellenar hasta el piso resulta entonces más barato que una ruta única
+      sobre el objetivo superior. Esa vía de recalibración ya fue explorada por esta memoria (piso
+      de paradas, piso combinado) sin éxito bajo un coeficiente fijo; el costo pendiente es de
+      diseño, no de cómputo: requiere una cota que escale con una estimación del trabajo real de la
+      instancia en lugar de una constante. Debe explorarse esa dependencia antes de reabrir
+      cualquier ciclo de recalibración de coeficientes fijos.
 
-  \item \textbf{Matrices de costos de gran escala}: el tope de $2\,000$ árboles que hoy acota la
-      dimensión de la matriz de costos está impuesto por el crecimiento $O(n^2)$ de su tamaño en
-      disco (Sección~\ref{sec:limitaciones}). El costo es de almacenamiento y de tiempo de
-      construcción de la matriz para censos mayores. Debe construirse almacenamiento disperso o
-      segmentación previa del \textit{dataset} para censos que excedan ese umbral.
+  \item Matrices de costos de gran escala: el tope de $2\,000$ árboles que hoy acota la dimensión
+      de la matriz de costos está impuesto por el crecimiento $O(n^2)$ de su tamaño en disco
+      (Sección~\ref{sec:limitaciones}). El costo es de almacenamiento y de tiempo de construcción
+      de la matriz para censos mayores. Debe construirse almacenamiento disperso o segmentación
+      previa del \textit{dataset} para censos que excedan ese umbral.
 
-  \item \textbf{Operación \textit{offline} robusta}: la cola \textit{offline} actual
-      (Sección~\ref{sec:ui}) preserva datos ante pérdidas momentáneas de red, pero no gestiona
-      teselas de mapa ni sincronización bajo conectividad intermitente prolongada. El costo es de
-      desarrollo de un \textit{service worker} dedicado. Debe construirse la gestión de teselas y la
-      sincronización diferida robusta que la versión actual no cubre.
+  \item Operación \textit{offline} robusta: la cola \textit{offline} actual (Sección~\ref{sec:ui})
+      preserva datos ante pérdidas momentáneas de red, pero no gestiona teselas de mapa ni
+      sincronización bajo conectividad intermitente prolongada. El costo es de desarrollo de un
+      \textit{service worker} dedicado. Debe construirse la gestión de teselas y la sincronización
+      diferida robusta que la versión actual no cubre.
 
-  \item \textbf{Importación de formatos adicionales}: los \textit{datasets} se importan hoy desde
-      archivos CSV o JSON, o desde las fuentes legadas (Sección~\ref{sec:legacy}), sin soporte de
-      GeoJSON. El costo es un \textit{parser} adicional sobre el mismo flujo de importación. Debe
-      construirse el soporte de GeoJSON como tercer formato de entrada.
+  \item Importación de formatos adicionales: los \textit{datasets} se importan hoy desde archivos
+      CSV o JSON, o desde las fuentes legadas (Sección~\ref{sec:legacy}), sin soporte de GeoJSON.
+      El costo es un \textit{parser} adicional sobre el mismo flujo de importación. Debe construirse
+      el soporte de GeoJSON como tercer formato de entrada.
 
-  \item \textbf{Reconciliación de trabajos de optimización}: un trabajo cuyo \textit{worker} muere
-      en plena ejecución queda en estado \texttt{running} de forma indefinida
+  \item Reconciliación de trabajos de optimización: un trabajo cuyo \textit{worker} muere en plena
+      ejecución queda en estado \texttt{running} de forma indefinida
       (Sección~\ref{sec:limitaciones}). El costo es de una tarea periódica que recorra los trabajos
       en ese estado. Debe construirse la marca de fallo automática para los trabajos cuya marca de
       inicio sea más antigua que el límite de tiempo configurado en el \textit{worker}.
 
-  \item \textbf{Pruebas de extremo a extremo}: la Sección~\ref{sec:verificacion} cubre pruebas
-      unitarias de \textit{backend} y \textit{frontend}, pero ningún flujo completo de usuario. El
-      costo es de mantenimiento de la suite. Debe construirse la automatización de los flujos de
-      administrador y censador mediante Playwright.
+  \item Pruebas de extremo a extremo: la Sección~\ref{sec:verificacion} cubre pruebas unitarias de
+      \textit{backend} y \textit{frontend}, pero ningún flujo completo de usuario. El costo es de
+      mantenimiento de la suite. Debe construirse la automatización de los flujos de administrador y
+      censador mediante Playwright.
 
-  \item \textbf{Preferir rutas cortas antes que descartar árboles}: subir el costo fijo por vehículo
+  \item Preferir rutas cortas antes que descartar árboles: subir el costo fijo por vehículo
       $C_{\text{fijo}}$ no es el mecanismo, y conviene decirlo así porque es la intuición más
       inmediata. Descartar un árbol cuesta $\pi = 10^{6}$\,s, mientras que abrir la ruta que lo
       absorbería cuesta $C_{\text{fijo}} = 10^{5}$\,s más la penalización de piso blando
@@ -1854,22 +1852,22 @@ evidencia que la respalda, su costo y qué habría que construir.
       trabajo real de la instancia, vía que la mejora de cotas blandas sensibles a la densidad, más
       arriba en esta lista, ya identifica como pendiente.
 
-  \item \textbf{Edición de árboles de un \textit{dataset}}: RF-26 permite hoy editar los metadatos
-      del \textit{dataset} y desactivar árboles, pero no corregir un árbol individual cuya posición,
+  \item Edición de árboles de un \textit{dataset}: RF-26 permite hoy editar los metadatos del
+      \textit{dataset} y desactivar árboles, pero no corregir un árbol individual cuya posición,
       especie o identificador externo llegó mal desde la fuente legada. El costo es un
       \textit{endpoint} de edición y su validación en el formulario del panel. Debe construirse la
       edición de los campos de \texttt{Tree} sobre el árbol ya importado.
 
-  \item \textbf{Ruta para los árboles descartados}: cuando una corrida descarta árboles por
-      disyunción (Sección~\ref{sec:disyunciones}), generar una ruta adicional resolviendo un TSP
-      abierto sobre ese resto con el mismo post-proceso 2-opt de la Sección~\ref{sec:postpass}. Esa
-      ruta queda desbalanceada frente a las demás de la campaña, pero el balance que el sistema
-      persigue es de largo plazo entre censistas y no por campaña individual, y ya lo sostiene
+  \item Ruta para los árboles descartados: cuando una corrida descarta árboles por disyunción
+      (Sección~\ref{sec:disyunciones}), generar una ruta adicional resolviendo un TSP abierto
+      sobre ese resto con el mismo post-proceso 2-opt de la Sección~\ref{sec:postpass}. Esa ruta
+      queda desbalanceada frente a las demás de la campaña, pero el balance que el sistema persigue
+      es de largo plazo entre censistas y no por campaña individual, y ya lo sostiene
       \texttt{suggest\_assignment} (RF-24). El costo es de \textit{pipeline}: reutilizar la matriz
       de costos en caché y el 2-opt existente sobre el subconjunto descartado.
 
-  \item \textbf{Modelo de aprendizaje automático para generar rutas}: se evaluó como alternativa y
-      no se propone, por tres razones. Primera, las restricciones duras del problema ---cobertura,
+  \item Modelo de aprendizaje automático para generar rutas: se evaluó como alternativa y no se
+      propone, por tres razones. Primera, las restricciones duras del problema ---cobertura,
       $T_{\max}$, secuencia estricta--- no son garantizables por un modelo aprendido, mientras que
       el VRP las impone por construcción. Segunda, entrenarlo exigiría un corpus de planes de censo
       etiquetados que el proyecto no tiene, y que solo podría generarse ejecutando el propio

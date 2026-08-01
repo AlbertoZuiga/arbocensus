@@ -135,20 +135,20 @@ considerable de pruebas y experimentos para evaluar y ajustar la solución, las 
 formulados de acuerdo con las necesidades previstas para la iteración y el proceso de desarrollo.
 
 \begin{enumerate}
-  \item \textbf{Costo.} Se anticipó un volumen elevado de ejecuciones durante el desarrollo y la
-        evaluación experimental del sistema. Bajo ese escenario, un componente tarificado por
-        consulta convierte cualquier precio unitario en un gasto difícil de acotar. El criterio fue
-        mantener en cero el gasto de la etapa de desarrollo. Este criterio califica las alternativas
-        para esa etapa; no excluye adoptar más adelante un componente de pago cuyo aporte al
-        producto en operación justifique su costo recurrente.
-  \item \textbf{Tiempo de ejecución.} Se descartan las latencias que no provienen del trabajo útil:
-        la ida y vuelta a un servicio remoto por cada consulta de ruteo, o una implementación que
-        recalcule lo ya calculado. El presupuesto de tiempo del sistema se reserva para el trabajo
-        propio del problema.
-  \item \textbf{Simplicidad del desarrollo.} Entre soluciones de resultado equivalente se prefiere
-        la que deja menos piezas que operar y mantener, dado que en la iteración actual del proyecto
-        se cuenta con un solo desarrollador. La simplicidad cede cuando la alternativa compleja
-        aporta una capacidad que el producto necesita.
+  \item Costo. Se anticipó un volumen elevado de ejecuciones durante el desarrollo y la evaluación
+        experimental del sistema. Bajo ese escenario, un componente tarificado por consulta
+        convierte cualquier precio unitario en un gasto difícil de acotar. El criterio fue mantener
+        en cero el gasto de la etapa de desarrollo. Este criterio califica las alternativas para esa
+        etapa; no excluye adoptar más adelante un componente de pago cuyo aporte al producto en
+        operación justifique su costo recurrente.
+  \item Tiempo de ejecución. Se descartan las latencias que no provienen del trabajo útil: la ida y
+        vuelta a un servicio remoto por cada consulta de ruteo, o una implementación que recalcule
+        lo ya calculado. El presupuesto de tiempo del sistema se reserva para el trabajo propio del
+        problema.
+  \item Simplicidad del desarrollo. Entre soluciones de resultado equivalente se prefiere la que
+        deja menos piezas que operar y mantener, dado que en la iteración actual del proyecto se
+        cuenta con un solo desarrollador. La simplicidad cede cuando la alternativa compleja aporta
+        una capacidad que el producto necesita.
 \end{enumerate}
 
 Los tres criterios se aplican de forma conjunta, sin un orden de prioridad fijo. La
@@ -248,31 +248,29 @@ etapa de desarrollo y componentes hoy descartados por costo admiten reevaluarse 
 Los modelos de dominio centrales son los siguientes:
 
 \begin{itemize}[label=--]
-  \item \textbf{Dataset}: agrupa un conjunto de árboles importados desde CSV o desde una fuente
-        legada.
-  \item \textbf{Tree}: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un
-        \texttt{Dataset}. Registra además su procedencia mediante los campos \texttt{source} y
-        \texttt{external\_id}, que identifican la fuente legada y el identificador que el árbol
-        tenía en ella (Sección~\ref{sec:legacy}).
-  \item \textbf{RoutingConfig}: parámetros de una sesión de optimización ($T_{\min}$, $T_{\max}$,
-        $s$).
-  \item \textbf{OptimizationJob}: tarea de optimización con estado (\texttt{queued},
-        \texttt{running}, \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
-  \item \textbf{RoutingSolution}: resultado de un \texttt{OptimizationJob} para una estrategia de
-        partición dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total
-        de desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución
-        (suma de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre
-        unión) del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo
+  \item Dataset: agrupa un conjunto de árboles importados desde CSV o desde una fuente legada.
+  \item Tree: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}.
+        Registra además su procedencia mediante los campos \texttt{source} y \texttt{external\_id},
+        que identifican la fuente legada y el identificador que el árbol tenía en ella
+        (Sección~\ref{sec:legacy}).
+  \item RoutingConfig: parámetros de una sesión de optimización ($T_{\min}$, $T_{\max}$, $s$).
+  \item OptimizationJob: tarea de optimización con estado (\texttt{queued}, \texttt{running},
+        \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
+  \item RoutingSolution: resultado de un \texttt{OptimizationJob} para una estrategia de partición
+        dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de
+        desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma
+        de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre unión)
+        del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo
         \texttt{timing}). La relación \texttt{participants} registra los censadores que participan
         de la solución y alimenta el cálculo de carga acumulada por censador (Sección~\ref{sec:ui}).
-  \item \textbf{Route}: ruta individual con tiempos estimados; su asignación a un censador 
+  \item Route: ruta individual con tiempos estimados; su asignación a un censador 
         (\texttt{surveyor}) es opcional.
-  \item \textbf{RouteStop}: visita de un árbol en una ruta, con número de secuencia y estado de
+  \item RouteStop: visita de un árbol en una ruta, con número de secuencia y estado de
         visita.
-  \item \textbf{TreeObservation}: registro histórico del estado de un árbol en un instante dado
+  \item TreeObservation: registro histórico del estado de un árbol en un instante dado
         (Sección~\ref{sec:recenso}). Es la entidad que convierte el sistema en una herramienta de
         re-censo y no solo de censo inicial.
-  \item \textbf{DistanceMatrix}: caché persistente de la matriz $n \times n$ de tiempos OSRM,
+  \item DistanceMatrix: caché persistente de la matriz $n \times n$ de tiempos OSRM,
         indexada por un hash SHA-256 de los IDs de árboles activos.
 \end{itemize}
 
@@ -688,24 +686,24 @@ La formulación en \textit{OR-Tools} usa el modelo de ruteo vehicular (\textit{V
 Problem}, VRP) con las siguientes características:
 
 \begin{itemize}[label=--]
-  \item \textbf{Rutas abiertas}: se introduce un depósito ficticio (\textit{dummy depot}) en el nodo
-        0 con costo de tránsito cero hacia todos los nodos reales. Los nodos reales se indexan de
-        $1$ a $n$.
-  \item \textbf{Cota superior de tiempo ($T_{\max}$, restricción dura)}: implementada mediante
+  \item Rutas abiertas: se introduce un depósito ficticio (\textit{dummy depot}) en el nodo 0 con
+        costo de tránsito cero hacia todos los nodos reales. Los nodos reales se indexan de $1$ a
+        $n$.
+  \item Cota superior de tiempo ($T_{\max}$, restricción dura): implementada mediante
         \texttt{AddDimension} con capacidad máxima $T_{\max}$. Ninguna ruta puede superar este
         valor.
-  \item \textbf{Cota inferior de tiempo ($T_{\min}$, restricción blanda)}: implementada mediante
+  \item Cota inferior de tiempo ($T_{\min}$, restricción blanda): implementada mediante
         \texttt{SetCumulVarSoftLowerBound} en el nodo terminal de cada vehículo, con coeficiente de
         penalización $10\,000$. Una cota inferior dura volvería el modelo infactible cuando el
         número de rutas necesarias multiplicado por $T_{\min}$ supera el trabajo disponible; la
         formulación blanda evita esa infactibilidad al penalizar el déficit en lugar de prohibirlo.
-  \item \textbf{Balance de rutas}: \texttt{SetCumulVarSoftUpperBound} dirige las rutas hacia el
-        punto medio $(T_{\min} + T_{\max})/2$, lo que reduce la varianza entre rutas.
-  \item \textbf{Minimización de rutas activas}: costo fijo de $100\,000$ por vehículo descarta
-        vehículos innecesarios.
-  \item \textbf{Disyunciones por nodo}: cada árbol puede quedar fuera de la solución a un costo de
+  \item Balance de rutas: \texttt{SetCumulVarSoftUpperBound} dirige las rutas hacia el punto medio
+        $(T_{\min} + T_{\max})/2$, lo que reduce la varianza entre rutas.
+  \item Minimización de rutas activas: costo fijo de $100\,000$ por vehículo descarta vehículos
+        innecesarios.
+  \item Disyunciones por nodo: cada árbol puede quedar fuera de la solución a un costo de
         $1\,000\,000$ (Sección~\ref{sec:disyunciones}).
-  \item \textbf{Búsqueda local}: estrategia GLS \citep{voudouris1999guided} con solución inicial
+  \item Búsqueda local: estrategia GLS \citep{voudouris1999guided} con solución inicial
         \textit{PATH\_CHEAPEST\_ARC} ---una construcción voraz por arco más barato, de la misma
         familia que el clásico algoritmo de ahorros \citep{clarke1964scheduling}---, con tiempo
         límite configurable. El GLS es una metaheurística sin criterio de término por convergencia
@@ -796,19 +794,18 @@ candidata que el criterio de selección nunca elige. Permanece accesible por la 
 por la del administrador.
 
 \begin{itemize}[label=--]
-  \item \textbf{\texttt{global}}: el \textit{Open mTSP} único descrito en la
-        Sección~\ref{sec:solver}, sin término espacial. Recibe ese nombre porque resuelve el
-        \textit{dataset} completo como un único problema, sin ninguna partición previa del
-        territorio ni de los árboles. Constituye la línea base.
-  \item \textbf{\texttt{spatial\_term}}: añade una segunda dimensión de
-        distancia geográfica ---la fórmula de \textit{haversine} entre paradas
-        \citep{sinnott1984virtues}--- y penaliza la extensión geográfica de cada ruta mediante
-        \texttt{SetSpanCostCoefficientForAllVehicles} con coeficiente $\lambda_{\text{span}} = 3$.
-        El \textit{span} de una ruta es la diferencia entre el máximo y el mínimo acumulado de la
-        dimensión a lo largo del vehículo; penalizarlo empuja al \textit{solver} hacia rutas más
-        compactas a costa de mayor tiempo total. La cota superior temporal se ajusta al punto medio
-        $(T_{\min} + T_{\max})/2$ para preservar el balance.
-  \item \textbf{\texttt{cluster\_first}}: enfoque \textit{cluster-first, route-second}
+  \item \texttt{global}: el \textit{Open mTSP} único descrito en la Sección~\ref{sec:solver}, sin
+        término espacial. Recibe ese nombre porque resuelve el \textit{dataset} completo como un
+        único problema, sin ninguna partición previa del territorio ni de los árboles. Constituye la
+        línea base.
+  \item \texttt{spatial\_term}: añade una segunda dimensión de distancia geográfica ---la fórmula de
+        \textit{haversine} entre paradas \citep{sinnott1984virtues}--- y penaliza la extensión
+        geográfica de cada ruta mediante \texttt{SetSpanCostCoefficientForAllVehicles} con
+        coeficiente $\lambda_{\text{span}} = 3$. El \textit{span} de una ruta es la diferencia entre
+        el máximo y el mínimo acumulado de la dimensión a lo largo del vehículo; penalizarlo empuja
+        al \textit{solver} hacia rutas más compactas a costa de mayor tiempo total. La cota superior
+        temporal se ajusta al punto medio $(T_{\min} + T_{\max})/2$ para preservar el balance.
+  \item \texttt{cluster\_first}: enfoque \textit{cluster-first, route-second}
         \citep{fisher1981generalized}: los árboles se agrupan en $k$ clústeres mediante el algoritmo
         de Lloyd \citep{lloyd1982least} con inicialización \textit{k-means++}
         \citep{arthur2007kmeans}; el número de grupos $k$ se estima a partir de la carga de trabajo
@@ -840,15 +837,15 @@ retorno no existe y no debe contabilizarse.
 Tres propiedades hacen que el post-proceso sea seguro incorporarlo de forma incondicional:
 
 \begin{itemize}[label=--]
-  \item \textbf{Optimiza la misma magnitud que el \textit{solver}.} El 2-opt evalúa las inversiones
-        sobre la matriz de tiempos de OSRM, exactamente la misma que alimenta el costo de arco de la
+  \item Optimiza la misma magnitud que el \textit{solver}. El 2-opt evalúa las inversiones sobre la
+        matriz de tiempos de OSRM, exactamente la misma que alimenta el costo de arco de la
         Ecuación~\ref{eq:objetivo}. No introduce un criterio nuevo ni una geometría distinta.
-  \item \textbf{Nunca empeora una ruta.} Solo acepta una inversión cuando el costo del camino
-        disminuye, de modo que el tiempo de desplazamiento de cada ruta es menor o igual al que
-        entregó el \textit{solver}, y el de la solución completa también.
-  \item \textbf{No altera nada más.} Reordena las paradas dentro de cada ruta, sin mover un árbol de
-        una ruta a otra. La asignación, el número de rutas $k$, el conjunto de árboles descartados y
-        el número de paradas por ruta quedan intactos. El índice de balance, en cambio, no queda
+  \item Nunca empeora una ruta. Solo acepta una inversión cuando el costo del camino disminuye, de
+        modo que el tiempo de desplazamiento de cada ruta es menor o igual al que entregó el
+        \textit{solver}, y el de la solución completa también.
+  \item No altera nada más. Reordena las paradas dentro de cada ruta, sin mover un árbol de una ruta
+        a otra. La asignación, el número de rutas $k$, el conjunto de árboles descartados y el
+        número de paradas por ruta quedan intactos. El índice de balance, en cambio, no queda
         garantizado: como es el cociente $\min_r T_r / \max_r T_r$, puede subir o bajar según cuál
         sea la ruta que el refinamiento acorta, aunque ninguna duración aumente.
 \end{itemize}
@@ -879,13 +876,13 @@ como parámetros, define tres perfiles de precios cerrados, con nombre y descrip
 del usuario, y los ejecuta todos.
 
 \begin{itemize}[label=--]
-  \item \textbf{Equilibrada} (\texttt{default}): los precios de producción tal como se describieron
-        en las secciones anteriores. Es el punto de partida y la combinación de control.
-  \item \textbf{Rutas más parejas} (\texttt{temporal\_span\_100}): activa el costo sobre el
-        \textit{span} de la dimensión temporal con coeficiente $100$, lo que iguala la duración
-        entre rutas a costa de caminata adicional.
-  \item \textbf{Menos zigzag} (\texttt{arc\_linear\_30}): eleva a $30$ el peso lineal del arco, lo
-        que penaliza los tramos largos y compacta el trazado cuando sobra tiempo de desplazamiento.
+  \item Equilibrada (\texttt{default}): los precios de producción tal como se describieron en las
+        secciones anteriores. Es el punto de partida y la combinación de control.
+  \item Rutas más parejas (\texttt{temporal\_span\_100}): activa el costo sobre el \textit{span} de
+        la dimensión temporal con coeficiente $100$, lo que iguala la duración entre rutas a costa
+        de caminata adicional.
+  \item Menos zigzag (\texttt{arc\_linear\_30}): eleva a $30$ el peso lineal del arco, lo que
+        penaliza los tramos largos y compacta el trazado cuando sobra tiempo de desplazamiento.
 \end{itemize}
 
 Una única solicitud de optimización despliega el producto cartesiano de los tres perfiles por las
@@ -1058,21 +1055,20 @@ imposible seleccionar dos veces el mismo árbol---. La selección puede componer
 mecanismos combinables:
 
 \begin{enumerate}
-  \item \textbf{Por área}: al hacer clic sobre el polígono de un área se alternan de una vez todos
-        los árboles contenidos en ella.
-  \item \textbf{Por región trazada}: el administrador traza sobre el mapa la región que quiere
-        censar y se agregan a la selección todos los árboles contenidos en ella, con independencia
-        del área a la que pertenezcan. La región se traza de dos maneras: un polígono arbitrario,
-        marcando sus vértices con clics sucesivos y cerrándolo sobre el primero, o un rectángulo,
-        arrastrando el cursor entre dos esquinas. Ambas producen la misma entidad ---un anillo de
-        vértices---, de modo que un rectángulo recién trazado se edita después como cualquier
-        polígono: cada vértice se arrastra para moverlo, el punto medio de cada lado se pulsa para
-        insertar un vértice nuevo y el clic derecho sobre un vértice lo elimina. La pertenencia de
-        cada árbol se reevalúa por punto-en-polígono al soltar el vértice, y no de forma continua
-        durante el arrastre, para no recorrer todo el arbolado legado en cada cuadro de animación.
-        Pueden coexistir varias regiones, cuya unión constituye la selección.
-  \item \textbf{Por árbol individual}: el clic sobre un marcador agrega o quita ese árbol de la
-        selección.
+  \item Por área: al hacer clic sobre el polígono de un área se alternan de una vez todos los
+        árboles contenidos en ella.
+  \item Por región trazada: el administrador traza sobre el mapa la región que quiere censar y se
+        agregan a la selección todos los árboles contenidos en ella, con independencia del área a la
+        que pertenezcan. La región se traza de dos maneras: un polígono arbitrario, marcando sus
+        vértices con clics sucesivos y cerrándolo sobre el primero, o un rectángulo, arrastrando el
+        cursor entre dos esquinas. Ambas producen la misma entidad ---un anillo de vértices---, de
+        modo que un rectángulo recién trazado se edita después como cualquier polígono: cada vértice
+        se arrastra para moverlo, el punto medio de cada lado se pulsa para insertar un vértice
+        nuevo y el clic derecho sobre un vértice lo elimina. La pertenencia de cada árbol se
+        reevalúa por punto-en-polígono al soltar el vértice, y no de forma continua durante el
+        arrastre, para no recorrer todo el arbolado legado en cada cuadro de animación. Pueden
+        coexistir varias regiones, cuya unión constituye la selección.
+  \item Por árbol individual: el clic sobre un marcador agrega o quita ese árbol de la selección.
 \end{enumerate}
 
 Un panel lateral mantiene visible la selección acumulada y permite la deselección manual de
@@ -1192,24 +1188,24 @@ clave natural y no por el identificador de fila.
 La API REST se implementa con Django REST Framework y expone los siguientes grupos de recursos:
 
 \begin{itemize}[label=--]
-  \item \textbf{Autenticación} (\texttt{/api/auth/}): obtención y renovación de \textit{tokens}
+  \item Autenticación (\texttt{/api/auth/}): obtención y renovación de \textit{tokens}
         \textit{JSON Web Token} (JWT) mediante \textit{djangorestframework-simplejwt}, consulta del
         usuario en sesión y administración de las cuentas de censadores.
-  \item \textbf{Datasets} (\texttt{/api/datasets/}): importación de archivos CSV o JSON con
-        detección automática de las columnas de coordenadas, exploración de las fuentes legadas y
-        creación de \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y
-        exportación de árboles como \textit{GeoJSON FeatureCollection}.
-  \item \textbf{Optimización} (\texttt{/api/optimization/}): cubre el ciclo completo de un trabajo
-        de optimización. Estima la flota y comprueba la factibilidad de la configuración (bloqueos y
+  \item Datasets (\texttt{/api/datasets/}): importación de archivos CSV o JSON con detección
+        automática de las columnas de coordenadas, exploración de las fuentes legadas y creación de
+        \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y exportación de
+        árboles como \textit{GeoJSON FeatureCollection}.
+  \item Optimización (\texttt{/api/optimization/}): cubre el ciclo completo de un trabajo de
+        optimización. Estima la flota y comprueba la factibilidad de la configuración (bloqueos y
         advertencias) antes de optimizar; crea los trabajos ---una sola solicitud genera los seis
         del abanico de producción (Sección~\ref{sec:abanico}) y responde con la lista completa---;
         consulta su estado (para \textit{polling} desde el \textit{frontend}); expone las métricas
         de cada \texttt{RoutingSolution} ordenadas por el criterio de recomendación; y publica o
         despublica la solución vigente por \textit{dataset}.
-  \item \textbf{Rutas} (\texttt{/api/routes/}): listado de rutas con métricas, exportación
-        \textit{GeoJSON} para visualización cartográfica, asignación de censadores, carga acumulada
-        por censador con sugerencia de asignación voraz, consulta de la ruta propia del censador, y
-        registro de visitas y omisiones en terreno con su observación asociada.
+  \item Rutas (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON}
+        para visualización cartográfica, asignación de censadores, carga acumulada por censador
+        con sugerencia de asignación voraz, consulta de la ruta propia del censador, y registro de
+        visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
 El sistema implementa dos roles: Administrador (acceso completo) y Censador (lectura de las rutas
@@ -1270,25 +1266,23 @@ del usuario: el panel de administración y el portal del censador.
 El panel de administración comprende cinco etapas:
 
 \begin{enumerate}
-  \item \textbf{Sesión.} El administrador inicia sesión y obtiene un \textit{token} JWT.
-  \item \textbf{Constitución del \textit{dataset}.} Importa un archivo CSV o selecciona el arbolado
-        sobre el mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se
-        visualiza como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets}
-        disponibles aparece en la Ilustración~\ref{fig:ui_datasets} del
-        \hyperref[anx:capturas]{Anexo 6}.
-  \item \textbf{Configuración y lanzamiento.} Configura $T_{\min}$, $T_{\max}$ y el tiempo de
-        servicio por árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los
-        coeficientes del objetivo: una sola solicitud despliega el abanico de seis combinaciones
-        descrito en la Sección~\ref{sec:abanico}. El \textit{endpoint}
-        \texttt{GET /api/optimization/estimate/} se consulta a medida que el administrador escribe y
-        comprueba la factibilidad de la configuración antes de que se cree el trabajo: las
-        advertencias se muestran junto al formulario y los bloqueos inhabilitan el botón de
-        lanzamiento.
-  \item \textbf{Monitoreo.} \textit{React Query} consulta el estado del trabajo cada 3 segundos
-        mientras se encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al
-        alcanzar un estado terminal o superar 15 minutos; el registro permanece en \texttt{running}
-        si el \textit{worker} muere (Sección~\ref{sec:limitaciones}).
-  \item \textbf{Presentación, recomendación y publicación.} Las rutas resultantes se presentan como
+  \item Sesión. El administrador inicia sesión y obtiene un \textit{token} JWT.
+  \item Constitución del \textit{dataset}. Importa un archivo CSV o selecciona el arbolado sobre el
+        mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza
+        como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles
+        aparece en la Ilustración~\ref{fig:ui_datasets} del \hyperref[anx:capturas]{Anexo 6}.
+  \item Configuración y lanzamiento. Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por
+        árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del
+        objetivo: una sola solicitud despliega el abanico de seis combinaciones descrito en la
+        Sección~\ref{sec:abanico}. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} se
+        consulta a medida que el administrador escribe y comprueba la factibilidad de la
+        configuración antes de que se cree el trabajo: las advertencias se muestran junto al
+        formulario y los bloqueos inhabilitan el botón de lanzamiento.
+  \item Monitoreo. \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se
+        encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un
+        estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el
+        \textit{worker} muere (Sección~\ref{sec:limitaciones}).
+  \item Presentación, recomendación y publicación. Las rutas resultantes se presentan como
         polilíneas coloreadas sobre la red peatonal real. El componente
         \texttt{SolutionCandidatesList} lista las seis soluciones como candidatas a plan, ordenadas
         de mejor a peor por el criterio lexicográfico que implementa \texttt{order\_by\_criterion}.
