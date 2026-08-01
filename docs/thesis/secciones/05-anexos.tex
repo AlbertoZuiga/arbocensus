@@ -482,9 +482,10 @@ docker compose -f docker-compose.prod.yml run --rm backend \
 \label{anx:grilla-variantes}
 
 Este anexo complementa las Secciones~\ref{sec:variantes-duracion}
-y~\ref{sec:discusion-calidad} con el detalle de la grilla de variantes operacionales
-y la descripción completa de los cuatro defectos de instrumentación detectados
-en la serie experimental.
+y~\ref{sec:discusion-calidad} con el detalle de la grilla de variantes operacionales,
+la descripción de la suite de instancias congeladas sobre la que se ejecutó el barrido
+de configuración y la descripción completa de los cuatro defectos de instrumentación
+detectados en la serie experimental.
 
 \subsubsection*{Grilla de seis variantes}
 
@@ -544,6 +545,48 @@ repetición. La varianza observada entre repeticiones (columna sd de \texttt{sol
 la tabla) proviene íntegramente del corte por tiempo de reloj (\textit{wall-clock}) de
 la búsqueda local: en las variantes en que la búsqueda agota el presupuesto, las tres
 repeticiones convergen a soluciones casi idénticas.
+
+\phantomsection
+\subsubsection*{Suite de instancias congeladas}
+\label{anx:suite-instancias}
+
+Las doce instancias sobre las que se ejecutó el barrido de configuración
+(Sección~\ref{sec:discusion-calidad}) están versionadas en
+\texttt{docs/experiments/instances/} y se describen en la
+Tabla~\ref{tab:suite-instancias}. La batería de crecimiento se construye sobre los
+$12\,946$ árboles georreferenciados de \texttt{legacy\_app}, ordenados por distancia de
+\textit{haversine} a un centroide fijo: cada instancia es prefijo exacto de la siguiente,
+de modo que el crecimiento es puramente espacial y no una muestra distinta. Las dos
+variantes dispersas toman uno de cada dos y uno de cada cuatro sobre los primeros
+$1\,000$, con lo que conservan la extensión y reducen la densidad a la mitad y a un
+cuarto: aíslan el efecto de la densidad del efecto del tamaño.
+
+\begin{table}[H]
+  \centering
+  \caption{Suite de instancias congeladas empleada en el barrido de configuración.}
+  \label{tab:suite-instancias}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l r X@{}}
+    \toprule
+    Familia & $n$ & Papel en la serie \\
+    \midrule
+    \texttt{area-29-n43}, \texttt{area-27-n72}, \texttt{area-26-n157} &
+      43--157 &
+      Áreas reales del censo histórico: la unidad operativa. \\
+    \texttt{battery-n50} a \texttt{battery-n1000} (seis instancias) &
+      50--1\,000 &
+      Batería de crecimiento anidada sobre \texttt{legacy\_app}: aísla el tamaño a
+      densidad real. \\
+    \texttt{battery-sparse-n250}, \texttt{battery-sparse-n500} &
+      250, 500 &
+      Misma extensión que \texttt{battery-n1000} con densidad a un cuarto y a la mitad:
+      aísla la densidad del tamaño. \\
+    \texttt{reference-n1607} &
+      1\,607 &
+      Régimen agregado: la unión de ambas fuentes legadas. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
 \phantomsection
 \subsubsection*{Auditoría de robustez metodológica --- detalle}

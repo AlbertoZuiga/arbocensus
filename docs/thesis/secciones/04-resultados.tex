@@ -371,11 +371,11 @@ docker compose -f docker-compose.prod.yml run --rm backend \
 Los datos crudos de las tres columnas se conservan en el repositorio como
 \texttt{docs/experiments/greedy-postpass-20260726-ortools.csv}, \texttt{-greedy-raw.csv} y
 \texttt{-greedy-postpass.csv}, y el análisis completo del ciclo ---con el criterio de comparación
-fijado antes de ejecutar los tres brazos--- en
-\texttt{docs/experiments/greedy-postpass-20260726.md}. Los tres CSV contienen las métricas agregadas
-de cada brazo. Las cifras por ruta de las dos columnas del \textit{greedy} ---el desglose de árboles
-y desplazamiento de cada ruta, y el tiempo de cómputo del heurístico--- las imprime
-\texttt{greedy\_baseline} junto con esas métricas; las de la columna de \textit{OR-Tools}
+fijado antes de ejecutar los tres brazos, es decir, las tres variantes que el experimento
+contrasta--- en \texttt{docs/experiments/greedy-postpass-20260726.md}. Los tres CSV contienen las
+métricas agregadas de cada brazo. Las cifras por ruta de las dos columnas del \textit{greedy} ---el
+desglose de árboles y desplazamiento de cada ruta, y el tiempo de cómputo del heurístico--- las
+imprime \texttt{greedy\_baseline} junto con esas métricas; las de la columna de \textit{OR-Tools}
 ---saturación máxima y ruta más pequeña--- no quedan en el CSV, que consolida una fila por semilla,
 y re-derivarlas exige volver a correr la instancia con \texttt{route\_audit}, que sí emite una fila
 por ruta. El heurístico es determinista ---no consume aleatoriedad---, por lo que cada variante se
@@ -583,8 +583,9 @@ penalizadas antes de encontrar una asignación completa.
 \subsubsection*{Grilla operacional de la estrategia ganadora}
 
 Confirmada \texttt{spatial\_term}, se repitió sobre ella la grilla de seis variantes operacionales
-(tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), con el mismo límite de
-120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
+---el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
+combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), con el
+mismo límite de 120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
 
 \begin{table}[H]
   \centering
@@ -942,12 +943,13 @@ pre-registro es de incumplimiento, y así se reporta.
 
 \subsubsection*{El caso \texttt{area-27} es el régimen de relleno por $T_{\min}$}
 
-El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de búsqueda: es el mismo
-régimen de relleno ya caracterizado en la Sección~\ref{sec:discusion-calidad} para instancias que no
-saturan su presupuesto temporal. Con la configuración de producción las cotas blandas no dependen de
-la instancia: el método \texttt{PenaltyConfig.vehicle\_bounds} devuelve, para las cuatro instancias
-de este apartado, un piso en $T_{\min} = 7\,200$\,s con coeficiente $10\,000\,\text{s}^{-1}$ y un
-objetivo superior en el punto medio de $9\,000$\,s con coeficiente $500\,\text{s}^{-1}$.
+El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de búsqueda: es el
+régimen de relleno que la Sección~\ref{sec:discusion-calidad} caracteriza más adelante para
+instancias que no saturan su presupuesto temporal. Con la configuración de producción las cotas
+blandas no dependen de la instancia: el método \texttt{PenaltyConfig.vehicle\_bounds} devuelve, para
+las cuatro instancias de este apartado, un piso en $T_{\min} = 7\,200$\,s con coeficiente
+$10\,000\,\text{s}^{-1}$ y un objetivo superior en el punto medio de $9\,000$\,s con coeficiente
+$500\,\text{s}^{-1}$.
 
 Instrumentar directamente el valor de la función objetivo del \textit{solver} en esta instancia
 ---inyectando la solución del \textit{greedy} como \textit{warm start} y comparando su costo contra
@@ -1194,12 +1196,14 @@ con los dos ejes que esta sección mide.
 
 Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
 configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
-sobre la suite de instancias congeladas (\texttt{route-config-algorithm-sweep-20260718.csv}; 96
-celdas ---ocho configuraciones sobre 12 instancias, $43 \leq n \leq 1\,607$--- registradas en 288
-filas). Cada celda se registró con tres repeticiones nominales, pero el comando de gestión que
-ejecutó el barrido escribía la semilla en el CSV sin propagarla al \textit{solver}, de modo que las
-tres filas de una misma celda no son réplicas independientes: difieren solo por el corte por reloj
-de pared descrito en la Sección~\ref{sec:metricas-calidad}. En 78 de las 96 celdas las tres filas
+sobre la suite de instancias congeladas que describe el \hyperref[anx:suite-instancias]{Anexo 4}
+---doce instancias reales entre $n=43$ y $n=1\,607$, con dos controles de densidad a extensión
+constante--- (\texttt{route-config-algorithm-sweep-20260718.csv}: ocho configuraciones sobre cada
+una de ellas, esto es 96 celdas, registradas en 288 filas). Cada celda se registró con tres
+repeticiones nominales, pero el comando de gestión que ejecutó el barrido escribía la semilla en el
+CSV sin propagarla al \textit{solver}, de modo que las tres filas de una misma celda no son réplicas
+independientes: difieren solo por el corte por reloj de pared descrito en la
+Sección~\ref{sec:metricas-calidad}. En 78 de las 96 celdas las tres filas
 coinciden exactamente; en las 18 restantes el desplazamiento total varía hasta un $3{,}4$\,\%. Las
 cifras que siguen provienen, por tanto, de una medición por celda sin réplica de semilla y no llevan
 barras de error.
@@ -1267,12 +1271,12 @@ cuatro defectos se documenta en el \hyperref[anx:auditoria-robustez]{Anexo 4}.
 
 Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones: de los
 dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el instrumento
-corregido sin que cambiara el descarte final y los demás descansan en criterios —tiempo de viaje,
-relleno, balance— ajenos a los defectos detectados. El caso de mayor alcance es el 2-opt intra-ruta,
-rechazado en un ciclo de evaluación anterior por empeorar los auto-cruces medidos en cuerdas: la
-auditoría de instrumento mostró que ese empeoramiento era artefacto de la métrica y que el algoritmo
-limpia la geometría real. Sobre esa base, el ciclo de validación posterior lo incorporó a la
-configuración de producción, con reducción simultánea de tiempo de viaje y de auto-cruces sobre
+corregido sin que cambiara el descarte final y los demás descansan en criterios ---tiempo de viaje,
+relleno, balance--- ajenos a los defectos detectados. El caso de mayor alcance es el 2-opt
+intra-ruta, rechazado en un ciclo de evaluación anterior por empeorar los auto-cruces medidos en
+cuerdas: la auditoría de instrumento mostró que ese empeoramiento era artefacto de la métrica y que
+el algoritmo limpia la geometría real. Sobre esa base, el ciclo de validación posterior lo incorporó
+a la configuración de producción, con reducción simultánea de tiempo de viaje y de auto-cruces sobre
 calle en las doce instancias de prueba y sin degradar el balance ni el número de rutas. Es el único
 cambio de configuración por defecto de toda la serie, y no proviene de barrer términos de la función
 objetivo sino de corregir el instrumento de medición. El análisis completo se documenta en
@@ -1679,9 +1683,8 @@ y uno con la adopción de un cambio. Los doce descartes fueron:
 \end{enumerate}
 La conclusión que emerge del conjunto no es que no se encontró nada, sino que la configuración de
 producción ya era la adecuada para su régimen de operación, y que el margen de mejora que se le
-suponía a la función objetivo no existía. Descartar doce alternativas plausibles con criterio
-pre-registrado es un resultado más informativo que adoptar la primera que hubiera parecido
-prometedora.
+suponía a la función objetivo no existía. Descartar doce alternativas plausibles es un resultado más
+informativo que adoptar la primera que hubiera parecido prometedora.
 
 El único cambio adoptado ---el post-proceso de resecuenciación de la Sección~\ref{sec:postpass}---
 refuerza esa lectura, porque no provino de barrer términos del objetivo sino de reparar el
@@ -1701,12 +1704,12 @@ Sección~\ref{sec:restricciones}.
 
 Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción del
 diagnóstico geográfico inicial de la Tabla~\ref{tab:baseline-geo}, medido sobre nodos sintéticos de
-distribución uniforme--- y sobre el rango de tamaños comprendido entre $43$ y $1\,607$ nodos; no se
-emplearon los bancos de referencia de la literatura \citep{solomon1987algorithms}. Las comparaciones
-son internas: contrastan el sistema contra otras configuraciones de sí mismo y contra un heurístico
-de vecino más cercano escrito para este trabajo. No hay anclaje externo, ni una cota de optimalidad
-aplicada al resultado principal, de modo que las afirmaciones son de mejora relativa y nunca de
-proximidad al óptimo.
+distribución uniforme--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
+densidad controlada; no se emplearon los bancos de referencia de la literatura
+\citep{solomon1987algorithms}. Las comparaciones son internas: contrastan el sistema contra otras
+configuraciones de sí mismo y contra un heurístico de vecino más cercano escrito para este trabajo.
+No hay anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo que las
+afirmaciones son de mejora relativa y nunca de proximidad al óptimo.
 
 Las cifras absolutas de tiempo provienen de un entorno de medición emulado y no de un servidor de
 producción, y el sistema no fue desplegado ni operado en una jornada real de censo. En consecuencia,
