@@ -784,17 +784,20 @@ partición, registradas en el campo \texttt{strategy} del trabajo de optimizaci�
 \texttt{global} reproduce el comportamiento de la formulación anterior sin cambios y constituye la
 línea base.
 
-Las tres estrategias no se ofrecen como una elección del administrador. Un valor adicional del
-campo, \texttt{compare}, ejecuta las tres sobre el mismo conjunto de árboles y persiste una
-\texttt{RoutingSolution} independiente por estrategia, lo que permite contrastarlas bajo una misma
-matriz de costos y un mismo presupuesto de \textit{solver}; es el modo con que se produjeron las
-comparaciones del Capítulo~\ref{cap:resultados} y queda reservado a ese uso experimental. El
-lanzamiento ordinario despliega en cambio un abanico fijo de combinaciones, descrito en la
-Sección~\ref{sec:abanico}, del que \texttt{cluster\_first} está excluida: el
-Capítulo~\ref{cap:resultados} la descarta con datos ---deja árboles fuera de la solución y degrada
-el balance--- y mantenerla en el abanico de producción gastaría un tercio del cómputo en una
-candidata que el criterio de selección nunca elige. Permanece accesible por la vía experimental, no
-por la del administrador.
+Ninguna de las tres se ofrece como elección del administrador, y no todas cumplen el mismo papel. En
+producción, el lanzamiento ordinario despliega un abanico fijo de combinaciones
+(Sección~\ref{sec:abanico}) construido solo sobre \texttt{global} y \texttt{spatial\_term}.
+\texttt{cluster\_first} queda fuera de ese abanico, y su exclusión es un resultado empírico y no una
+preferencia de diseño: medida contra las otras dos bajo la misma matriz de costos y el mismo
+presupuesto, deja árboles fuera de la solución y degrada el balance
+(Sección~\ref{sec:comparacion-estrategias}, Tabla~\ref{tab:estrategias}). Mantenerla en producción
+gastaría un tercio del cómputo en una candidata que el criterio de selección nunca elige.
+
+Fuera de producción, un cuarto valor del campo, \texttt{compare}, ejecuta las tres sobre el mismo
+conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por estrategia. Ese es el
+mecanismo que hace homogénea la comparación ---misma matriz, mismo presupuesto, mismas semillas--- y
+con el que se produjeron las cifras del Capítulo~\ref{cap:resultados}. \texttt{cluster\_first}
+permanece accesible por esa vía, la experimental, y no por la del administrador.
 
 \begin{itemize}[label=--]
   \item \texttt{global}: el \textit{Open mTSP} único descrito en la Sección~\ref{sec:solver}, sin
