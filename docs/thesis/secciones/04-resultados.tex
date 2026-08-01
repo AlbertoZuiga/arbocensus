@@ -47,6 +47,7 @@ criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptac
 
 \begin{table}[H]
   \centering
+  \begin{threeparttable}[b]
   \caption{Métricas de calidad de rutas sobre la instancia de referencia.}
   \label{tab:metricas}
   \begin{tabularx}{\textwidth}{lXX}
@@ -93,20 +94,19 @@ criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptac
       sin criterio en esta corrida: descriptiva \\
     \bottomrule
   \end{tabularx}
+  \begin{tablenotes}[flushleft]\footnotesize
+    \item[1] Cifra de un barrido distinto sobre el mismo \textit{dataset} y configuración, no de
+      esta corrida de referencia (reserva de instrumento detallada en el
+      \hyperref[anx:reservas-sensibilidad]{Anexo 4}).
+    \item[2] Corresponde a las dos repeticiones con la matriz de costos ya en caché de una corrida
+      de julio de 2026 que sí instrumentó el tiempo extremo a extremo; se detalla más abajo junto
+      con el caso de caché fría.
+    \item[3] Cifra de una repetición posterior que sí recupera la geometría real de cada tramo desde
+      \textit{OSRM}; la corrida de referencia de esta sección solo instrumenta auto-cruces sobre la
+      cuerda recta entre paradas.
+  \end{tablenotes}
+  \end{threeparttable}
 \end{table}
-
-{\footnotesize
-$^{1}$ Cifra de un barrido distinto sobre el mismo \textit{dataset} y configuración, no de esta
-corrida de referencia (reserva de instrumento detallada en el
-\hyperref[anx:reservas-sensibilidad]{Anexo 4}).
-
-$^{2}$ Corresponde a las dos repeticiones con la matriz de costos ya en caché de una corrida
-de julio de 2026 que sí instrumentó el tiempo extremo a extremo; se detalla más abajo junto con
-el caso de caché fría.
-
-$^{3}$ Cifra de una repetición posterior que sí recupera la geometría real de cada tramo desde
-\textit{OSRM}; la corrida de referencia de esta sección solo instrumenta auto-cruces sobre la
-cuerda recta entre paradas.}
 
 El número de rutas, $k=25$, es la flota que el \textit{solver} activa bajo esta configuración, no
 una cota mínima demostrada. No se calcula ninguna cota inferior sobre $k$; el \textit{baseline}
@@ -203,6 +203,7 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
 
 \begin{table}[H]
   \centering
+  \begin{threeparttable}[b]
   \caption{
     Comparación entre la solución de \textit{OR-Tools} y el \textit{baseline} \textit{greedy}, sin y
     con el mismo post-proceso 2-opt.
@@ -220,7 +221,7 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
       24 &
       24 \\
     Tiempo total de desplazamiento &
-      58\,327\,s$^*$ &
+      58\,327\,s$^{1}$ &
       63\,073\,s &
       61\,234\,s \\
     \phantom{Tiempo total} (equivalente) &
@@ -232,9 +233,9 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
       0,930 &
       0,908 \\
     Desviación estándar de $T_r$ &
-      559\,s$^\dagger$ &
-      196\,s$^\dagger$ &
-      235\,s$^\dagger$ \\
+      559\,s$^{2}$ &
+      196\,s$^{2}$ &
+      235\,s$^{2}$ \\
     Saturación media ($\overline{T_r}/T_{\max}$) &
       93,0\,\% &
       98,7\,\% &
@@ -256,11 +257,11 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
       0 &
       0 \\
     Paradas de la ruta más pequeña &
-      6--12$^\ddagger$ &
+      6--12$^{3}$ &
       5 &
       5 \\
     Desplazamiento de esa ruta &
-      7\,798--8\,666\,s$^\ddagger$ &
+      7\,798--8\,666\,s$^{3}$ &
       9\,466\,s &
       9\,466\,s \\
     Tiempo de cómputo &
@@ -269,21 +270,23 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
       0,09\,s \\
     \bottomrule
   \end{tabularx}
+  \begin{tablenotes}[flushleft]\footnotesize
+    \item[1] Media de tres semillas (59\,649\,s, 56\,640\,s y 58\,693\,s), con post-proceso
+      2-opt habilitado por defecto desde 2026-07-24; la desviación estándar entre semillas es de
+      1\,538\,s. Toda la columna de \textit{OR-Tools} promedia las tres semillas, salvo las dos
+      filas marcadas con 3. El ahorro contra el \textit{greedy} crudo es de 4\,746\,s
+      ($-7{,}5$\,\%), pero contra el \textit{greedy} que recibe el mismo post-proceso se reduce a
+      2\,907\,s ($-4{,}7$\,\%), aproximadamente 48 minutos de caminata. Ese segundo margen es el
+      comparable, y sigue superando la dispersión entre semillas.
+    \item[2] La cifra de \textit{OR-Tools} es el promedio de tres desviaciones estándar muestrales
+      y las dos del \textit{greedy} son poblacionales, porque provienen de comandos distintos; con
+      $k \approx 25$ el factor entre ambas convenciones es de $1{,}02$ y no explica la brecha.
+    \item[3] Rango sobre las tres semillas, no intervalo de confianza. La ruta más pequeña es una
+      distinta en cada semilla, de modo que las dos filas no se leen emparejadas: el mínimo de
+      paradas y el mínimo de desplazamiento no provienen necesariamente de la misma ruta.
+  \end{tablenotes}
+  \end{threeparttable}
 \end{table}
-
-{\footnotesize$^*$ Media de tres semillas (59\,649\,s, 56\,640\,s y 58\,693\,s), con post-proceso
-2-opt habilitado por defecto desde 2026-07-24; la desviación estándar entre semillas es de
-1\,538\,s. Toda la columna de \textit{OR-Tools} promedia las tres semillas, salvo las dos filas
-marcadas con $\ddagger$. El ahorro contra el \textit{greedy} crudo es de 4\,746\,s ($-7{,}5$\,\%),
-pero contra el \textit{greedy} que recibe el mismo post-proceso se reduce a 2\,907\,s
-($-4{,}7$\,\%), aproximadamente 48 minutos de caminata. Ese segundo margen es el comparable, y sigue
-superando la dispersión entre semillas. $^\dagger$ La cifra de \textit{OR-Tools} es el promedio de
-tres desviaciones estándar muestrales y las dos del \textit{greedy} son poblacionales, porque
-provienen de comandos distintos; con $k \approx 25$ el factor entre ambas convenciones es de
-$1{,}02$ y no explica la brecha. $^\ddagger$ Rango sobre las tres semillas, no intervalo de
-confianza. La ruta más pequeña es una distinta en cada semilla, de modo que las dos filas no se leen
-emparejadas: el mínimo de paradas y el mínimo de desplazamiento no provienen necesariamente de la
-misma ruta.}
 
 En la métrica que el modelo efectivamente minimiza ---el tiempo total de desplazamiento---
 \textit{OR-Tools} supera a las dos variantes del \textit{baseline}, pero la magnitud del margen
@@ -484,7 +487,7 @@ Tabla~\ref{tab:estrategias} resume los resultados como media de las tres repetic
 
 \begin{table}[H]
   \centering
-  \caption{Comparación de estrategias sobre el \textit{dataset} real.}
+  \caption{Comparación de estrategias sobre la instancia de referencia.}
   \label{tab:estrategias}
   \small
   \begin{tabularx}{\textwidth}{lXXXXXXX}
