@@ -1,59 +1,54 @@
-\chapter*{ANEXOS}
-\addcontentsline{toc}{chapter}{ANEXOS}
+\chapter{ANEXOS}
 
 % Las tablas de los anexos no van al índice de tablas (corrección del centro de escritura).
 \captionsetup{list=false}
 
-\phantomsection
-\addcontentsline{toc}{section}{ÍNDICE DE ANEXOS}
-\begin{center}
-  {\bfseries ÍNDICE DE ANEXOS}
-\end{center}
-\vspace{6pt}
 \noindent
 \begin{tabularx}{\textwidth}{@{}X r@{}}
-  Anexo 1. Documentación de la API REST & \pageref{anx:api} \\
-  Anexo 2. Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
-  Anexo 3. Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
-  Anexo 4. Grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
-  Anexo 5. Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
-  Anexo 6. Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
-  Anexo 7. Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
+  Documentación de la API REST & \pageref{anx:api} \\
+  Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
+  Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
+  Grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
+  Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
+  Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
+  Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
 \end{tabularx}
-\newpage
 
-\phantomsection
-\section*{Anexo 1. Documentación de la API REST}
+% Encabezado de cada anexo: salto de página, "Anexo N. Título" en negrita de subcapítulo, y entrada
+% de índice general. #1 = número, #2 = título en la hoja del anexo, #3 = título en el índice general
+% (igual a #2 salvo Anexo 2).
+\newcommand{\anexo}[3]{%
+  \clearpage
+  \phantomsection
+  \section*{\fontsize{12}{14}\selectfont\bfseries Anexo #1. #2}%
+  \addcontentsline{toc}{section}{Anexo #1. #3}%
+}
+
+\anexo{1}{Documentación de la API REST}{Documentación de la API REST}
 \label{anx:api}
-\addcontentsline{toc}{section}{Anexo 1. Documentación de la API REST}
 
-La API se implementa con Django REST Framework y se publica bajo el prefijo
-\texttt{/api/}. La autenticación es por \textit{JSON Web Token} mediante
-\textit{djangorestframework-simplejwt}: el cliente obtiene un par de \textit{tokens} en
-\texttt{POST /api/auth/token/} y envía el \textit{token} de acceso en la cabecera
-\texttt{Authorization: Bearer <token>}. La vigencia por defecto es de 60 minutos
-para el \textit{token} de acceso y de 7 días para el de refresco, ambas configurables por
-variable de entorno.
+La API se implementa con Django REST Framework y se publica bajo el prefijo \texttt{/api/}. La
+autenticación es por \textit{JSON Web Token} mediante \textit{djangorestframework-simplejwt}: el
+cliente obtiene un par de \textit{tokens} en \texttt{POST /api/auth/token/} y envía el
+\textit{token} de acceso en la cabecera \texttt{Authorization: Bearer <token>}. La vigencia por
+defecto es de 60 minutos para el \textit{token} de acceso y de 7 días para el de refresco, ambas
+configurables por variable de entorno.
 
-La autorización se resuelve sobre el campo \texttt{role} del usuario mediante dos
-permisos propios del proyecto, \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, y no
-sobre los permisos estándar de Django REST Framework: \texttt{IsAdminUser} valida el
-atributo \texttt{is\_staff}, que en este sistema no representa el rol de negocio. En
-las tablas siguientes, la columna \textbf{Permiso} distingue cuatro niveles:
-Público (sin autenticación), Autenticado (cualquier usuario con
-sesión válida), Admin (\texttt{IsAdminRole}) y Censador
-(\texttt{IsSurveyorRole}).
+La autorización se resuelve sobre el campo \texttt{role} del usuario mediante dos permisos propios
+del proyecto, \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, y no sobre los permisos estándar de
+Django REST Framework: \texttt{IsAdminUser} valida el atributo \texttt{is\_staff}, que en este
+sistema no representa el rol de negocio. En las tablas siguientes, la columna Permiso distingue
+cuatro niveles: Público (sin autenticación), Autenticado (cualquier usuario con sesión válida),
+Admin (\texttt{IsAdminRole}) y Censador (\texttt{IsSurveyorRole}).
 
-Los listados se paginan con \texttt{PageNumberPagination} a 20 elementos por página.
-Las respuestas geográficas siguen el formato \textit{GeoJSON}
-(\textit{FeatureCollection}), con coordenadas en el orden \texttt{[lon, lat]} que
-exige el estándar.
+Los listados se paginan con \texttt{PageNumberPagination} a 20 elementos por página. Las respuestas
+geográficas siguen el formato \textit{GeoJSON} (\textit{FeatureCollection}), con coordenadas en el
+orden \texttt{[lon, lat]} que exige el estándar.
 
-El inventario se reparte en cuatro tablas según el recurso:
-autenticación y usuarios (Tabla~\ref{tab:anexo_api_auth}), \textit{datasets} e
-importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
-(Tabla~\ref{tab:anexo_api_optimization}) y rutas y captura en terreno
-(Tabla~\ref{tab:anexo_api_routes}).
+El inventario se reparte en cuatro tablas según el recurso: autenticación y usuarios
+(Tabla~\ref{tab:anexo_api_auth}), \textit{datasets} e importación legada
+(Tabla~\ref{tab:anexo_api_datasets}), motor de optimización (Tabla~\ref{tab:anexo_api_optimization})
+y rutas y captura en terreno (Tabla~\ref{tab:anexo_api_routes}).
 
 \begin{table}[H]
   \centering
@@ -256,10 +251,8 @@ importación legada (Tabla~\ref{tab:anexo_api_datasets}), motor de optimización
   \end{tabularx}
 \end{table}
 
-\phantomsection
-\section*{Anexo 2. Comando de demostración (\texttt{seed\_demo})}
+\anexo{2}{Comando de demostración (\texttt{seed\_demo})}{Comando de demostración}
 \label{anx:demo}
-\addcontentsline{toc}{section}{Anexo 2. Comando de demostración}
 
 El comando de gestión \texttt{seed\_demo} construye un \textit{dataset} sintético y
 reproducible sobre un rectángulo de Santiago
@@ -329,10 +322,8 @@ El \textit{dataset} de la evaluación de esta memoria no proviene de este comand
 de las fuentes legadas (Sección~\ref{sec:legacy}); \texttt{seed\_demo} cubre la
 demostración funcional y las pruebas de carga sintéticas.
 
-\phantomsection
-\section*{Anexo 3. Comandos reproducibles de los experimentos}
+\anexo{3}{Comandos reproducibles de los experimentos}{Comandos reproducibles de los experimentos}
 \label{anx:comandos}
-\addcontentsline{toc}{section}{Anexo 3. Comandos reproducibles de los experimentos}
 
 Los resultados del Capítulo~\ref{cap:resultados} se obtuvieron con tres comandos de
 gestión: \texttt{baseline\_sweep} (barridos de configuración y perfilado por fases),
@@ -508,31 +499,27 @@ docker compose -f docker-compose.prod.yml run --rm backend \
   \end{tabularx}
 \end{table}
 
-\phantomsection
-\section*{Anexo 4. Grilla de variantes y auditoría de robustez}
-\addcontentsline{toc}{section}{Anexo 4. Grilla de variantes y auditoría de robustez}
+\anexo{4}{Grilla de variantes y auditoría de robustez}{Grilla de variantes y auditoría de robustez}
 \label{anx:grilla-variantes}
 
-Este anexo complementa las Secciones~\ref{sec:variantes-duracion}
-y~\ref{sec:discusion-calidad} con el detalle de la grilla de variantes operacionales,
-la descripción de la suite de instancias congeladas sobre la que se ejecutó el barrido
-de configuración y la descripción completa de los cuatro defectos de instrumentación
-detectados en la serie experimental.
+Este anexo complementa las Secciones~\ref{sec:variantes-duracion} y~\ref{sec:discusion-calidad} con
+el detalle de la grilla de variantes operacionales, la descripción de la suite de instancias
+congeladas sobre la que se ejecutó el barrido de configuración y la descripción completa de los
+cuatro defectos de instrumentación detectados en la serie experimental.
 
 \subsubsection*{Grilla de seis variantes}
 
-La Tabla~\ref{tab:grilla-variantes} reporta las seis combinaciones de tiempo de servicio
-por árbol $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el
-\textit{dataset} real de $n=1\,607$ árboles (429 de \texttt{legacy\_api} y 1\,178 de
-\texttt{legacy\_app}, con posición mediana por código QR). Cada variante se ejecutó con
-semillas 42, 43 y 44 y un límite de \textit{solver} de 180\,s; la tabla reporta medias.
+La Tabla~\ref{tab:grilla-variantes} reporta las seis combinaciones de tiempo de servicio por árbol
+$\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el \textit{dataset} real de
+$n=1\,607$ árboles (429 de \texttt{legacy\_api} y 1\,178 de \texttt{legacy\_app}, con posición
+mediana por código QR). Cada variante se ejecutó con estrategia \texttt{global}, semillas 42, 43 y
+44, un límite de \textit{solver} de 180\,s y la versión del código previa a la corrección del
+redondeo del tránsito; la tabla reporta medias. El total del \textit{pipeline} equivale al tiempo de
+\texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.
 
 \begin{table}[H]
   \centering
-\caption{Grilla de seis variantes sobre el \textit{dataset} real ($n=1\,607$; media de 3 semillas;
-    estrategia \texttt{global}; límite de \textit{solver} de 180\,s; código previo a la
-    corrección del redondeo del tránsito). El total del \textit{pipeline} equivale al tiempo
-de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
+  \caption{Grilla de seis variantes sobre el \textit{dataset} real.}
   \label{tab:grilla-variantes}
   \small
   \begin{tabularx}{\textwidth}{rrXXXXXXX}
@@ -557,41 +544,39 @@ de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
   \end{tabularx}
 \end{table}
 
-Los resultados muestran el compromiso central entre balance y costo total. Con
-$T_{\max}=2$\,h el número de rutas $k$ escala fuertemente con el tiempo de servicio
-($23 \rightarrow 36 \rightarrow 49$), dado que el trabajo de servicio domina la capacidad de
-cada ruta, y el balance se aproxima a 1 (al coincidir $T_{\min}$ y $T_{\max}$, las rutas
-resultan de duración casi idéntica, con $\sigma(T)$ de 3 a 14\,s). Con $T_{\max}=3$\,h,
-en cambio, el tiempo total de desplazamiento se reduce en torno al 10\,\% y $k$ cae
-alrededor de un 35\,\%, a costa de un balance de $\approx 0{,}87$ con $\sigma(T)$ de 284
-a 391\,s. La única variante que descarta nodos es la más restrictiva (servicio de 3\,min
-con $T_{\max}=2$\,h), que deja un árbol fuera de la solución de forma consistente en las
-tres semillas.
+Los resultados muestran el compromiso central entre balance y costo total. Con $T_{\max}=2$\,h el
+número de rutas $k$ escala fuertemente con el tiempo de servicio
+($23 \rightarrow 36 \rightarrow 49$), dado que el trabajo de servicio domina la capacidad de cada
+ruta, y el balance se aproxima a 1 (al coincidir $T_{\min}$ y $T_{\max}$, las rutas resultan de
+duración casi idéntica, con $\sigma(T)$ de 3 a 14\,s). Con $T_{\max}=3$\,h, en cambio, el tiempo
+total de desplazamiento se reduce en torno al 10\,\% y $k$ cae alrededor de un 35\,\%, a costa de un
+balance de $\approx 0{,}87$ con $\sigma(T)$ de 284 a 391\,s. La única variante que descarta nodos es
+la más restrictiva (servicio de 3\,min con $T_{\max}=2$\,h), que deja un árbol fuera de la solución
+de forma consistente en las tres semillas.
 
 Respecto de las semillas, corresponde precisar su rol: a diferencia de
-\texttt{config\_algorithm\_sweep} (Sección~\ref{sec:discusion-calidad}), donde la
-semilla sí se propaga al \textit{solver} y altera la trayectoria del GLS, esta grilla se
-ejecutó con \texttt{baseline\_sweep} (\hyperref[anx:comandos]{Anexo 3}), donde la
-semilla solo etiqueta la
-repetición. La varianza observada entre repeticiones (columna sd de \texttt{solve} en
-la tabla) proviene íntegramente del corte por tiempo de reloj (\textit{wall-clock}) de
-la búsqueda local: en las variantes en que la búsqueda agota el presupuesto, las tres
-repeticiones convergen a soluciones casi idénticas.
+\texttt{config\_algorithm\_sweep} (Sección~\ref{sec:discusion-calidad}), donde la semilla sí se
+propaga al \textit{solver} y altera la trayectoria del GLS, esta grilla se ejecutó con
+\texttt{baseline\_sweep} (\hyperref[anx:comandos]{Anexo 3}), donde la semilla solo etiqueta la
+repetición. La varianza observada entre repeticiones (columna sd de \texttt{solve} en la tabla)
+proviene íntegramente del corte por tiempo de reloj (\textit{wall-clock}) de la búsqueda local: en
+las variantes en que la búsqueda agota el presupuesto, las tres repeticiones convergen a soluciones
+casi idénticas.
 
 \phantomsection
 \subsubsection*{Suite de instancias congeladas}
 \label{anx:suite-instancias}
 
 Las doce instancias sobre las que se ejecutó el barrido de configuración
-(Sección~\ref{sec:discusion-calidad}) están versionadas en
-\texttt{docs/experiments/instances/} y se describen en la
-Tabla~\ref{tab:suite-instancias}. La batería de crecimiento se construye sobre los
-$12\,946$ árboles georreferenciados de \texttt{legacy\_app}, ordenados por distancia de
-\textit{haversine} a un centroide fijo: cada instancia es prefijo exacto de la siguiente,
-de modo que el crecimiento es puramente espacial y no una muestra distinta. Las dos
-variantes dispersas toman uno de cada dos y uno de cada cuatro sobre los primeros
-$1\,000$, con lo que conservan la extensión y reducen la densidad a la mitad y a un
-cuarto: aíslan el efecto de la densidad del efecto del tamaño.
+(Sección~\ref{sec:discusion-calidad}) están versionadas en \texttt{docs/experiments/instances/} y se
+describen en la Tabla~\ref{tab:suite-instancias}. La batería de crecimiento se construye sobre los
+$12\,946$ árboles georreferenciados de \texttt{legacy\_app} ---los $12\,941$ del importador más los
+cinco códigos QR de ceros, que la batería no filtra por construirse antes de esa exclusión---,
+ordenados por distancia de \textit{haversine} a un centroide fijo: cada instancia es prefijo exacto
+de la siguiente, de modo que el crecimiento es puramente espacial y no una muestra distinta. Las dos
+variantes dispersas toman uno de cada dos y uno de cada cuatro sobre los primeros $1\,000$, con lo
+que conservan la extensión y reducen la densidad a la mitad y a un cuarto: aíslan el efecto de la
+densidad del efecto del tamaño.
 
 \begin{table}[H]
   \centering
@@ -710,7 +695,7 @@ La Sección~\ref{sec:discusion-calidad} resume los cuatro defectos de
 instrumentación detectados en la serie experimental. Este apartado los describe
 con el detalle necesario para reproducir las correcciones.
 
-\textbf{Defecto 1 --- Semillas no propagadas.}
+Defecto 1 --- Semillas no propagadas.
 Las corridas iniciales de la serie no propagaban la semilla al \textit{solver}: las
 nominales tres réplicas por celda eran la misma corrida, de modo que la dispersión
 reportada ($\sigma \approx 0{,}03\,\%$) era un artefacto de replicación idéntica y no
@@ -718,7 +703,7 @@ describía la convergencia del algoritmo. Una corrida de recalibración posterio
 semillas reales al \textit{solver}, con lo que la dispersión subió a $\sigma \approx
 2{,}4\,\%$ y catorce de veintiocho veredictos de ese ciclo debieron re-juzgarse.
 
-\textbf{Defecto 2 --- Cota de relleno inalcanzable.}
+Defecto 2 --- Cota de relleno inalcanzable.
 Los ciclos iniciales usaban como piso de la métrica de relleno el producto
 $n \times \bar{n}$ (número de nodos por grado medio de la red), que viola la restricción
 de grado de los caminos y resulta por tanto inalcanzable. La métrica corregida usa el
@@ -748,7 +733,7 @@ del VRP y su papel es acotar la flojedad de la cota, no sustituirla como referen
 operacional. Re-juzgadas contra el ancla, ninguna de las doce celdas de área de los
 dos ciclos más recientes cambia de veredicto.
 
-\textbf{Defecto 3 --- Auto-cruces sobre cuerdas rectas.}
+Defecto 3 --- Auto-cruces sobre cuerdas rectas.
 La métrica de auto-cruces se calcula sobre cuerdas rectas entre paradas consecutivas, una
 geometría que no coincide ni con la red que el \textit{solver} optimiza ni con la
 polilínea real que se dibuja al censador. La correlación de Spearman entre ambas
@@ -761,7 +746,7 @@ su valor comparativo dentro de cada ciclo, dado que todos los brazos se contrast
 misma vara; las diferencias relativas permanecen válidas aunque el nivel absoluto quede
 acotado por esta limitación.
 
-\textbf{Defecto 4 --- Criterio de degeneración mixto.}
+Defecto 4 --- Criterio de degeneración mixto.
 El criterio de rutas degeneradas original mezclaba dos fenómenos: un aislamiento
 geográfico que captura el conteo de paradas (menos de cinco) y un perjuicio operativo real
 que captura la duración (menos de 1\,800 segundos). Una ruta con tres paradas y
@@ -802,7 +787,7 @@ actual justifica.
 \subsubsection*{Efectos no medidos}
 \label{anx:efectos-no-medidos}
 
-\textbf{Costo de las disyunciones de nodos.}
+Costo de las disyunciones de nodos.
 Declarar cada árbol como una disyunción unitaria (Sección~\ref{sec:disyunciones})
 añade una decisión binaria por nodo y amplía el vecindario que la búsqueda local
 debe explorar en cada iteración. Como el GLS se corta por reloj de pared y no por
@@ -815,7 +800,7 @@ prescindible ---sin él un solo árbol inalcanzable deja al \textit{solver} sin 
 para todo el \textit{dataset}---, de modo que la alternativa medida no sería una
 configuración operable sino una referencia de laboratorio.
 
-\textbf{Exactitud del estimador de distancias.}
+Exactitud del estimador de distancias.
 El perfil peatonal (\texttt{foot}) de OSRM sobre datos de \textit{OpenStreetMap}
 estima el tiempo de caminata a partir de la representación de la red vial y de un
 factor de velocidad constante, de modo que se aparta necesariamente de la caminata
@@ -830,9 +815,7 @@ relativas entre configuraciones, que son las que sostienen las conclusiones del
 capítulo de resultados. Contrastar la estimación contra tiempos reales de terreno es
 la validación pendiente de mayor valor para el uso operativo de la plataforma.
 
-\phantomsection
-\section*{Anexo 5. Trazabilidad de requisitos al diseño}
-\addcontentsline{toc}{section}{Anexo 5. Trazabilidad de requisitos al diseño}
+\anexo{5}{Trazabilidad de requisitos al diseño}{Trazabilidad de requisitos al diseño}
 \label{anx:trazabilidad}
 
 La Tabla~\ref{tab:trazabilidad} remite cada requisito funcional de la
@@ -881,9 +864,7 @@ donde se documenta su realización y, cuando corresponde, al inventario de
   RF-26 & \S\ref{sec:api} \\
 \end{xltabular}
 
-\phantomsection
-\section*{Anexo 6. Capturas complementarias de la interfaz}
-\addcontentsline{toc}{section}{Anexo 6. Capturas complementarias de la interfaz}
+\anexo{6}{Capturas complementarias de la interfaz}{Capturas complementarias de la interfaz}
 \label{anx:capturas}
 
 % La cota de altura replica la del capítulo de diseño (capturaui).
@@ -897,31 +878,29 @@ donde se documenta su realización y, cuando corresponde, al inventario de
 }
 
 La Ilustración~\ref{fig:ui_datasets} muestra el listado de \textit{datasets} disponibles en el
-sistema.
+sistema (\texttt{/admin/datasets}): tabla con nombre, número de árboles y fecha de importación;
+los botones superiores dan acceso a las dos rutas de creación.
 
 \capturaanexo{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de
-\textit{datasets} e importación de archivos (\texttt{/admin/datasets}): tabla con nombre, número
-de árboles y fecha de importación; los botones superiores dan acceso a las dos rutas de
-creación.}{fig:ui_datasets}
+\textit{datasets} e importación de archivos.}{fig:ui_datasets}
 
 Las dos rutas de creación a las que dan acceso esos botones corresponden a la
 importación de archivo y a la selección sobre el mapa de fuentes legadas, ambas
 descritas en la Sección~\ref{sec:ui}.
 
-El tablero de avance del censo se muestra en la Ilustración~\ref{fig:ui_progress}.
+El tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}) se muestra en la
+Ilustración~\ref{fig:ui_progress}: porcentaje de árboles censados, omitidos y pendientes; mapa
+coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.
 
-\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo
-(\texttt{/admin/datasets/\{id\}/progress}): porcentaje de árboles censados, omitidos y
-pendientes; mapa coloreado por el estado de cada árbol; y desglose del avance por ruta y por
-censador.}{fig:ui_progress}
+\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo.}{
+  fig:ui_progress
+}
 
 El desglose por censador es el que permite verificar en operación el reparto de
 carga que persigue el índice de balance definido en la
 Sección~\ref{sec:atributos-calidad}.
 
-\phantomsection
-\section*{Anexo 7. Modelo de datos de las bases legadas}
-\addcontentsline{toc}{section}{Anexo 7. Modelo de datos de las bases legadas}
+\anexo{7}{Modelo de datos de las bases legadas}{Modelo de datos de las bases legadas}
 \label{anx:modelo-legado}
 
 Este anexo detalla las tablas de los dos esquemas legados que la Sección~\ref{sec:legacy} resume, y

@@ -62,7 +62,6 @@
   \renewcommand{\figurename}{Ilustración}
   \renewcommand{\tablename}{Tabla}
   \renewcommand{\bibname}{BIBLIOGRAFÍA}
-  \renewcommand{\appendixname}{ANEXO}
   \renewcommand{\chaptername}{}
 }
 
@@ -95,6 +94,7 @@
 % ---- Captions -------------------------------------------------
 % Formato exigido por el centro de escritura: «TABLA 1 Título», «ILUSTRACIÓN 1 Título».
 \usepackage{caption}
+\captionsetup{justification=centering, singlelinecheck=false}
 \captionsetup[table]{name=TABLA, labelsep=space, position=above}
 \captionsetup[figure]{name=ILUSTRACIÓN, labelsep=space, position=below}
 
@@ -118,6 +118,9 @@
 % ---- Citas y Metadatos -----------------------------------------
 \usepackage[authoryear,round]{natbib}
 \bibliographystyle{plainnat-es}
+% Para que la bibliografía sea un capítulo numerado (5. BIBLIOGRAFÍA) en lugar del
+% \chapter* que impone natbib por defecto.
+\renewcommand{\bibsection}{\chapter{\bibname}}
 \usepackage[hidelinks]{hyperref}
 
 \hypersetup{
@@ -145,15 +148,12 @@
 \input{secciones/04-resultados}
 
 % Bibliografía
-% El \clearpage es necesario: sin él \addcontentsline registra la página en que
-% termina el capítulo 3, no aquella en que empieza la bibliografía.
+% El \clearpage es necesario: sin él la bibliografía podría empezar a media página
+% del capítulo anterior.
 \clearpage
-\phantomsection
-\addcontentsline{toc}{chapter}{BIBLIOGRAFÍA}
 \bibliography{bibliography}
 
 % Anexos
-\appendix
 \input{secciones/05-anexos}
 
 \end{document}
