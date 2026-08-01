@@ -1804,8 +1804,8 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 Las mejoras enumeradas a continuación se derivan de los resultados del capítulo. La primera es la de
 mayor valor para el proyecto; las dos siguientes tienen además anclaje en mediciones propias de esta
 memoria. Las nueve restantes abordan limitaciones funcionales o de diseño, independientes o no de la
-serie experimental, y la última registra una alternativa evaluada y descartada. Cada una indica la
-evidencia que la respalda, su costo y qué habría que construir.
+serie experimental, y las dos últimas registran alternativas evaluadas y descartadas. Cada una
+indica la evidencia que la respalda, su costo y qué habría que construir.
 
 \begin{itemize}[label=--]
   \item Validación en terreno: las conclusiones de este capítulo verifican que el producto hace lo
@@ -1909,6 +1909,18 @@ evidencia que la respalda, su costo y qué habría que construir.
       \textit{solver}, lo que vuelve circular el entrenamiento. Tercera, es sobreingeniería frente a
       un problema que la formulación actual resuelve en $120$\,s con herramientas ya construidas y
       probadas (Sección~\ref{sec:cumplimiento-criterios}).
+
+  \item Partición \textit{route-first, cluster-second}: se evaluó como alternativa de partición
+      espacial (Sección~\ref{sec:solucion}) y no se propone. Resolver un TSP único sobre los $n$
+      árboles y cortar después el recorrido en tramos de duración acumulada $\leq T_{\max}$ no
+      controla el balance ni la compacidad de cada tramo, y fija los extremos de cada uno con un
+      recorrido que se construyó ignorando la partición que luego se le impone. Los resultados de
+      este capítulo refuerzan el descarte y no lo debilitan: el balance de carga no resulta ser una
+      propiedad que se obtenga por añadidura sino la que más cuesta sostener
+      (Sección~\ref{sec:discusion-calidad}), y la compacidad geográfica exigió un término explícito
+      en el objetivo (Sección~\ref{sec:comparacion-estrategias}). El costo de retomarla es de
+      formulación y no de cómputo. Debe construirse, si se retoma, un criterio de corte que optimice
+      la partición en lugar de heredarla del recorrido.
 \end{itemize}
 
 Una extensión adicional se evaluó y quedó descartada por la propia medición, lo que justifica
