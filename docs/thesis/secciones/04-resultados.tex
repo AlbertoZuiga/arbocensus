@@ -42,9 +42,7 @@ Sección~\ref{sec:criterios-aceptacion}.
 
 \begin{table}[H]
   \centering
-\caption{Métricas de calidad de rutas sobre el \textit{dataset} de evaluación ($N=1\,607$, media de
-  3
-semillas).}
+  \caption{Métricas de calidad de rutas sobre el \textit{dataset} de evaluación.}
   \label{tab:metricas}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
@@ -197,9 +195,10 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
 
 \begin{table}[H]
   \centering
-\caption{Comparación entre la solución de \textit{OR-Tools} y el \textit{baseline} \textit{greedy},
-  sin y
-    con el mismo post-proceso 2-opt ($N=1\,607$, servicio 2\,min, $T_{\max}=3$\,h).}
+  \caption{
+    Comparación entre la solución de \textit{OR-Tools} y el \textit{baseline} \textit{greedy}, sin y
+    con el mismo post-proceso 2-opt.
+  }
   \label{tab:comparativa}
   \begin{tabularx}{\textwidth}{lXXX}
     \toprule
@@ -397,7 +396,7 @@ defecto de $180$\,s, promediando las métricas por semilla (Tabla~\ref{tab:basel
 
 \begin{table}[H]
   \centering
-  \caption{\textit{Baseline} de calidad geográfica del VRP global (media de 5 semillas por $n$).}
+  \caption{\textit{Baseline} de calidad geográfica del VRP global.}
   \label{tab:baseline-geo}
   \begin{tabularx}{\textwidth}{rXXXXXX}
     \toprule
@@ -476,8 +475,7 @@ Tabla~\ref{tab:estrategias} resume los resultados como media de las tres repetic
 
 \begin{table}[H]
   \centering
-\caption{Comparación de estrategias sobre el \textit{dataset} real ($n=1\,607$; servicio de 2\,min,
-$T_{\max}=3$\,h; límite de \textit{solver} de 120\,s; media de 3 semillas).}
+  \caption{Comparación de estrategias sobre el \textit{dataset} real.}
   \label{tab:estrategias}
   \small
   \begin{tabularx}{\textwidth}{lXXXXXXX}
@@ -563,13 +561,13 @@ penalizadas antes de encontrar una asignación completa.
 
 Confirmada \texttt{spatial\_term}, se repitió sobre ella la grilla de seis variantes operacionales
 ---el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
-combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), con el
-mismo límite de 120\,s y tres semillas (Tabla~\ref{tab:grilla-spatial}).
+combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), sobre el
+\textit{dataset} de $n=1\,607$, con el mismo límite de 120\,s y tres semillas
+(Tabla~\ref{tab:grilla-spatial}).
 
 \begin{table}[H]
   \centering
-\caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term} ($n=1\,607$; límite de
-\textit{solver} de 120\,s; media de 3 semillas).}
+  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term}.}
   \label{tab:grilla-spatial}
   \small
   \begin{tabularx}{\textwidth}{rrXXXXXXX}
@@ -703,7 +701,7 @@ variantes de la grilla.
       \node[below=2pt] at (axis cs:3,34) {\scriptsize $b=0{,}836$};
     \end{axis}
   \end{tikzpicture}
-\caption{Compromiso entre flota ($k$) y balance ($b$) según el tiempo de servicio y la cota
+  \caption{Compromiso entre flota ($k$) y balance ($b$) según el tiempo de servicio y la cota
   $T_{\max}$.}
   \label{fig:grilla-spatial-k}
 \end{figure}
@@ -811,9 +809,10 @@ $T_{\max}$. Ningún brazo dejó árboles sin asignar ni produjo rutas sobre $T_{
 
 \begin{table}[H]
   \centering
-\caption{Comparación de \textit{OR-Tools}, \textit{greedy} crudo y \textit{greedy} con 2-opt sobre
-  las
-áreas reales y su unión (desplazamiento en segundos).}
+  \caption{
+    Comparación de \textit{OR-Tools}, \textit{greedy} crudo y \textit{greedy} con 2-opt sobre las
+    áreas reales y su unión (desplazamiento en segundos).
+  }
   \label{tab:areas-brazos}
   \begin{tabularx}{\textwidth}{lXrrrl}
     \toprule
@@ -1088,36 +1087,37 @@ tratar esa unión ---las veintiuna áreas no vacías de \texttt{legacy\_api} (42
 conjunto) más los 1\,178 árboles de \texttt{legacy\_app}, sin área asignada--- como un único trabajo
 de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). En el régimen de área real la
 configuración de producción genera rutas sin auto-cruces apreciables; estos emergen solo al procesar
-el conjunto agregado disperso (Ilustración~\ref{fig:ruta-vueltas-r1}), situación que en operación
-solo surgiría si se procesaran múltiples áreas de censo como un único problema.
+el conjunto agregado disperso bajo la estrategia \texttt{spatial\_term}
+(Ilustración~\ref{fig:ruta-vueltas-r1}), situación que en operación solo surgiría si se procesaran
+múltiples áreas de censo como un único problema.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
-  \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación
-    ($n = 1\,607$, estrategia \texttt{spatial\_term}, configuración de producción).}
+  \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación.}
   \label{fig:ruta-vueltas-r1}
 \end{figure}
 
-La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno.
+La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno:
+$\approx 10{,}3$\,km en el conjunto agregado frente a $\leq 1{,}32$\,km en las áreas individuales.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
-  \caption{Régimen disperso (extensión $\approx 10{,}3$\,km, \textit{dataset} de
-    evaluación agregado) frente a régimen real (extensión $\leq 1{,}32$\,km, áreas
-    individuales del arbolado legado).}
+  \caption{
+    Régimen disperso (\textit{dataset} de evaluación agregado) frente a régimen real (áreas
+    individuales del arbolado legado).
+  }
   \label{fig:regimen-disperso-vs-real}
 \end{figure}
 
-El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias} se
-reproduce en la Ilustración~\ref{fig:peor-par}.
+El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
+de $0{,}55$, se reproduce en la Ilustración~\ref{fig:peor-par}.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
-  \caption{Par de rutas con mayor solapamiento espacial
-    (\textit{IoU} del peor par $= 0{,}55$) en el \textit{dataset} de evaluación.}
+  \caption{Par de rutas con mayor solapamiento espacial en el \textit{dataset} de evaluación.}
   \label{fig:peor-par}
 \end{figure}
 
@@ -1259,15 +1259,13 @@ caliente) el \textit{pipeline} está acotado por el \textit{solver} (\textit{sol
 el primer contacto con un \textit{dataset} está acotado por OSRM (\textit{OSRM-bound}).
 
 Con la caché caliente, la metaheurística GLS concentra el 98,1\,\% del tiempo total, y todas las
-demás fases combinadas representan menos del 2\,\% (Tabla~\ref{tab:fases-caliente}). Optimizar la
-construcción del modelo, la extracción o el cálculo de métricas no tendría, por tanto, ningún efecto
-medible.
+demás fases combinadas representan menos del 2\,\% (Tabla~\ref{tab:fases-caliente}), media de las
+18 corridas de la grilla. Optimizar la construcción del modelo, la extracción o el cálculo de
+métricas no tendría, por tanto, ningún efecto medible.
 
 \begin{table}[H]
   \centering
-\caption{Desglose de tiempo por fase con caché de matriz caliente ($n=1\,607$; media de las 18
-  corridas
-de la grilla).}
+  \caption{Desglose de tiempo por fase con caché de matriz caliente.}
   \label{tab:fases-caliente}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
@@ -1302,19 +1300,19 @@ de la grilla).}
 \end{table}
 
 En frío ---caché de matriz vacía, primera corrida sobre el \textit{dataset}--- el perfil se
-invierte: la consulta a OSRM domina con el 97,6\,\% del tiempo (Tabla~\ref{tab:fases-frio}). Con
-$n=1\,607$ la fragmentación por longitud de URL (175 coordenadas por bloque) convierte la matriz en
-una grilla de $10 \times 10 = 100$ solicitudes al servicio \texttt{/table}, con un costo total de
-170{,}8\,s que escala aproximadamente como $O(n^2)$ con el número de celdas. La cifra difiere en un
-4\,\% de la corrida en frío citada en la Sección~\ref{sec:metricas-calidad}, dispersión propia de la
-latencia de cien solicitudes HTTP sucesivas. Este costo se paga una única vez por \textit{dataset}:
-la matriz queda almacenada en caché (indexada por el hash SHA-256 de los identificadores de árboles
-activos), de modo que toda corrida posterior es \textit{solve-bound}.
+invierte: la consulta a OSRM domina con el 97,6\,\% del tiempo (Tabla~\ref{tab:fases-frio}), medido
+en la corrida piloto con tiempo de servicio de 2\,min y $T_{\max}=3$\,h. Con $n=1\,607$ la
+fragmentación por longitud de URL (175 coordenadas por bloque) convierte la matriz en una grilla de
+$10 \times 10 = 100$ solicitudes al servicio \texttt{/table}, con un costo total de 170{,}8\,s que
+escala aproximadamente como $O(n^2)$ con el número de celdas. La cifra difiere en un 4\,\% de la
+corrida en frío citada en la Sección~\ref{sec:metricas-calidad}, dispersión propia de la latencia de
+cien solicitudes HTTP sucesivas. Este costo se paga una única vez por \textit{dataset}: la matriz
+queda almacenada en caché (indexada por el hash SHA-256 de los identificadores de árboles activos),
+de modo que toda corrida posterior es \textit{solve-bound}.
 
 \begin{table}[H]
   \centering
-\caption{Desglose de tiempo por fase en frío (caché de matriz vacía; corrida piloto con tiempo de
-servicio de 2\,min y $T_{\max}=3$\,h).}
+  \caption{Desglose de tiempo por fase en frío.}
   \label{tab:fases-frio}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
@@ -1392,9 +1390,7 @@ alcanzable con 180\,s, lo que justifica el valor de producción sin pérdida de 
 
 \begin{table}[H]
   \centering
-\caption{Sensibilidad al límite de tiempo del \textit{solver} (servicio de 2\,min, $T_{\max}=3$\,h,
-    $n=1\,607$, estrategia \texttt{spatial\_term}; media $\pm$ desviación estándar de tres
-semillas).}
+  \caption{Sensibilidad al límite de tiempo del \textit{solver}.}
   \label{tab:sensibilidad-tl}
   \begin{tabularx}{\textwidth}{rXXXX}
     \toprule

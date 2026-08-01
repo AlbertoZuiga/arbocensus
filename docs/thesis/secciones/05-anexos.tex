@@ -513,26 +513,24 @@ docker compose -f docker-compose.prod.yml run --rm backend \
 \addcontentsline{toc}{section}{Anexo 4. Grilla de variantes y auditoría de robustez}
 \label{anx:grilla-variantes}
 
-Este anexo complementa las Secciones~\ref{sec:variantes-duracion}
-y~\ref{sec:discusion-calidad} con el detalle de la grilla de variantes operacionales,
-la descripción de la suite de instancias congeladas sobre la que se ejecutó el barrido
-de configuración y la descripción completa de los cuatro defectos de instrumentación
-detectados en la serie experimental.
+Este anexo complementa las Secciones~\ref{sec:variantes-duracion} y~\ref{sec:discusion-calidad} con
+el detalle de la grilla de variantes operacionales, la descripción de la suite de instancias
+congeladas sobre la que se ejecutó el barrido de configuración y la descripción completa de los
+cuatro defectos de instrumentación detectados en la serie experimental.
 
 \subsubsection*{Grilla de seis variantes}
 
-La Tabla~\ref{tab:grilla-variantes} reporta las seis combinaciones de tiempo de servicio
-por árbol $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el
-\textit{dataset} real de $n=1\,607$ árboles (429 de \texttt{legacy\_api} y 1\,178 de
-\texttt{legacy\_app}, con posición mediana por código QR). Cada variante se ejecutó con
-semillas 42, 43 y 44 y un límite de \textit{solver} de 180\,s; la tabla reporta medias.
+La Tabla~\ref{tab:grilla-variantes} reporta las seis combinaciones de tiempo de servicio por árbol
+$\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el \textit{dataset} real de
+$n=1\,607$ árboles (429 de \texttt{legacy\_api} y 1\,178 de \texttt{legacy\_app}, con posición
+mediana por código QR). Cada variante se ejecutó con estrategia \texttt{global}, semillas 42, 43 y
+44, un límite de \textit{solver} de 180\,s y la versión del código previa a la corrección del
+redondeo del tránsito; la tabla reporta medias. El total del \textit{pipeline} equivale al tiempo de
+\texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.
 
 \begin{table}[H]
   \centering
-\caption{Grilla de seis variantes sobre el \textit{dataset} real ($n=1\,607$; media de 3 semillas;
-    estrategia \texttt{global}; límite de \textit{solver} de 180\,s; código previo a la
-    corrección del redondeo del tránsito). El total del \textit{pipeline} equivale al tiempo
-de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
+  \caption{Grilla de seis variantes sobre el \textit{dataset} real.}
   \label{tab:grilla-variantes}
   \small
   \begin{tabularx}{\textwidth}{rrXXXXXXX}
@@ -557,26 +555,24 @@ de \texttt{solve} más $\approx$0{,}6\,s de sobrecosto fijo.}
   \end{tabularx}
 \end{table}
 
-Los resultados muestran el compromiso central entre balance y costo total. Con
-$T_{\max}=2$\,h el número de rutas $k$ escala fuertemente con el tiempo de servicio
-($23 \rightarrow 36 \rightarrow 49$), dado que el trabajo de servicio domina la capacidad de
-cada ruta, y el balance se aproxima a 1 (al coincidir $T_{\min}$ y $T_{\max}$, las rutas
-resultan de duración casi idéntica, con $\sigma(T)$ de 3 a 14\,s). Con $T_{\max}=3$\,h,
-en cambio, el tiempo total de desplazamiento se reduce en torno al 10\,\% y $k$ cae
-alrededor de un 35\,\%, a costa de un balance de $\approx 0{,}87$ con $\sigma(T)$ de 284
-a 391\,s. La única variante que descarta nodos es la más restrictiva (servicio de 3\,min
-con $T_{\max}=2$\,h), que deja un árbol fuera de la solución de forma consistente en las
-tres semillas.
+Los resultados muestran el compromiso central entre balance y costo total. Con $T_{\max}=2$\,h el
+número de rutas $k$ escala fuertemente con el tiempo de servicio
+($23 \rightarrow 36 \rightarrow 49$), dado que el trabajo de servicio domina la capacidad de cada
+ruta, y el balance se aproxima a 1 (al coincidir $T_{\min}$ y $T_{\max}$, las rutas resultan de
+duración casi idéntica, con $\sigma(T)$ de 3 a 14\,s). Con $T_{\max}=3$\,h, en cambio, el tiempo
+total de desplazamiento se reduce en torno al 10\,\% y $k$ cae alrededor de un 35\,\%, a costa de un
+balance de $\approx 0{,}87$ con $\sigma(T)$ de 284 a 391\,s. La única variante que descarta nodos es
+la más restrictiva (servicio de 3\,min con $T_{\max}=2$\,h), que deja un árbol fuera de la solución
+de forma consistente en las tres semillas.
 
 Respecto de las semillas, corresponde precisar su rol: a diferencia de
-\texttt{config\_algorithm\_sweep} (Sección~\ref{sec:discusion-calidad}), donde la
-semilla sí se propaga al \textit{solver} y altera la trayectoria del GLS, esta grilla se
-ejecutó con \texttt{baseline\_sweep} (\hyperref[anx:comandos]{Anexo 3}), donde la
-semilla solo etiqueta la
-repetición. La varianza observada entre repeticiones (columna sd de \texttt{solve} en
-la tabla) proviene íntegramente del corte por tiempo de reloj (\textit{wall-clock}) de
-la búsqueda local: en las variantes en que la búsqueda agota el presupuesto, las tres
-repeticiones convergen a soluciones casi idénticas.
+\texttt{config\_algorithm\_sweep} (Sección~\ref{sec:discusion-calidad}), donde la semilla sí se
+propaga al \textit{solver} y altera la trayectoria del GLS, esta grilla se ejecutó con
+\texttt{baseline\_sweep} (\hyperref[anx:comandos]{Anexo 3}), donde la semilla solo etiqueta la
+repetición. La varianza observada entre repeticiones (columna sd de \texttt{solve} en la tabla)
+proviene íntegramente del corte por tiempo de reloj (\textit{wall-clock}) de la búsqueda local: en
+las variantes en que la búsqueda agota el presupuesto, las tres repeticiones convergen a soluciones
+casi idénticas.
 
 \phantomsection
 \subsubsection*{Suite de instancias congeladas}
@@ -897,23 +893,23 @@ donde se documenta su realización y, cuando corresponde, al inventario de
 }
 
 La Ilustración~\ref{fig:ui_datasets} muestra el listado de \textit{datasets} disponibles en el
-sistema.
+sistema (\texttt{/admin/datasets}): tabla con nombre, número de árboles y fecha de importación;
+los botones superiores dan acceso a las dos rutas de creación.
 
 \capturaanexo{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de
-\textit{datasets} e importación de archivos (\texttt{/admin/datasets}): tabla con nombre, número
-de árboles y fecha de importación; los botones superiores dan acceso a las dos rutas de
-creación.}{fig:ui_datasets}
+\textit{datasets} e importación de archivos.}{fig:ui_datasets}
 
 Las dos rutas de creación a las que dan acceso esos botones corresponden a la
 importación de archivo y a la selección sobre el mapa de fuentes legadas, ambas
 descritas en la Sección~\ref{sec:ui}.
 
-El tablero de avance del censo se muestra en la Ilustración~\ref{fig:ui_progress}.
+El tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}) se muestra en la
+Ilustración~\ref{fig:ui_progress}: porcentaje de árboles censados, omitidos y pendientes; mapa
+coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.
 
-\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo
-(\texttt{/admin/datasets/\{id\}/progress}): porcentaje de árboles censados, omitidos y
-pendientes; mapa coloreado por el estado de cada árbol; y desglose del avance por ruta y por
-censador.}{fig:ui_progress}
+\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo.}{
+  fig:ui_progress
+}
 
 El desglose por censador es el que permite verificar en operación el reparto de
 carga que persigue el índice de balance definido en la

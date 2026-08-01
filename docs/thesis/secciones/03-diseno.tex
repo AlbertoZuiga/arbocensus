@@ -32,7 +32,8 @@ optimización: el navegador solicita el trabajo a la API, esta lo encola en Cele
 resolverlo en el ciclo de la petición HTTP, y el \textit{worker} ejecuta el \textit{pipeline}, que
 consulta OSRM para construir la matriz de costos y persiste la solución en PostGIS. El
 \textit{frontend} consulta el estado del trabajo por \textit{polling} hasta que alcanza un estado
-terminal.
+terminal. El trazo continuo marca las capas del monolito Django; el trazo discontinuo, los servicios
+de apoyo desplegados como contenedores independientes.
 
 \begin{figure}[H]
   \centering
@@ -62,9 +63,7 @@ terminal.
     \draw[flujo] (q.south) -- (l.east) node[etiqueta,above,sloped] {ejecuta el \textit{pipeline}};
     \draw[flujo,<->] (l.west) -- (o.east) node[etiqueta,above] {\texttt{/table} · \texttt{/route}};
   \end{tikzpicture}
-\caption[Arquitectura de Arbocensus]{Arquitectura de Arbocensus. Trazo continuo: capas del monolito
-  Django. Trazo discontinuo:
-servicios de apoyo desplegados como contenedores independientes.}
+  \caption{Arquitectura de Arbocensus.}
   \label{fig:arquitectura}
 \end{figure}
 
@@ -126,9 +125,7 @@ error distinto del de estado.
     \node[etl, anchor=south east] at (3.05,-11.35)
       {estado y métricas; el \textit{polling} cesa en estado terminal};
   \end{tikzpicture}
-\caption[Ciclo de vida de un \texttt{OptimizationJob}]{
-  Ciclo de vida de un \texttt{OptimizationJob}.
-}
+  \caption{Ciclo de vida de un \texttt{OptimizationJob}.}
   \label{fig:secuencia}
 \end{figure}
 
@@ -302,7 +299,9 @@ plan vigente.
 La Ilustración~\ref{fig:er} presenta el modelo entidad-relación simplificado. Se omiten los
 atributos no estructurales, así como la relación auxiliar que vincula cada observación con el
 usuario que la registra: ese campo es anulable por la misma razón que lo es el censador de una ruta.
-Todas las entidades usan claves primarias UUID.
+Todas las entidades usan claves primarias UUID. \texttt{DistanceMatrix} cachea la matriz de tiempos
+del \textit{dataset}; \texttt{RouteStop} es la fuente de verdad del orden de visita;
+\texttt{TreeObservation} sobrevive al plan de rutas que la originó.
 
 \begin{figure}[H]
   \centering
@@ -336,10 +335,7 @@ Todas las entidades usan claves primarias UUID.
     \draw[rel] (rs) -- (obs) node[card,above,sloped] {1 : N};
     \draw[rel] (rt) -- (us)  node[card,right] {N : 1};
   \end{tikzpicture}
-\caption[Modelo entidad-relación simplificado]{Modelo entidad-relación simplificado.
-  \texttt{DistanceMatrix} cachea la matriz de tiempos del
-    \textit{dataset}; \texttt{RouteStop} es la fuente de verdad del orden de visita;
-\texttt{TreeObservation} sobrevive al plan de rutas que la originó.}
+  \caption{Modelo entidad-relación simplificado.}
   \label{fig:er}
 \end{figure}
 
@@ -955,10 +951,7 @@ ordena sus candidatas.
     \node[final] (rec) at (3.0,-6.4) {candidata recomendada};
     \draw[flujo] (p5.south) -- (8.6,-6.4) -- (rec.east);
   \end{tikzpicture}
-%---------------------------------------------------------------------------------------------------
-\caption[Abanico de producción y criterio de selección]{
-  Abanico de producción y criterio lexicográfico de selección.
-}
+  \caption{Abanico de producción y criterio lexicográfico de selección.}
   \label{fig:abanico}
 \end{figure}
 
@@ -1089,12 +1082,11 @@ se emite la solicitud de creación. El resultado es que el recorte territorial d
 decisión explícita del administrador, tomada sobre la evidencia cartográfica, y no una consecuencia
 de cómo estaban organizadas las áreas en el sistema anterior.
 
-El mapa de selección con una sesión en curso aparece en la Ilustración~\ref{fig:ui_legacy}.
+El mapa de selección (\texttt{/admin/datasets/legacy-import}) con una sesión en curso aparece en la
+Ilustración~\ref{fig:ui_legacy}.
 
-\capturaui{ui-legacy-import.png}{Mapa de selección de arbolado legado}{Mapa de selección de
-arbolado legado (\texttt{/admin/datasets/legacy-import}): un polígono editable sobre el arbolado
-disponible, marcadores coloreados por estado (disponible, seleccionado, ya importado) y panel
-lateral con la selección acumulada.}{fig:ui_legacy}
+\capturaui{ui-legacy-import.png}{Mapa de selección de arbolado legado}{Mapa de selección de arbolado
+legado.}{fig:ui_legacy}
 
 El color de cada marcador codifica el estado del árbol en el sistema: verde para disponible, azul
 para seleccionado en la sesión actual y gris para ya importado en otro \textit{dataset}. El panel
@@ -1316,25 +1308,26 @@ El panel de administración comprende cinco etapas:
         campañas, y el administrador la acepta o la modifica ruta por ruta.
 \end{enumerate}
 
-La Ilustración~\ref{fig:ui_optimization} corresponde al panel de optimización del \textit{dataset}.
+La Ilustración~\ref{fig:ui_optimization} corresponde al panel de optimización del \textit{dataset}
+(\texttt{/admin/datasets/\{id\}}): el mapa muestra la solución recomendada sobre la red peatonal y
+el panel lateral lista las candidatas a plan ordenadas por el criterio de selección, cada una con
+sus métricas y con la caminata adicional que cuesta respecto de la recomendada. El formulario de
+parámetros temporales encabeza el mismo panel.
 
 \capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: panel de optimización}{Detalle de un
-\textit{dataset} (\texttt{/admin/datasets/\{id\}}), panel de optimización: el mapa muestra la
-solución recomendada sobre la red peatonal y el panel lateral lista las candidatas a plan ordenadas
-por el criterio de selección, cada una con sus métricas y con la caminata adicional que cuesta
-respecto de la recomendada. El formulario de parámetros temporales encabeza el mismo
-panel.}{fig:ui_optimization}
+\textit{dataset}: panel de optimización.}{fig:ui_optimization}
 
 El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$ y tiempo de
 servicio) y el estado de la última optimización; el clic sobre un marcador del mapa despliega el
 historial de observaciones de ese árbol, lo que permite al administrador verificar si ya fue censado
 antes de lanzar la optimización.
 
-El panel de asignación aparece en la Ilustración~\ref{fig:ui_routes}.
+El panel de asignación aparece en la Ilustración~\ref{fig:ui_routes}: el mismo detalle muestra el
+plan publicado como polilíneas coloreadas sobre la red peatonal y, por cada ruta, sus paradas, su
+duración estimada y el censador asignado.
 
-\capturaui{ui-routes.png}{Detalle de un \textit{dataset}: panel de asignación}{El mismo detalle en
-su panel de asignación: el plan publicado como polilíneas coloreadas sobre la red peatonal y, por
-cada ruta, sus paradas, su duración estimada y el censador asignado.}{fig:ui_routes}
+\capturaui{ui-routes.png}{Detalle de un \textit{dataset}: panel de asignación}{Detalle de un
+\textit{dataset}: panel de asignación.}{fig:ui_routes}
 
 Cada candidata resume tres métricas ---número de rutas, tiempo de caminata y puntaje de balance--- y
 destaca en cuáles de ellas es la mejor de la corrida; los árboles que quedan fuera de ruta, las
@@ -1368,16 +1361,16 @@ realizado sin conexión se sincronice al recuperar la red. El almacén es \texti
 pendiente de envío, y \texttt{localStorage} solo admite cadenas de texto: serializar la imagen a
 texto la perdería o multiplicaría su tamaño.
 
-La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censador en dispositivo móvil.
+La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censador (\texttt{/}) en vista
+\textit{mobile}: parada activa, distancia a la parada, captura fotográfica y registro de visita u
+omisión.
 
 % [H] forzado: con colocación flotante [htbp] esta captura (vertical, 0.55\textheight) queda
 % relegada tres páginas después de su mención.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/ui-surveyor.png}
-  \caption[Portal del censador en vista \textit{mobile}]{Portal del censador
-(\texttt{/}, vista \textit{mobile}): parada activa, distancia a la parada, captura fotográfica y
-registro de visita u omisión.}
+  \caption{Portal del censador en vista \textit{mobile}.}
   \label{fig:ui_surveyor}
 \end{figure}
 
