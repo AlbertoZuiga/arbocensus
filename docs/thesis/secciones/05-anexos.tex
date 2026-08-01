@@ -1,31 +1,31 @@
-\chapter*{ANEXOS}
-\addcontentsline{toc}{chapter}{ANEXOS}
+\chapter{ANEXOS}
 
 % Las tablas de los anexos no van al índice de tablas (corrección del centro de escritura).
 \captionsetup{list=false}
 
-\phantomsection
-\addcontentsline{toc}{section}{ÍNDICE DE ANEXOS}
-\begin{center}
-  {\bfseries ÍNDICE DE ANEXOS}
-\end{center}
-\vspace{6pt}
 \noindent
 \begin{tabularx}{\textwidth}{@{}X r@{}}
-  Anexo 1. Documentación de la API REST & \pageref{anx:api} \\
-  Anexo 2. Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
-  Anexo 3. Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
-  Anexo 4. Grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
-  Anexo 5. Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
-  Anexo 6. Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
-  Anexo 7. Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
+  Documentación de la API REST & \pageref{anx:api} \\
+  Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
+  Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
+  Grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
+  Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
+  Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
+  Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
 \end{tabularx}
-\newpage
 
-\phantomsection
-\section*{Anexo 1. Documentación de la API REST}
+% Encabezado de cada anexo: salto de página, "Anexo N. Título" en negrita de subcapítulo, y entrada
+% de índice general. #1 = número, #2 = título en la hoja del anexo, #3 = título en el índice general
+% (igual a #2 salvo Anexo 2).
+\newcommand{\anexo}[3]{%
+  \clearpage
+  \phantomsection
+  \section*{\fontsize{12}{14}\selectfont\bfseries Anexo #1. #2}%
+  \addcontentsline{toc}{section}{Anexo #1. #3}%
+}
+
+\anexo{1}{Documentación de la API REST}{Documentación de la API REST}
 \label{anx:api}
-\addcontentsline{toc}{section}{Anexo 1. Documentación de la API REST}
 
 La API se implementa con Django REST Framework y se publica bajo el prefijo \texttt{/api/}. La
 autenticación es por \textit{JSON Web Token} mediante \textit{djangorestframework-simplejwt}: el
@@ -251,10 +251,8 @@ y rutas y captura en terreno (Tabla~\ref{tab:anexo_api_routes}).
   \end{tabularx}
 \end{table}
 
-\phantomsection
-\section*{Anexo 2. Comando de demostración (\texttt{seed\_demo})}
+\anexo{2}{Comando de demostración (\texttt{seed\_demo})}{Comando de demostración}
 \label{anx:demo}
-\addcontentsline{toc}{section}{Anexo 2. Comando de demostración}
 
 El comando de gestión \texttt{seed\_demo} construye un \textit{dataset} sintético y
 reproducible sobre un rectángulo de Santiago
@@ -324,10 +322,8 @@ El \textit{dataset} de la evaluación de esta memoria no proviene de este comand
 de las fuentes legadas (Sección~\ref{sec:legacy}); \texttt{seed\_demo} cubre la
 demostración funcional y las pruebas de carga sintéticas.
 
-\phantomsection
-\section*{Anexo 3. Comandos reproducibles de los experimentos}
+\anexo{3}{Comandos reproducibles de los experimentos}{Comandos reproducibles de los experimentos}
 \label{anx:comandos}
-\addcontentsline{toc}{section}{Anexo 3. Comandos reproducibles de los experimentos}
 
 Los resultados del Capítulo~\ref{cap:resultados} se obtuvieron con tres comandos de
 gestión: \texttt{baseline\_sweep} (barridos de configuración y perfilado por fases),
@@ -503,9 +499,7 @@ docker compose -f docker-compose.prod.yml run --rm backend \
   \end{tabularx}
 \end{table}
 
-\phantomsection
-\section*{Anexo 4. Grilla de variantes y auditoría de robustez}
-\addcontentsline{toc}{section}{Anexo 4. Grilla de variantes y auditoría de robustez}
+\anexo{4}{Grilla de variantes y auditoría de robustez}{Grilla de variantes y auditoría de robustez}
 \label{anx:grilla-variantes}
 
 Este anexo complementa las Secciones~\ref{sec:variantes-duracion} y~\ref{sec:discusion-calidad} con
@@ -821,9 +815,7 @@ relativas entre configuraciones, que son las que sostienen las conclusiones del
 capítulo de resultados. Contrastar la estimación contra tiempos reales de terreno es
 la validación pendiente de mayor valor para el uso operativo de la plataforma.
 
-\phantomsection
-\section*{Anexo 5. Trazabilidad de requisitos al diseño}
-\addcontentsline{toc}{section}{Anexo 5. Trazabilidad de requisitos al diseño}
+\anexo{5}{Trazabilidad de requisitos al diseño}{Trazabilidad de requisitos al diseño}
 \label{anx:trazabilidad}
 
 La Tabla~\ref{tab:trazabilidad} remite cada requisito funcional de la
@@ -872,9 +864,7 @@ donde se documenta su realización y, cuando corresponde, al inventario de
   RF-26 & \S\ref{sec:api} \\
 \end{xltabular}
 
-\phantomsection
-\section*{Anexo 6. Capturas complementarias de la interfaz}
-\addcontentsline{toc}{section}{Anexo 6. Capturas complementarias de la interfaz}
+\anexo{6}{Capturas complementarias de la interfaz}{Capturas complementarias de la interfaz}
 \label{anx:capturas}
 
 % La cota de altura replica la del capítulo de diseño (capturaui).
@@ -910,9 +900,7 @@ El desglose por censador es el que permite verificar en operación el reparto de
 carga que persigue el índice de balance definido en la
 Sección~\ref{sec:atributos-calidad}.
 
-\phantomsection
-\section*{Anexo 7. Modelo de datos de las bases legadas}
-\addcontentsline{toc}{section}{Anexo 7. Modelo de datos de las bases legadas}
+\anexo{7}{Modelo de datos de las bases legadas}{Modelo de datos de las bases legadas}
 \label{anx:modelo-legado}
 
 Este anexo detalla las tablas de los dos esquemas legados que la Sección~\ref{sec:legacy} resume, y
