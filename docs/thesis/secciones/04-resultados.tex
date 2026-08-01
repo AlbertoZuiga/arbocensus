@@ -269,7 +269,7 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
 1\,538\,s. Toda la columna de \textit{OR-Tools} promedia las tres semillas, salvo las dos filas
 marcadas con $\ddagger$. El ahorro contra el \textit{greedy} crudo es de 4\,746\,s ($-7{,}5$\,\%),
 pero contra el \textit{greedy} que recibe el mismo post-proceso se reduce a 2\,907\,s
-($-4{,}8$\,\%), aproximadamente 48 minutos de caminata. Ese segundo margen es el comparable, y sigue
+($-4{,}7$\,\%), aproximadamente 48 minutos de caminata. Ese segundo margen es el comparable, y sigue
 superando la dispersión entre semillas. $^\dagger$ La cifra de \textit{OR-Tools} es el promedio de
 tres desviaciones estándar muestrales y las dos del \textit{greedy} son poblacionales, porque
 provienen de comandos distintos; con $k \approx 25$ el factor entre ambas convenciones es de
@@ -284,7 +284,7 @@ depende por completo de si el competidor recibe el mismo refinamiento. El post-p
 quita al \textit{greedy} 1\,839\,s ($-2{,}9$\,\%) sin cambiar ni la asignación de árboles a rutas ni
 el número de rutas: reordena las paradas dentro de cada ruta y nada más. Con eso, algo más de un
 tercio del ahorro que se atribuiría al \textit{solver} resulta ser atribuible al post-proceso que
-solo un lado recibía. La comparación honesta es la tercera columna, y es de $-4{,}8$\,\%.
+solo un lado recibía. La comparación honesta es la tercera columna, y es de $-4{,}7$\,\%.
 
 Las filas de balance y desviación estándar favorecen al \textit{greedy}, y requieren lectura
 cuidadosa, porque ambas son consecuencia de un mismo comportamiento: la heurística voraz llena cada
@@ -319,7 +319,7 @@ resulta degenerada por duración: con esta configuración, todas superan holgada
 El costo de la calidad restante es tiempo de cómputo: el \textit{greedy} resuelve en 0{,}09\,s sobre
 la matriz ya cacheada, frente a los 120\,s de presupuesto del metaheurístico de \textit{OR-Tools}.
 En una planificación que se ejecuta una vez por campaña de censo, 120\,s de cómputo a cambio de un
-$4{,}8$\,\% menos de caminata, de un 93\,\% de ocupación media en lugar de un 98\,\% y de una ruta
+$4{,}7$\,\% menos de caminata, de un 93\,\% de ocupación media en lugar de un 98\,\% y de una ruta
 residual menos patológica es un intercambio favorable, aunque el margen es más estrecho de lo que
 sugiere la comparación contra un \textit{baseline} sin refinar.
 
@@ -1132,7 +1132,7 @@ geometría: la configuración de producción produce rutas sin auto-cruces en á
 limitación del tiempo de cómputo. La pregunta «¿por qué el \textit{baseline} \textit{greedy} se
 acerca en desplazamiento total?» tiene respuesta en la saturación: el heurístico llena cada ruta
 hasta un $98$\,\% de $T_{\max}$ ---sin dejar holgura operacional--- de modo que su reducción de
-caminata proviene de la cota, no de la calidad del ordenamiento. La diferencia de $4{,}8$\,\% de
+caminata proviene de la cota, no de la calidad del ordenamiento. La diferencia de $4{,}7$\,\% de
 desplazamiento a favor del \textit{solver} ---medida contra un \textit{baseline} que recibe el mismo
 post-proceso de 2-opt--- y la menor severidad de su ruta residual son las dimensiones que el tiempo
 total de desplazamiento no captura de forma aislada (Sección~\ref{sec:comparacion-estrategias}).
@@ -1478,7 +1478,7 @@ entre ellas--- y comparaba la solución del \textit{solver}, que recibe el post-
 resecuenciación de la Sección~\ref{sec:postpass}, contra un \textit{baseline} sin refinamiento local
 alguno. Repetido el experimento con las tres columnas sobre la misma instancia congelada y con el
 heurístico dotado del mismo post-proceso (Tabla~\ref{tab:comparativa}), el ahorro resulta ser de
-$2\,907$\,s, un $4{,}8$\,\% del desplazamiento total del \textit{baseline} refinado, en lugar del
+$2\,907$\,s, un $4{,}7$\,\% del desplazamiento total del \textit{baseline} refinado, en lugar del
 $6{,}7$\,\% inicial: alrededor de un tercio de aquel margen era atribuible al post-proceso que solo
 un lado recibía. El margen subsistente supera la dispersión entre semillas del \textit{solver}
 ($1\,538$\,s), de modo que el criterio se cumple. Junto a él subsiste una diferencia cualitativa: el
@@ -1771,7 +1771,7 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
         (Sección~\ref{sec:discusion-calidad}).
     \item \textbf{Cercanía del \textit{baseline greedy} en tiempo total}: el margen de
         \textit{OR-Tools} frente al heurístico del vecino más cercano con el mismo post-proceso de
-        resecuenciación es estrecho ---un $4{,}8$\,\% del desplazamiento total
+        resecuenciación es estrecho ---un $4{,}7$\,\% del desplazamiento total
         (Tabla~\ref{tab:comparativa})---, y es un artefacto de saturación: el \textit{greedy} llena
         cada ruta hasta el borde de $T_{\max}$, lo que también infla su índice de balance sin que
         medie un reparto deliberado (Sección~\ref{sec:comparacion-greedy}).
@@ -1787,9 +1787,9 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
 Las mejoras enumeradas a continuación se derivan de los resultados del capítulo. La primera es la de
 mayor valor para el proyecto; las dos siguientes tienen además anclaje en mediciones propias de esta
-memoria. Las nueve restantes abordan limitaciones funcionales o de diseño, independientes o no de la
-serie experimental. Cada una indica la evidencia que la respalda, su costo y qué habría que
-construir.
+memoria. Las ocho restantes abordan limitaciones funcionales o de diseño, independientes o no de la
+serie experimental, y la última registra una alternativa evaluada y descartada. Cada una indica la
+evidencia que la respalda, su costo y qué habría que construir.
 
 \begin{itemize}[label=--]
   \item \textbf{Validación en terreno}: las conclusiones de este capítulo verifican que el producto

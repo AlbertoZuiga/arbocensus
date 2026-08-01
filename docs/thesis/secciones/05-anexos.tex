@@ -583,15 +583,15 @@ repeticiones convergen a soluciones casi idénticas.
 \label{anx:suite-instancias}
 
 Las doce instancias sobre las que se ejecutó el barrido de configuración
-(Sección~\ref{sec:discusion-calidad}) están versionadas en
-\texttt{docs/experiments/instances/} y se describen en la
-Tabla~\ref{tab:suite-instancias}. La batería de crecimiento se construye sobre los
-$12\,946$ árboles georreferenciados de \texttt{legacy\_app}, ordenados por distancia de
-\textit{haversine} a un centroide fijo: cada instancia es prefijo exacto de la siguiente,
-de modo que el crecimiento es puramente espacial y no una muestra distinta. Las dos
-variantes dispersas toman uno de cada dos y uno de cada cuatro sobre los primeros
-$1\,000$, con lo que conservan la extensión y reducen la densidad a la mitad y a un
-cuarto: aíslan el efecto de la densidad del efecto del tamaño.
+(Sección~\ref{sec:discusion-calidad}) están versionadas en \texttt{docs/experiments/instances/} y se
+describen en la Tabla~\ref{tab:suite-instancias}. La batería de crecimiento se construye sobre los
+$12\,946$ árboles georreferenciados de \texttt{legacy\_app} ---los $12\,941$ del importador más los
+cinco códigos QR de ceros, que la batería no filtra por construirse antes de esa exclusión---,
+ordenados por distancia de \textit{haversine} a un centroide fijo: cada instancia es prefijo exacto
+de la siguiente, de modo que el crecimiento es puramente espacial y no una muestra distinta. Las dos
+variantes dispersas toman uno de cada dos y uno de cada cuatro sobre los primeros $1\,000$, con lo
+que conservan la extensión y reducen la densidad a la mitad y a un cuarto: aíslan el efecto de la
+densidad del efecto del tamaño.
 
 \begin{table}[H]
   \centering
