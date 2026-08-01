@@ -6,7 +6,7 @@
 \newcommand{\capturaui}[4]{%
   \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth,height=0.75\textheight,keepaspectratio]{media/#1}
+    \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/#1}
     \caption[#2]{#3}
     \label{#4}
   \end{figure}%
@@ -126,11 +126,9 @@ error distinto del de estado.
     \node[etl, anchor=south east] at (3.05,-11.35)
       {estado y métricas; el \textit{polling} cesa en estado terminal};
   \end{tikzpicture}
-\caption[Ciclo de vida de un \texttt{OptimizationJob}]{Ciclo de vida de un \texttt{OptimizationJob},
-  desde la solicitud del administrador hasta la
-    solución persistida. La petición HTTP retorna al encolar; el \textit{worker} avanza el estado
-    del trabajo, y el panel lo observa por \textit{polling} hasta un estado terminal
-  (\texttt{completed} o \texttt{failed}).}
+\caption[Ciclo de vida de un \texttt{OptimizationJob}]{
+  Ciclo de vida de un \texttt{OptimizationJob}.
+}
   \label{fig:secuencia}
 \end{figure}
 
@@ -160,31 +158,37 @@ Los tres criterios se aplican de forma conjunta, sin un orden de prioridad fijo.
 Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada componente y el
 criterio que resolvió la elección.
 
-\begin{table}[H]
-  \centering
+\small
+\begin{xltabular}{\textwidth}{@{}p{2.4cm} p{3.4cm} X@{}}
   \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
-  \label{tab:stack-decisions}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l X X@{}}
-    \toprule
-    Decisión &
-      Alternativas consideradas &
-      Criterio de elección \\
-    \midrule
+  \label{tab:stack-decisions} \\
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
     Django + GeoDjango &
-      FastAPI (empleado por la iteración anterior), Flask, \textit{Ruby on Rails} &
+      \textit{FastAPI}, \textit{Flask}, \textit{Ruby on Rails} &
       Simplicidad. GeoDjango es la única de las cuatro que integra PostGIS en el ORM: tipos
-      geográficos, consultas espaciales y migraciones vienen resueltos. FastAPI y Flask exigirían
-      construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con extensión espacial
-      equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un proyecto cuyo
-      \textit{solver} y cuya ciencia de datos son de Python. \\[4pt]
+      geográficos, consultas espaciales y migraciones vienen resueltos. \textit{FastAPI} y
+      \textit{Flask} exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con
+      extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un
+      proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\
     \textit{OR-Tools} &
-      \textit{Gurobi}, \textit{CPLEX}, heurística propia &
-      Costo y simplicidad. \textit{Gurobi} y \textit{CPLEX} resuelven mejor el VRP exacto, pero su
-      licencia comercial es un gasto recurrente y su licencia académica no acompaña al producto
-      fuera de la titulación. \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas
-      y se invoca desde el mismo proceso Python; la heurística propia se descartó por costo de
-      construcción frente a un aporte incierto. \\[4pt]
+      Heurística propia, \textit{Gurobi}, \textit{CPLEX} &
+      Costo y simplicidad. La heurística propia se consideró seriamente, pero la magnitud del
+      problema ($n \leq 2\,000$, una campaña por vez) queda holgadamente dentro de lo que resuelve
+      un \textit{solver} especializado ya construido y probado, de modo que el costo de construirla
+      y validarla no compraba una capacidad que el producto necesitara. \textit{Gurobi} y
+      \textit{CPLEX} resuelven mejor el VRP exacto, pero su licencia comercial es un gasto
+      recurrente y su licencia académica no acompaña al producto fuera de la titulación.
+      \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el
+      mismo proceso Python. \\
     OSRM &
       \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}),
       \textit{Mapbox Directions}, Valhalla, GraphHopper &
@@ -196,19 +200,19 @@ criterio que resolvió la elección.
       perfil peatonal se resuelve sobre la misma red de \textit{OpenStreetMap}. OSRM se preprocesa
       localmente, responde sin salir del \textit{host} y deja la red congelada en un archivo,
       condición sin la cual los experimentos del Capítulo~\ref{cap:resultados} no serían repetibles
-      meses después sobre la misma base. \\[4pt]
+      meses después sobre la misma base. \\
     \textit{React}~18 \citep{react} + Vite &
       \textit{Vue}, \textit{Angular}, \textit{Svelte} &
       Simplicidad. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el
       ecosistema con integración más directa con \textit{Leaflet} \citep{leaflet}
       (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada
-      (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\[4pt]
+      (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\
     \textit{Leaflet} &
       \textit{MapLibre GL}, \textit{Google Maps JavaScript API} &
       Costo y simplicidad. La API de \textit{Google} requiere clave facturada por carga de mapa.
       \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, una pieza más de
       infraestructura que el alcance de visualización no justifica. \textit{Leaflet} consume teselas
-      de \textit{OpenStreetMap} sin costo. \\[4pt]
+      de \textit{OpenStreetMap} sin costo. \\
     Celery + Redis &
       Ejecución síncrona, \textit{cron} sobre tabla de tareas &
       Tiempo de ejecución y simplicidad. La construcción de la matriz de costos y la ejecución del
@@ -217,15 +221,14 @@ criterio que resolvió la elección.
       tareas añade al trabajo la espera hasta el siguiente ciclo. Celery ejecuta el trabajo apenas
       se encola y libera la petición de inmediato, a cambio de dos procesos adicionales
       ---\textit{worker} y \textit{broker}--- que se declaran en la misma composición de
-      contenedores que el resto del sistema. \\[4pt]
+      contenedores que el resto del sistema. \\
     Monolito modular &
       Servicios separados por dominio &
       Simplicidad. Las operaciones de importación y optimización cruzan módulos en una sola
       transacción; el proyecto cuenta con un único desarrollador, y la escala prevista no justifica
       la complejidad operacional de desplegar servicios independientes. \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+\end{xltabular}
+\normalsize
 
 El patrón que recorre la tabla es que ninguna decisión se resolvió por rendimiento aislado del
 componente: donde existía una alternativa de pago, su aporte no compensaba el gasto proyectado sobre
@@ -772,9 +775,9 @@ dentro del mismo presupuesto de tiempo se asume como limitación del trabajo
 La formulación global anterior minimiza el tiempo total de recorrido y equilibra la duración de las
 rutas, pero no incorpora ningún criterio geográfico explícito en la partición de los nodos. Como
 consecuencia, las rutas se agrupan por proximidad temporal y no espacial, lo que produce
-\textit{solapamiento} (\textit{interleaving}) entre rutas distintas que crece con la densidad de
-árboles (Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias
-de partición, registradas en el campo \texttt{strategy} del trabajo de optimización. La estrategia
+solapamiento (\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
+(Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias de
+partición, registradas en el campo \texttt{strategy} del trabajo de optimización. La estrategia
 \texttt{global} reproduce el comportamiento de la formulación anterior sin cambios y constituye la
 línea base.
 
@@ -828,9 +831,9 @@ El procedimiento es un 2-opt de camino abierto \citep{croes1958method,lin1965com
 cada ruta de forma independiente. Dada la secuencia de paradas de una ruta, examina todo par de
 posiciones no adyacentes, invierte el segmento comprendido entre ellas y conserva la inversión
 cuando reduce el costo del camino; repite el barrido hasta que ninguna inversión mejora. La variante
-es de camino \textit{abierto} ---y no la clásica de circuito--- porque las rutas del problema no se
-cierran sobre un depósito: al invertir un segmento que llega hasta el último nodo, el costo del arco
-de retorno no existe y no debe contabilizarse.
+es de camino abierto ---y no la clásica de circuito--- porque las rutas del problema no se cierran
+sobre un depósito: al invertir un segmento que llega hasta el último nodo, el costo del arco de
+retorno no existe y no debe contabilizarse.
 
 Tres propiedades hacen que el post-proceso sea seguro incorporarlo de forma incondicional:
 
@@ -912,8 +915,8 @@ ordena sus candidatas.
     \node[origen] (cfg) at (3.6,2.5)
       {Una solicitud de optimización\\ una \texttt{RoutingConfig} · una matriz OSRM en caché};
 
-    \node[cab] at (1.6,1.15) {\texttt{global}};
-    \node[cab] at (5.6,1.15) {\texttt{spatial\_term}};
+    \node[cab] at (1.6,1.9) {\texttt{global}};
+    \node[cab] at (5.6,1.9) {\texttt{spatial\_term}};
     \node[cab, align=right] at (-1.7,0.3)  {Equilibrada};
     \node[cab, align=right] at (-1.7,-1.0) {Rutas más parejas};
     \node[cab, align=right] at (-1.7,-2.3) {Menos zigzag};
@@ -928,13 +931,16 @@ ordena sus candidatas.
     \draw[flujo] (cfg.south) -- (3.6,1.6) -- (1.6,1.6) -- (c1.north);
     \draw[flujo] (3.6,1.6) -- (5.6,1.6) -- (c2.north);
 
+    \node[cab] (todas) at (3.6,-3.3) {las seis candidatas};
     \node[paso] (p1) at (-2.6,-4.6) {sin árboles\\ fuera de ruta};
     \node[paso] (p2) at (0.2,-4.6)  {sin rutas\\ degeneradas};
     \node[paso] (p3) at (3.0,-4.6)  {balance\\ $\geq 0{,}60$};
     \node[paso] (p4) at (5.8,-4.6)  {menor tiempo de\\ desplazamiento};
     \node[paso] (p5) at (8.6,-4.6)  {menor número\\ de rutas};
 
-    \draw[flujo] (1.6,-2.85) -- (1.6,-3.3) -- (-2.6,-3.3) -- (p1.north);
+    \draw[flujo] (1.6,-2.85) -- (1.6,-3.3) -- (todas.west);
+    \draw[flujo] (5.6,-2.85) -- (5.6,-3.3) -- (todas.east);
+    \draw[flujo] (todas.south) -- (3.6,-3.7) -- (-2.6,-3.7) -- (p1.north);
     \draw[flujo] (p1) -- (p2);
     \draw[flujo] (p2) -- (p3);
     \draw[flujo] (p3) -- (p4);
@@ -943,11 +949,10 @@ ordena sus candidatas.
     \node[final] (rec) at (3.0,-6.4) {candidata recomendada};
     \draw[flujo] (p5.south) -- (8.6,-6.4) -- (rec.east);
   \end{tikzpicture}
-\caption[Abanico de producción y criterio de selección]{Abanico de producción: tres perfiles de
-  precios por dos estrategias de partición dan seis
-    candidatas que comparten configuración y matriz de costos. El criterio lexicográfico las ordena
-    aplicando los cinco desempates en secuencia; la primera se marca como recomendada, salvo empate
-técnico con el par de control, y las restantes se informan con su costo adicional en caminata.}
+%---------------------------------------------------------------------------------------------------
+\caption[Abanico de producción y criterio de selección]{
+  Abanico de producción y criterio lexicográfico de selección.
+}
   \label{fig:abanico}
 \end{figure}
 
@@ -1414,7 +1419,7 @@ las comprobaciones que la acompañan.
     Tres verificaciones &
     Estilo y formato con \textit{Ruff}, tipos con \textit{Pyright} y estilo de \textit{JavaScript}
     con \textit{ESLint}. \\
-  Integración continua &
+  Integración continua (CI) &
     Tres flujos de trabajo &
     Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato
     de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso
@@ -1438,10 +1443,10 @@ dependerían del corte por reloj de pared del \textit{solver}---:
 Corresponde acotar el alcance de esta verificación. No existen pruebas automatizadas de extremo a
 extremo: los flujos completos de administrador y de censador se comprueban por partes, nunca
 encadenados sobre el sistema en pie. La cobertura de código está configurada en el proyecto pero no
-se ejecuta como parte de la integración continua, de modo que esta memoria no reporta una cifra de
-cobertura. Sobre todo, lo que se verifica es que el sistema hace lo que su diseño dice: la
-validación con usuarios reales ---una jornada de censo ejecutada con censadores en terreno--- queda
-fuera del alcance de esta iteración y es la comprobación que ninguna suite de pruebas sustituye.
+se ejecuta como parte del CI, de modo que esta memoria no reporta una cifra de cobertura. Sobre
+todo, lo que se verifica es que el sistema hace lo que su diseño dice: la validación con usuarios
+reales ---una jornada de censo ejecutada con censadores en terreno--- queda fuera del alcance de
+esta iteración y es la comprobación que ninguna suite de pruebas sustituye.
 
 A esta verificación del sistema se suma un compromiso distinto: la reproducibilidad de las cifras
 experimentales que reporta el Capítulo~\ref{cap:resultados}. La búsqueda local del \textit{solver}

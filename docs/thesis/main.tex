@@ -48,6 +48,11 @@
   {\thesubsection}{0.5em}{#1}
 \titlespacing*{\subsection}{0pt}{10pt}{4pt}
 
+\titleformat{\subsubsection}[block]
+  {\normalfont\fontsize{12}{14}\itshape}
+  {}{0pt}{#1}
+\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
+
 % ---- Índices y Nombres -----------------------------------------
 \usepackage{tocloft}
 \addto\captionsspanish{
@@ -97,6 +102,7 @@
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{booktabs}
+\renewcommand{\arraystretch}{1.25}
 \usepackage{tabularx}
 \usepackage{xltabular}   % tabularx que puede partirse entre páginas
 \usepackage{amsmath}
