@@ -5,13 +5,17 @@
 \subsection{Métricas de calidad de rutas}
 \label{sec:metricas-calidad}
 
-La calidad de la solución producida por el motor de optimización se evalúa sobre la instancia de
-referencia congelada descrita en la Sección~\ref{sec:legacy} y en la Sección~\ref{sec:estado-actual}
-(ambas fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con mediana de posición por código QR),
-de $N = 1\,607$ árboles. La serie experimental completa mide además once instancias adicionales,
-entre $n = 43$ y $n = 1\,607$, sobre la suite de instancias congeladas del
-\hyperref[anx:suite-instancias]{Anexo 4}; esta sección reporta la instancia de referencia porque es
-la que fija los criterios de aceptación del Capítulo~\ref{cap:solucion}. El conjunto no corresponde
+La calidad de la solución producida por el motor de optimización se evalúa sobre doce instancias
+reales congeladas, entre $n = 43$ y $n = 1\,607$ árboles, versionadas en la suite del
+\hyperref[anx:suite-instancias]{Anexo 4}. Este apartado reporta en detalle una de ellas, la
+instancia de referencia descrita en la Sección~\ref{sec:legacy} y en la
+Sección~\ref{sec:estado-actual} (ambas fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con
+mediana de posición por código QR), de $N = 1\,607$ árboles, porque es la que fija los criterios de
+aceptación del Capítulo~\ref{cap:solucion}. Las once restantes ---entre ellas tres áreas de censo
+individuales de la operación histórica--- sostienen los apartados siguientes, y conviene anticipar
+que no siempre coinciden con ella: la Sección~\ref{sec:areas-reales} muestra que varias conclusiones
+obtenidas en el régimen agregado no se trasladan sin más al régimen de área individual, que es el de
+la operación habitual. El conjunto no corresponde
 a una única comuna: reúne una porción del arbolado disponible en ambas bases legadas, elegida por
 reproducibilidad y no la totalidad del universo importable (Sección~\ref{sec:legacy}).
 Se emplean los parámetros temporales por defecto ($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s),
@@ -36,13 +40,14 @@ tamaño. Se reportan nueve indicadores:
   \item el número de auto-cruces sobre el trazado real de calles, descriptivo y sin criterio
      en esta corrida.
 \end{enumerate}
-La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de tres repeticiones (semillas
-42, 43 y 44) y remite, en su columna de criterio, a los criterios de aceptación comprometidos en la
-Sección~\ref{sec:criterios-aceptacion}.
+La Tabla~\ref{tab:metricas} resume estos resultados ---los de la configuración de producción recién
+descrita: estrategia \texttt{spatial\_term} y presupuesto de \textit{solver} de 120\,s--- como el
+promedio de tres repeticiones (semillas 42, 43 y 44), y remite, en su columna de criterio, a los
+criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptacion}.
 
 \begin{table}[H]
   \centering
-  \caption{Métricas de calidad de rutas sobre el \textit{dataset} de evaluación.}
+  \caption{Métricas de calidad de rutas sobre la instancia de referencia.}
   \label{tab:metricas}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
@@ -143,7 +148,9 @@ el presupuesto de 120\,s que se configura al \textit{solver}: mientras ese presu
 bajo el umbral el criterio no puede fallar, de modo que acota la configuración elegida antes que
 medir el sistema. La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad de
 la Tabla~\ref{tab:sensibilidad-tl}, remedido sobre el código y la estrategia vigentes, y que la
-Sección~\ref{sec:cumplimiento-criterios} retoma.
+Sección~\ref{sec:cumplimiento-criterios} retoma. Su lectura en simple es que conceder más tiempo ya
+no compra nada: el número de rutas no se mueve, y pasar de 120\,s a 180\,s mejora el desplazamiento
+un $0{,}6$\,\%, frente al $3{,}5$\,\% que se gana al pasar de 60\,s a 120\,s.
 
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en caché. En la corrida
 de referencia de julio de 2026 que instrumentó esos tiempos
@@ -446,9 +453,10 @@ sin ningún criterio espacial explícito en la partición.
 
 \subsubsection*{Estrategias evaluadas}
 
-A partir de ese diagnóstico se evaluaron las dos estrategias de partición espacial
----\texttt{spatial\_term} y \texttt{cluster\_first} (Sección~\ref{sec:estrategias})--- contra la
-formulación vigente (\texttt{global}) sobre el \textit{dataset} real de $n = 1\,607$ árboles.
+Ese diagnóstico es el que motivó las dos estrategias de partición espacial que la
+Sección~\ref{sec:estrategias} describe ---\texttt{spatial\_term} y \texttt{cluster\_first}---, y que
+aquí se miden contra la formulación vigente (\texttt{global}) sobre la instancia de referencia de
+$n = 1\,607$ árboles.
 
 Medir \texttt{cluster\_first} exigió corregir antes dos defectos de su implementación: la estimación
 de $k$ usaba el viaje promedio entre \textit{todos} los pares de la matriz metropolitana como
@@ -526,8 +534,17 @@ Lo hace con el mismo número de rutas, cobertura total y un balance de $0{,}833$
 de la \textit{baseline}, diferencia inferior a la dispersión entre semillas de la propia
 \texttt{global}. Cumple, por tanto, el criterio de decisión.
 
-El resultado admite una matización: el IoU del peor par no mejora, sino que empeora levemente
-($0{,}51 \rightarrow 0{,}55$; en esta métrica un valor mayor es peor). La penalización del
+El veredicto tiene el alcance de la corrida que lo produjo: la instancia de referencia, con la
+configuración censal de 2\,min de servicio y $T_{\max}=3$\,h, y bajo la métrica de solapamiento
+entre rutas. No es un veredicto sobre toda instancia ni sobre todo indicador. Dos apartados
+posteriores lo acotan: la Sección~\ref{sec:areas-reales} lleva esta misma configuración de
+producción a las áreas reales del censo, donde el criterio de decisión se cumple en dos de las tres
+y no en las tres; y el barrido del coeficiente espacial que cierra este apartado muestra que la
+compacidad que la estrategia compra se paga en tiempo de desplazamiento y en balance.
+
+El resultado admite además una matización dentro de esta misma corrida: el IoU del peor par no
+mejora, sino que empeora levemente ($0{,}51 \rightarrow 0{,}55$; en esta métrica un valor mayor es
+peor). La penalización del
 \textit{span} actúa sobre la extensión de cada ruta considerada de forma individual, de modo que
 comprime las cajas envolventes, pero no separa el par de rutas vecinas que se superponen en la zona
 más densa del \textit{dataset}: ese par persiste como problema de geometría local y no lo resuelve
