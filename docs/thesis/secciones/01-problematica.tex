@@ -78,11 +78,15 @@ La plataforma de censado se construyó en iteraciones sucesivas desde 2021:
 %   - Discrepancia de año de inicio entre fuentes (Binder/Cortés: 2022; Pizarro:
 %     2021) queda resuelta a 2021 por el commit inicial del repositorio original.
 
-Las campañas ejecutadas con esas versiones produjeron un catastro de árboles georreferenciados que
-constituye, sin embargo, un registro puntual de cada ejemplar. De las tres iteraciones anteriores,
-dos dejaron una base de datos con arbolado censado; la capa de ludificación de la segunda dejó una
-tercera base, ajena al catastro de árboles y sin uso para esta memoria. Su escala se evidencia en
-las dos bases de datos con arbolado \citep{binder-cortes2023,pizarro-zumaeta2024}. La más antigua,
+Las campañas ejecutadas con esas versiones produjeron un catastro de árboles georreferenciados, pero
+ese catastro registra cada ejemplar una sola vez, en el instante en que se lo visitó. De las tres
+iteraciones anteriores, dos dejaron una base de datos con arbolado censado
+\citep{castro-diaz2022,pizarro-zumaeta2024}; la capa de ludificación de la restante
+\citep{binder-cortes2023} dejó una tercera base, ajena al catastro de árboles y sin uso para esta
+memoria. Esa correspondencia entre cada base y la memoria que la produjo es una inferencia a partir
+del esquema de cada volcado y de sus fechas ---la más antigua registra muestras por código QR desde
+2021 y la posterior, posiciones y especies explícitas desde 2023---, y no un dato que las fuentes
+declaren. La escala del catastro se evidencia en las dos bases con arbolado. La más antigua,
 la base \texttt{legacy\_app} de la aplicación de censado previa desplegada en Heroku, registra
 17\,208 muestras de censo asociadas por código QR, que corresponden a 13\,081 árboles distintos.
 De ellos, 12\,941 tienen coordenada geográfica utilizable ---obtenida como la mediana de las
