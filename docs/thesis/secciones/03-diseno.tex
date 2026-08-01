@@ -873,10 +873,15 @@ se documentan en la Sección~\ref{sec:discusion-calidad}.
 
 Los coeficientes de la función objetivo no admiten un único valor correcto: cada ajuste compra una
 propiedad de la solución al precio de otra, y qué propiedad conviene comprar depende de la densidad
-del \textit{dataset} y de la holgura de la jornada (Capítulo~\ref{cap:resultados}). El sistema
-resuelve esa indeterminación sin trasladarla al administrador: en lugar de exponer los coeficientes
-como parámetros, define tres perfiles de precios cerrados, con nombre y descripción en el lenguaje
-del usuario, y los ejecuta todos.
+del \textit{dataset} y de la holgura de la jornada. Esa indeterminación no es un supuesto de partida
+sino el resultado de la serie experimental: en casi ningún ciclo apareció una configuración que
+ganara en todas las instancias medidas, y el orden entre dos de ellas se invierte al cambiar el
+tamaño o la densidad del conjunto (Capítulo~\ref{cap:resultados}). Los tres perfiles que siguen no
+se eligieron por criterio propio: son las combinaciones que esa comparación dejó en pie.
+
+El sistema resuelve la indeterminación sin trasladarla al administrador: en lugar de exponer los
+coeficientes como parámetros, define tres perfiles de precios cerrados, con nombre y descripción en
+el lenguaje del usuario, y los ejecuta todos.
 
 \begin{itemize}[label=--]
   \item Equilibrada (\texttt{default}): los precios de producción tal como se describieron en las

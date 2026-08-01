@@ -1222,6 +1222,25 @@ incorporó a la configuración de producción. Es el único cambio de configurac
 la serie, y no proviene de barrer términos de la función objetivo sino de corregir el instrumento de
 medición.
 
+Hay un hallazgo transversal a los apartados anteriores que conviene enunciar por separado, porque no
+pertenece a ninguno y explica una decisión de diseño del Capítulo~\ref{cap:diseno}. En casi ningún
+ciclo de la serie apareció un brazo que ganara en todas las instancias a la vez. Lo habitual fue lo
+contrario: una configuración que mejora la geometría en el régimen agregado empeora el balance en
+las áreas pequeñas, una que elimina las rutas cortas paga tiempo de desplazamiento, y el orden entre
+dos brazos se invierte al cambiar la densidad o el tamaño de la instancia. Los apartados anteriores
+muestran cuatro casos de ese patrón: el término espacial compra compacidad y cede tiempo y balance;
+la comparación con el heurístico depende por completo de si el competidor recibe el mismo
+refinamiento; el criterio de decisión sobre áreas reales se cumple en dos de las tres; y el
+coeficiente espacial no ordena las instancias de forma monótona.
+
+Esa ausencia sistemática de un ganador único es la evidencia que descartó fijar un
+\textit{default} único y la que motivó el abanico de seis candidatas con selección lexicográfica que
+describe la Sección~\ref{sec:abanico}: si ninguna combinación domina a las demás en todas las
+instancias, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la
+instancia concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
+El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
+experimental midió.
+
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 \label{sec:perfil-rendimiento}
 
