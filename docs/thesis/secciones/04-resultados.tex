@@ -171,11 +171,12 @@ Como referencia de comparación se implementó una solución \textit{greedy} bas
 del vecino más cercano, generada programáticamente sobre el mismo \textit{dataset} ($N = 1\,607$),
 con la misma matriz de costos de OSRM ---la caché de la corrida anterior--- y con los mismos
 parámetros temporales ($T_{\max} = 10\,800$\,s y 2 minutos de servicio por árbol) que la solución de
-\textit{OR-Tools} de la Sección~\ref{sec:metricas-calidad}. El \textit{baseline} construye cada ruta
-encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el siguiente salto
-haría exceder el presupuesto temporal de la ruta; entonces abre una ruta nueva con el primer árbol
-que quede sin visitar. No hay optimización global, ni balance de carga, ni reasignación posterior de
-árboles entre rutas.
+\textit{OR-Tools} de la Sección~\ref{sec:metricas-calidad}, producida con la versión $9.15$ de la
+biblioteca \citep{ortools} que detalla la Sección~\ref{sec:entorno-medicion}. El \textit{baseline}
+construye cada ruta encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el
+siguiente salto haría exceder el presupuesto temporal de la ruta; entonces abre una ruta nueva con
+el primer árbol que quede sin visitar. No hay optimización global, ni balance de carga, ni
+reasignación posterior de árboles entre rutas.
 
 El \textit{baseline} se evalúa en dos variantes, porque la solución de \textit{OR-Tools} recibe
 desde 2026-07-24 un post-proceso de 2-opt intra-ruta habilitado por defecto: contrastar el método
@@ -1235,6 +1236,7 @@ y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto d
 como variable del experimento y no como constante del régimen.
 
 \subsection{Entorno de medición}
+\label{sec:entorno-medicion}
 
 Dado que el sistema no cuenta con un despliegue productivo, las mediciones se realizaron sobre una
 réplica local del entorno de producción definida en \texttt{docker-compose.prod.yml}. Esta réplica

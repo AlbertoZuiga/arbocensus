@@ -333,6 +333,12 @@ y sin post-proceso de resecuenciación). Las tablas siguientes detallan los par�
 de cada uno. Cada ejecución escribe además un informe en \texttt{docs\slash
 experiments\slash }, con su comando, sus parámetros y sus métricas.
 
+La versión de la biblioteca de optimización queda fijada en
+\texttt{backend\slash requirements.txt}: todas las corridas del
+Capítulo~\ref{cap:resultados} emplean \texttt{ortools==9.15.6755}. Reproducir las cifras
+exige esa versión, porque la biblioteca no expone una semilla y las heurísticas de
+construcción y de búsqueda local cambian entre versiones (RE-05).
+
 La Tabla~\ref{tab:anexo_baseline_sweep} detalla los parámetros de \texttt{baseline\_sweep}.
 
 \begin{table}[H]
