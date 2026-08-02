@@ -6,7 +6,7 @@ from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("django/admin/", admin.site.urls),
     path(
         "api/auth/token/",
         ThrottledTokenObtainPairView.as_view(),
