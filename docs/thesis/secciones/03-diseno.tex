@@ -14,123 +14,6 @@
 
 \section{ARQUITECTURA DEL SISTEMA}
 \label{sec:arquitectura}
-La arquitectura del sistema sigue el patrón de monolito modular: un único servicio Django
-\citep{django} con módulos separados por dominio (\texttt{accounts}, \texttt{datasets},
-\texttt{optimization}, \texttt{routes}).
-
-Las tareas de optimización se ejecutan de forma asíncrona mediante Celery \citep{celery} con Redis
-como \textit{broker}, dado que el proceso de construcción de la matriz de costos y la ejecución del
-\textit{solver} pueden tardar varios minutos para conjuntos de cien o más puntos.
-
-El motor de ruteo peatonal (OSRM) se despliega como un contenedor más del propio sistema ---tanto
-en desarrollo como en producción (Sección~\ref{sec:despliegue-produccion})--- y procesa datos de
-\textit{OpenStreetMap} \citep{openstreetmap} de Chile, lo que elimina costos de API y dependencias
-de red durante la optimización. La persistencia geográfica se apoya en la extensión espacial PostGIS
-de PostgreSQL \citep{postgis}.
-
-La Ilustración~\ref{fig:arquitectura} resume las capas del sistema y el recorrido de una
-optimización: el navegador solicita el trabajo a la API, esta lo encola en Celery en lugar de
-resolverlo en el ciclo de la petición HTTP, y el \textit{worker} ejecuta el \textit{pipeline}, que
-consulta OSRM para construir la matriz de costos y persiste la solución en PostGIS. El
-\textit{frontend} consulta el estado del trabajo por \textit{polling} hasta que alcanza un estado
-terminal. El trazo continuo marca las capas del monolito Django; el trazo discontinuo, los servicios
-de apoyo desplegados como contenedores independientes.
-
-\begin{figure}[H]
-  \centering
-  % babel-spanish activa '<' y '>'; sin esto, la punta de flecha (>=stealth) no compila
-  \shorthandoff{<>}%
-  \begin{tikzpicture}[
-      scale=0.85, transform shape,
-      capa/.style={draw, rounded corners=2pt, align=center, font=\small,
-                   minimum width=7.2cm, minimum height=1.15cm},
-      externo/.style={draw, dashed, rounded corners=2pt, align=center, font=\small,
-                      minimum width=3.6cm, minimum height=1.15cm},
-      flujo/.style={->, >=stealth, thick},
-      etiqueta/.style={font=\scriptsize, midway}
-    ]
-    \node[capa]    (p) at (0,0)      {Presentación\\ React 18 + Vite · React Query · Leaflet};
-    \node[capa]    (a) at (0,-2.2)   {API REST\\ Django REST Framework · JWT · permisos por rol};
-    \node[capa]    (l) at (0,-4.6)
-      {Lógica de dominio\\ importadores · \textit{pipeline} · OR-Tools};
-    \node[capa]    (d) at (0,-6.8)   {Datos\\ PostgreSQL + PostGIS};
-    \node[externo] (q) at (6.6,-2.2) {Celery + Redis\\ cola de tareas};
-    \node[externo] (o) at (-7.4,-4.6) {OSRM\\ red peatonal (OSM Chile)};
-
-    \draw[flujo] (p) -- (a) node[etiqueta,right] {JSON · \textit{Bearer} JWT};
-    \draw[flujo] (a) -- (l) node[etiqueta,right] {importación · consultas};
-    \draw[flujo] (l) -- (d) node[etiqueta,right] {GeoDjango · SRID 4326};
-    \draw[flujo] (a.east) -- (q.west) node[etiqueta,above,yshift=0.55cm] {encola el \textit{job}};
-    \draw[flujo] (q.south) -- (l.east) node[etiqueta,above,sloped] {ejecuta el \textit{pipeline}};
-    \draw[flujo,<->] (l.west) -- (o.east)
-      node[etiqueta,above,yshift=0.55cm] {\texttt{/table} · \texttt{/route}};
-  \end{tikzpicture}
-  \caption{Arquitectura de Arbocensus.}
-  \label{fig:arquitectura}
-\end{figure}
-
-La Ilustración~\ref{fig:secuencia} detalla ese recorrido en el tiempo, para uno de los seis trabajos
-que despliega una solicitud (Sección~\ref{sec:abanico}). La petición HTTP termina en cuanto los
-trabajos quedan encolados, de modo que el navegador nunca espera al \textit{solver}; el estado se
-obtiene después por \textit{polling}. Un fallo del \textit{worker} deja el trabajo en
-\texttt{failed} con el mensaje de la excepción, que el panel muestra sin necesidad de un canal de
-error distinto del de estado.
-
-\begin{figure}[H]
-  \centering
-  \shorthandoff{<>}%
-  \begin{tikzpicture}[
-      scale=0.78, transform shape,
-      actor/.style={draw, rounded corners=2pt, align=center, font=\scriptsize,
-                    minimum width=2.35cm, minimum height=0.85cm},
-      vida/.style={dashed, gray},
-      msj/.style={->, >=stealth, semithick},
-      ret/.style={->, >=stealth, semithick, dashed},
-      et/.style={font=\scriptsize, midway, above, inner sep=1.5pt},
-      etl/.style={font=\scriptsize, inner sep=1.5pt},
-      nota/.style={draw, fill=black!4, rounded corners=2pt, align=center,
-                   font=\scriptsize, inner sep=3pt}
-    ]
-    \def\yb{-11.7}
-    \node[actor] (pa) at (0,0)    {Panel\\ (\textit{React})};
-    \node[actor] (ap) at (3.1,0)  {API REST};
-    \node[actor] (re) at (6.2,0)  {Redis\\ (cola)};
-    \node[actor] (wo) at (9.3,0)  {\textit{Worker}\\ (\textit{pipeline})};
-    \node[actor] (os) at (12.4,0) {OSRM};
-    \node[actor] (bd) at (15.2,0) {PostGIS};
-
-    \foreach \n in {pa,ap,re,wo,os,bd} { \draw[vida] (\n.south) -- ($(\n.south)+(0,\yb)$); }
-
-    \draw[msj] (0,-1.2) -- (3.1,-1.2);
-    \node[etl, anchor=south west] at (0.05,-1.15)
-      {\texttt{POST /optimization/jobs/} ($T_{\min}$, $T_{\max}$, $s$)};
-    \draw[msj] (3.1,-2.1) -- (15.2,-2.1) node[et]
-      {crea la \texttt{RoutingConfig} y seis \texttt{OptimizationJob} en estado \texttt{queued}};
-    \draw[msj] (3.1,-3.0) -- (6.2,-3.0) node[et] {encola seis tareas};
-    \draw[ret] (3.1,-3.9) -- (0,-3.9);
-    \node[etl, anchor=south east] at (3.05,-3.85) {\texttt{201} con los seis trabajos};
-    \draw[msj] (6.2,-4.8) -- (9.3,-4.8) node[et] {entrega la tarea};
-    \draw[msj] (9.3,-5.7) -- (15.2,-5.7) node[et] {estado \texttt{running}};
-    \draw[msj] (9.3,-6.9) -- (12.4,-6.9) node[et, align=center]
-      {\texttt{/table}, solo si la matriz\\ no está en la caché};
-    \draw[ret] (12.4,-7.7) -- (9.3,-7.7) node[et] {matriz $n \times n$};
-    \node[nota, anchor=east, text width=2.6cm] at (9.15,-8.7)
-      {estima $k$ · resuelve el VRP · 2-opt intra-ruta};
-    \draw[msj] (9.2,-8.7) -- (9.3,-8.7);
-    \draw[msj] (9.3,-9.7) -- (15.2,-9.7) node[et, align=center]
-      {persiste \texttt{RoutingSolution}, \texttt{Route} y \texttt{RouteStop}\\
-        en una transacción; estado \texttt{completed}};
-    \draw[msj] (0,-10.6) -- (3.1,-10.6);
-    \node[etl, anchor=south west] at (0.05,-10.55)
-      {\texttt{GET /optimization/jobs/} cada $3$\,s};
-    \draw[ret] (3.1,-11.4) -- (0,-11.4);
-    \node[etl, anchor=south east] at (3.05,-11.35)
-      {estado y métricas; el \textit{polling} cesa en estado terminal};
-  \end{tikzpicture}
-  \caption{Ciclo de vida de un \texttt{OptimizationJob}.}
-  \label{fig:secuencia}
-\end{figure}
-
 El desarrollo del problema de optimización exigía un volumen alto de pruebas y experimentos, por lo
 que las decisiones de \textit{stack} se tomaron antes de construir el sistema, guiadas por tres
 criterios.
@@ -242,18 +125,136 @@ definitiva: en operación regular el sistema reconstruye la matriz solo al cambi
 árboles activos, de modo que el volumen de consultas cae varios órdenes de magnitud respecto de la
 etapa de desarrollo y componentes hoy descartados por costo admiten reevaluarse bajo ese régimen.
 
+La arquitectura resultante sigue el patrón de monolito modular: un único servicio Django
+\citep{django} con módulos separados por dominio (\texttt{accounts}, \texttt{datasets},
+\texttt{optimization}, \texttt{routes}).
+
+Las tareas de optimización se ejecutan de forma asíncrona mediante Celery \citep{celery} con Redis
+como \textit{broker}, dado que el proceso de construcción de la matriz de costos y la ejecución del
+\textit{solver} pueden tardar varios minutos para conjuntos de cien o más puntos.
+
+El motor de ruteo peatonal OSRM \citep{osrm} se despliega como un contenedor más del propio sistema ---tanto
+en desarrollo como en producción (Sección~\ref{sec:despliegue-produccion})--- y procesa datos de
+\textit{OpenStreetMap} \citep{openstreetmap} de Chile, lo que elimina costos de API y dependencias
+de red durante la optimización. La persistencia geográfica se apoya en la extensión espacial PostGIS
+de PostgreSQL \citep{postgis}.
+
+La Ilustración~\ref{fig:arquitectura} resume las capas del sistema y el recorrido de una
+optimización: el navegador solicita el trabajo a la API, esta lo encola en Celery en lugar de
+resolverlo en el ciclo de la petición HTTP, y el \textit{worker} ejecuta el \textit{pipeline}, que
+consulta OSRM para construir la matriz de costos y persiste la solución en PostGIS. El
+\textit{frontend} consulta el estado del trabajo por \textit{polling} hasta que alcanza un estado
+terminal. El trazo continuo marca las capas del monolito Django; el trazo discontinuo, los servicios
+de apoyo desplegados como contenedores independientes.
+
+\begin{figure}[H]
+  \centering
+  % babel-spanish activa '<' y '>'; sin esto, la punta de flecha (>=stealth) no compila
+  \shorthandoff{<>}%
+  \begin{tikzpicture}[
+      scale=0.85, transform shape,
+      capa/.style={draw, rounded corners=2pt, align=center, font=\small,
+                   minimum width=7.2cm, minimum height=1.15cm},
+      externo/.style={draw, dashed, rounded corners=2pt, align=center, font=\small,
+                      minimum width=3.6cm, minimum height=1.15cm},
+      flujo/.style={->, >=stealth, thick},
+      etiqueta/.style={font=\scriptsize, midway}
+    ]
+    \node[capa]    (p) at (0,0)      {Presentación\\ React 18 + Vite · React Query · Leaflet};
+    \node[capa]    (a) at (0,-2.2)   {API REST\\ Django REST Framework · JWT · permisos por rol};
+    \node[capa]    (l) at (0,-4.6)
+      {Lógica de dominio\\ importadores · \textit{pipeline} · OR-Tools};
+    \node[capa]    (d) at (0,-6.8)   {Datos\\ PostgreSQL + PostGIS};
+    \node[externo] (q) at (6.6,-2.2) {Celery + Redis\\ cola de tareas};
+    \node[externo] (o) at (-7.4,-4.6) {OSRM\\ red peatonal (OSM Chile)};
+
+    \draw[flujo] (p) -- (a) node[etiqueta,right] {JSON · \textit{Bearer} JWT};
+    \draw[flujo] (a) -- (l) node[etiqueta,right] {importación · consultas};
+    \draw[flujo] (l) -- (d) node[etiqueta,right] {GeoDjango · SRID 4326};
+    \draw[flujo] (a.east) -- (q.west) node[etiqueta,above,yshift=0.55cm] {encola el \textit{job}};
+    \draw[flujo] (q.south) -- (l.east) node[etiqueta,above,sloped] {ejecuta el \textit{pipeline}};
+    \draw[flujo,<->] (l.west) -- (o.east)
+      node[etiqueta,above,yshift=0.55cm] {\texttt{/table} · \texttt{/route}};
+  \end{tikzpicture}
+  \caption{Arquitectura de Arbocensus.}
+  \label{fig:arquitectura}
+\end{figure}
+
+La Ilustración~\ref{fig:secuencia} detalla ese recorrido en el tiempo, para uno de los seis trabajos
+que despliega una solicitud (Sección~\ref{sec:abanico}). La petición HTTP termina en cuanto los
+trabajos quedan encolados, de modo que el navegador nunca espera al \textit{solver}; el estado se
+obtiene después por \textit{polling}. Un fallo del \textit{worker} deja el trabajo en
+\texttt{failed} con el mensaje de la excepción, que el panel muestra sin necesidad de un canal de
+error distinto del de estado.
+
+\begin{figure}[H]
+  \centering
+  \shorthandoff{<>}%
+  \begin{tikzpicture}[
+      scale=0.78, transform shape,
+      actor/.style={draw, rounded corners=2pt, align=center, font=\scriptsize,
+                    minimum width=2.35cm, minimum height=0.85cm},
+      vida/.style={dashed, gray},
+      msj/.style={->, >=stealth, semithick},
+      ret/.style={->, >=stealth, semithick, dashed},
+      et/.style={font=\scriptsize, midway, above, inner sep=1.5pt},
+      etl/.style={font=\scriptsize, inner sep=1.5pt},
+      nota/.style={draw, fill=black!4, rounded corners=2pt, align=center,
+                   font=\scriptsize, inner sep=3pt}
+    ]
+    \def\yb{-11.7}
+    \node[actor] (pa) at (0,0)    {Panel\\ (\textit{React})};
+    \node[actor] (ap) at (3.1,0)  {API REST};
+    \node[actor] (re) at (6.2,0)  {Redis\\ (cola)};
+    \node[actor] (wo) at (9.3,0)  {\textit{Worker}\\ (\textit{pipeline})};
+    \node[actor] (os) at (12.4,0) {OSRM};
+    \node[actor] (bd) at (15.2,0) {PostGIS};
+
+    \foreach \n in {pa,ap,re,wo,os,bd} { \draw[vida] (\n.south) -- ($(\n.south)+(0,\yb)$); }
+
+    \draw[msj] (0,-1.2) -- (3.1,-1.2);
+    \node[etl, anchor=south west] at (0.05,-1.15)
+      {\texttt{POST /optimization/jobs/} ($T_{\min}$, $T_{\max}$, $s$)};
+    \draw[msj] (3.1,-2.1) -- (15.2,-2.1) node[et]
+      {crea la \texttt{RoutingConfig} y seis \texttt{OptimizationJob} en estado \texttt{queued}};
+    \draw[msj] (3.1,-3.0) -- (6.2,-3.0) node[et] {encola seis tareas};
+    \draw[ret] (3.1,-3.9) -- (0,-3.9);
+    \node[etl, anchor=south east] at (3.05,-3.85) {\texttt{201} con los seis trabajos};
+    \draw[msj] (6.2,-4.8) -- (9.3,-4.8) node[et] {entrega la tarea};
+    \draw[msj] (9.3,-5.7) -- (15.2,-5.7) node[et] {estado \texttt{running}};
+    \draw[msj] (9.3,-6.9) -- (12.4,-6.9) node[et, align=center]
+      {\texttt{/table}, solo si la matriz\\ no está en la caché};
+    \draw[ret] (12.4,-7.7) -- (9.3,-7.7) node[et] {matriz $n \times n$};
+    \node[nota, anchor=east, text width=2.6cm] at (9.15,-8.7)
+      {estima $k$ · resuelve el VRP · 2-opt intra-ruta};
+    \draw[msj] (9.2,-8.7) -- (9.3,-8.7);
+    \draw[msj] (9.3,-9.7) -- (15.2,-9.7) node[et, align=center]
+      {persiste \texttt{RoutingSolution}, \texttt{Route} y \texttt{RouteStop}\\
+        en una transacción; estado \texttt{completed}};
+    \draw[msj] (0,-10.6) -- (3.1,-10.6);
+    \node[etl, anchor=south west] at (0.05,-10.55)
+      {\texttt{GET /optimization/jobs/} cada $3$\,s};
+    \draw[ret] (3.1,-11.4) -- (0,-11.4);
+    \node[etl, anchor=south east] at (3.05,-11.35)
+      {estado y métricas; el \textit{polling} cesa en estado terminal};
+  \end{tikzpicture}
+  \caption{Ciclo de vida de un \texttt{OptimizationJob}.}
+  \label{fig:secuencia}
+\end{figure}
+
 \subsection{Despliegue de producción}
 \label{sec:despliegue-produccion}
 
 Al cierre de la iteración el sistema quedó desplegado en un servidor virtual (\textit{droplet}) de
-\textit{DigitalOcean} con Ubuntu 24.04 y 2\,GB de memoria, ampliados con 2\,GB de intercambio para
-absorber el preprocesamiento inicial de OSRM. Se descartó volver a una plataforma como servicio
----la vía de despliegue de la aplicación de censado previa---: alojar allí una composición de seis
+\textit{DigitalOcean} con Ubuntu 24.04 y 2\,GB de memoria\footnote{Se amplió la memoria con 2\,GB
+de intercambio porque el preprocesamiento inicial de OSRM excede la memoria física del servidor;
+tras esa fase el servicio opera dentro de los 2\,GB.}. Se descartó una plataforma como servicio
+---la vía de despliegue de iteraciones pasadas del proyecto---: alojar allí una composición de seis
 servicios, con OSRM residente en memoria, implica contratar y configurar cada pieza por separado,
 con un costo que crece por servicio, mientras que un servidor virtual único ofrece la flexibilidad
 de alojar el conjunto completo a costo fijo, en línea con los criterios de costo y simplicidad ya
-enunciados. La composición de contenedores de producción
-(\texttt{docker-compose.production.yml}) declara seis servicios ---PostGIS, Redis, OSRM, la
+enunciados. La composición de contenedores de producción, definida con \textit{Docker Compose}
+\citep{merkel2014docker,dockercompose}, declara seis servicios ---PostGIS, Redis, OSRM, la
 aplicación Django, el \textit{worker} de Celery y Caddy \citep{caddy}--- con reinicio automático y
 verificaciones de salud encadenadas: el \textit{worker} no arranca hasta que la base de datos y
 OSRM responden, y el proxy no expone la aplicación hasta que esta contesta. A diferencia del
@@ -390,9 +391,11 @@ se cachea una vez por conjunto de árboles activos, no una vez por optimización
 
 \subsubsection*{Conjuntos, parámetros y variables}
 
-El problema se define sobre un conjunto de puntos $P = \{p_1, p_2, \ldots, p_n\}$ correspondientes a
-las ubicaciones geográficas de los árboles a censar. Con el propósito de modelar rutas abiertas
----sin punto de inicio ni de término predefinido--- se añade un depósito ficticio
+La formulación sigue la estructura estándar de los problemas de ruteo de vehículos
+\citep{toth2014vehicle}. El problema se define sobre un conjunto de puntos $P = \{p_1, p_2, \ldots,
+p_n\}$ correspondientes a las ubicaciones geográficas de los árboles a censar. Con el propósito de
+modelar rutas abiertas ---sin punto de inicio ni de término predefinido---
+\citep{li2007open} se añade un depósito ficticio
 (\textit{dummy depot}) $p_0$, de modo que el grafo del modelo se define sobre $V = \{0, 1, \ldots,
 n\}$, donde el índice $0$ corresponde al depósito y los índices $1$ a $n$ a los árboles reales. Se
 dispone de un conjunto $R = \{1, \ldots, N_{\max}\}$ de vehículos, cuyo cardinal es una cota
@@ -403,7 +406,8 @@ calculado sobre la red vial peatonal real mediante OSRM. Los arcos que tocan el 
 costo nulo, $c_{0j} = c_{i0} = 0$, lo que es precisamente el mecanismo que abre las rutas: entrar y
 salir del depósito es gratuito, de modo que la ruta efectiva es la secuencia de árboles que hay
 entre ambos extremos. El parámetro $s$ es el tiempo de servicio constante por árbol, y $d_{ij}$ la
-distancia de \textit{haversine} entre $p_i$ y $p_j$, empleada por la dimensión geográfica de la
+distancia de \textit{haversine} \citep{sinnott1984virtues} entre $p_i$ y $p_j$, empleada por la
+dimensión geográfica de la
 Sección~\ref{sec:estrategias}.
 
 El modelo emplea tres familias de variables de decisión:
