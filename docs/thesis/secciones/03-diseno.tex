@@ -59,9 +59,10 @@ de apoyo desplegados como contenedores independientes.
     \draw[flujo] (p) -- (a) node[etiqueta,right] {JSON · \textit{Bearer} JWT};
     \draw[flujo] (a) -- (l) node[etiqueta,right] {importación · consultas};
     \draw[flujo] (l) -- (d) node[etiqueta,right] {GeoDjango · SRID 4326};
-    \draw[flujo] (a.east) -- (q.west) node[etiqueta,above] {encola el \textit{job}};
+    \draw[flujo] (a.east) -- (q.west) node[etiqueta,above,yshift=0.55cm] {encola el \textit{job}};
     \draw[flujo] (q.south) -- (l.east) node[etiqueta,above,sloped] {ejecuta el \textit{pipeline}};
-    \draw[flujo,<->] (l.west) -- (o.east) node[etiqueta,above] {\texttt{/table} · \texttt{/route}};
+    \draw[flujo,<->] (l.west) -- (o.east)
+      node[etiqueta,above,yshift=0.55cm] {\texttt{/table} · \texttt{/route}};
   \end{tikzpicture}
   \caption{Arquitectura de Arbocensus.}
   \label{fig:arquitectura}
@@ -156,7 +157,7 @@ Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada co
 criterio que resolvió la elección.
 
 \small
-\begin{xltabular}{\textwidth}{@{}p{2.4cm} p{3.4cm} X@{}}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.6cm} X@{}}
   \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
   \label{tab:stack-decisions} \\
   \toprule
@@ -476,18 +477,20 @@ Tabla~\ref{tab:coeficientes}. Las penalizaciones inferior y superior se aplican,
 implementación, sobre la variable acumulada del nodo terminal de cada vehículo, que es donde $t_i$
 vale $T_r$; un vehículo inactivo no contribuye a ninguno de los seis términos.
 
-\begin{table}[H]
-  \centering
-  \caption{Coeficientes de la función objetivo y su magnitud en la configuración de producción.}
-  \label{tab:coeficientes}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l l l X@{}}
-    \toprule
-    Símbolo &
-      Término &
-      Valor &
-      Unidad y lectura \\
-    \midrule
+\small
+\begin{xltabular}{\textwidth}{@{}l l l X@{}}
+  \caption{Coeficientes de la función objetivo en producción.}
+  \label{tab:coeficientes} \\
+  \toprule
+  Símbolo & Término & Valor & Unidad y lectura \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Símbolo & Término & Valor & Unidad y lectura \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
     --- &
       Costo de arco &
       $1$ &
@@ -519,9 +522,8 @@ vale $T_r$; un vehículo inactivo no contribuye a ninguno de los seis términos.
       $3$ &
       Por metro de extensión de la ruta en la dimensión de \textit{haversine}
       (Sección~\ref{sec:estrategias}). \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+\end{xltabular}
+\normalsize
 
 Los tres propósitos que la Ecuación~\ref{eq:objetivo} escalariza son:
 
@@ -932,7 +934,7 @@ ordena sus candidatas.
                     minimum width=5.4cm, minimum height=1.0cm},
       flujo/.style={->, >=stealth, thick}
     ]
-    \node[origen] (cfg) at (3.6,2.5)
+    \node[origen] (cfg) at (3.6,2.9)
       {Una solicitud de optimización\\ una \texttt{RoutingConfig} · una matriz OSRM en caché};
 
     \node[cab] at (1.6,1.9) {\texttt{global}};

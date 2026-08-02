@@ -285,16 +285,20 @@ condiciones impuestas por el entorno de operación, por los datos heredados o po
 empleadas: el diseño responde a ellas, pero no puede levantarlas. Se enuncian como condición, y no
 como la respuesta que el diseño les dio.
 
-\begin{table}[H]
-  \centering
+\small
+\begin{xltabular}{\textwidth}{@{}l X@{}}
   \caption{Restricciones consideradas en la elaboración del producto.}
-  \label{tab:restricciones}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l X@{}}
-    \toprule
-    ID &
-    Restricción \\
-    \midrule
+  \label{tab:restricciones} \\
+  \toprule
+  ID & Restricción \\
+  \midrule
+  \endfirsthead
+  \toprule
+  ID & Restricción \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
     RE-01 &
     El servicio \texttt{/table} de OSRM codifica cada coordenada en la ruta de la petición, de modo
     que una consulta de matriz falla por longitud de URL mucho antes de alcanzar el límite de tabla
@@ -331,9 +335,8 @@ como la respuesta que el diseño les dio.
     medición disponible es hardware de desarrollo, con los contenedores de base de datos y de ruteo
     emulados sobre otra arquitectura, de modo que toda medición se realiza sobre una réplica local y
     las cifras absolutas de tiempo no son extrapolables a un servidor de producción. \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+\end{xltabular}
+\normalsize
 
 Las restricciones se reparten en tres grupos según a qué afectan. RE-01, RE-02 y RE-04 provienen de
 las herramientas de ruteo y de optimización y acotan lo que la plataforma puede calcular. RE-03 y
@@ -354,6 +357,7 @@ después contra lo medido.
 
 \begin{table}[H]
   \centering
+  \begin{threeparttable}[b]
   \caption{Criterios de aceptación comprometidos para la solución.}
   \label{tab:criterios}
   \small
@@ -372,8 +376,7 @@ después contra lo medido.
     Ninguna ruta excede $T_{\max}$. \\
     \addlinespace
     CA-03 &
-    Balance de carga entre equipos, medido como el cociente entre la duración de la ruta más corta
-    y la de la más larga. &
+    Balance de carga entre equipos.$^{1}$ &
     Índice de al menos $0{,}80$. \\
     \addlinespace
     CA-04 &
@@ -382,10 +385,7 @@ después contra lo medido.
     declare. \\
     \addlinespace
     CA-05 &
-    Costo de planificar una campaña: tiempo de reloj de una corrida completa del proceso de
-    optimización, con la matriz de costos en caché. Comprende el presupuesto de tiempo que se
-    configura al \textit{solver}, de modo que el criterio acota esa configuración además de su
-    resultado. &
+    Costo de planificar una campaña.$^{2}$ &
     Menos de 5 minutos. \\
     \addlinespace
     CA-06 &
@@ -394,6 +394,13 @@ después contra lo medido.
     vecino más cercano, sobre la misma instancia y la misma matriz de costos. \\
     \bottomrule
   \end{tabularx}
+  \begin{tablenotes}[flushleft]\footnotesize
+    \item[1] Medido como el cociente entre la duración de la ruta más corta y la de la más larga.
+    \item[2] Tiempo de reloj de una corrida completa del proceso de optimización, con la matriz de
+      costos en caché. Comprende el presupuesto de tiempo que se configura al \textit{solver}, de
+      modo que el criterio acota esa configuración además de su resultado.
+  \end{tablenotes}
+  \end{threeparttable}
 \end{table}
 
 CA-05 exige una precisión de alcance. El presupuesto del \textit{solver} es un tope duro, no un

@@ -49,7 +49,7 @@
 \titlespacing*{\subsection}{0pt}{10pt}{4pt}
 
 \titleformat{\subsubsection}[block]
-  {\normalfont\fontsize{12}{14}\itshape}
+  {\normalfont\fontsize{12}{14}}
   {}{0pt}{#1}
 \titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
 
@@ -94,7 +94,7 @@
 % ---- Captions -------------------------------------------------
 % Formato exigido por el centro de escritura: «TABLA 1 Título», «ILUSTRACIÓN 1 Título».
 \usepackage{caption}
-\captionsetup{justification=centering, singlelinecheck=false}
+\captionsetup{justification=centering, singlelinecheck=false, font=normalsize}
 \captionsetup[table]{name=TABLA, labelsep=space, position=above}
 \captionsetup[figure]{name=ILUSTRACIÓN, labelsep=space, position=below}
 
@@ -105,6 +105,7 @@
 \renewcommand{\arraystretch}{1.25}
 \usepackage{tabularx}
 \usepackage{xltabular}   % tabularx que puede partirse entre páginas
+\usepackage[flushleft]{threeparttable}  % ancla las notas al pie de su propia tabla
 \usepackage{amsmath}
 \usepackage{amssymb}     % Necesario para símbolos matemáticos como \mathbb{R}
 \usepackage{xcolor}
