@@ -50,7 +50,8 @@ carencias que las herramientas genéricas no abordan:
         desbalance de carga entre equipos.
 \end{enumerate}
 
-Se consideró también un enfoque \textit{route-first, cluster-second}: resolver un único TSP sobre
+Se consideró también un enfoque \textit{route-first, cluster-second} \citep{beasley1983route}:
+resolver un único TSP sobre
 los $n$ árboles y cortar el recorrido resultante en tramos de duración acumulada $\leq T_{\max}$. Se
 descartó porque el corte por duración no controla el balance ni la compacidad de cada tramo, y
 porque los extremos de cada tramo quedan fijados por un recorrido único que ignora, al construirse,
@@ -298,7 +299,8 @@ como la respuesta que el diseño les dio.
   \bottomrule
   \endlastfoot
     RE-01 &
-    El servicio \texttt{/table} de OSRM codifica cada coordenada en la ruta de la petición, de modo
+    El servicio \texttt{/table} de OSRM \citep{osrm} codifica cada coordenada en la ruta de la
+    petición, de modo
     que una consulta de matriz falla por longitud de URL mucho antes de alcanzar el límite de tabla
     del servidor. \\
     \addlinespace
