@@ -7,8 +7,8 @@ from rest_framework.exceptions import ValidationError
 
 class CustomUser(AbstractUser):
     class Role(models.TextChoices):
-        ADMIN = "admin"
-        SURVEYOR = "surveyor"
+        ADMIN = "admin", "Administrador"
+        SURVEYOR = "surveyor", "Censista"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.SURVEYOR)
