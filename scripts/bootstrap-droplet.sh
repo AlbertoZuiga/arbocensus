@@ -4,13 +4,20 @@ set -euo pipefail
 # Provisions a fresh Ubuntu 24.04 droplet into a running Arbocensus production
 # stack. Idempotent: safe to re-run after fixing a failed step.
 #
-#   apt-get update && apt-get install -y git
-#   git clone https://github.com/AlbertoZuiga/arbocensus-routing.git /srv/arbocensus
-#   bash /srv/arbocensus/scripts/bootstrap-droplet.sh
+#   apt-get update && apt-get install -y git curl
+#   curl -fsSL -H "Authorization: token <PAT con repo:read>" \
+#     https://raw.githubusercontent.com/Arbocensus/arbocensus-routing/production/scripts/bootstrap-droplet.sh \
+#     -o /root/bootstrap-droplet.sh
+#   bash /root/bootstrap-droplet.sh
+#
+# El script clona el repo por sí mismo; si es privado genera una deploy key y
+# espera a que la registres en GitHub. El PAT de arriba solo descarga este
+# archivo y no queda guardado en el droplet.
 
 TARGET_DIR="/srv/arbocensus"
 DEPLOY_USER="deploy"
-REPO_URL="https://github.com/AlbertoZuiga/arbocensus-routing.git"
+REPO_URL="https://github.com/Arbocensus/arbocensus-routing.git"
+REPO_SSH_URL="git@github.com:Arbocensus/arbocensus-routing.git"
 BRANCH="production"
 SWAP_FILE="/swapfile"
 SWAP_SIZE="2G"
@@ -151,11 +158,46 @@ fi
 
 # ── 5. Checkout ───────────────────────────────────────────────────────────────
 bold "5/10 Repositorio en $TARGET_DIR"
+
+repo_reachable() { GIT_TERMINAL_PROMPT=0 git ls-remote "$1" HEAD >/dev/null 2>&1; }
+
+if repo_reachable "$REPO_URL"; then
+  CLONE_URL=$REPO_URL
+else
+  info "el repo no responde anónimo (privado) — acceso por deploy key SSH"
+  GITHUB_KEY="/home/$DEPLOY_USER/.ssh/github_deploy"
+  if [ ! -f "$GITHUB_KEY" ]; then
+    sudo -u "$DEPLOY_USER" ssh-keygen -t ed25519 -f "$GITHUB_KEY" -N "" \
+      -C "arbocensus-droplet" >/dev/null
+  fi
+  SSH_CONFIG="/home/$DEPLOY_USER/.ssh/config"
+  if ! grep -qs "IdentityFile $GITHUB_KEY" "$SSH_CONFIG"; then
+    printf 'Host github.com\n  IdentityFile %s\n  IdentitiesOnly yes\n' \
+      "$GITHUB_KEY" >>"$SSH_CONFIG"
+    chown "$DEPLOY_USER:$DEPLOY_USER" "$SSH_CONFIG"
+    chmod 600 "$SSH_CONFIG"
+  fi
+  grep -qs "^github.com" /etc/ssh/ssh_known_hosts ||
+    ssh-keyscan github.com >>/etc/ssh/ssh_known_hosts 2>/dev/null
+  export GIT_SSH_COMMAND="ssh -i $GITHUB_KEY -o IdentitiesOnly=yes"
+  info "registra esta llave como Deploy Key (read-only, sin write) del repo:"
+  info "  GitHub → Settings → Deploy keys → Add deploy key"
+  info ""
+  info "$(cat "$GITHUB_KEY.pub")"
+  info ""
+  until repo_reachable "$REPO_SSH_URL"; do
+    ask _WAIT "Enter cuando esté registrada (Ctrl-C para abortar)" "-"
+  done
+  info "deploy key aceptada por GitHub"
+  CLONE_URL=$REPO_SSH_URL
+fi
+
 if [ -d "$TARGET_DIR/.git" ]; then
   info "ya existe, se conserva"
+  git -C "$TARGET_DIR" remote set-url origin "$CLONE_URL"
 else
-  git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR" 2>/dev/null ||
-    git clone "$REPO_URL" "$TARGET_DIR"
+  git clone --branch "$BRANCH" "$CLONE_URL" "$TARGET_DIR" 2>/dev/null ||
+    git clone "$CLONE_URL" "$TARGET_DIR"
 fi
 git config --global --add safe.directory "$TARGET_DIR"
 cd "$TARGET_DIR"
