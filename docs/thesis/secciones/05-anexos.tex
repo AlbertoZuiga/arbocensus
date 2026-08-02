@@ -39,7 +39,7 @@ del proyecto, \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, y no sobre los per
 Django REST Framework: \texttt{IsAdminUser} valida el atributo \texttt{is\_staff}, que en este
 sistema no representa el rol de negocio. En las tablas siguientes, la columna Permiso distingue
 cuatro niveles: Público (sin autenticación), Autenticado (cualquier usuario con sesión válida),
-Admin (\texttt{IsAdminRole}) y Censador (\texttt{IsSurveyorRole}).
+Admin (\texttt{IsAdminRole}) y Censista (\texttt{IsSurveyorRole}).
 
 Los listados se paginan con \texttt{PageNumberPagination} a 20 elementos por página. Las respuestas
 geográficas siguen el formato \textit{GeoJSON} (\textit{FeatureCollection}), con coordenadas en el
@@ -74,7 +74,7 @@ y rutas y captura en terreno (Tabla~\ref{tab:anexo_api_routes}).
       consulta que usa el \textit{frontend} para decidir qué interfaz mostrar. \\
     \texttt{GET \slash api\slash auth\slash surveyors\slash } &
       Admin &
-      Censadores registrados, para poblar el selector de asignación de rutas. \\
+      Censistas registrados, para poblar el selector de asignación de rutas. \\
     \texttt{GET \slash api\slash auth\slash users\slash } &
       Admin &
       Listado paginado de usuarios. \\
@@ -191,7 +191,7 @@ y rutas y captura en terreno (Tabla~\ref{tab:anexo_api_routes}).
     \texttt{GET \slash api\slash optimization\slash solutions\slash \{id\}\slash } &
       Autenticado &
       Métricas de una solución: número de rutas, tiempo total de desplazamiento, puntaje de
-      balance, métricas espaciales y tiempos por fase del \textit{pipeline}. El censador solo
+      balance, métricas espaciales y tiempos por fase del \textit{pipeline}. El censista solo
       accede a las soluciones que contienen rutas suyas. \\
     \texttt{POST \slash api\slash optimization\slash solutions\slash \{id\}\slash publish\slash } &
       Admin &
@@ -219,7 +219,7 @@ y rutas y captura en terreno (Tabla~\ref{tab:anexo_api_routes}).
     \texttt{GET \slash api\slash routes\slash } &
       Autenticado &
       Rutas con sus tiempos y su avance (visitadas, pendientes, omitidas), filtrables por
-      \texttt{solution\_id}. El censador solo ve las rutas asignadas a él. \\
+      \texttt{solution\_id}. El censista solo ve las rutas asignadas a él. \\
     \texttt{GET \slash api\slash routes\slash \{id\}\slash } &
       Autenticado &
       Detalle de una ruta, incluidas sus paradas ordenadas por \texttt{sequence}. \\
@@ -233,18 +233,18 @@ y rutas y captura en terreno (Tabla~\ref{tab:anexo_api_routes}).
       Trazado peatonal de una sola ruta. \\
     \texttt{PATCH \slash api\slash routes\slash \{id\}\slash assign\slash } &
       Admin &
-      Asigna o desasigna un censador. Solo se permite sobre rutas de la solución publicada. \\
+      Asigna o desasigna un censista. Solo se permite sobre rutas de la solución publicada. \\
     \texttt{GET \slash api\slash routes\slash my-route\slash } &
-      Censador &
+      Censista &
       Rutas propias del plan vigente; excluye por construcción las rutas de soluciones no
       publicadas. \\
     \texttt{POST \slash api\slash routes\slash stops\slash \{id\}\slash visit\slash } &
-      Censador &
+      Censista &
       Marca la parada como visitada y crea su \texttt{TreeObservation} (estado, fotografía y
       notas; \textit{multipart} cuando incluye imagen). Rechaza la visita si alguna parada
       anterior sigue pendiente. \\
     \texttt{POST \slash api\slash routes\slash stops\slash \{id\}\slash skip\slash } &
-      Censador &
+      Censista &
       Omite la parada con un motivo obligatorio y crea la observación correspondiente,
       derivando su estado del motivo. \\
     \bottomrule
@@ -332,6 +332,12 @@ post-proceso habilitado) y \texttt{greedy\_baseline} (el heurístico de contrast
 y sin post-proceso de resecuenciación). Las tablas siguientes detallan los parámetros
 de cada uno. Cada ejecución escribe además un informe en \texttt{docs\slash
 experiments\slash }, con su comando, sus parámetros y sus métricas.
+
+La versión de la biblioteca de optimización queda fijada en
+\texttt{backend\slash requirements.txt}: todas las corridas del
+Capítulo~\ref{cap:resultados} emplean \texttt{ortools==9.15.6755}. Reproducir las cifras
+exige esa versión, porque la biblioteca no expone una semilla y las heurísticas de
+construcción y de búsqueda local cambian entre versiones (RE-05).
 
 La Tabla~\ref{tab:anexo_baseline_sweep} detalla los parámetros de \texttt{baseline\_sweep}.
 
@@ -736,7 +742,7 @@ dos ciclos más recientes cambia de veredicto.
 Defecto 3 --- Auto-cruces sobre cuerdas rectas.
 La métrica de auto-cruces se calcula sobre cuerdas rectas entre paradas consecutivas, una
 geometría que no coincide ni con la red que el \textit{solver} optimiza ni con la
-polilínea real que se dibuja al censador. La correlación de Spearman entre ambas
+polilínea real que se dibuja al censista. La correlación de Spearman entre ambas
 geometrías fue de $\rho = 0{,}527$ a nivel global e invertida en el \textit{dataset} de
 evaluación principal ($\rho = -0{,}575$). La prueba decisiva es que el aumento de
 auto-cruces atribuido al 2-opt intra-ruta, que sobre cuerdas se multiplicaba por 2{,}9 a
@@ -890,13 +896,12 @@ descritas en la Sección~\ref{sec:ui}.
 
 El tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}) se muestra en la
 Ilustración~\ref{fig:ui_progress}: porcentaje de árboles censados, omitidos y pendientes; mapa
-coloreado por el estado de cada árbol; y desglose del avance por ruta y por censador.
+coloreado por el estado de cada árbol; y desglose del avance por ruta y por censista.
 
-\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo.}{
-  fig:ui_progress
-}
+\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo.}%
+{fig:ui_progress}
 
-El desglose por censador es el que permite verificar en operación el reparto de
+El desglose por censista es el que permite verificar en operación el reparto de
 carga que persigue el índice de balance definido en la
 Sección~\ref{sec:atributos-calidad}.
 

@@ -5,13 +5,17 @@
 \subsection{Métricas de calidad de rutas}
 \label{sec:metricas-calidad}
 
-La calidad de la solución producida por el motor de optimización se evalúa sobre la instancia de
-referencia congelada descrita en la Sección~\ref{sec:legacy} y en la Sección~\ref{sec:estado-actual}
-(ambas fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con mediana de posición por código QR),
-de $N = 1\,607$ árboles. La serie experimental completa mide además once instancias adicionales,
-entre $n = 43$ y $n = 1\,607$, sobre la suite de instancias congeladas del
-\hyperref[anx:suite-instancias]{Anexo 4}; esta sección reporta la instancia de referencia porque es
-la que fija los criterios de aceptación del Capítulo~\ref{cap:solucion}. El conjunto no corresponde
+La calidad de la solución producida por el motor de optimización se evalúa sobre doce instancias
+reales congeladas, entre $n = 43$ y $n = 1\,607$ árboles, versionadas en la suite del
+\hyperref[anx:suite-instancias]{Anexo 4}. Este apartado reporta en detalle una de ellas, la
+instancia de referencia descrita en la Sección~\ref{sec:legacy} y en la
+Sección~\ref{sec:estado-actual} (ambas fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con
+mediana de posición por código QR), de $N = 1\,607$ árboles, porque es la que fija los criterios de
+aceptación del Capítulo~\ref{cap:solucion}. Las once restantes ---entre ellas tres áreas de censo
+individuales de la operación histórica--- sostienen los apartados siguientes, y conviene anticipar
+que no siempre coinciden con ella: la Sección~\ref{sec:areas-reales} muestra que varias conclusiones
+obtenidas en el régimen agregado no se trasladan sin más al régimen de área individual, que es el de
+la operación habitual. El conjunto no corresponde
 a una única comuna: reúne una porción del arbolado disponible en ambas bases legadas, elegida por
 reproducibilidad y no la totalidad del universo importable (Sección~\ref{sec:legacy}).
 Se emplean los parámetros temporales por defecto ($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s),
@@ -36,13 +40,14 @@ tamaño. Se reportan nueve indicadores:
   \item el número de auto-cruces sobre el trazado real de calles, descriptivo y sin criterio
      en esta corrida.
 \end{enumerate}
-La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de tres repeticiones (semillas
-42, 43 y 44) y remite, en su columna de criterio, a los criterios de aceptación comprometidos en la
-Sección~\ref{sec:criterios-aceptacion}.
+La Tabla~\ref{tab:metricas} resume estos resultados ---los de la configuración de producción recién
+descrita: estrategia \texttt{spatial\_term} y presupuesto de \textit{solver} de 120\,s--- como el
+promedio de tres repeticiones (semillas 42, 43 y 44), y remite, en su columna de criterio, a los
+criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptacion}.
 
 \begin{table}[H]
   \centering
-  \caption{Métricas de calidad de rutas sobre el \textit{dataset} de evaluación.}
+  \caption{Métricas de calidad de rutas sobre la instancia de referencia.}
   \label{tab:metricas}
   \begin{tabularx}{\textwidth}{lXX}
     \toprule
@@ -143,7 +148,9 @@ el presupuesto de 120\,s que se configura al \textit{solver}: mientras ese presu
 bajo el umbral el criterio no puede fallar, de modo que acota la configuración elegida antes que
 medir el sistema. La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad de
 la Tabla~\ref{tab:sensibilidad-tl}, remedido sobre el código y la estrategia vigentes, y que la
-Sección~\ref{sec:cumplimiento-criterios} retoma.
+Sección~\ref{sec:cumplimiento-criterios} retoma. Su lectura en simple es que conceder más tiempo ya
+no compra nada: el número de rutas no se mueve, y pasar de 120\,s a 180\,s mejora el desplazamiento
+un $0{,}6$\,\%, frente al $3{,}5$\,\% que se gana al pasar de 60\,s a 120\,s.
 
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en caché. En la corrida
 de referencia de julio de 2026 que instrumentó esos tiempos
@@ -171,11 +178,12 @@ Como referencia de comparación se implementó una solución \textit{greedy} bas
 del vecino más cercano, generada programáticamente sobre el mismo \textit{dataset} ($N = 1\,607$),
 con la misma matriz de costos de OSRM ---la caché de la corrida anterior--- y con los mismos
 parámetros temporales ($T_{\max} = 10\,800$\,s y 2 minutos de servicio por árbol) que la solución de
-\textit{OR-Tools} de la Sección~\ref{sec:metricas-calidad}. El \textit{baseline} construye cada ruta
-encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el siguiente salto
-haría exceder el presupuesto temporal de la ruta; entonces abre una ruta nueva con el primer árbol
-que quede sin visitar. No hay optimización global, ni balance de carga, ni reasignación posterior de
-árboles entre rutas.
+\textit{OR-Tools} de la Sección~\ref{sec:metricas-calidad}, producida con la versión $9.15$ de la
+biblioteca \citep{ortools} que detalla la Sección~\ref{sec:entorno-medicion}. El \textit{baseline}
+construye cada ruta encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el
+siguiente salto haría exceder el presupuesto temporal de la ruta; entonces abre una ruta nueva con
+el primer árbol que quede sin visitar. No hay optimización global, ni balance de carga, ni
+reasignación posterior de árboles entre rutas.
 
 El \textit{baseline} se evalúa en dos variantes, porque la solución de \textit{OR-Tools} recibe
 desde 2026-07-24 un post-proceso de 2-opt intra-ruta habilitado por defecto: contrastar el método
@@ -445,9 +453,10 @@ sin ningún criterio espacial explícito en la partición.
 
 \subsubsection*{Estrategias evaluadas}
 
-A partir de ese diagnóstico se evaluaron las dos estrategias de partición espacial
----\texttt{spatial\_term} y \texttt{cluster\_first} (Sección~\ref{sec:estrategias})--- contra la
-formulación vigente (\texttt{global}) sobre el \textit{dataset} real de $n = 1\,607$ árboles.
+Ese diagnóstico es el que motivó las dos estrategias de partición espacial que la
+Sección~\ref{sec:estrategias} describe ---\texttt{spatial\_term} y \texttt{cluster\_first}---, y que
+aquí se miden contra la formulación vigente (\texttt{global}) sobre la instancia de referencia de
+$n = 1\,607$ árboles.
 
 Medir \texttt{cluster\_first} exigió corregir antes dos defectos de su implementación: la estimación
 de $k$ usaba el viaje promedio entre \textit{todos} los pares de la matriz metropolitana como
@@ -525,8 +534,17 @@ Lo hace con el mismo número de rutas, cobertura total y un balance de $0{,}833$
 de la \textit{baseline}, diferencia inferior a la dispersión entre semillas de la propia
 \texttt{global}. Cumple, por tanto, el criterio de decisión.
 
-El resultado admite una matización: el IoU del peor par no mejora, sino que empeora levemente
-($0{,}51 \rightarrow 0{,}55$; en esta métrica un valor mayor es peor). La penalización del
+El veredicto tiene el alcance de la corrida que lo produjo: la instancia de referencia, con la
+configuración censal de 2\,min de servicio y $T_{\max}=3$\,h, y bajo la métrica de solapamiento
+entre rutas. No es un veredicto sobre toda instancia ni sobre todo indicador. Dos apartados
+posteriores lo acotan: la Sección~\ref{sec:areas-reales} lleva esta misma configuración de
+producción a las áreas reales del censo, donde el criterio de decisión se cumple en dos de las tres
+y no en las tres; y el barrido del coeficiente espacial que cierra este apartado muestra que la
+compacidad que la estrategia compra se paga en tiempo de desplazamiento y en balance.
+
+El resultado admite además una matización dentro de esta misma corrida: el IoU del peor par no
+mejora, sino que empeora levemente ($0{,}51 \rightarrow 0{,}55$; en esta métrica un valor mayor es
+peor). La penalización del
 \textit{span} actúa sobre la extensión de cada ruta considerada de forma individual, de modo que
 comprime las cajas envolventes, pero no separa el par de rutas vecinas que se superponen en la zona
 más densa del \textit{dataset}: ese par persiste como problema de geometría local y no lo resuelve
@@ -719,20 +737,164 @@ entre tres causas simultáneas (estrategia, redondeo y presupuesto de tiempo). S
 sus hallazgos de \textit{tiempo} ---la dominancia del GLS y el carácter \textit{OSRM-bound} en
 frío--- no dependen de ninguno de esos tres factores.
 
-No se ejecutó un ajuste fino del coeficiente \texttt{SPATIAL\_SPAN\_COEF}. La razón es que
-\texttt{spatial\_term} ya satisface el criterio de decisión con su valor de fábrica y consume solo
-$1{,}5$ de los 10 puntos porcentuales de desplazamiento adicional admitidos, mientras que el único
-eje con señal pendiente ---el IoU del peor par--- es, como se argumentó, un problema de geometría
-local que un coeficiente global no separa sin penalizar al resto de las rutas. La decisión que se
+El valor del coeficiente \texttt{SPATIAL\_SPAN\_COEF} se sometió a un barrido posterior sobre los
+valores $\{0,\,3,\,10,\,30\}$, con tres semillas por punto y las doce instancias congeladas del
+\hyperref[anx:suite-instancias]{Anexo 4}. Su resultado no habilita ningún valor mejor que el de
+fábrica, pero tampoco lo confirma como óptimo: sobre la instancia de referencia los auto-cruces
+sobre calle no varían de forma monótona con el coeficiente ---$39{,}7$ sin penalización espacial,
+$34{,}3$ en el valor de producción, y $46{,}0$ y $48{,}0$ al subirlo a $10$ y a $30$---, de modo que
+la mejora que el valor de producción obtiene sobre no penalizar, de un $13{,}6$\,\%, queda lejos del
+criterio de decisión y se revierte en cuanto el coeficiente crece. La lectura obliga además a una
+reserva sobre lo que la estrategia compra: en esa misma instancia, suprimir la penalización espacial
+entrega mejor tiempo de desplazamiento ($57\,352$\,s frente a $58\,948$\,s) y mejor balance ($0{,}874$
+frente a $0{,}839$). Lo que \texttt{spatial\_term} compra es compacidad y menor solapamiento entre
+rutas, y lo paga en tiempo y en balance; no es una mejora en todos los ejes a la vez. El único eje
+con señal pendiente ---el IoU del peor par--- es, como se argumentó, un problema de geometría local
+que un coeficiente global no separa sin penalizar al resto de las rutas. La decisión que se
 desprende del experimento es, en consecuencia, adoptar \texttt{spatial\_term} como estrategia por
 defecto del sistema, con \texttt{SPATIAL\_SPAN\_COEF} $=3$, un límite de \textit{solver} de 120\,s
 y la configuración censal de referencia de 2\,min de servicio con $T_{\max}=3$\,h;
 \texttt{cluster\_first} se mantiene disponible como opción de comparación, pero no como
 \textit{default} de producción. El protocolo completo, los comandos reproducibles y los datos crudos
-de este experimento se encuentran versionados en \texttt{docs/experiments/} (reporte
-\texttt{route-quality-20260712.md} y los archivos CSV asociados).
+de este experimento se encuentran versionados en \texttt{docs/experiments/} (reportes
+\texttt{route-quality-20260712.md} y \texttt{spatial-span-20260730.md}, con los archivos CSV
+asociados).
 
 % ---- 4.1.4 ------------------------------------------------------
+\subsection{Discusión de calidad de rutas}
+\label{sec:discusion-calidad}
+
+La función objetivo que minimiza el \textit{solver} combina seis componentes de escala diferente
+(Ecuación~\ref{eq:objetivo}). El término principal es el costo de arco, proporcional al tiempo de
+tránsito entre paradas consecutivas (aproximadamente 1\,s por segundo de caminata según la red
+peatonal de OSRM). Sobre él actúan dos penalizaciones blandas en la dimensión temporal de cada ruta:
+la penalización inferior, con coeficiente $10\,000\,\text{s}^{-1}$, desalienta que una ruta quede
+por debajo de $T_{\min}$; y la penalización superior, con coeficiente $500\,\text{s}^{-1}$,
+desalienta que la duración supere el punto medio del intervalo $[T_{\min},\,T_{\max}]$. Se añaden
+además un costo fijo de $100\,000$\,s por vehículo activo, que desincentiva el uso de rutas
+adicionales, y una penalización de $1\,000\,000$\,s por árbol no cubierto, que garantiza que la
+cobertura total sea siempre preferible a cualquier mejora marginal en los demás términos. El sexto
+componente es el costo de extensión geográfica, con coeficiente $\lambda_{\text{span}} = 3$ por
+metro de \textit{span} \textit{haversine} de cada ruta, que solo actúa bajo la estrategia
+\texttt{spatial\_term} y es lo que la distingue de \texttt{global}.
+
+La razón entre ambas penalizaciones blandas es de $20\mathord{:}1$ ($10\,000 / 500$), y el
+experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se conservan en
+\texttt{docs/experiments/penalty-sensitivity-20260713-reference.csv}--- ofrece evidencia causal de
+la función que cumple cada término. Al suprimir la penalización inferior (coeficiente $= 0$),
+manteniendo fijo el resto de los coeficientes, el balance de carga cae de $0{,}838$ a $0{,}739$, la
+flota sube de 25 a 32 rutas y el número de rutas que quedan por debajo de $T_{\min}$ pasa de 3 a 26,
+lo que confirma que ese componente es el mecanismo que sostiene la distribución de carga y evita la
+fragmentación en rutas demasiado cortas.
+
+La penalización superior actúa sobre la geometría: al redirigir su objetivo desde el punto medio del
+intervalo hasta $T_{\max}$, el número de auto-cruces medido sobre cuerdas cae de $76{,}3$ a $6{,}3$
+---una reducción del $91{,}7$\,\%--- sin variar el presupuesto de cómputo ni el número de rutas. Esa
+cifra no sostiene, sin embargo, una relación causal directa: el barrido no tiene réplicas de semilla
+independientes, la métrica de cuerdas está invertida ($\rho = -0{,}575$) precisamente en la
+instancia donde se midió, y el mismo brazo degrada el balance de $0{,}838$ a $0{,}715$. El
+\hyperref[anx:reservas-sensibilidad]{Anexo 4} detalla las tres reservas. Con ellas, lo que el
+material sostiene es evidencia consistente con la hipótesis de que la geometría de las rutas
+responde a la configuración de la función objetivo y no al corte por tiempo del GLS, reforzada por
+dos observaciones independientes: el presupuesto del \textit{solver} no altera el número de rutas ni
+el balance por sobre los 120\,s (Tabla~\ref{tab:sensibilidad-tl}), y la re-medición sobre
+\texttt{crossings\_road} invierte el signo del efecto de este mismo brazo sobre la geometría real.
+
+El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. El conjunto
+de evaluación de $n = 1\,607$ árboles agrega arbolado real de múltiples áreas de censo dispersas en
+$\approx 10{,}3$\,km de extensión ($12{,}5$\,km de diagonal), frente a $1{,}32$\,km del área
+individual mayor ---razón cercana a $8\times$, según las instancias versionadas en
+\texttt{docs/experiments/instances/}---. Los árboles son reales; lo sin correlato operativo es
+tratar esa unión ---las veintiuna áreas no vacías de \texttt{legacy\_api} (429 árboles, 27\,\% del
+conjunto) más los 1\,178 árboles de \texttt{legacy\_app}, sin área asignada--- como un único trabajo
+de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). En el régimen de área real la
+configuración de producción genera rutas sin auto-cruces apreciables; estos emergen solo al procesar
+el conjunto agregado disperso bajo la estrategia \texttt{spatial\_term}
+(Ilustración~\ref{fig:ruta-vueltas-r1}), situación que en operación solo surgiría si se procesaran
+múltiples áreas de censo como un único problema.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
+  \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación.}
+  \label{fig:ruta-vueltas-r1}
+\end{figure}
+
+La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno:
+$\approx 10{,}3$\,km en el conjunto agregado frente a $\leq 1{,}32$\,km en las áreas individuales.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
+  \caption{
+    Régimen disperso (\textit{dataset} de evaluación agregado) frente a régimen real (áreas
+    individuales del arbolado legado).
+  }
+  \label{fig:regimen-disperso-vs-real}
+\end{figure}
+
+El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
+de $0{,}55$, se reproduce en la Ilustración~\ref{fig:peor-par}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
+  \caption{Par de rutas con mayor solapamiento espacial en el \textit{dataset} de evaluación.}
+  \label{fig:peor-par}
+\end{figure}
+
+El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría
+local del par, y ningún coeficiente global lo elimina sin penalizar las rutas circundantes; la
+solución estructural es la segmentación previa por área de censo.
+
+De los resultados anteriores se derivan dos respuestas directas a las preguntas de evaluación más
+frecuentes. La pregunta «¿por qué las rutas no se ven compactas visualmente?» tiene respuesta en la
+geometría: la configuración de producción produce rutas sin auto-cruces en áreas de extensión real
+($\leq 1{,}32$\,km), y cuando los auto-cruces aparecen responden a la función objetivo, no a una
+limitación del tiempo de cómputo. La pregunta «¿por qué el \textit{baseline} \textit{greedy} se
+acerca en desplazamiento total?» tiene respuesta en la saturación: el heurístico llena cada ruta
+hasta un $98$\,\% de $T_{\max}$ ---sin dejar holgura operacional--- de modo que su reducción de
+caminata proviene de la cota, no de la calidad del ordenamiento. La diferencia de $4{,}7$\,\% de
+desplazamiento a favor del \textit{solver} ---medida contra un \textit{baseline} que recibe el mismo
+post-proceso de 2-opt--- y la menor severidad de su ruta residual son las dimensiones que el tiempo
+total de desplazamiento no captura de forma aislada (Sección~\ref{sec:comparacion-estrategias}).
+
+La unidad operativa del motor es el área de censo individual, no el arbolado metropolitano en su
+conjunto. Procesar cada área como un problema independiente reduciría la extensión del
+\textit{dataset} a la escala en que el \textit{solver} produce rutas limpias con la configuración
+actual; esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su
+costo se midió después sobre las áreas reales (Sección~\ref{sec:areas-reales}), donde resulta ser
+una ruta adicional y el triple de cómputo, no kilómetros de caminata. El problema que esa extensión
+plantea ---repartir un territorio en distritos compactos y equilibrados antes de rutear--- tiene
+tratamiento propio en la literatura bajo la denominación de diseño territorial
+\citep{kalcsics2005towards,rios2009reactive}, cuyos criterios de compacidad y de balance coinciden
+con los dos ejes que esta sección mide.
+
+Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
+configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
+sobre las doce instancias reales congeladas del \hyperref[anx:suite-instancias]{Anexo 4} ($n=43$ a
+$n=1\,607$). El único brazo que satisface el criterio de decisión sobre $n=1\,607$
+---\texttt{upper-tmax-tmin9000}, que ancla la penalización blanda superior en $T_{\max}$ y eleva el
+piso blando--- reduce los auto-cruces un $92{,}5$\,\% sin costo de viaje ni de balance en esa
+instancia, porque a esa densidad las rutas saturan $T_{\max}$ de forma natural
+($\overline{\text{sat}} = 0{,}94$). El mismo brazo produce, sin embargo, el peor resultado sobre las
+áreas reales individuales, donde la instancia no satura $T_{\max}$: fuerza relleno de trayecto con
+incrementos de viaje de hasta $+89$\,\%. Los brazos restantes no mejoran el criterio (el término de
+\textit{span} temporal queda por debajo del umbral exigido) o rompen el balance de carga en varias
+instancias. El \hyperref[anx:barrido-configuraciones]{Anexo 4} detalla las ocho configuraciones
+evaluadas, brazo por brazo, sobre las 96 celdas del barrido.
+
+La conclusión del barrido es que no existe una configuración única ganadora para todos los regímenes
+sin una compuerta previa: la hipótesis queda refutada. El escenario donde
+\texttt{upper-tmax-tmin9000} gana ---el conjunto agregado de $n=1\,607$--- no tiene correlato
+operativo en el censo histórico, que se organizó por área; representa en cambio el régimen de
+escalamiento, un censo de cobertura mayor o el ruteo de una comuna completa como un solo problema.
+La decisión adoptada es conservar la configuración de producción (\texttt{actual}) sin modificación
+y publicar \texttt{upper-tmax-tmin9000} como propuesta verificada para un \textit{guard} por
+saturación a priori ($\overline{\text{sat}} \gtrsim 0{,}9$): el código de los \textit{overrides}
+queda en el árbol (opt-in, producción intacta) para habilitar ese \textit{guard} cuando se
+implemente el selector, extensión que se documenta en la Sección~\ref{sec:posibles-mejoras}.
+% ---- 4.1.5 ------------------------------------------------------
 \subsection{Evaluación sobre áreas reales de censo y precio de la partición}
 \label{sec:areas-reales}
 
@@ -918,14 +1080,14 @@ los 72 árboles en una sola jornada de $10\,209$\,s ---el $94{,}5$\,\% de $T_{\m
 $1\,569$\,s de desplazamiento, mientras que el \textit{solver} abre dos rutas de $5\,766$ y
 $5\,597$\,s y gasta $2\,466$\,s, un $57$\,\% más de caminata y dos medias jornadas en lugar de una
 completa. No hay aquí ruta degenerada que reprochar al \textit{baseline}: su solución es la que un
-censador preferiría. Como el criterio exigía las tres áreas, el veredicto global frente al
+censista preferiría. Como el criterio exigía las tres áreas, el veredicto global frente al
 pre-registro es de incumplimiento, y así se reporta.
 
 \subsubsection*{El caso \texttt{area-27} es el régimen de relleno por $T_{\min}$}
 
 El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de búsqueda: es el
-régimen de relleno que la Sección~\ref{sec:discusion-calidad} caracteriza más adelante para
-instancias que no saturan su presupuesto temporal. Con la configuración de producción las cotas
+régimen de relleno que la Sección~\ref{sec:discusion-calidad} caracteriza para instancias que no
+saturan su presupuesto temporal. Con la configuración de producción las cotas
 blandas no dependen de la instancia: el método \texttt{PenaltyConfig.vehicle\_bounds} devuelve, para
 las cuatro instancias de este apartado, un piso en $T_{\min} = 7\,200$\,s con coeficiente
 $10\,000\,\text{s}^{-1}$ y un objetivo superior en el punto medio de $9\,000$\,s con coeficiente
@@ -1023,7 +1185,7 @@ La lectura que el material sostiene es que, al mismo presupuesto por corrida, la
 monolítica resulta menos estable, y no que particionar ahorre caminata. Ese presupuesto por corrida,
 además, no es comparable en total: la partición consumió el triple de cómputo.
 
-El precio medido de particionar es, entonces, una jornada de censador más, tres jornadas por debajo
+El precio medido de particionar es, entonces, una jornada de censista más, tres jornadas por debajo
 de $T_{\min}$ y el triple de cómputo, a cambio de instancias de aproximadamente $1{,}3$\,km que
 corresponden a una unidad operativa real y de una varianza entre repeticiones sustancialmente menor.
 Los auto-cruces y el solapamiento entre rutas se registraron como contexto y no formaron parte del
@@ -1038,144 +1200,16 @@ protocolo, los comandos reproducibles y los datos crudos se encuentran versionad
 \texttt{docs/experiments/} (reporte \texttt{area-partition-20260726.md} y los archivos CSV
 asociados).
 
-% ---- 4.1.5 ------------------------------------------------------
-\subsection{Discusión de calidad de rutas}
-\label{sec:discusion-calidad}
+% ---- 4.1.6 ------------------------------------------------------
+\subsection{Auditoría de robustez metodológica}
+\label{sec:auditoria-robustez}
 
-La función objetivo que minimiza el \textit{solver} combina seis componentes de escala diferente
-(Ecuación~\ref{eq:objetivo}). El término principal es el costo de arco, proporcional al tiempo de
-tránsito entre paradas consecutivas (aproximadamente 1\,s por segundo de caminata según la red
-peatonal de OSRM). Sobre él actúan dos penalizaciones blandas en la dimensión temporal de cada ruta:
-la penalización inferior, con coeficiente $10\,000\,\text{s}^{-1}$, desalienta que una ruta quede
-por debajo de $T_{\min}$; y la penalización superior, con coeficiente $500\,\text{s}^{-1}$,
-desalienta que la duración supere el punto medio del intervalo $[T_{\min},\,T_{\max}]$. Se añaden
-además un costo fijo de $100\,000$\,s por vehículo activo, que desincentiva el uso de rutas
-adicionales, y una penalización de $1\,000\,000$\,s por árbol no cubierto, que garantiza que la
-cobertura total sea siempre preferible a cualquier mejora marginal en los demás términos. El sexto
-componente es el costo de extensión geográfica, con coeficiente $\lambda_{\text{span}} = 3$ por
-metro de \textit{span} \textit{haversine} de cada ruta, que solo actúa bajo la estrategia
-\texttt{spatial\_term} y es lo que la distingue de \texttt{global}.
-
-La razón entre ambas penalizaciones blandas es de $20\mathord{:}1$ ($10\,000 / 500$), y el
-experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se conservan en
-\texttt{docs/experiments/penalty-sensitivity-20260713-reference.csv}--- ofrece evidencia causal de
-la función que cumple cada término. Al suprimir la penalización inferior (coeficiente $= 0$),
-manteniendo fijo el resto de los coeficientes, el balance de carga cae de $0{,}838$ a $0{,}739$, la
-flota sube de 25 a 32 rutas y el número de rutas que quedan por debajo de $T_{\min}$ pasa de 3 a 26,
-lo que confirma que ese componente es el mecanismo que sostiene la distribución de carga y evita la
-fragmentación en rutas demasiado cortas.
-
-La penalización superior actúa sobre la geometría: al redirigir su objetivo desde el punto medio del
-intervalo hasta $T_{\max}$, el número de auto-cruces medido sobre cuerdas cae de $76{,}3$ a $6{,}3$
----una reducción del $91{,}7$\,\%--- sin variar el presupuesto de cómputo ni el número de rutas. Esa
-cifra no sostiene, sin embargo, una relación causal directa: el barrido no tiene réplicas de semilla
-independientes, la métrica de cuerdas está invertida ($\rho = -0{,}575$) precisamente en la
-instancia donde se midió, y el mismo brazo degrada el balance de $0{,}838$ a $0{,}715$. El
-\hyperref[anx:reservas-sensibilidad]{Anexo 4} detalla las tres reservas. Con ellas, lo que el
-material sostiene es evidencia consistente con la hipótesis de que la geometría de las rutas
-responde a la configuración de la función objetivo y no al corte por tiempo del GLS, reforzada por
-dos observaciones independientes: el presupuesto del \textit{solver} no altera el número de rutas ni
-el balance por sobre los 120\,s (Tabla~\ref{tab:sensibilidad-tl}), y la re-medición sobre
-\texttt{crossings\_road} invierte el signo del efecto de este mismo brazo sobre la geometría real.
-
-El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. El conjunto
-de evaluación de $n = 1\,607$ árboles agrega arbolado real de múltiples áreas de censo dispersas en
-$\approx 10{,}3$\,km de extensión ($12{,}5$\,km de diagonal), frente a $1{,}32$\,km del área
-individual mayor ---razón cercana a $8\times$, según las instancias versionadas en
-\texttt{docs/experiments/instances/}---. Los árboles son reales; lo sin correlato operativo es
-tratar esa unión ---las veintiuna áreas no vacías de \texttt{legacy\_api} (429 árboles, 27\,\% del
-conjunto) más los 1\,178 árboles de \texttt{legacy\_app}, sin área asignada--- como un único trabajo
-de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). En el régimen de área real la
-configuración de producción genera rutas sin auto-cruces apreciables; estos emergen solo al procesar
-el conjunto agregado disperso bajo la estrategia \texttt{spatial\_term}
-(Ilustración~\ref{fig:ruta-vueltas-r1}), situación que en operación solo surgiría si se procesaran
-múltiples áreas de censo como un único problema.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
-  \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación.}
-  \label{fig:ruta-vueltas-r1}
-\end{figure}
-
-La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno:
-$\approx 10{,}3$\,km en el conjunto agregado frente a $\leq 1{,}32$\,km en las áreas individuales.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
-  \caption{
-    Régimen disperso (\textit{dataset} de evaluación agregado) frente a régimen real (áreas
-    individuales del arbolado legado).
-  }
-  \label{fig:regimen-disperso-vs-real}
-\end{figure}
-
-El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
-de $0{,}55$, se reproduce en la Ilustración~\ref{fig:peor-par}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
-  \caption{Par de rutas con mayor solapamiento espacial en el \textit{dataset} de evaluación.}
-  \label{fig:peor-par}
-\end{figure}
-
-El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría
-local del par, y ningún coeficiente global lo elimina sin penalizar las rutas circundantes; la
-solución estructural es la segmentación previa por área de censo.
-
-De los resultados anteriores se derivan dos respuestas directas a las preguntas de evaluación más
-frecuentes. La pregunta «¿por qué las rutas no se ven compactas visualmente?» tiene respuesta en la
-geometría: la configuración de producción produce rutas sin auto-cruces en áreas de extensión real
-($\leq 1{,}32$\,km), y cuando los auto-cruces aparecen responden a la función objetivo, no a una
-limitación del tiempo de cómputo. La pregunta «¿por qué el \textit{baseline} \textit{greedy} se
-acerca en desplazamiento total?» tiene respuesta en la saturación: el heurístico llena cada ruta
-hasta un $98$\,\% de $T_{\max}$ ---sin dejar holgura operacional--- de modo que su reducción de
-caminata proviene de la cota, no de la calidad del ordenamiento. La diferencia de $4{,}7$\,\% de
-desplazamiento a favor del \textit{solver} ---medida contra un \textit{baseline} que recibe el mismo
-post-proceso de 2-opt--- y la menor severidad de su ruta residual son las dimensiones que el tiempo
-total de desplazamiento no captura de forma aislada (Sección~\ref{sec:comparacion-estrategias}).
-
-La unidad operativa del motor es el área de censo individual, no el arbolado metropolitano en su
-conjunto. Procesar cada área como un problema independiente reduciría la extensión del
-\textit{dataset} a la escala en que el \textit{solver} produce rutas limpias con la configuración
-actual; esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su
-costo se midió después sobre las áreas reales (Sección~\ref{sec:areas-reales}), donde resulta ser
-una ruta adicional y el triple de cómputo, no kilómetros de caminata. El problema que esa extensión
-plantea ---repartir un territorio en distritos compactos y equilibrados antes de rutear--- tiene
-tratamiento propio en la literatura bajo la denominación de diseño territorial
-\citep{kalcsics2005towards,rios2009reactive}, cuyos criterios de compacidad y de balance coinciden
-con los dos ejes que esta sección mide.
-
-Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
-configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
-sobre las doce instancias reales congeladas del \hyperref[anx:suite-instancias]{Anexo 4} ($n=43$ a
-$n=1\,607$). El único brazo que satisface el criterio de decisión sobre $n=1\,607$
----\texttt{upper-tmax-tmin9000}, que ancla la penalización blanda superior en $T_{\max}$ y eleva el
-piso blando--- reduce los auto-cruces un $92{,}5$\,\% sin costo de viaje ni de balance en esa
-instancia, porque a esa densidad las rutas saturan $T_{\max}$ de forma natural
-($\overline{\text{sat}} = 0{,}94$). El mismo brazo produce, sin embargo, el peor resultado sobre las
-áreas reales individuales, donde la instancia no satura $T_{\max}$: fuerza relleno de trayecto con
-incrementos de viaje de hasta $+89$\,\%. Los brazos restantes no mejoran el criterio (el término de
-\textit{span} temporal queda por debajo del umbral exigido) o rompen el balance de carga en varias
-instancias. El \hyperref[anx:barrido-configuraciones]{Anexo 4} detalla las ocho configuraciones
-evaluadas, brazo por brazo, sobre las 96 celdas del barrido.
-
-La conclusión del barrido es que no existe una configuración única ganadora para todos los regímenes
-sin una compuerta previa: la hipótesis queda refutada. El escenario donde
-\texttt{upper-tmax-tmin9000} gana ---el conjunto agregado de $n=1\,607$--- no tiene correlato
-operativo en el censo histórico, que se organizó por área; representa en cambio el régimen de
-escalamiento, un censo de cobertura mayor o el ruteo de una comuna completa como un solo problema.
-La decisión adoptada es conservar la configuración de producción (\texttt{actual}) sin modificación
-y publicar \texttt{upper-tmax-tmin9000} como propuesta verificada para un \textit{guard} por
-saturación a priori ($\overline{\text{sat}} \gtrsim 0{,}9$): el código de los \textit{overrides}
-queda en el árbol (opt-in, producción intacta) para habilitar ese \textit{guard} cuando se
-implemente el selector, extensión que se documenta en la Sección~\ref{sec:posibles-mejoras}.
-
-\subsubsection*{Auditoría de robustez metodológica}
-
-La serie experimental registra dieciséis ciclos de evaluación cerrados durante julio de 2026. El
+La serie experimental registra dieciséis ciclos de evaluación\footnote{Se cuenta como ciclo de
+evaluación el que somete a prueba una hipótesis sobre la formulación o sus coeficientes con un
+criterio de decisión fijado y versionado antes de ejecutar la corrida. El directorio
+\texttt{docs\slash experiments\slash } contiene además informes de perfilado, de auditoría de
+instrumento y de corridas de referencia, que no constituyen ciclos bajo esa definición y no entran
+en el recuento.} cerrados durante julio de 2026. El
 análisis retrospectivo identificó cuatro defectos de instrumentación en los ciclos iniciales
 ---semillas no propagadas, una cota de relleno inalcanzable, la métrica de auto-cruces sobre cuerdas
 en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos distintos---,
@@ -1192,6 +1226,25 @@ artefacto de la métrica y que el algoritmo limpia la geometría real, lo que re
 incorporó a la configuración de producción. Es el único cambio de configuración por defecto de toda
 la serie, y no proviene de barrer términos de la función objetivo sino de corregir el instrumento de
 medición.
+
+Hay un hallazgo transversal a los apartados anteriores que conviene enunciar por separado, porque no
+pertenece a ninguno y explica una decisión de diseño del Capítulo~\ref{cap:diseno}. En casi ningún
+ciclo de la serie apareció un brazo que ganara en todas las instancias a la vez. Lo habitual fue lo
+contrario: una configuración que mejora la geometría en el régimen agregado empeora el balance en
+las áreas pequeñas, una que elimina las rutas cortas paga tiempo de desplazamiento, y el orden entre
+dos brazos se invierte al cambiar la densidad o el tamaño de la instancia. Los apartados anteriores
+muestran cuatro casos de ese patrón: el término espacial compra compacidad y cede tiempo y balance;
+la comparación con el heurístico depende por completo de si el competidor recibe el mismo
+refinamiento; el criterio de decisión sobre áreas reales se cumple en dos de las tres; y el
+coeficiente espacial no ordena las instancias de forma monótona.
+
+Esa ausencia sistemática de un ganador único es la evidencia que descartó fijar un
+\textit{default} único y la que motivó el abanico de seis candidatas con selección lexicográfica que
+describe la Sección~\ref{sec:abanico}: si ninguna combinación domina a las demás en todas las
+instancias, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la
+instancia concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
+El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
+experimental midió.
 
 \section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
 \label{sec:perfil-rendimiento}
@@ -1225,6 +1278,7 @@ y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto d
 como variable del experimento y no como constante del régimen.
 
 \subsection{Entorno de medición}
+\label{sec:entorno-medicion}
 
 Dado que el sistema no cuenta con un despliegue productivo, las mediciones se realizaron sobre una
 réplica local del entorno de producción definida en \texttt{docker-compose.prod.yml}. Esta réplica
@@ -1447,7 +1501,7 @@ exigido, acompañado de una desviación estándar de $559$\,s equivalente al $5{
 el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto
 equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
 (CA-04) es en efecto una salida del sistema: el administrador declara la duración de la jornada y el
-tiempo de servicio, y el número de censadores necesarios se deriva de ellos, lo que constituye la
+tiempo de servicio, y el número de censistas necesarios se deriva de ellos, lo que constituye la
 diferencia funcional más nítida respecto de la planificación manual descrita en la
 Sección~\ref{sec:estado-actual}.
 
@@ -1501,7 +1555,7 @@ borde está documentado con la configuración que lo evita.
 
 La operabilidad en terreno es el atributo cuyo cumplimiento esta memoria acredita con menos fuerza,
 y por dos razones distintas. La primera es de alcance de la evidencia: el portal se verificó por
-partes y nunca en una jornada de censo con censadores reales, de modo que lo que se comprueba es que
+partes y nunca en una jornada de censo con censistas reales, de modo que lo que se comprueba es que
 el sistema hace lo que su diseño dice, no que resista la calle. La segunda es de grado de
 implementación: el registro sobrevive a pérdidas de conexión momentáneas mediante una cola local,
 pero no se implementó la sincronización diferida robusta ni el almacenamiento de teselas de mapa que
@@ -1657,6 +1711,15 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
         porque su tamaño en disco crece como $O(n^2)$; procesar \textit{datasets} que lo excedan
         requeriría almacenamiento disperso o la segmentación previa del arbolado.
 
+    \item Persistencia de las fotografías: la imagen que acompaña a cada observación se guarda en un
+        campo \texttt{ImageField} sobre el sistema de archivos del contenedor de la aplicación
+        (Sección~\ref{sec:recenso}), sin almacenamiento de objetos ni respaldo, y el despliegue de
+        producción no declara un volumen que la preserve. La evidencia gráfica que el sistema exige
+        para toda visita positiva es, por tanto, la pieza de menor durabilidad del modelo de datos.
+        La limitación se asume porque el protocolo de censo aún no determina si la fotografía es
+        necesaria ni cuántas por árbol, y dimensionar el almacenamiento antes de esa definición
+        fijaría una arquitectura sobre un requisito que puede cambiar.
+
     \item Alcance del problema de ruteo: el motor optimiza el \textit{dataset} completo como un
         único problema, sin segmentación previa por área geográfica. Cuando el \textit{dataset}
         reúne arbolado de múltiples áreas de censo ---como el conjunto de evaluación de $n = 1\,607$
@@ -1740,7 +1803,7 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
     \item Geometría de referencia de la métrica de auto-cruces: el número de auto-cruces se calcula
         sobre las cuerdas rectas entre paradas consecutivas, geometría distinta de la que optimiza
-        el \textit{solver} (tiempo de red de OSRM) y de la que recorre el censador (trazado real de
+        el \textit{solver} (tiempo de red de OSRM) y de la que recorre el censista (trazado real de
         calles). La correspondencia entre las dos primeras no se ha comprobado; la de las cuerdas
         con el trazado real sí está medida y es parcial ($\rho = 0{,}527$, invertida en el conjunto
         agregado), de modo que las cifras de auto-cruces sobre cuerdas de este capítulo conservan su
@@ -1749,7 +1812,7 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
     \item Exactitud no medida del estimador de distancias: el perfil peatonal de OSRM se aparta de
         la caminata real de terreno por no modelar pendientes, semáforos, congestión peatonal ni el
-        ritmo de un censador; la magnitud de esa desviación no se midió porque exigiría una jornada
+        ritmo de un censista; la magnitud de esa desviación no se midió porque exigiría una jornada
         de terreno con registro de tiempos, fuera del alcance de esta memoria
         (Sección~\ref{sec:verificacion}). Cabe esperar que el error sea sistemático ---todas las
         rutas se estiman con el mismo perfil sobre la misma red---, lo que lo hace más sensible para
@@ -1782,14 +1845,14 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
 Las mejoras enumeradas a continuación se derivan de los resultados del capítulo. La primera es la de
 mayor valor para el proyecto; las dos siguientes tienen además anclaje en mediciones propias de esta
-memoria. Las ocho restantes abordan limitaciones funcionales o de diseño, independientes o no de la
-serie experimental, y la última registra una alternativa evaluada y descartada. Cada una indica la
-evidencia que la respalda, su costo y qué habría que construir.
+memoria. Las nueve restantes abordan limitaciones funcionales o de diseño, independientes o no de la
+serie experimental, y las dos últimas registran alternativas evaluadas y descartadas. Cada una
+indica la evidencia que la respalda, su costo y qué habría que construir.
 
 \begin{itemize}[label=--]
   \item Validación en terreno: las conclusiones de este capítulo verifican que el producto hace lo
       que su diseño declara, pero no que resuelva en operación el problema logístico que lo motivó
-      (Sección~\ref{sec:verificacion}). El costo es una jornada de censo real con censadores y un
+      (Sección~\ref{sec:verificacion}). El costo es una jornada de censo real con censistas y un
       área individual, con registro de tiempos de caminata. Debe construirse una jornada
       instrumentada que contraste el tiempo estimado por el perfil peatonal de OSRM contra el tiempo
       observado en terreno, y que ejercite la cola \textit{offline} bajo la conectividad real que
@@ -1825,6 +1888,20 @@ evidencia que la respalda, su costo y qué habría que construir.
       \textit{service worker} dedicado. Debe construirse la gestión de teselas y la sincronización
       diferida robusta que la versión actual no cubre.
 
+  \item Protocolo de censo y almacenamiento de fotografías: el sistema exige hoy una fotografía por
+      visita positiva y la persiste en el sistema de archivos del contenedor
+      (Sección~\ref{sec:limitaciones}), pero esa exigencia no se deriva del propósito del proyecto y
+      el protocolo que la fijaría no está definido. La evidencia de que el almacenamiento importa la
+      da el propio proyecto: las $10\,008$ fotografías de \texttt{legacy\_api} son hoy inaccesibles
+      porque se cerró el plan de facturación del proyecto \textit{Firebase} que las alojaba. El orden
+      correcto es primero decidir el protocolo ---si la fotografía es necesaria, cuántas por árbol y
+      con qué retención--- y solo entonces dimensionar la arquitectura, porque el costo de
+      almacenamiento y la política de respaldo dependen por completo de esa decisión. Debe
+      construirse, una vez fijada, la persistencia sobre un almacenamiento de objetos externo con
+      respaldo y control de acceso; un proyecto \textit{Firebase} propio de esta iteración es la vía
+      natural por continuidad con las dos fuentes legadas, con la reserva de que la propiedad de la
+      cuenta y su facturación queden bajo el proyecto y no bajo una persona.
+
   \item Importación de formatos adicionales: los \textit{datasets} se importan hoy desde archivos
       CSV o JSON, o desde las fuentes legadas (Sección~\ref{sec:legacy}), sin soporte de GeoJSON.
       El costo es un \textit{parser} adicional sobre el mismo flujo de importación. Debe construirse
@@ -1839,7 +1916,7 @@ evidencia que la respalda, su costo y qué habría que construir.
   \item Pruebas de extremo a extremo: la Sección~\ref{sec:verificacion} cubre pruebas unitarias de
       \textit{backend} y \textit{frontend}, pero ningún flujo completo de usuario. El costo es de
       mantenimiento de la suite. Debe construirse la automatización de los flujos de administrador y
-      censador mediante Playwright.
+      censista mediante Playwright.
 
   \item Preferir rutas cortas antes que descartar árboles: subir el costo fijo por vehículo
       $C_{\text{fijo}}$ no es el mecanismo, y conviene decirlo así porque es la intuición más
@@ -1874,6 +1951,18 @@ evidencia que la respalda, su costo y qué habría que construir.
       \textit{solver}, lo que vuelve circular el entrenamiento. Tercera, es sobreingeniería frente a
       un problema que la formulación actual resuelve en $120$\,s con herramientas ya construidas y
       probadas (Sección~\ref{sec:cumplimiento-criterios}).
+
+  \item Partición \textit{route-first, cluster-second}: se evaluó como alternativa de partición
+      espacial (Sección~\ref{sec:solucion}) y no se propone. Resolver un TSP único sobre los $n$
+      árboles y cortar después el recorrido en tramos de duración acumulada $\leq T_{\max}$ no
+      controla el balance ni la compacidad de cada tramo, y fija los extremos de cada uno con un
+      recorrido que se construyó ignorando la partición que luego se le impone. Los resultados de
+      este capítulo refuerzan el descarte y no lo debilitan: el balance de carga no resulta ser una
+      propiedad que se obtenga por añadidura sino la que más cuesta sostener
+      (Sección~\ref{sec:discusion-calidad}), y la compacidad geográfica exigió un término explícito
+      en el objetivo (Sección~\ref{sec:comparacion-estrategias}). El costo de retomarla es de
+      formulación y no de cómputo. Debe construirse, si se retoma, un criterio de corte que optimice
+      la partición en lugar de heredarla del recorrido.
 \end{itemize}
 
 Una extensión adicional se evaluó y quedó descartada por la propia medición, lo que justifica

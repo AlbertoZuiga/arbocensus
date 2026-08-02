@@ -1,7 +1,7 @@
 \chapter{DISEÑO DEL PRODUCTO}
 \label{cap:diseno}
 
-% La cota de altura es obligatoria: la captura del portal del censador es
+% La cota de altura es obligatoria: la captura del portal del censista es
 % vertical, y a 0.9\textwidth su alto excede la caja de texto.
 \newcommand{\capturaui}[4]{%
   \begin{figure}[htbp]
@@ -261,9 +261,9 @@ Los modelos de dominio centrales son los siguientes:
         desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma
         de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre unión)
         del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo
-        \texttt{timing}). La relación \texttt{participants} registra los censadores que participan
-        de la solución y alimenta el cálculo de carga acumulada por censador (Sección~\ref{sec:ui}).
-  \item Route: ruta individual con tiempos estimados; su asignación a un censador 
+        \texttt{timing}). La relación \texttt{participants} registra los censistas que participan
+        de la solución y alimenta el cálculo de carga acumulada por censista (Sección~\ref{sec:ui}).
+  \item Route: ruta individual con tiempos estimados; su asignación a un censista 
         (\texttt{surveyor}) es opcional.
   \item RouteStop: visita de un árbol en una ruta, con número de secuencia y estado de
         visita.
@@ -289,14 +289,14 @@ modelo incorpora un ciclo de vida de publicación: el campo \texttt{published\_a
 activa de un \textit{dataset} y una restricción de unicidad parcial (\texttt{UniqueConstraint}
 condicionada a \texttt{published\_at} no nulo) garantiza que exista a lo más una
 \texttt{RoutingSolution} publicada por \textit{dataset}. Publicar una nueva solución despublica
-atómicamente la anterior. La asignación de un censador a una \texttt{Route} solo se permite sobre la
+atómicamente la anterior. La asignación de un censista a una \texttt{Route} solo se permite sobre la
 solución publicada, y el campo \texttt{surveyor} admite valor nulo (\texttt{SET\_NULL}), de modo que
 las rutas de soluciones no publicadas permanecen sin asignar hasta que el administrador defina el
 plan vigente.
 
 La Ilustración~\ref{fig:er} presenta el modelo entidad-relación simplificado. Se omiten los
 atributos no estructurales, así como la relación auxiliar que vincula cada observación con el
-usuario que la registra: ese campo es anulable por la misma razón que lo es el censador de una ruta.
+usuario que la registra: ese campo es anulable por la misma razón que lo es el censista de una ruta.
 Todas las entidades usan claves primarias UUID. \texttt{DistanceMatrix} cachea la matriz de tiempos
 del \textit{dataset}; \texttt{RouteStop} es la fuente de verdad del orden de visita;
 \texttt{TreeObservation} sobrevive al plan de rutas que la originó.
@@ -615,18 +615,21 @@ orden de decenas de megabytes a ese tamaño---.
 
 \label{sec:flota}
 
-El número de rutas $k$ ---y por lo tanto el número de censadores que deben salir a terreno en una
+El número de rutas $k$ ---y por lo tanto el número de censistas que deben salir a terreno en una
 jornada--- no es un dato de entrada del sistema: es una salida del \textit{solver}. El administrador
 nunca declara cuántos equipos tiene disponibles; declara cuánto puede durar una jornada ($T_{\min}$,
-$T_{\max}$) y cuánto toma censar un árbol ($s$), y el sistema deriva la flota necesaria. El tiempo
-de servicio $s$ es un parámetro y no una constante del sistema porque el protocolo de censo no está
-fijado de una campaña a otra: el número de fotografías y de preguntas que un censador completa por
-árbol varía según lo que la campaña exija registrar, y esa variación es la que $s$ traslada al
-modelo. Esta
-decisión de diseño evita el enfoque de iteración externa ---resolver el modelo con $1, 2, 3, \ldots$
-vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de cómputo por el número
-de intentos y resulta frágil, dado que una corrida infactible no distingue entre «faltan vehículos»
-y «el modelo no admite solución».
+$T_{\max}$) y cuánto toma censar un árbol ($s$), y el sistema deriva la flota necesaria. Derivar $k$
+del \textit{solver} evita el enfoque de iteración externa ---resolver el modelo con
+$1, 2, 3, \ldots$ vehículos hasta hallar el menor valor factible---, que multiplica el tiempo de
+cómputo por el número de intentos y resulta frágil, dado que una corrida infactible no distingue
+entre «faltan vehículos» y «el modelo no admite solución».
+
+El tiempo de servicio $s$, en cambio, sí es un dato de entrada, y es un parámetro y no una constante
+del sistema porque el protocolo de censo no está fijado de una campaña a otra: el número de
+fotografías y de preguntas que un censista completa por árbol varía según lo que la campaña exija
+registrar, y esa variación es la que $s$ traslada al modelo. Esa indefinición no es un detalle de
+calibración sino una cuestión abierta del proyecto, que la Sección~\ref{sec:recenso} retoma al
+discutir qué evidencia exige cada observación en terreno.
 
 En su lugar, el sistema entrega a \textit{OR-Tools} un techo $N_{\max}$ de vehículos disponibles y
 deja que el \textit{solver} decida cuántos activa. El techo se calcula a partir del trabajo total
@@ -661,7 +664,7 @@ los $1\,607$ árboles de la instancia de referencia, con un techo de $N_{\max}=3
 
 La misma estimación alimenta un segundo uso, orientado a la planificación operativa y no al
 \textit{solver}: el \textit{endpoint} \texttt{GET /api/optimization/estimate/} permite al
-administrador consultar, antes de lanzar una optimización, cuántos censadores requeriría un
+administrador consultar, antes de lanzar una optimización, cuántos censistas requeriría un
 \textit{dataset} bajo un $T_{\min}$ y un tiempo de servicio dados. En este caso la
 Ecuación~\ref{eq:nmax} se evalúa con margen nulo ($b=0$), dado que aquí interesa una estimación
 ajustada y no un techo. La consulta reutiliza la matriz de costos en caché y no dispara ninguna
@@ -781,17 +784,20 @@ partición, registradas en el campo \texttt{strategy} del trabajo de optimizaci�
 \texttt{global} reproduce el comportamiento de la formulación anterior sin cambios y constituye la
 línea base.
 
-Las tres estrategias no se ofrecen como una elección del administrador. Un valor adicional del
-campo, \texttt{compare}, ejecuta las tres sobre el mismo conjunto de árboles y persiste una
-\texttt{RoutingSolution} independiente por estrategia, lo que permite contrastarlas bajo una misma
-matriz de costos y un mismo presupuesto de \textit{solver}; es el modo con que se produjeron las
-comparaciones del Capítulo~\ref{cap:resultados} y queda reservado a ese uso experimental. El
-lanzamiento ordinario despliega en cambio un abanico fijo de combinaciones, descrito en la
-Sección~\ref{sec:abanico}, del que \texttt{cluster\_first} está excluida: el
-Capítulo~\ref{cap:resultados} la descarta con datos ---deja árboles fuera de la solución y degrada
-el balance--- y mantenerla en el abanico de producción gastaría un tercio del cómputo en una
-candidata que el criterio de selección nunca elige. Permanece accesible por la vía experimental, no
-por la del administrador.
+Ninguna de las tres se ofrece como elección del administrador, y no todas cumplen el mismo papel. En
+producción, el lanzamiento ordinario despliega un abanico fijo de combinaciones
+(Sección~\ref{sec:abanico}) construido solo sobre \texttt{global} y \texttt{spatial\_term}.
+\texttt{cluster\_first} queda fuera de ese abanico, y su exclusión es un resultado empírico y no una
+preferencia de diseño: medida contra las otras dos bajo la misma matriz de costos y el mismo
+presupuesto, deja árboles fuera de la solución y degrada el balance
+(Sección~\ref{sec:comparacion-estrategias}, Tabla~\ref{tab:estrategias}). Mantenerla en producción
+gastaría un tercio del cómputo en una candidata que el criterio de selección nunca elige.
+
+Fuera de producción, un cuarto valor del campo, \texttt{compare}, ejecuta las tres sobre el mismo
+conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por estrategia. Ese es el
+mecanismo que hace homogénea la comparación ---misma matriz, mismo presupuesto, mismas semillas--- y
+con el que se produjeron las cifras del Capítulo~\ref{cap:resultados}. \texttt{cluster\_first}
+permanece accesible por esa vía, la experimental, y no por la del administrador.
 
 \begin{itemize}[label=--]
   \item \texttt{global}: el \textit{Open mTSP} único descrito en la Sección~\ref{sec:solver}, sin
@@ -825,6 +831,16 @@ soluciones en las que la asignación ya es buena pero el ordenamiento interno de
 cruces que un refinamiento local elimina de inmediato. El sistema explota esa asimetría con un
 post-proceso que se aplica a toda solución antes de persistirla, sin condición ni parámetro que lo
 desactive.
+
+Hay una segunda razón, y es de precio y no de presupuesto. Por debajo de $T_{\min}$ el costo
+marginal del tiempo es negativo: alargar una ruta corta la acerca al piso y abarata la solución. Un
+\textit{solver} enfrentado a una instancia cuyo trabajo real no alcanza a llenar las rutas que abre
+no tiene entonces ningún incentivo para que el recorrido interno de esas rutas sea corto, y puede
+entregarlas con desvíos que solo existen para consumir tiempo. Como la dimensión temporal se declara
+sin holgura, ese consumo no es espera sino caminata: son metros que el censista recorrería. El
+2-opt, que optimiza el camino y no el objetivo del modelo, recupera buena parte de esa caminata sin
+tocar la asignación, y por eso su ganancia es mayor precisamente en las instancias de baja densidad
+donde ese régimen aparece (Sección~\ref{sec:areas-reales}).
 
 El procedimiento es un 2-opt de camino abierto \citep{croes1958method,lin1965computer}, aplicado a
 cada ruta de forma independiente. Dada la secuencia de paradas de una ruta, examina todo par de
@@ -870,10 +886,15 @@ se documentan en la Sección~\ref{sec:discusion-calidad}.
 
 Los coeficientes de la función objetivo no admiten un único valor correcto: cada ajuste compra una
 propiedad de la solución al precio de otra, y qué propiedad conviene comprar depende de la densidad
-del \textit{dataset} y de la holgura de la jornada (Capítulo~\ref{cap:resultados}). El sistema
-resuelve esa indeterminación sin trasladarla al administrador: en lugar de exponer los coeficientes
-como parámetros, define tres perfiles de precios cerrados, con nombre y descripción en el lenguaje
-del usuario, y los ejecuta todos.
+del \textit{dataset} y de la holgura de la jornada. Esa indeterminación no es un supuesto de partida
+sino el resultado de la serie experimental: en casi ningún ciclo apareció una configuración que
+ganara en todas las instancias medidas, y el orden entre dos de ellas se invierte al cambiar el
+tamaño o la densidad del conjunto (Capítulo~\ref{cap:resultados}). Los tres perfiles que siguen no
+se eligieron por criterio propio: son las combinaciones que esa comparación dejó en pie.
+
+El sistema resuelve la indeterminación sin trasladarla al administrador: en lugar de exponer los
+coeficientes como parámetros, define tres perfiles de precios cerrados, con nombre y descripción en
+el lenguaje del usuario, y los ejecuta todos.
 
 \begin{itemize}[label=--]
   \item Equilibrada (\texttt{default}): los precios de producción tal como se describieron en las
@@ -956,10 +977,11 @@ ordena sus candidatas.
 \section{IMPORTACIÓN Y SELECCIÓN DE FUENTES LEGADAS}
 \label{sec:legacy}
 
-El sistema no parte de cero: existen dos bases de datos operativas de versiones anteriores del
-proyecto Arbocensus \citep{binder-cortes2023,pizarro-zumaeta2024}, que contienen el arbolado ya
-catastrado en campañas previas. Ambas se incorporan como fuentes de importación, identificadas por
-el campo \texttt{source} del modelo \texttt{Tree}:
+Las dos bases de datos que dejaron las iteraciones anteriores, descritas en la
+Sección~\ref{sec:estado-actual}, se incorporan como fuentes de importación, identificadas por el
+campo \texttt{source} del modelo \texttt{Tree}. Lo que esta sección aporta no es su contenido sino
+lo que esta iteración hace con ellas: cómo se reconstruye una posición canónica donde no la hay,
+cómo se resuelve el solapamiento entre ambas y cómo el administrador elige qué subconjunto importar.
 
 % Orden cronológico confirmado por los volcados de las bases (migraciones y muestras): legacy_app
 % (esquema arbocensus_app_*, muestras por QR) es la más antigua: génesis de base 2021-10 y capturas
@@ -991,9 +1013,15 @@ Ambas fuentes se solapan geográficamente, por lo que se descarta el árbol de \
 que se encuentre a $5$\,m o menos de uno de \texttt{legacy\_api} ---se conserva este último, que
 aporta especie y área---. La proximidad es el único criterio de correspondencia disponible entre
 ambas fuentes, dado que no comparten un identificador común: \texttt{legacy\_app} identifica cada
-árbol por código QR y \texttt{legacy\_api} por su fila en la base. El umbral de $5$\,m es del orden
-del error típico de una lectura de GPS de teléfono en terreno, de modo que separa el árbol
-efectivamente duplicado de uno distinto que, por azar, cae cerca del primero. El explorador expone
+árbol por código QR y \texttt{legacy\_api} por su fila en la base. El umbral de $5$\,m es un criterio
+operativo elegido por este diseño y no se deriva de la precisión del instrumento: la literatura
+reporta para receptores de teléfono en entorno urbano errores horizontales medios del orden de
+$7$--$13$\,m \citep{merry2019smartphone}, es decir, mayores que el propio umbral. La elección es por
+tanto deliberadamente conservadora, y su sesgo es conocido: al exigir una coincidencia más estrecha
+que el error de medición, el criterio deja pasar duplicados cuyas dos lecturas se separan más de
+$5$\,m antes que fusionar dos ejemplares distintos que caen cerca. Se prefiere ese error porque un
+árbol duplicado cuesta una visita redundante, mientras que uno fusionado por error desaparece del
+catastro. El explorador expone
 así $13\,319$ árboles importables: $429$ de \texttt{legacy\_api} y $12\,890$ de
 \texttt{legacy\_app}. Ese es el universo disponible; el
 \textit{dataset} de $n = 1\,607$ árboles con que se evalúa el sistema
@@ -1049,7 +1077,11 @@ usuario y no tiene interfaz asociada: se conserva como atajo programático para 
 
 La interfaz de selección (\texttt{LegacyImport}, con el componente \texttt{LegacySelectionMap})
 presenta sobre un mapa \textit{Leaflet} la totalidad del arbolado legado y los polígonos de las
-áreas de censo. Cada árbol se dibuja como un marcador circular cuyo color codifica su estado:
+áreas de censo. Un área de censo es la unidad con que se organizó la operación histórica: son
+polígonos que vienen de \texttt{legacy\_api}, donde cada campaña agrupaba su arbolado por sector, y
+no una entidad que esta iteración defina. Se dibujan porque el administrador reconoce el territorio
+por ellas, y porque son la unidad que el Capítulo~\ref{cap:resultados} identifica como la escala
+natural del motor. Cada árbol se dibuja como un marcador circular cuyo color codifica su estado:
 disponible, seleccionado o ya importado --- estos últimos, además, no son interactivos, lo que hace
 imposible seleccionar dos veces el mismo árbol---. La selección puede componerse mediante tres
 mecanismos combinables:
@@ -1112,8 +1144,8 @@ afirmación que la fuente no respalda.
 
 \subsection{Captura en terreno}
 
-En el portal del censador (Sección~\ref{sec:ui}), toda parada genera una observación, tanto si el
-árbol se visita como si se omite. Al registrar una visita, el censador selecciona el estado del
+En el portal del censista (Sección~\ref{sec:ui}), toda parada genera una observación, tanto si el
+árbol se visita como si se omite. Al registrar una visita, el censista selecciona el estado del
 árbol y captura una fotografía. La fotografía es obligatoria cuando el estado declarado afirma haber
 visto el árbol ---\texttt{alive} o \texttt{removed}---: la interfaz mantiene la confirmación
 deshabilitada mientras no se haya tomado, y el servidor rechaza con un código 400 la petición que
@@ -1128,15 +1160,15 @@ sobre el estado de un árbol, y no de la constatación de su ausencia.
 
 Conviene precisar el alcance de esa garantía. La fotografía es la evidencia documental de la
 observación ---sin ella el estado declarado no es contrastable a posteriori por el administrador---,
-pero no acredita por sí sola que el censador haya estado frente al árbol correcto: no se verifica su
+pero no acredita por sí sola que el censista haya estado frente al árbol correcto: no se verifica su
 contenido, ni sus metadatos de posición, ni el instante de captura. El control de proximidad de
 $30$\,m que la interfaz aplica antes de habilitar el registro (Sección~\ref{sec:ui}) tampoco cierra
 esa brecha, porque se evalúa en el cliente ---que además ofrece la opción de forzar el registro
 cuando la señal de GPS es imprecisa--- y el servidor acepta las coordenadas que reciba sin
 contrastarlas con la posición del árbol. Ese control es deliberadamente una guía y no una compuerta:
-al censador en la calle puede fallarle la señal de GPS, y bloquear el registro en ese caso costaría
+al censista en la calle puede fallarle la señal de GPS, y bloquear el registro en ese caso costaría
 la observación completa de la jornada. El árbol ya tiene una posición conocida desde su
-importación, de modo que la proximidad sirve para orientar al censador hacia la parada correcta y no
+importación, de modo que la proximidad sirve para orientar al censista hacia la parada correcta y no
 para condicionar si el registro se acepta. La trazabilidad que el sistema sí garantiza es de autoría
 y momento: cada observación queda ligada al usuario que la registró y a su marca temporal, y no
 puede alterarse retroactivamente. Verificar la presencia física en terreno exigiría un control del
@@ -1144,19 +1176,30 @@ lado del servidor sobre la coordenada reportada, que esta iteración no implemen
 
 La captura se realiza con la cámara del dispositivo desde el propio navegador ---solicitando la
 cámara trasera y comprimiendo el fotograma a JPEG--- y la observación viaja al servidor como
-\textit{multipart} cuando incluye imagen. Al omitir una parada, en cambio, el censador debe indicar
+\textit{multipart} cuando incluye imagen. Al omitir una parada, en cambio, el censista debe indicar
 un motivo (árbol inexistente, acceso bloqueado u otro) y la fotografía no se exige, dado que el
 motivo típico de la omisión es justamente que no hay árbol que fotografiar. El estado de la
 observación se deriva del motivo: la omisión por árbol inexistente produce una observación
 \texttt{not\_found}, y cualquier otro motivo, una observación \texttt{unknown}. Así, incluso una
 parada omitida deja constancia histórica de por qué no se pudo censar.
 
+Conviene separar dos cosas que la implementación hoy une. Que la fotografía sea obligatoria es una
+regla de esta iteración, no un requisito que se derive del propósito del proyecto: etiquetar un
+ejemplar como riesgoso o no riesgoso no exige necesariamente una imagen por visita, y el protocolo
+de censo que fijaría esa exigencia no está definido ---es la misma indefinición que obliga a tratar
+el tiempo de servicio $s$ como parámetro (Sección~\ref{sec:flota})---. Que el sistema la admita
+tampoco significa que la conserve bien: la imagen se persiste en un campo \texttt{ImageField} sobre
+el sistema de archivos del contenedor de la aplicación, que no es almacenamiento durable ni está
+respaldado. Esa combinación ---una exigencia que el propósito no impone y una persistencia que no
+garantiza permanencia--- es una limitación asumida y no un compromiso de diseño, y el
+Capítulo~\ref{cap:resultados} la retoma como tal.
+
 \subsection{Instantánea del histórico legado}
 
 La importación de una fuente legada no trae solo la posición de los árboles: trae también, en la
 misma transacción, sus observaciones previas, que se materializan como \texttt{TreeObservation} con
 el campo \texttt{source}, que registra su procedencia. El resultado es que un árbol recién importado
-ya llega al sistema con su historial de campañas anteriores, y la primera visita del censador se
+ya llega al sistema con su historial de campañas anteriores, y la primera visita del censista se
 registra como una observación más en esa serie ---esto es, como un re-censo y no como un censo
 inicial.
 
@@ -1190,7 +1233,7 @@ La API REST se implementa con Django REST Framework y expone los siguientes grup
 \begin{itemize}[label=--]
   \item Autenticación (\texttt{/api/auth/}): obtención y renovación de \textit{tokens}
         \textit{JSON Web Token} (JWT) mediante \textit{djangorestframework-simplejwt}, consulta del
-        usuario en sesión y administración de las cuentas de censadores.
+        usuario en sesión y administración de las cuentas de censistas.
   \item Datasets (\texttt{/api/datasets/}): importación de archivos CSV o JSON con detección
         automática de las columnas de coordenadas, exploración de las fuentes legadas y creación de
         \textit{datasets} a partir de una selección (Sección~\ref{sec:legacy}), y exportación de
@@ -1203,13 +1246,14 @@ La API REST se implementa con Django REST Framework y expone los siguientes grup
         de cada \texttt{RoutingSolution} ordenadas por el criterio de recomendación; y publica o
         despublica la solución vigente por \textit{dataset}.
   \item Rutas (\texttt{/api/routes/}): listado de rutas con métricas, exportación \textit{GeoJSON}
-        para visualización cartográfica, asignación de censadores, carga acumulada por censador
-        con sugerencia de asignación voraz, consulta de la ruta propia del censador, y registro de
+        para visualización cartográfica, asignación de censistas, carga acumulada por censista
+        con sugerencia de asignación voraz, consulta de la ruta propia del censista, y registro de
         visitas y omisiones en terreno con su observación asociada.
 \end{itemize}
 
-El sistema implementa dos roles: Administrador (acceso completo) y Censador (lectura de las rutas
-propias del plan vigente y registro de visitas). La autorización se resuelve por rol mediante los
+Los dos usuarios objetivo de la Sección~\ref{sec:usuarios} se materializan en la API como dos roles:
+Administrador (acceso completo) y Censista (lectura de las rutas propias del plan vigente y registro
+de visitas). La autorización se resuelve por rol mediante los
 permisos propios \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, definidos sobre el campo
 \texttt{role} del usuario y no sobre los permisos estándar del \textit{framework}, que validan el
 atributo \texttt{is\_staff} de Django ---un concepto ajeno al rol de negocio. La
@@ -1229,7 +1273,7 @@ Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes; el
     \midrule
     Autenticación &
       \texttt{/api/auth/} &
-      \textit{Tokens} JWT, consulta del usuario en sesión y gestión de cuentas de censadores. \\
+      \textit{Tokens} JWT, consulta del usuario en sesión y gestión de cuentas de censistas. \\
     \textit{Datasets} &
       \texttt{/api/datasets/} &
       Importación CSV/JSON y desde fuentes legadas, exploración, exportación \textit{GeoJSON} e
@@ -1240,8 +1284,8 @@ Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes; el
       estado, métricas de soluciones y publicación del plan vigente. \\
     Rutas &
       \texttt{/api/routes/} &
-      Listado con métricas, exportación \textit{GeoJSON}, asignación de censadores, carga acumulada
-      por censador con sugerencia de asignación, ruta propia del censador y registro de visitas y
+      Listado con métricas, exportación \textit{GeoJSON}, asignación de censistas, carga acumulada
+      por censista con sugerencia de asignación, ruta propia del censista y registro de visitas y
       omisiones. \\
     \bottomrule
   \end{tabularx}
@@ -1250,7 +1294,7 @@ Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes; el
 Los grupos \textit{Datasets} y Optimización son exclusivos del rol Administrador, al igual que la
 administración de cuentas dentro del grupo Autenticación; el resto de ese grupo ---obtención y
 renovación del \textit{token} y consulta de la sesión propia--- lo utilizan ambos roles. Rutas es el
-único grupo cuyas operaciones de negocio comparten los dos, con el censador restringido a su propia
+único grupo cuyas operaciones de negocio comparten los dos, con el censista restringido a su propia
 ruta vigente.
 
 % ---- 3.7 -------------------------------------------------------
@@ -1261,7 +1305,7 @@ La interfaz se implementa como una \textit{Single Page Application} con \textit{
 estado de servidor se gestiona con \textit{React Query} y el estado de sesión (autenticación,
 notificaciones) con Zustand; los mapas emplean \textit{Leaflet} sobre teselas de
 \textit{OpenStreetMap} \citep{openstreetmap}. La aplicación distingue dos experiencias según el rol
-del usuario: el panel de administración y el portal del censador.
+del usuario: el panel de administración y el portal del censista.
 
 El panel de administración comprende cinco etapas:
 
@@ -1298,7 +1342,7 @@ El panel de administración comprende cinco etapas:
         empate técnico, de modo que el administrador distingue una ventaja real de una diferencia
         dentro del ruido del \textit{solver}. La recomendación no es vinculante: el administrador
         publica la candidata que estime conveniente. Publicado el plan, \texttt{suggest\_assignment}
-        propone una asignación de rutas a censadores que reduce el déficit de carga acumulado entre
+        propone una asignación de rutas a censistas que reduce el déficit de carga acumulado entre
         campañas, y el administrador la acepta o la modifica ruta por ruta.
 \end{enumerate}
 
@@ -1318,7 +1362,7 @@ antes de lanzar la optimización.
 
 El panel de asignación aparece en la Ilustración~\ref{fig:ui_routes}: el mismo detalle muestra el
 plan publicado como polilíneas coloreadas sobre la red peatonal y, por cada ruta, sus paradas, su
-duración estimada y el censador asignado.
+duración estimada y el censista asignado.
 
 \capturaui{ui-routes.png}{Detalle de un \textit{dataset}: panel de asignación}{Detalle de un
 \textit{dataset}: panel de asignación.}{fig:ui_routes}
@@ -1327,20 +1371,20 @@ Cada candidata resume tres métricas ---número de rutas, tiempo de caminata y p
 destaca en cuáles de ellas es la mejor de la corrida; los árboles que quedan fuera de ruta, las
 rutas degeneradas y el balance bajo el umbral no se presentan como cifras sino como advertencias en
 lenguaje llano, porque son condiciones que descalifican a la candidata y no magnitudes que el
-administrador deba ponderar. El panel derecho materializa la asignación de cada ruta a un censador.
+administrador deba ponderar. El panel derecho materializa la asignación de cada ruta a un censista.
 Como dos corridas con parámetros temporales distintos no son comparables entre sí, la lista muestra
 una sola corrida a la vez y un selector permite alternar entre ellas.
 
 Publicado el plan, el administrador supervisa el avance del censo desde la pestaña de progreso: el
 tablero resume el porcentaje de árboles censados, omitidos y pendientes, los sitúa sobre el mapa
-según su estado y desglosa el avance por ruta y por censador, de modo que se identifican qué rutas
+según su estado y desglosa el avance por ruta y por censista, de modo que se identifican qué rutas
 van retrasadas. Esta vista realiza RF-19 y RF-20; la ilustración correspondiente se incluye en el
 \hyperref[anx:capturas]{Anexo 6} (Ilustración~\ref{fig:ui_progress}).
 
-El portal del censador (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first} orientada al
+El portal del censista (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first} orientada al
 trabajo en terreno. Recupera únicamente las rutas del plan vigente asignadas al usuario y presenta
 las paradas en orden secuencial estricto: una parada solo puede marcarse como visitada cuando las
-anteriores ya lo han sido. La ubicación del censador se sigue mediante la API de geolocalización del
+anteriores ya lo han sido. La ubicación del censista se sigue mediante la API de geolocalización del
 navegador y se calcula la distancia de \textit{haversine} \citep{sinnott1984virtues} a la parada
 activa; el registro de visita se habilita al entrar en un radio de proximidad de 30\,m, con la
 opción de forzar el registro (\textit{«Registrar de todos modos»}) cuando la señal GPS es imprecisa.
@@ -1355,7 +1399,7 @@ realizado sin conexión se sincronice al recuperar la red. El almacén es \texti
 pendiente de envío, y \texttt{localStorage} solo admite cadenas de texto: serializar la imagen a
 texto la perdería o multiplicaría su tamaño.
 
-La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censador (\texttt{/}) en vista
+La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censista (\texttt{/}) en vista
 \textit{mobile}: parada activa, distancia a la parada, captura fotográfica y registro de visita u
 omisión.
 
@@ -1364,13 +1408,13 @@ omisión.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/ui-surveyor.png}
-  \caption{Portal del censador en vista \textit{mobile}.}
+  \caption{Portal del censista en vista \textit{mobile}.}
   \label{fig:ui_surveyor}
 \end{figure}
 
 Los marcadores numerados sobre el mapa reflejan el orden de visita derivado de
 \texttt{RouteStop.sequence}; las paradas posteriores a la activa aparecen bloqueadas hasta que el
-censador complete la anterior, lo que impone el orden secuencial estricto de la ruta. El botón
+censista complete la anterior, lo que impone el orden secuencial estricto de la ruta. El botón
 «Registrar de todos modos» habilita el registro cuando la señal GPS no alcanza el radio de
 proximidad de $30$\,m.
 
@@ -1439,11 +1483,11 @@ dependerían del corte por reloj de pared del \textit{solver}---:
 \end{enumerate}
 
 Corresponde acotar el alcance de esta verificación. No existen pruebas automatizadas de extremo a
-extremo: los flujos completos de administrador y de censador se comprueban por partes, nunca
+extremo: los flujos completos de administrador y de censista se comprueban por partes, nunca
 encadenados sobre el sistema en pie. La cobertura de código está configurada en el proyecto pero no
 se ejecuta como parte del CI, de modo que esta memoria no reporta una cifra de cobertura. Sobre
 todo, lo que se verifica es que el sistema hace lo que su diseño dice: la validación con usuarios
-reales ---una jornada de censo ejecutada con censadores en terreno--- queda fuera del alcance de
+reales ---una jornada de censo ejecutada con censistas en terreno--- queda fuera del alcance de
 esta iteración y es la comprobación que ninguna suite de pruebas sustituye.
 
 A esta verificación del sistema se suma un compromiso distinto: la reproducibilidad de las cifras
