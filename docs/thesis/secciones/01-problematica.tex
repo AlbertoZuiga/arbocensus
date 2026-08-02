@@ -6,21 +6,18 @@
 El arbolado urbano es parte de la infraestructura de la ciudad y su gestión recae en los municipios.
 Los árboles en mal estado representan un riesgo para las personas y para la infraestructura crítica,
 y la evaluación de ese riesgo requiere personal capacitado y criterios explícitos de inspección
-\citep{klein2019risk}. Las tareas que esa gestión impone a la autoridad municipal ---manejo del
-riesgo, seguridad vial, decisiones de poda y de replante, y seguimiento del cambio del arbolado en
-el tiempo--- se ejercen sobre el ejemplar y no sobre el agregado, y por eso los catastros de
-arbolado urbano registran el dato a nivel de árbol individual \citep{nielsen2014review}: dónde está
-cada ejemplar y en qué estado se encuentra. Levantar y mantener ese catastro es costoso, y el costo
+\citep{klein2019risk}. Esas tareas de gestión ---manejo del riesgo, poda, replante y seguimiento
+del arbolado en el tiempo--- requieren información de cada árbol individual, y por eso los
+catastros de arbolado urbano registran dónde está cada ejemplar y en qué estado se encuentra
+\citep{nielsen2014review}. Levantar y mantener ese catastro es costoso, y el costo
 crece con la cantidad de atributos registrados y con la frecuencia de actualización.
 
 Arbocensus, desarrollado en la Universidad de los Andes en el marco del proyecto Fondef ID21110360,
-responde a esa necesidad. El proyecto levanta un catastro masivo del arbolado urbano asistido por
+aborda esa necesidad de información: levanta un catastro masivo del arbolado urbano asistido por
 tecnología, mediante visión artificial y participación ciudadana
 \citep{binder-cortes2023,pizarro-zumaeta2024}. El propósito declarado es entregar al municipio
 información sobre el número y el estado de los árboles de la comuna, que le permita priorizar
-aquellos que presentan mayor riesgo. Conviene precisar el tiempo verbal: ninguna iteración del
-proyecto, incluida esta, ha operado en una campaña municipal real, de modo que lo anterior describe
-el objetivo del proyecto y no un servicio en operación (Sección~\ref{sec:limitaciones}).
+aquellos que presentan mayor riesgo.
 
 Ese propósito no se agota en localizar cada árbol una vez. Requiere un historial de observaciones
 por árbol a lo largo del tiempo ---objetivo declarado del proyecto \citep{pizarro-zumaeta2024}--- y
@@ -53,13 +50,15 @@ memoria evalúa el producto contra una alternativa algorítmica sobre la misma i
 La plataforma de censado se construyó en iteraciones sucesivas desde 2021:
 \begin{enumerate}[label=\alph*)]
   \item una primera versión web orientada a dispositivos móviles que permitió tomar muestras de
-    árboles ---mediante lectura de códigos QR y captura de GPS--- organizadas en campañas, zonas y
-    equipos \citep{castro-diaz2022};
+    árboles organizadas en campañas, zonas y equipos \citep{castro-diaz2022}: cada árbol porta una
+    placa con un código QR que lo identifica de forma única y persistente entre visitas, y cada
+    muestra registra ese código junto con la posición GPS del teléfono; su base de datos se
+    designa en esta memoria como \texttt{legacy\_app};
   \item un rediseño que incorporó elementos de ludificación ---puntos, logros, desafíos y tablas de
     posiciones--- para incentivar la participación \citep{binder-cortes2023};
   \item una tercera iteración que integró el procesamiento de imágenes del Sistema de Análisis de
     Imágenes de Árboles (SAIdA) y un modelo de estimación de cobertura del censo
-    \citep{pizarro-zumaeta2024}.
+    \citep{pizarro-zumaeta2024}; su base se designa como \texttt{legacy\_api}.
 \end{enumerate}
 % Historia verificada contra los repositorios de código del proyecto (jul 2026):
 %   - github.com/mrecabarren/arbocensus: commit inicial 2021-10-01 (Matías Recabarren,
@@ -89,9 +88,10 @@ del esquema de cada volcado y de sus fechas ---la más antigua registra muestras
 declaren. La escala del catastro se evidencia en las dos bases con arbolado. La más antigua,
 la base \texttt{legacy\_app} de la aplicación de censado previa desplegada en Heroku, registra
 17\,208 muestras de censo asociadas por código QR, que corresponden a 13\,081 árboles distintos.
-De ellos, 12\,941 tienen coordenada geográfica utilizable ---obtenida como la mediana de las
-muestras de cada QR dentro del recuadro de Chile continental, excluidos cinco códigos QR formados
-íntegramente por ceros---. La posterior, la base de datos \texttt{legacy\_api}, contiene 429
+De ellos, 12\,941 tienen coordenada geográfica utilizable, obtenida como la mediana de las
+posiciones registradas para cada QR ---tras descartar las posiciones que caen fuera del recuadro de
+Chile continental y las muestras de cinco códigos QR cuyo identificador consiste íntegramente en
+ceros, valor que no corresponde a ningún árbol---. La base \texttt{legacy\_api}, la más reciente, contiene 429
 árboles georreferenciados, 3\,961 muestras (\textit{samples}), 10\,008 fotografías y 48 áreas de
 censo registradas ---27 sin arbolado y 21 no vacías, que se reducen a 12 polígonos distintos porque
 las áreas se recrean en cada campaña--- distribuidas en 10 campañas. La unión de ambas fuentes, una
@@ -114,8 +114,7 @@ recuadro abarca 10,3~km de extensión en longitud (12,5~km de diagonal).
   \centering
   \includegraphics[width=0.85\textwidth]{media/fig-instancia-legada.pdf}
   \caption{
-    Los 1\,607 nodos de la instancia de referencia distribuidos en el espacio urbano, diferenciados
-    por fuente.
+    Nodos de la instancia de referencia ($n = 1\,607$), diferenciados por fuente de origen.
   }
   \label{fig:instancia-legada}
 \end{figure}
@@ -152,10 +151,11 @@ La tercera es el registro en terreno. El censista recorre desde su teléfono la 
 de su ruta y anota en cada parada lo que observa del árbol, de modo que el resultado de la jornada
 quede asociado al ejemplar ya catastrado y no a una muestra sin correspondencia entre campañas.
 
-La verificación del producto se realiza sobre el arbolado real de las bases legadas ---la instancia
-de referencia de 1\,607 árboles, la suite de doce instancias congeladas entre $n=43$ y $n=1\,607$
-descrita en el \hyperref[anx:suite-instancias]{Anexo 4}, y las áreas de censo efectivamente
-registradas---, mediante experimentos que comparan las configuraciones del motor entre sí y contra
+La verificación del producto se realiza sobre el arbolado real de las bases legadas ---los
+12\,941 árboles georreferenciados de \texttt{legacy\_app} y los 429 de \texttt{legacy\_api}, de los
+que se derivan la instancia de referencia de 1\,607 árboles, la suite de doce instancias congeladas
+entre $n=43$ y $n=1\,607$ descrita en el \hyperref[anx:suite-instancias]{Anexo 4} y las áreas de
+censo efectivamente registradas---, mediante experimentos que comparan las configuraciones del motor entre sí y contra
 una solución heurística\footnote{Procedimiento que construye una solución razonable mediante reglas
 simples, sin garantizar que sea la mejor posible.} simple. Queda fuera del alcance la operación del
 sistema en una jornada de censo real, con
