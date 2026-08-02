@@ -22,7 +22,8 @@ Las tareas de optimización se ejecutan de forma asíncrona mediante Celery \cit
 como \textit{broker}, dado que el proceso de construcción de la matriz de costos y la ejecución del
 \textit{solver} pueden tardar varios minutos para conjuntos de cien o más puntos.
 
-El motor de ruteo peatonal (OSRM) se despliega localmente en Docker y procesa datos de
+El motor de ruteo peatonal (OSRM) se despliega como un contenedor más del propio sistema ---tanto
+en desarrollo como en producción (Sección~\ref{sec:despliegue-produccion})--- y procesa datos de
 \textit{OpenStreetMap} \citep{openstreetmap} de Chile, lo que elimina costos de API y dependencias
 de red durante la optimización. La persistencia geográfica se apoya en la extensión espacial PostGIS
 de PostgreSQL \citep{postgis}.
@@ -241,6 +242,38 @@ las alternativas libres decidió la simplicidad de operarlas. Ninguna de estas e
 definitiva: en operación regular el sistema reconstruye la matriz solo al cambiar el conjunto de
 árboles activos, de modo que el volumen de consultas cae varios órdenes de magnitud respecto de la
 etapa de desarrollo y componentes hoy descartados por costo admiten reevaluarse bajo ese régimen.
+
+\subsection{Despliegue de producción}
+\label{sec:despliegue-produccion}
+
+Al cierre de la iteración el sistema quedó desplegado en un servidor virtual (\textit{droplet}) de
+\textit{DigitalOcean} con Ubuntu 24.04 y 2\,GB de memoria, ampliados con 2\,GB de intercambio para
+absorber el preprocesamiento inicial de OSRM. La composición de contenedores de producción
+(\texttt{docker-compose.production.yml}) declara seis servicios ---PostGIS, Redis, OSRM, la
+aplicación Django, el \textit{worker} de Celery y Caddy \citep{caddy}--- con reinicio automático y
+verificaciones de salud encadenadas: el \textit{worker} no arranca hasta que la base de datos y
+OSRM responden, y el proxy no expone la aplicación hasta que esta contesta. A diferencia del
+entorno de desarrollo, OSRM opera sobre un extracto de Santiago recortado del de Chile, lo que
+reduce sus artefactos preprocesados a una fracción y permite que el servicio quepa en la memoria
+del servidor.
+
+Caddy actúa como único punto de entrada: sirve el paquete estático del \textit{frontend}
+---construido por Vite y empaquetado en la propia imagen del proxy---, redirige \texttt{/api},
+\texttt{/admin} y \texttt{/static} a la aplicación y entrega las fotografías desde un volumen
+compartido con ella. El certificado TLS se obtiene y renueva automáticamente contra
+\textit{Let's Encrypt} \citep{letsencrypt}, y como el \textit{frontend} y la API comparten origen,
+la configuración de producción no requiere excepciones de CORS. La aplicación añade el
+endurecimiento correspondiente: archivos estáticos comprimidos con huella de contenido
+(\textit{WhiteNoise}), HSTS y \textit{cookies} restringidas a HTTPS.
+
+La entrega es continua: un \textit{push} a la rama \texttt{production} dispara un flujo de GitHub
+Actions que construye las imágenes de la aplicación y del proxy, las publica en el registro de
+contenedores de GitHub etiquetadas por confirmación y se conecta al servidor por SSH para
+actualizar la composición con las imágenes nuevas. Cada despliegue queda así asociado a una
+confirmación concreta, y volver a una versión anterior se reduce a redesplegar su etiqueta. Un
+respaldo diario programado en el servidor genera un volcado de la base de datos y un archivo con
+las fotografías, con una retención de siete días; ambos residen en el propio servidor, sin copia
+externa, límite que el Capítulo~\ref{cap:resultados} registra entre las limitaciones vigentes.
 
 % ---- 3.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
@@ -1191,8 +1224,9 @@ ejemplar como riesgoso o no riesgoso no exige necesariamente una imagen por visi
 de censo que fijaría esa exigencia no está definido ---es la misma indefinición que obliga a tratar
 el tiempo de servicio $s$ como parámetro (Sección~\ref{sec:flota})---. Que el sistema la admita
 tampoco significa que la conserve bien: la imagen se persiste en un campo \texttt{ImageField} sobre
-el sistema de archivos del contenedor de la aplicación, que no es almacenamiento durable ni está
-respaldado. Esa combinación ---una exigencia que el propósito no impone y una persistencia que no
+el sistema de archivos del contenedor de la aplicación; en producción un volumen la conserva entre
+reinicios y el respaldo diario la incluye (Sección~\ref{sec:despliegue-produccion}), pero no hay
+almacenamiento de objetos ni copia fuera del servidor. Esa combinación ---una exigencia que el propósito no impone y una persistencia que no
 garantiza permanencia--- es una limitación asumida y no un compromiso de diseño, y el
 Capítulo~\ref{cap:resultados} la retoma como tal.
 
@@ -1468,6 +1502,11 @@ las comprobaciones que la acompañan.
     Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato
     de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso
     del \textit{frontend}, la construcción del paquete de producción. \\
+  Entrega continua (CD) &
+    Un flujo de trabajo &
+    Construcción y publicación de las imágenes de producción y actualización del servidor por SSH
+    ante cada \textit{push} a la rama \texttt{production}
+    (Sección~\ref{sec:despliegue-produccion}). \\
 \end{xltabular}
 \normalsize
 
