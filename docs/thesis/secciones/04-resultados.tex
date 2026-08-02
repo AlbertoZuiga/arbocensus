@@ -45,17 +45,32 @@ descrita: estrategia \texttt{spatial\_term} y presupuesto de \textit{solver} de 
 promedio de tres repeticiones (semillas 42, 43 y 44), y remite, en su columna de criterio, a los
 criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptacion}.
 
-\begin{table}[H]
-  \centering
-  \begin{threeparttable}[b]
+\begin{xltabular}{\textwidth}{lXX}
   \caption{Métricas de calidad de rutas sobre la instancia de referencia.}
-  \label{tab:metricas}
-  \begin{tabularx}{\textwidth}{lXX}
-    \toprule
-    Métrica &
-      Valor &
-      Criterio \\
-    \midrule
+  \label{tab:metricas} \\
+  \toprule
+  Métrica & Valor & Criterio \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Métrica & Valor & Criterio \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endfoot
+  \bottomrule
+  \multicolumn{3}{@{}p{\textwidth}@{}}{\footnotesize\textsuperscript{1} Cifra de un barrido
+    distinto sobre el mismo \textit{dataset} y configuración, no de esta corrida de referencia
+    (reserva de instrumento detallada en el \hyperref[anx:reservas-sensibilidad]{Anexo 4}).} \\
+  \multicolumn{3}{@{}p{\textwidth}@{}}{\footnotesize\textsuperscript{2} Corresponde a las dos
+    repeticiones con la matriz de costos ya en caché de una corrida de julio de 2026 que sí
+    instrumentó el tiempo extremo a extremo; se detalla más abajo junto con el caso de caché
+    fría.} \\
+  \multicolumn{3}{@{}p{\textwidth}@{}}{\footnotesize\textsuperscript{3} Cifra de una repetición
+    posterior que sí recupera la geometría real de cada tramo desde \textit{OSRM}; la corrida de
+    referencia de esta sección solo instrumenta auto-cruces sobre la cuerda recta entre
+    paradas.} \\
+  \endlastfoot
     Número de rutas $k$ &
       25 &
       salida del \textit{solver}, no dato de entrada (CA-04) \\
@@ -92,21 +107,7 @@ criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptac
     Auto-cruces sobre calle$^{3}$ &
       37{,}7 (33--40 según la repetición) &
       sin criterio en esta corrida: descriptiva \\
-    \bottomrule
-  \end{tabularx}
-  \begin{tablenotes}[flushleft]\footnotesize
-    \item[1] Cifra de un barrido distinto sobre el mismo \textit{dataset} y configuración, no de
-      esta corrida de referencia (reserva de instrumento detallada en el
-      \hyperref[anx:reservas-sensibilidad]{Anexo 4}).
-    \item[2] Corresponde a las dos repeticiones con la matriz de costos ya en caché de una corrida
-      de julio de 2026 que sí instrumentó el tiempo extremo a extremo; se detalla más abajo junto
-      con el caso de caché fría.
-    \item[3] Cifra de una repetición posterior que sí recupera la geometría real de cada tramo desde
-      \textit{OSRM}; la corrida de referencia de esta sección solo instrumenta auto-cruces sobre la
-      cuerda recta entre paradas.
-  \end{tablenotes}
-  \end{threeparttable}
-\end{table}
+\end{xltabular}
 
 El número de rutas, $k=25$, es la flota que el \textit{solver} activa bajo esta configuración, no
 una cota mínima demostrada. No se calcula ninguna cota inferior sobre $k$; el \textit{baseline}
