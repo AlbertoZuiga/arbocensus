@@ -251,8 +251,8 @@ absorber el preprocesamiento inicial de OSRM. Se descartó volver a una platafor
 ---la vía de despliegue de la aplicación de censado previa---: alojar allí una composición de seis
 servicios, con OSRM residente en memoria, implica contratar y configurar cada pieza por separado,
 con un costo que crece por servicio, mientras que un servidor virtual único ofrece la flexibilidad
-de alojar la composición completa a costo fijo, en línea con los criterios de costo y simplicidad
-ya enunciados. La composición de contenedores de producción
+de alojar el conjunto completo a costo fijo, en línea con los criterios de costo y simplicidad ya
+enunciados. La composición de contenedores de producción
 (\texttt{docker-compose.production.yml}) declara seis servicios ---PostGIS, Redis, OSRM, la
 aplicación Django, el \textit{worker} de Celery y Caddy \citep{caddy}--- con reinicio automático y
 verificaciones de salud encadenadas: el \textit{worker} no arranca hasta que la base de datos y

@@ -199,7 +199,7 @@ nodos no es común a las tres: el heurístico recorre los árboles ordenados por
 mientras que cada semilla de \textit{OR-Tools} aplica una permutación distinta de ese orden, que es
 el mecanismo de réplica descrito en la Sección~\ref{sec:metricas-calidad}. Esa reejecución con las
 mismas tres semillas reprodujo el resultado de aquella sección ---las medias difieren en 37\,s sobre
-un total de 58\,000, y ninguna semilla se aparta más de 67\,s de su valor previo---, lo que descarta
+un total de 58\,000, y ninguna semilla se aparta más de 68\,s de su valor previo---, lo que descarta
 que las diferencias de la tabla provengan de la variabilidad entre corridas discutida más arriba.
 
 \begin{table}[H]
@@ -823,9 +823,6 @@ múltiples áreas de censo como un único problema.
   \label{fig:ruta-vueltas-r1}
 \end{figure}
 
-La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno:
-$\approx 10{,}3$\,km en el conjunto agregado frente a $\leq 1{,}32$\,km en las áreas individuales.
-
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
@@ -835,6 +832,9 @@ $\approx 10{,}3$\,km en el conjunto agregado frente a $\leq 1{,}32$\,km en las �
   }
   \label{fig:regimen-disperso-vs-real}
 \end{figure}
+
+La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno:
+$\approx 10{,}3$\,km en el conjunto agregado frente a $\leq 1{,}32$\,km en las áreas individuales.
 
 El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
 de $0{,}55$, se reproduce en la Ilustración~\ref{fig:peor-par}.
@@ -1690,8 +1690,10 @@ Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la exc
 diagnóstico geográfico inicial de la Tabla~\ref{tab:baseline-geo}, medido sobre nodos sintéticos de
 distribución uniforme--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
 densidad controlada; no se emplearon los bancos de referencia de la literatura
-\citep{solomon1987algorithms}. Las comparaciones son internas: contrastan el sistema contra otras
-configuraciones de sí mismo y contra un heurístico de vecino más cercano escrito para este trabajo.
+\citep{solomon1987algorithms}, cuyas instancias sintéticas suponen un depósito central y ventanas
+de tiempo, condiciones ajenas al problema de rutas abiertas sobre una red vial real aquí tratado.
+Las comparaciones son internas: contrastan el sistema contra otras configuraciones de sí mismo y
+contra un heurístico de vecino más cercano escrito para este trabajo.
 No hay anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo que las
 afirmaciones son de mejora relativa y nunca de proximidad al óptimo.
 
