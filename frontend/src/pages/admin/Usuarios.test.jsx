@@ -39,7 +39,7 @@ describe("Usuarios", () => {
         last_name: "Lovelace",
         email: "ada@example.com",
         role: "admin",
-        role_display: "Admin",
+        role_display: "Administrador",
         is_active: true,
       },
     ]);
@@ -47,7 +47,7 @@ describe("Usuarios", () => {
 
     expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("ada@example.com")).toBeInTheDocument();
-    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(screen.getByText("Administrador")).toBeInTheDocument();
     expect(screen.getByText("Activo")).toBeInTheDocument();
   });
 
@@ -60,7 +60,7 @@ describe("Usuarios", () => {
         last_name: "",
         email: "grace@example.com",
         role: "surveyor",
-        role_display: "Surveyor",
+        role_display: "Censista",
         is_active: false,
       },
     ]);
