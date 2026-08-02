@@ -58,8 +58,9 @@ Salvo indicación en contrario, los experimentos emplean los parámetros tempora
 ($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol y
 los \textit{defaults} de producción del motor: la estrategia \texttt{spatial\_term} ---que agrega
 al objetivo un término de dispersión geográfica, véase la Sección~\ref{sec:estrategias}--- y un
-tiempo límite de \textit{solver} de 120\,s, el valor que produce la heurística
-$\min(30 + 1{,}5\,n,\ 120)$ para cualquier \textit{dataset} de estos tamaños.
+tiempo límite de \textit{solver} de 120\,s, que coincide con el tope de la heurística
+$\min(30 + 1{,}5\,n,\ 120)$ para todo \textit{dataset} de $n \geq 60$ y se fija también en las
+instancias menores de la suite para mantener el presupuesto homogéneo.
 
 Las réplicas de cada corrida no provienen de una semilla de generador pseudoaleatorio
 ---\textit{OR-Tools} no la expone--- sino de permutar el orden de entrada de los nodos. Esta

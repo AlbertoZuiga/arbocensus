@@ -56,21 +56,25 @@ administrador importa los árboles, configura los parámetros, optimiza y public
 accede desde su teléfono a la ruta asignada, con las paradas en secuencia y navegación peatonal por
 parada, sobre un despliegue productivo con HTTPS y entrega continua.
 
-Sobre la instancia de referencia de 1\,607 árboles el sistema genera 25 rutas con cobertura total,
-un índice de balance de carga de 0{,}83 y ninguna ruta que exceda la jornada máxima, en un
+La evaluación cubre doce instancias reales congeladas entre $n=43$ y $n=1\,607$ árboles, incluidas
+tres áreas de censo individuales de la operación histórica. Los resultados muestran que esas áreas
+---la escala que corresponde a una jornada real de censo--- son también la escala en que el motor
+rinde mejor: sobre ellas la configuración de producción cubre todos los árboles sin
+auto-cruces apreciables, aunque el contraste con un heurístico \textit{greedy} de vecino más
+cercano, exigido en las tres áreas, se cumple solo en dos. Como instancia de estrés, el arbolado
+agregado de 1\,607 árboles acredita los criterios en el peor caso de tamaño: 25 rutas con cobertura
+total, un índice de balance de carga de 0{,}83 y ninguna ruta que exceda la jornada máxima, en un
 presupuesto de cómputo de 120\,s que captura prácticamente toda la mejora alcanzable con
-presupuestos mayores; frente a un heurístico \textit{greedy} de vecino más cercano con el mismo
-refinamiento local reduce el tiempo total de desplazamiento en un 4{,}7\,\%, cerca de 48 minutos.
+presupuestos mayores, y un 4{,}7\,\% menos de desplazamiento total ---cerca de 48 minutos--- que el
+heurístico con el mismo refinamiento local.
 
 Estas conclusiones descansan en dieciséis ciclos de evaluación con criterio fijado antes de cada
 corrida y datos crudos versionados, doce de los cuales cerraron descartando la hipótesis que los
-motivaba, lo que acota el margen de mejora atribuible a la función objetivo. La serie cubre doce
-instancias reales congeladas entre $n=43$ y $n=1\,607$, incluidas tres áreas de censo individuales
-de la operación histórica; sobre ellas la configuración de producción no descarta árboles ni produce
-auto-cruces apreciables, aunque el contraste con el heurístico, exigido en las tres, se cumple solo
-en dos. El área individual, y no el arbolado agregado, resulta ser la unidad operativa correcta del
-motor. Se concluye que esta formulación produce planes de censo verificables sobre instancias reales
-en tiempos prácticos; su validación en una jornada de terreno queda pendiente y es la extensión de
-mayor valor para el proyecto.
+motivaba, lo que acota el margen de mejora atribuible a la función objetivo.
+Se concluye que la formulación propuesta resuelve el problema planteado: satisface los criterios de
+aceptación comprometidos tanto en las áreas reales como en la instancia de estrés, con la sola
+excepción del contraste frente al heurístico en un área de 72 árboles, y lo hace en tiempos
+compatibles con la planificación de una campaña. Su validación en una jornada de terreno queda
+pendiente y es la extensión de mayor valor para el proyecto.
 
 \newpage
