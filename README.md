@@ -21,8 +21,8 @@ Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 ### Con Docker (recomendado)
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/Arbocensus/arbocensus-routing.git
+# 1. Clonar el repositorio (privado — requiere tu llave SSH de GitHub)
+git clone git@github.com:Arbocensus/arbocensus-routing.git
 cd arbocensus-routing
 
 # 2. Configurar variables de entorno
@@ -247,12 +247,14 @@ Sin passphrase (`-N ""`) es obligatorio: Actions no puede escribir una passphras
 
 Todo el aprovisionamiento vive en `scripts/bootstrap-droplet.sh`. En el panel de DigitalOcean: **Create → Droplet**, Ubuntu 24.04 LTS · Basic · 2 GB / 2 vCPU / 60 GB, región NYC3 o SFO3 (DO no tiene datacenter en Sudamérica).
 
-Luego abre la consola web como `root` y corre estas tres líneas — no hay nada más manual:
+Luego abre la consola web como `root` y corre estas líneas. El repo es privado, así que el script se descarga con un [PAT](https://github.com/settings/tokens) de solo lectura que no queda guardado en el droplet; el clone del repo lo hace el propio script con una deploy key que genera y te pide registrar:
 
 ```bash
-apt-get update && apt-get install -y git
-git clone https://github.com/Arbocensus/arbocensus-routing.git /srv/arbocensus
-bash /srv/arbocensus/scripts/bootstrap-droplet.sh
+apt-get update && apt-get install -y git curl
+curl -fsSL -H "Authorization: token <PAT con repo:read>" \
+  https://raw.githubusercontent.com/Arbocensus/arbocensus-routing/production/scripts/bootstrap-droplet.sh \
+  -o /root/bootstrap-droplet.sh
+bash /root/bootstrap-droplet.sh
 ```
 
 El script es idempotente (re-ejecutable tras un fallo) y hace, en orden:
@@ -261,7 +263,7 @@ El script es idempotente (re-ejecutable tras un fallo) y hace, en orden:
 2. Crea 2 GB de swap — `osrm-extract` no cabe en 2 GB de RAM sin él.
 3. Abre 22/80/443 en ufw.
 4. Crea el usuario `deploy` y lo agrega al grupo `docker`. Para su llave SSH **pregunta** qué hacer, y entre las opciones lista las públicas que DigitalOcean ya instaló en `/root/.ssh/authorized_keys` al crear el droplet (con huella y comentario, para distinguirlas): elegir una de esas, generar un par nuevo en el droplet, pegar otra pública, o dejar la que ya esté autorizada.
-5. Deja el checkout en `/srv/arbocensus` (el workflow hace `reset --hard` sobre él en cada deploy).
+5. Deja el checkout en `/srv/arbocensus` (el workflow hace `reset --hard` sobre él en cada deploy). Si el repo no responde anónimo, genera una deploy key para `deploy`, la imprime y espera a que la registres como **Deploy Key** (read-only) en GitHub; desde ahí clona y fetchea por SSH.
 6. **Pregunta interactivamente** dominio, usuario/email/password de admin y las URLs de las bases legadas; genera `SECRET_KEY`, `DB_PASSWORD` y, si lo dejas vacío, el password de admin. Escribe `.env` con permisos `600`. Si `.env` ya existe, no lo toca.
 7. Descarga el PBF de Chile y recorta el bbox del Gran Santiago (~326 MB de descarga, tarda).
 8. Descarga las imágenes desde GHCR; si aún no están publicadas o son privadas, las construye en el droplet.
