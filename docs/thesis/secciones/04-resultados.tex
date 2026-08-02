@@ -1283,8 +1283,11 @@ como variable del experimento y no como constante del régimen.
 \subsection{Entorno de medición}
 \label{sec:entorno-medicion}
 
-Dado que el sistema no cuenta con un despliegue productivo, las mediciones se realizaron sobre una
-réplica local del entorno de producción definida en \texttt{docker-compose.prod.yml}. Esta réplica
+Las mediciones de este capítulo preceden al despliegue productivo del sistema
+(Sección~\ref{sec:despliegue-produccion}), incorporado al cierre de la iteración, y se realizaron
+sobre una réplica local del entorno de producción definida en \texttt{docker-compose.prod.yml}
+---un archivo distinto del que gobierna el despliegue, \texttt{docker-compose.production.yml},
+aunque ambos usan las mismas imágenes---. Esta réplica
 usa imágenes construidas con el \textit{target} \texttt{prod} del \texttt{Dockerfile} (sin
 \textit{bind-mounts} de código ni recarga en caliente, con usuario no privilegiado), una instancia
 real de OSRM cargada con el extracto completo de Chile de \textit{OpenStreetMap}
@@ -1293,10 +1296,11 @@ real de OSRM cargada con el extracto completo de Chile de \textit{OpenStreetMap}
 7. Las versiones empleadas fueron Python 3.12.11, Django \citep{django} 6.0, \textit{OR-Tools}
 \citep{ortools} 9.15 y NumPy 2.4.6.
 
-Este entorno difiere de un despliegue real en tres condiciones que acotan la extrapolación de sus
+Este entorno difiere del despliegue real en tres condiciones que acotan la extrapolación de sus
 cifras. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con los
 contenedores de base de datos y OSRM emulados en \texttt{linux/amd64} mediante Rosetta, mientras que
-un servidor de producción típico sería x86 nativo con recursos menores. La comunicación con OSRM y
+el servidor de producción del sistema es x86 nativo con recursos muy inferiores
+(Sección~\ref{sec:despliegue-produccion}). La comunicación con OSRM y
 la base de datos ocurre, además, por la red interna de \textit{compose} en la misma máquina, con
 latencia cercana a cero, mientras que en un centro de datos la latencia de red encarecería la fase
 de consulta a OSRM (100 solicitudes HTTP para $n=1\,607$). Por último, el punto de entrada fue el
@@ -1304,6 +1308,23 @@ comando de gestión ejecutado secuencialmente dentro del contenedor, en lugar de
 API~$\rightarrow$~Celery del sistema en operación; ambos recorren el mismo código
 (\texttt{OptimizationPipeline.run}), por lo que la diferencia agrega únicamente latencia de
 encolado, no de cómputo.
+
+Tras el despliegue se ejecutó una medición de contraste sobre el servidor de producción (1--2 de
+agosto de 2026), con el mismo comando \texttt{baseline\_sweep} del
+\hyperref[anx:comandos]{Anexo 3} sobre tres instancias congeladas (\texttt{area-29-n43},
+\texttt{area-26-n157} y \texttt{reference-n1607}), la estrategia \texttt{global}, tres
+repeticiones y el límite de \textit{solver} vigente de 120\,s (archivos
+\texttt{20260802-droplet-profile-*.csv} en \texttt{docs\slash experiments\slash}). El contraste
+confirma ambos regímenes en el hardware real. Con la caché caliente, el \textit{pipeline}
+completo tomó entre 120{,}0 y 122{,}7\,s según la instancia: las fases fuera de \texttt{solve}
+suman menos de 3\,s incluso con $n=1\,607$, de modo que el carácter \textit{solve-bound} se
+mantiene en una máquina de un solo núcleo. En frío, la consulta a OSRM vuelve a dominar y es
+donde el hardware inferior se paga: las 100 solicitudes de la matriz de $n=1\,607$ costaron
+780{,}9\,s frente a los 170{,}8\,s de la réplica local (un factor de 4{,}6), con lo que el
+\textit{pipeline} frío completo ronda los 15\,min, frente a los cerca de 5\,min que suman las
+mismas fases en la réplica local con igual presupuesto de \textit{solver}. Este costo se sigue pagando
+una sola vez por \textit{dataset}, por lo que la operación normal del sistema desplegado queda
+acotada por el presupuesto del \textit{solver}, igual que en la réplica local.
 
 \subsection{Desglose de tiempo por fase}
 
@@ -1674,8 +1695,10 @@ configuraciones de sí mismo y contra un heurístico de vecino más cercano escr
 No hay anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo que las
 afirmaciones son de mejora relativa y nunca de proximidad al óptimo.
 
-Las cifras absolutas de tiempo provienen de un entorno de medición emulado y no de un servidor de
-producción, y el sistema no fue desplegado ni operado en una jornada real de censo. En consecuencia,
+Las cifras absolutas de tiempo provienen de un entorno de medición emulado y no del servidor de
+producción, y aunque el sistema quedó desplegado al cierre de la iteración
+(Sección~\ref{sec:despliegue-produccion}), no fue operado en una jornada real de censo. En
+consecuencia,
 lo verificado es que el producto hace lo que su diseño declara ---en los términos de la
 Sección~\ref{sec:verificacion}--- y no que resuelva en terreno el problema logístico que lo motivó.
 Esa última comprobación queda pendiente y es, de todas las extensiones identificadas, la de mayor
@@ -1703,8 +1726,10 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
     \item Seguridad de sesión: los \textit{tokens} JWT se almacenan en \texttt{localStorage}, lo que
         simplifica la implementación a costa de una mayor exposición ante ataques de tipo
         \textit{cross-site scripting} en comparación con el almacenamiento en \textit{cookies} con
-        atributo \texttt{HttpOnly}. El riesgo es aceptado para un sistema de intranet operado por
-        personal interno.
+        atributo \texttt{HttpOnly}. El despliegue productivo sirve la aplicación exclusivamente
+        sobre HTTPS con HSTS (Sección~\ref{sec:despliegue-produccion}), lo que protege el
+        \textit{token} en tránsito pero no ante un \textit{script} inyectado; el riesgo se acepta
+        para un sistema operado por personal interno del proyecto.
 
     \item Escala de la matriz de costos: la matriz se construye por fragmentación
         (\textit{chunking}) en bloques cuando el \textit{dataset} supera las $350$ coordenadas que
@@ -1716,8 +1741,10 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
 
     \item Persistencia de las fotografías: la imagen que acompaña a cada observación se guarda en un
         campo \texttt{ImageField} sobre el sistema de archivos del contenedor de la aplicación
-        (Sección~\ref{sec:recenso}), sin almacenamiento de objetos ni respaldo, y el despliegue de
-        producción no declara un volumen que la preserve. La evidencia gráfica que el sistema exige
+        (Sección~\ref{sec:recenso}). El despliegue productivo declara un volumen que la preserva
+        entre reinicios y la incluye en el respaldo diario local
+        (Sección~\ref{sec:despliegue-produccion}), pero no hay almacenamiento de objetos ni copia
+        fuera del servidor. La evidencia gráfica que el sistema exige
         para toda visita positiva es, por tanto, la pieza de menor durabilidad del modelo de datos.
         La limitación se asume porque el protocolo de censo aún no determina si la fotografía es
         necesaria ni cuántas por árbol, y dimensionar el almacenamiento antes de esa definición
@@ -1855,7 +1882,9 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
 \begin{itemize}[label=--]
   \item Validación en terreno: las conclusiones de este capítulo verifican que el producto hace lo
       que su diseño declara, pero no que resuelva en operación el problema logístico que lo motivó
-      (Sección~\ref{sec:verificacion}). El costo es una jornada de censo real con censistas y un
+      (Sección~\ref{sec:verificacion}). El despliegue productivo
+      (Sección~\ref{sec:despliegue-produccion}) deja esa jornada sin prerrequisitos de
+      infraestructura. El costo es una jornada de censo real con censistas y un
       área individual, con registro de tiempos de caminata. Debe construirse una jornada
       instrumentada que contraste el tiempo estimado por el perfil peatonal de OSRM contra el tiempo
       observado en terreno, y que ejercite la cola \textit{offline} bajo la conectividad real que
