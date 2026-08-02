@@ -1152,12 +1152,12 @@ de cómo estaban organizadas las áreas en el sistema anterior.
 El mapa de selección (\texttt{/admin/datasets/legacy-import}) con una sesión en curso aparece en la
 Ilustración~\ref{fig:ui_legacy}.
 
-\capturaui{ui-legacy-import.png}{Mapa de selección de arbolado legado}{Mapa de selección de arbolado
-legado.}{fig:ui_legacy}
+\capturaui{flow-09-legacy-import-seleccion-poligono.png}{Mapa de selección de arbolado legado}{Mapa
+de selección de arbolado legado.}{fig:ui_legacy}
 
 El color de cada marcador codifica el estado del árbol en el sistema: verde para disponible, azul
 para seleccionado en la sesión actual y gris para ya importado en otro \textit{dataset}. El panel
-lateral lista la selección acumulada ---126 árboles en la sesión de la ilustración--- y permite
+lateral lista la selección acumulada ---3\,182 árboles en la sesión de la ilustración--- y permite
 revisarla árbol por árbol antes de confirmar la creación del \textit{dataset}.
 
 % ---- 3.5 -------------------------------------------------------
@@ -1392,7 +1392,7 @@ el panel lateral lista las candidatas a plan ordenadas por el criterio de selecc
 sus métricas y con la caminata adicional que cuesta respecto de la recomendada. El formulario de
 parámetros temporales encabeza el mismo panel.
 
-\capturaui{ui-optimization.png}{Detalle de un \textit{dataset}: panel de optimización}{Detalle de un
+\capturaui{flow-16-optimizacion-candidatas.png}{Detalle de un \textit{dataset}: panel de optimización}{Detalle de un
 \textit{dataset}: panel de optimización.}{fig:ui_optimization}
 
 El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$ y tiempo de
@@ -1404,7 +1404,7 @@ El panel de asignación aparece en la Ilustración~\ref{fig:ui_routes}: el mismo
 plan publicado como polilíneas coloreadas sobre la red peatonal y, por cada ruta, sus paradas, su
 duración estimada y el censista asignado.
 
-\capturaui{ui-routes.png}{Detalle de un \textit{dataset}: panel de asignación}{Detalle de un
+\capturaui{flow-22-asignacion-aplicada.png}{Detalle de un \textit{dataset}: panel de asignación}{Detalle de un
 \textit{dataset}: panel de asignación.}{fig:ui_routes}
 
 Cada candidata resume tres métricas ---número de rutas, tiempo de caminata y puntaje de balance--- y
@@ -1440,23 +1440,24 @@ pendiente de envío, y \texttt{localStorage} solo admite cadenas de texto: seria
 texto la perdería o multiplicaría su tamaño.
 
 La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censista (\texttt{/}) en vista
-\textit{mobile}: parada activa, distancia a la parada, captura fotográfica y registro de visita u
-omisión.
+\textit{mobile}: mapa de la ruta con las paradas numeradas, parada activa con su distancia y la
+lista de paradas con su estado; el registro con captura fotográfica se abre desde el botón de la
+parada activa.
 
 % [H] forzado: con colocación flotante [htbp] esta captura (vertical, 0.55\textheight) queda
 % relegada tres páginas después de su mención.
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/ui-surveyor.png}
+  \includegraphics[width=0.9\textwidth,height=0.55\textheight,keepaspectratio]{media/flow-27b-censista-vista-general.png}
   \caption{Portal del censista en vista \textit{mobile}.}
   \label{fig:ui_surveyor}
 \end{figure}
 
 Los marcadores numerados sobre el mapa reflejan el orden de visita derivado de
 \texttt{RouteStop.sequence}; las paradas posteriores a la activa aparecen bloqueadas hasta que el
-censista complete la anterior, lo que impone el orden secuencial estricto de la ruta. El botón
-«Registrar de todos modos» habilita el registro cuando la señal GPS no alcanza el radio de
-proximidad de $30$\,m.
+censista complete la anterior, lo que impone el orden secuencial estricto de la ruta. En la
+ilustración el censista se encuentra dentro del radio de proximidad («en rango»), por lo que el
+registro está habilitado; fuera de ese radio el botón se sustituye por «Registrar de todos modos».
 
 % ---- 3.8 -------------------------------------------------------
 \section{VERIFICACIÓN Y VALIDACIÓN}

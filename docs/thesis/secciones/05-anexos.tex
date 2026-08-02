@@ -875,7 +875,7 @@ donde se documenta su realización y, cuando corresponde, al inventario de
 
 % La cota de altura replica la del capítulo de diseño (capturaui).
 \newcommand{\capturaanexo}[4]{%
-  \begin{figure}[htbp]
+  \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth,height=0.75\textheight,keepaspectratio]{media/#1}
     \caption[#2]{#3}
@@ -883,27 +883,204 @@ donde se documenta su realización y, cuando corresponde, al inventario de
   \end{figure}%
 }
 
+% Par de capturas móviles (390x844) lado a lado con un solo caption.
+\newcommand{\capturamovil}[5]{%
+  \begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{media/#1}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{media/#2}
+    \end{minipage}
+    \caption[#3]{#4}
+    \label{#5}
+  \end{figure}%
+}
+
+Este anexo recorre el flujo completo de la plataforma sobre un \textit{dataset} de demostración de
+288 árboles seleccionados por polígono en Providencia, primero desde la perspectiva del
+administrador y luego desde la del censista en terreno. Las capturas complementan a las incluidas
+en la Sección~\ref{sec:ui}, que muestran la selección de arbolado legado
+(Ilustración~\ref{fig:ui_legacy}), el panel de optimización
+(Ilustración~\ref{fig:ui_optimization}), el panel de asignación (Ilustración~\ref{fig:ui_routes})
+y el portal del censista (Ilustración~\ref{fig:ui_surveyor}).
+
+\subsection*{Flujo del administrador}
+
+El acceso al sistema es un formulario de credenciales único para ambos perfiles
+(Ilustración~\ref{fig:anx_login}); tras la autenticación, el administrador llega al panel de
+administración (Ilustración~\ref{fig:anx_home}).
+
+\capturaanexo{flow-01-login-desktop.png}{Formulario de acceso}{Formulario de
+acceso.}{fig:anx_login}
+
+\capturaanexo{flow-02-admin-home.png}{Panel de administración}{Panel de
+administración.}{fig:anx_home}
+
 La Ilustración~\ref{fig:ui_datasets} muestra el listado de \textit{datasets} disponibles en el
 sistema (\texttt{/admin/datasets}): tabla con nombre, número de árboles y fecha de importación;
-los botones superiores dan acceso a las dos rutas de creación.
+los botones superiores dan acceso a las dos rutas de creación: la importación de archivo y la
+selección sobre el mapa de fuentes legadas, ambas descritas en la Sección~\ref{sec:ui}.
 
-\capturaanexo{ui-datasets.png}{Listado de \textit{datasets} e importación de archivos}{Listado de
+\capturaanexo{flow-03-datasets-list.png}{Listado de \textit{datasets} e importación de archivos}{Listado de
 \textit{datasets} e importación de archivos.}{fig:ui_datasets}
 
-Las dos rutas de creación a las que dan acceso esos botones corresponden a la
-importación de archivo y a la selección sobre el mapa de fuentes legadas, ambas
-descritas en la Sección~\ref{sec:ui}.
+La gestión de cuentas (\texttt{/admin/users}) permite crear censistas y administradores
+(Ilustración~\ref{fig:anx_usuarios}).
 
-El tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}) se muestra en la
-Ilustración~\ref{fig:ui_progress}: porcentaje de árboles censados, omitidos y pendientes; mapa
-coloreado por el estado de cada árbol; y desglose del avance por ruta y por censista.
+\capturaanexo{flow-04-usuarios.png}{Gestión de usuarios}{Gestión de
+usuarios.}{fig:anx_usuarios}
 
-\capturaanexo{ui-progress.png}{Tablero de avance del censo}{Tablero de avance del censo.}%
+El mapa de importación de fuentes legadas abre con el arbolado completo
+---13\,319 árboles--- coloreado según su estado (Ilustración~\ref{fig:anx_import_inicial}); el
+filtro de estado restringe la vista a los árboles aún disponibles
+(Ilustración~\ref{fig:anx_import_filtro}).
+
+\capturaanexo{flow-05-legacy-import-inicial.png}{Importación de arbolado legado: vista
+inicial}{Importación de arbolado legado: vista inicial.}{fig:anx_import_inicial}
+
+\capturaanexo{flow-06-legacy-import-filtro-disponibles.png}{Importación de arbolado legado: filtro
+de disponibles}{Importación de arbolado legado: filtro de disponibles.}{fig:anx_import_filtro}
+
+Los dos modos de selección por región se muestran en las
+Ilustraciones~\ref{fig:anx_import_rect} y~\ref{fig:anx_import_poly}: rectángulo arrastrable y
+polígono de vértices editables. El resultado de cerrar un polígono sobre el arbolado aparece en la
+Ilustración~\ref{fig:ui_legacy} de la Sección~\ref{sec:ui}.
+
+\capturaanexo{flow-07-legacy-import-modo-rectangulo.png}{Selección por rectángulo}{Selección por
+rectángulo.}{fig:anx_import_rect}
+
+\capturaanexo{flow-08-legacy-import-modo-poligono.png}{Selección por polígono}{Selección por
+polígono.}{fig:anx_import_poly}
+
+Confirmada la selección, el diálogo de creación ofrece dos salidas: un único \textit{dataset}
+(Ilustración~\ref{fig:anx_crear}) o la partición de la selección en varios \textit{datasets}
+mediante \textit{k-means} o por área de origen (Ilustración~\ref{fig:anx_particion}).
+
+\capturaanexo{flow-10-legacy-import-dialogo-crear.png}{Diálogo de creación de
+\textit{dataset}}{Diálogo de creación de \textit{dataset}.}{fig:anx_crear}
+
+\capturaanexo{flow-11-legacy-import-dialogo-particion-kmeans.png}{Diálogo de partición de la
+selección}{Diálogo de partición de la selección.}{fig:anx_particion}
+
+El \textit{dataset} recién creado presenta sus árboles sobre el mapa
+(Ilustración~\ref{fig:anx_dataset}); el nombre y la descripción se editan desde un modal
+(Ilustración~\ref{fig:anx_editar}).
+
+\capturaanexo{flow-12-dataset-detalle-recien-creado.png}{Detalle de un \textit{dataset} recién
+creado}{Detalle de un \textit{dataset} recién creado.}{fig:anx_dataset}
+
+\capturaanexo{flow-33-dataset-editar-modal.png}{Edición de nombre y descripción del
+\textit{dataset}}{Edición de nombre y descripción del \textit{dataset}.}{fig:anx_editar}
+
+El formulario de optimización fija los parámetros temporales y anticipa la cota de flota derivada
+de ellos (Ilustración~\ref{fig:anx_opt_form}); durante la ejecución, el panel informa el avance de
+las configuraciones de la corrida (Ilustración~\ref{fig:anx_opt_progreso}).
+
+\capturaanexo{flow-13-optimizacion-formulario.png}{Formulario de configuración de la
+optimización}{Formulario de configuración de la optimización.}{fig:anx_opt_form}
+
+\capturaanexo{flow-14-optimizacion-en-progreso.png}{Optimización en progreso}{Optimización en
+progreso.}{fig:anx_opt_progreso}
+
+Terminada la corrida, las candidatas a plan se listan ordenadas por el criterio de selección, cada
+una con sus rutas, caminata, balance de carga y la caminata adicional respecto de la recomendada
+(Ilustración~\ref{fig:anx_candidatas}); el detalle del trabajo compara las estrategias de búsqueda
+ejecutadas (Ilustración~\ref{fig:anx_job}).
+
+\capturaanexo{flow-16b-optimizacion-candidatas-detalle.png}{Candidatas a plan con sus
+métricas}{Candidatas a plan con sus métricas.}{fig:anx_candidatas}
+
+\capturaanexo{flow-24-job-detalle.png}{Detalle de un trabajo de optimización}{Detalle de un trabajo
+de optimización.}{fig:anx_job}
+
+La publicación marca la candidata elegida (Ilustración~\ref{fig:anx_publicada}) y el mapa del
+\textit{dataset} pasa a distinguir el plan vigente (Ilustración~\ref{fig:anx_mapa_publicada}).
+
+\capturaanexo{flow-17-optimizacion-publicada.png}{Candidata publicada}{Candidata
+publicada.}{fig:anx_publicada}
+
+\capturaanexo{flow-18-mapa-solucion-publicada.png}{Mapa con el plan publicado}{Mapa con el plan
+publicado.}{fig:anx_mapa_publicada}
+
+El panel de asignación presenta cada ruta con su selector de censista
+(Ilustración~\ref{fig:anx_asignacion}). La asignación automática opera en dos pasos: primero
+muestra la carga acumulada de cada censista (Ilustración~\ref{fig:anx_asig_modal}) y luego
+previsualiza la propuesta con los saldos resultantes (Ilustración~\ref{fig:anx_asig_prev}) antes de
+aplicarla; el estado final aparece en la Ilustración~\ref{fig:ui_routes} de la
+Sección~\ref{sec:ui}.
+
+\capturaanexo{flow-19-asignacion-panel.png}{Panel de asignación de rutas}{Panel de asignación de
+rutas.}{fig:anx_asignacion}
+
+\capturaanexo{flow-20-asignacion-modal-censistas.png}{Asignación automática: carga de los
+censistas}{Asignación automática: carga de los censistas.}{fig:anx_asig_modal}
+
+\capturaanexo{flow-21-asignacion-previsualizacion.png}{Asignación automática:
+previsualización}{Asignación automática: previsualización.}{fig:anx_asig_prev}
+
+El tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}) abre en cero al publicar
+el plan (Ilustración~\ref{fig:anx_avance_cero}). La Ilustración~\ref{fig:ui_progress} lo muestra
+con progreso registrado: porcentaje de árboles censados, omitidos y pendientes; mapa coloreado por
+el estado de cada árbol; y desglose del avance por ruta.
+
+\capturaanexo{flow-23-avance-censo.png}{Tablero de avance al publicar el plan}{Tablero de
+avance al publicar el plan.}{fig:anx_avance_cero}
+
+\capturaanexo{flow-34-avance-con-progreso.png}{Tablero de avance del censo}{Tablero de avance del censo.}%
 {fig:ui_progress}
 
-El desglose por censista es el que permite verificar en operación el reparto de
-carga que persigue el índice de balance definido en la
-Sección~\ref{sec:atributos-calidad}.
+La pestaña de censistas desglosa el mismo avance por persona
+(Ilustración~\ref{fig:anx_avance_censistas}), lo que permite verificar en operación el reparto de
+carga que persigue el índice de balance definido en la Sección~\ref{sec:atributos-calidad}; el
+trazado de rutas superpone las polilíneas del plan sobre el estado de los árboles
+(Ilustración~\ref{fig:anx_avance_trazado}).
+
+\capturaanexo{flow-35-avance-censistas-drilldown.png}{Avance del censo por censista}{Avance del
+censo por censista.}{fig:anx_avance_censistas}
+
+\capturaanexo{flow-36-avance-trazado-rutas.png}{Avance del censo con trazado de rutas}{Avance del
+censo con trazado de rutas.}{fig:anx_avance_trazado}
+
+\subsection*{Flujo del censista}
+
+Las vistas del censista son \textit{mobile-first} y se presentan aquí en pares. Tras el acceso,
+el selector de rutas lista las rutas del plan vigente asignadas al usuario
+(Ilustración~\ref{fig:anx_cen_login}); la vista general de la ruta activa corresponde a la
+Ilustración~\ref{fig:ui_surveyor} de la Sección~\ref{sec:ui}.
+
+\capturamovil{flow-25-login-movil.png}{flow-27-censista-selector-rutas.png}{Acceso móvil y selector
+de rutas}{Acceso móvil (izquierda) y selector de rutas del censista
+(derecha).}{fig:anx_cen_login}
+
+El registro de un árbol abre una hoja con los estados posibles y la captura fotográfica
+(Ilustración~\ref{fig:anx_cen_registro}); la fotografía se toma con la cámara del dispositivo y se
+confirma o repite antes de enviar (Ilustración~\ref{fig:anx_cen_foto}).
+
+\capturamovil{flow-28-censista-registrar-opciones.png}{flow-29-censista-camara.png}{Hoja de
+registro y cámara}{Hoja de registro del árbol (izquierda) y cámara abierta
+(derecha).}{fig:anx_cen_registro}
+
+\capturamovil{flow-30-censista-foto-capturada.png}{flow-31-censista-arbol-visitado.png}{Confirmación
+de la fotografía y parada visitada}{Confirmación de la fotografía (izquierda) y parada marcada como
+visitada (derecha).}{fig:anx_cen_foto}
+
+La omisión de una parada exige un motivo y también genera una observación; tras omitir, la ruta
+avanza a la siguiente parada (Ilustración~\ref{fig:anx_cen_omitir}). Desde la parada activa el
+censista consulta además la galería de fotografías de censos anteriores del mismo árbol.
+
+\capturamovil{flow-32-censista-tras-omitir.png}{flow-37-censista-galeria-fotos.png}{Parada omitida
+y galería de censos anteriores}{Ruta tras omitir una parada (izquierda) y galería de fotografías de
+censos anteriores (derecha).}{fig:anx_cen_omitir}
+
+Completadas todas las paradas, el portal lo confirma y ofrece volver al selector de rutas
+(Ilustración~\ref{fig:anx_cen_fin}).
+
+\capturaanexo{flow-26-censista-ruta-completada.png}{Ruta completada}{Ruta
+completada.}{fig:anx_cen_fin}
 
 \anexo{7}{Modelo de datos de las bases legadas}{Modelo de datos de las bases legadas}
 \label{anx:modelo-legado}
