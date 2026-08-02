@@ -229,7 +229,7 @@ Actualmente, el proyecto se encuentra en una nueva etapa: realizar un
 re-censo de las zonas previamente censadas. El objetivo es actualizar la
 información existente, generar nuevos registros y mantener consistencia entre
 los datos históricos y los nuevos datos recopilados en terreno mediante la
-planificación eficiente de rutas para equipos de censadores.
+planificación eficiente de rutas para equipos de censistas.
 
 Para esto, se cuenta con bases de datos previas que contienen:
 
@@ -239,19 +239,19 @@ Para esto, se cuenta con bases de datos previas que contienen:
 
 Sin embargo, estas fuentes de información se encuentran distribuidas en bases
 separadas y heterogéneas. El proyecto busca utilizar dichos datos como entrada
-para planificar recorridos eficientes de los censadores y facilitar futuras
+para planificar recorridos eficientes de los censistas y facilitar futuras
 integraciones con nuevas bases de datos.
 
 La tarea de re-censo presenta desafíos importantes:
 
-- **Ineficiencia en rutas**: Los censadores deben recorrer zonas extensas,
+- **Ineficiencia en rutas**: Los censistas deben recorrer zonas extensas,
 visitando árboles previamente registrados y nuevos puntos de interés
 - **Balance de carga**: Es necesario distribuir equitativamente el trabajo
 entre equipos de terreno considerando restricciones temporales por ruta
 - **Actualización de información**: Se debe garantizar consistencia entre los
 datos históricos y los nuevos registros
 - **Complejidad combinatoria**: Encontrar rutas eficientes para múltiples
-censadores corresponde a un problema NP-difícil
+censistas corresponde a un problema NP-difícil
 - **Costo operacional**: Reducir tiempos y costos de desplazamiento disminuye
 costos operacionales y fatiga del personal
 
@@ -284,4 +284,4 @@ El pipeline de optimización:
 1. **Importación**: carga de árboles georreferenciados desde CSV o base de datos existente
 2. **Matriz de costos**: consulta a OSRM para obtener tiempos de desplazamiento peatonal reales entre pares de árboles
 3. **Solver VRP**: OR-Tools resuelve el ruteo multi-agente con restricciones de tiempo máximo por ruta y balance de carga
-4. **Resultado**: conjunto de rutas asignadas a censadores, visualizadas en mapa con Leaflet
+4. **Resultado**: conjunto de rutas asignadas a censistas, visualizadas en mapa con Leaflet

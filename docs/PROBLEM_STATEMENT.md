@@ -2,9 +2,9 @@
 
 ## Enunciado del Problema
 
-Se dispone de un conjunto de puntos geográficos correspondientes a ubicaciones de árboles distribuidos en un área urbana. El objetivo es generar un conjunto de rutas óptimas que permitan a equipos de censadores visitar todos los puntos, minimizando el tiempo total de desplazamiento y manteniendo una distribución balanceada de la carga de trabajo.
+Se dispone de un conjunto de puntos geográficos correspondientes a ubicaciones de árboles distribuidos en un área urbana. El objetivo es generar un conjunto de rutas óptimas que permitan a equipos de censistas visitar todos los puntos, minimizando el tiempo total de desplazamiento y manteniendo una distribución balanceada de la carga de trabajo.
 
-Cada ruta representa el recorrido realizado por un equipo de censadores durante una jornada de trabajo. Las rutas no poseen un punto de inicio ni un punto de término predefinido; únicamente se requiere que los equipos recorran los árboles asignados.
+Cada ruta representa el recorrido realizado por un equipo de censistas durante una jornada de trabajo. Las rutas no poseen un punto de inicio ni un punto de término predefinido; únicamente se requiere que los equipos recorran los árboles asignados.
 
 ## Definición Formal
 
