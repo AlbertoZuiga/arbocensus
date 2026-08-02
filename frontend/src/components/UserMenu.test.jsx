@@ -21,7 +21,7 @@ function renderMenu() {
 beforeEach(() => {
   logoutSpy.mockClear();
   useAuthStore.setState({
-    user: { username: "alice", role: "surveyor", role_display: "Censador" },
+    user: { username: "alice", role: "surveyor", role_display: "Censista" },
   });
 });
 
@@ -42,7 +42,7 @@ describe("UserMenu", () => {
 
     await user.click(screen.getByRole("button", { name: /alice/ }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
-    expect(screen.getByText("Censador")).toBeInTheDocument();
+    expect(screen.getByText("Censista")).toBeInTheDocument();
 
     await user.click(screen.getByRole("menuitem", { name: /cerrar sesión/i }));
     expect(logoutSpy).toHaveBeenCalledTimes(1);

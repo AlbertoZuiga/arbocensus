@@ -197,7 +197,7 @@ export default function AdminHome() {
             hint="En todos los datasets"
           />
           <StatCard
-            label="Censadores activos"
+            label="Censistas activos"
             value={surveyors ? surveyors.length : "—"}
             hint={usersError ? "No se pudieron cargar los usuarios." : undefined}
           />

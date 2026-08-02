@@ -65,7 +65,7 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   useAuthStore.setState({
-    user: { username: "alice", role: "surveyor", role_display: "Censador" },
+    user: { username: "alice", role: "surveyor", role_display: "Censista" },
   });
   useRouteDetail.mockReturnValue({ ...idleQuery });
   useRoutePath.mockReturnValue({ ...idleQuery });

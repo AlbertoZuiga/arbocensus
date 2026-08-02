@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/select";
 
 const ROLE_OPTIONS = [
-  { value: "surveyor", label: "Censador" },
+  { value: "surveyor", label: "Censista" },
   { value: "admin", label: "Administrador" },
 ];
 

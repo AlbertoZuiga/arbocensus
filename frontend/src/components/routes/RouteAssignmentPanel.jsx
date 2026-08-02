@@ -403,7 +403,7 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
 
       {!published && (
         <p className="text-sm text-muted-foreground">
-          Publica una solución para asignar censadores a las rutas.
+          Publica una solución para asignar censistas a las rutas.
         </p>
       )}
 
@@ -468,7 +468,7 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
             >
               <SelectTrigger
                 className="mt-2"
-                aria-label={`Censador ruta ${route.route_number}`}
+                aria-label={`Censista ruta ${route.route_number}`}
               >
                 <SelectValue placeholder="Sin asignar" />
               </SelectTrigger>

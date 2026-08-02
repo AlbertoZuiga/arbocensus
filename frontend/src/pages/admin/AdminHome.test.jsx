@@ -76,7 +76,7 @@ describe("AdminHome", () => {
     expect(screen.getByText("200")).toBeInTheDocument();
     await waitFor(() =>
       expect(
-        screen.getByText("Censadores activos").closest("div"),
+        screen.getByText("Censistas activos").closest("div"),
       ).toHaveTextContent("1"),
     );
   });
