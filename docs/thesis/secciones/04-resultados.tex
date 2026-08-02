@@ -1309,6 +1309,23 @@ API~$\rightarrow$~Celery del sistema en operación; ambos recorren el mismo cód
 (\texttt{OptimizationPipeline.run}), por lo que la diferencia agrega únicamente latencia de
 encolado, no de cómputo.
 
+Tras el despliegue se ejecutó una medición de contraste sobre el servidor de producción (1--2 de
+agosto de 2026), con el mismo comando \texttt{baseline\_sweep} del
+\hyperref[anx:comandos]{Anexo 3} sobre tres instancias congeladas (\texttt{area-29-n43},
+\texttt{area-26-n157} y \texttt{reference-n1607}), la estrategia \texttt{global}, tres
+repeticiones y el límite de \textit{solver} vigente de 120\,s (archivos
+\texttt{20260802-droplet-profile-*.csv} en \texttt{docs\slash experiments\slash}). El contraste
+confirma ambos regímenes en el hardware real. Con la caché caliente, el \textit{pipeline}
+completo tomó entre 120{,}0 y 122{,}7\,s según la instancia: las fases fuera de \texttt{solve}
+suman menos de 3\,s incluso con $n=1\,607$, de modo que el carácter \textit{solve-bound} se
+mantiene en una máquina de un solo núcleo. En frío, la consulta a OSRM vuelve a dominar y es
+donde el hardware inferior se paga: las 100 solicitudes de la matriz de $n=1\,607$ costaron
+780{,}9\,s frente a los 170{,}8\,s de la réplica local (un factor de 4{,}6), con lo que el
+\textit{pipeline} frío completo ronda los 15\,min, frente a los cerca de 5\,min que suman las
+mismas fases en la réplica local con igual presupuesto de \textit{solver}. Este costo se sigue pagando
+una sola vez por \textit{dataset}, por lo que la operación normal del sistema desplegado queda
+acotada por el presupuesto del \textit{solver}, igual que en la réplica local.
+
 \subsection{Desglose de tiempo por fase}
 
 El \textit{pipeline} se instrumentó por fases: construcción de la matriz de costos
