@@ -131,10 +131,9 @@ error distinto del de estado.
   \label{fig:secuencia}
 \end{figure}
 
-Considerando la naturaleza del problema de optimización, cuyo desarrollo requiere una cantidad
-considerable de pruebas y experimentos para evaluar y ajustar la solución, las decisiones de
-\textit{stack} se tomaron antes de la construcción del sistema y se guiaron por tres criterios,
-formulados de acuerdo con las necesidades previstas para la iteración y el proceso de desarrollo.
+El desarrollo del problema de optimización exigía un volumen alto de pruebas y experimentos, por lo
+que las decisiones de \textit{stack} se tomaron antes de construir el sistema, guiadas por tres
+criterios.
 
 \begin{enumerate}
   \item Costo. Se anticipó un volumen elevado de ejecuciones durante el desarrollo y la evaluación
@@ -248,7 +247,12 @@ etapa de desarrollo y componentes hoy descartados por costo admiten reevaluarse 
 
 Al cierre de la iteración el sistema quedó desplegado en un servidor virtual (\textit{droplet}) de
 \textit{DigitalOcean} con Ubuntu 24.04 y 2\,GB de memoria, ampliados con 2\,GB de intercambio para
-absorber el preprocesamiento inicial de OSRM. La composición de contenedores de producción
+absorber el preprocesamiento inicial de OSRM. Se descartó volver a una plataforma como servicio
+---la vía de despliegue de la aplicación de censado previa---: alojar allí una composición de seis
+servicios, con OSRM residente en memoria, implica contratar y configurar cada pieza por separado,
+con un costo que crece por servicio, mientras que un servidor virtual único ofrece la flexibilidad
+de alojar la composición completa a costo fijo, en línea con los criterios de costo y simplicidad
+ya enunciados. La composición de contenedores de producción
 (\texttt{docker-compose.production.yml}) declara seis servicios ---PostGIS, Redis, OSRM, la
 aplicación Django, el \textit{worker} de Celery y Caddy \citep{caddy}--- con reinicio automático y
 verificaciones de salud encadenadas: el \textit{worker} no arranca hasta que la base de datos y
