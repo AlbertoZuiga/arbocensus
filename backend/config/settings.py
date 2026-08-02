@@ -32,6 +32,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -91,6 +92,24 @@ STATIC_ROOT = BASE_DIR / "static"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    },
+}
+
+CSRF_TRUSTED_ORIGINS = [
+    o for o in env("CSRF_TRUSTED_ORIGINS", default="").split(",") if o
+]
+if not DEBUG:
+    # Only trustworthy behind the Caddy reverse proxy; in dev any client could
+    # spoof the header and make request.is_secure() lie.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+
 EXPERIMENTS_DIR = Path(
     env("EXPERIMENTS_DIR", default=str(BASE_DIR.parent / "docs" / "experiments"))
 )
@@ -134,9 +153,13 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
 }
 
-CORS_ALLOWED_ORIGINS = env(
-    "CORS_ALLOWED_ORIGINS", default="http://localhost:3000,http://localhost:5173"
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    o
+    for o in env(
+        "CORS_ALLOWED_ORIGINS", default="http://localhost:3000,http://localhost:5173"
+    ).split(",")
+    if o
+]
 CORS_ALLOW_CREDENTIALS = True
 
 CELERY_BROKER_URL = env("REDIS_URL", default="redis://redis:6379/0")

@@ -2,7 +2,7 @@ name: Commitlint
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, production]
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
@@ -13,7 +13,7 @@ jobs:
   commitlint:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: ${{ !github.event.pull_request.draft }}
+    if: ${{ !github.event.pull_request.draft && (github.base_ref != 'production' || github.head_ref != 'main') }}
 
     steps:
       - name: Checkout repo

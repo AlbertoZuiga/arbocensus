@@ -2,7 +2,7 @@ name: Frontend
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, production]
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
@@ -12,6 +12,9 @@ concurrency:
 
 jobs:
   changes:
+    # A release PR main -> production carries only commits that already passed CI
+    # on main. Re-running it buys nothing; skipping cascades to the frontend job.
+    if: github.base_ref != 'production' || github.head_ref != 'main'
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}

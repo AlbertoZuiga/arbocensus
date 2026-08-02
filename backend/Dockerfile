@@ -30,8 +30,9 @@ COPY . .
 
 RUN chmod +x /app/entrypoint.sh
 
-# Create non-root user
-RUN useradd -m -u 1000 app && chown -R app:app /app
+# Create non-root user. media must exist in the image so the media_data volume
+# mountpoint inherits app ownership instead of root's.
+RUN mkdir -p /app/media && useradd -m -u 1000 app && chown -R app:app /app
 
 EXPOSE 8000
 

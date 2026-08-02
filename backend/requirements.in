@@ -27,3 +27,4 @@ requests>=2.31
 # Server and utilities
 gunicorn>=21.2
 Pillow>=11.0
+whitenoise>=6.0
