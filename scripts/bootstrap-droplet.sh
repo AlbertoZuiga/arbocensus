@@ -26,6 +26,7 @@ ask() { # ask VAR "prompt" "default"
   else
     read -r -p "   $__prompt: " __reply
   fi
+  __reply=${__reply//$'\r'/}
   printf -v "$__var" '%s' "${__reply:-$__default}"
 }
 
