@@ -307,11 +307,13 @@ pese a compartir configuración: ambas cifras provienen de corridas distintas y 
 arco a arco.
 
 % ---- 4.1.2 ------------------------------------------------------
-\subsection{Comparación con la solución \textit{greedy}}
+\subsection{Mejora sobre la alternativa trivial (CA-06)}
 \label{sec:comparacion-greedy}
 
-Como referencia de comparación se implementó una solución \textit{greedy} basada en el heurístico
-del vecino más cercano, generada programáticamente sobre el mismo \textit{dataset} ($N = 1\,607$),
+Este apartado reúne la evidencia del criterio CA-06, que exige una mejora sobre una alternativa
+trivial de planificación. Como referencia de comparación se implementó una solución \textit{greedy}
+basada en el heurístico del vecino más cercano \citep{rosenkrantz1977analysis}, generada
+programáticamente sobre el mismo \textit{dataset} ($N = 1\,607$),
 con la misma matriz de costos de OSRM ---la caché de la corrida anterior--- y con los mismos
 parámetros temporales ($T_{\max} = 10\,800$\,s y 2 minutos de servicio por árbol) que la solución de
 \textit{OR-Tools} de la Sección~\ref{sec:metricas-calidad}, producida con la versión $9.15$ de la
@@ -322,17 +324,20 @@ el primer árbol que quede sin visitar. No hay optimización global, ni balance 
 reasignación posterior de árboles entre rutas.
 
 El \textit{baseline} se evalúa en dos variantes, porque la solución de \textit{OR-Tools} recibe
-desde 2026-07-24 un post-proceso de 2-opt intra-ruta habilitado por defecto: contrastar el método
+desde 2026-07-24 un post-proceso de 2-opt intra-ruta \citep{croes1958method} habilitado por
+defecto: contrastar el método
 propio con refinamiento contra un competidor sin refinamiento mediría el post-proceso y no el
 \textit{solver}. La segunda variante aplica al \textit{greedy} exactamente el mismo post-proceso, de
 modo que ambos lados reciban el mismo trato. La Tabla~\ref{tab:comparativa} contrasta los tres
-enfoques sobre una única corrida de este ciclo: la solución de \textit{OR-Tools} se volvió a
+enfoques sobre una única corrida de este ciclo: la solución de \textit{OR-Tools} ---con la
+configuración de producción declarada en la Sección~\ref{sec:protocolo-evaluacion}, estrategia
+\texttt{spatial\_term} y presupuesto de \textit{solver} de 120\,s--- se volvió a
 ejecutar aquí en lugar de citar la de la Sección~\ref{sec:metricas-calidad}, y las dos variantes del
 \textit{greedy} operan sobre el mismo \textit{dataset} congelado, con lo que las tres columnas
 comparten el conjunto de árboles, sus identificadores y la matriz de costos. El orden interno de los
 nodos no es común a las tres: el heurístico recorre los árboles ordenados por identificador,
 mientras que cada semilla de \textit{OR-Tools} aplica una permutación distinta de ese orden, que es
-el mecanismo de réplica descrito en la Sección~\ref{sec:metricas-calidad}. Esa reejecución con las
+el mecanismo de réplica descrito en la Sección~\ref{sec:protocolo-evaluacion}. Esa reejecución con las
 mismas tres semillas reprodujo el resultado de aquella sección ---las medias difieren en 37\,s sobre
 un total de 58\,000, y ninguna semilla se aparta más de 68\,s de su valor previo---, lo que descarta
 que las diferencias de la tabla provengan de la variabilidad entre corridas discutida más arriba.
@@ -505,8 +510,8 @@ imprime \texttt{greedy\_baseline} junto con esas métricas; las de la columna de
 y re-derivarlas exige volver a correr la instancia con \texttt{route\_audit}, que sí emite una fila
 por ruta. El heurístico es determinista ---no consume aleatoriedad---, por lo que cada variante se
 ejecuta una sola vez y no requiere repeticiones con semillas distintas; el \textit{dataset} es la
-instancia congelada de \texttt{docs/experiments/instances/}, cuyos identificadores son función pura
-del archivo y por lo tanto reproducibles en cualquier máquina.
+instancia \texttt{reference-n1607} congelada en \texttt{docs/experiments/instances/}, cuyos
+identificadores son función pura del archivo y por lo tanto reproducibles en cualquier máquina.
 \end{sloppypar}
 
 % ---- 4.1.3 -----------------------------------------------------
@@ -546,7 +551,7 @@ tiempo total con un término de balance blando y sin criterio espacial explícit
 
 Ese diagnóstico es el que motivó las dos estrategias de partición espacial que la
 Sección~\ref{sec:estrategias} describe ---\texttt{spatial\_term} y \texttt{cluster\_first}---, y que
-aquí se miden contra la formulación vigente (\texttt{global}) sobre la instancia de referencia de
+aquí se miden contra la formulación vigente (\texttt{global}) sobre la instancia de estrés de
 $n = 1\,607$ árboles.
 
 Medir \texttt{cluster\_first} exigió corregir antes dos defectos de su implementación: la estimación
@@ -575,7 +580,7 @@ Tabla~\ref{tab:estrategias} resume los resultados como media de las tres repetic
 
 \begin{table}[H]
   \centering
-  \caption{Comparación de estrategias sobre la instancia de referencia.}
+  \caption{Comparación de estrategias sobre la instancia de estrés \texttt{reference-n1607}.}
   \label{tab:estrategias}
   \small
   \begin{tabularx}{\textwidth}{lXXXXXXX}
@@ -623,7 +628,8 @@ Tabla~\ref{tab:estrategias} resume los resultados como media de las tres repetic
 $+1{,}5$\,\% de tiempo total de desplazamiento ---muy por debajo del margen del 10\,\% admitido---.
 Lo hace con el mismo número de rutas, cobertura total y un balance de $0{,}833$ frente a $0{,}838$
 de la \textit{baseline}, diferencia inferior a la dispersión entre semillas de la propia
-\texttt{global}. Cumple, por tanto, el criterio de decisión.
+\texttt{global}. Cumple, por tanto, el criterio de decisión pre-registrado que este apartado fijó
+al inicio de su protocolo.
 
 El veredicto tiene el alcance de la corrida que lo produjo: la instancia de referencia, con la
 configuración censal de 2\,min de servicio y $T_{\max}=3$\,h, y bajo la métrica de solapamiento
@@ -651,7 +657,7 @@ la repetición, de modo que su media esconde una repetición notoriamente mejor.
 repetición de \texttt{global} ($150$), \texttt{spatial\_term} ($81$, $75$ y $75$) reduce el
 solapamiento en al menos un $45$\,\%, por lo que la conclusión no depende de la agregación.
 
-\texttt{cluster\_first} queda descartada \textit{con datos}, incluso en su versión corregida.
+\texttt{cluster\_first} queda descartada con datos, incluso en su versión corregida.
 Alcanza, como era esperable, la mejor separación espacial de las tres ---solapamiento de $20$ por
 ruta ($-88$\,\%) y $\sum r_{\max}$ de $9\,714$\,m ($-57$\,\%)---, cifras que sirven como cota de la
 separación alcanzable, pero lo hace incumpliendo dos de las tres salvaguardas del criterio: a)
@@ -834,7 +840,8 @@ fábrica, pero tampoco lo confirma como óptimo: sobre la instancia de referenci
 sobre calle no varían de forma monótona con el coeficiente ---$39{,}7$ sin penalización espacial,
 $34{,}3$ en el valor de producción, y $46{,}0$ y $48{,}0$ al subirlo a $10$ y a $30$---, de modo que
 la mejora que el valor de producción obtiene sobre no penalizar, de un $13{,}6$\,\%, queda lejos del
-criterio de decisión y se revierte en cuanto el coeficiente crece. La lectura obliga además a una
+criterio de decisión pre-registrado de ese ciclo (\texttt{spatial-span-20260730.md}) y se revierte
+en cuanto el coeficiente crece. La lectura obliga además a una
 reserva sobre lo que la estrategia compra: en esa misma instancia, suprimir la penalización espacial
 entrega mejor tiempo de desplazamiento ($57\,352$\,s frente a $58\,948$\,s) y mejor balance ($0{,}874$
 frente a $0{,}839$). Lo que \texttt{spatial\_term} compra es compacidad y menor solapamiento entre
@@ -851,7 +858,7 @@ de este experimento se encuentran versionados en \texttt{docs/experiments/} (rep
 asociados).
 
 % ---- 4.1.4 ------------------------------------------------------
-\subsection{Discusión de calidad de rutas}
+\subsection{El régimen geográfico de la instancia}
 \label{sec:discusion-calidad}
 
 La función objetivo que minimiza el \textit{solver} combina seis componentes de escala diferente
@@ -905,19 +912,19 @@ múltiples áreas de censo como un único problema.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
-  \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación.}
-  \label{fig:ruta-vueltas-r1}
-\end{figure}
-
-\begin{figure}[H]
-  \centering
   \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
   \caption{
     Régimen disperso (\textit{dataset} de evaluación agregado) frente a régimen real (áreas
     individuales del arbolado legado).
   }
   \label{fig:regimen-disperso-vs-real}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-ruta-vueltas-r1.png}
+  \caption{Ruta con auto-cruces en el \textit{dataset} de evaluación.}
+  \label{fig:ruta-vueltas-r1}
 \end{figure}
 
 La diferencia entre ambos regímenes se aprecia en la extensión que abarca cada uno:
@@ -953,8 +960,7 @@ La unidad operativa del motor es el área de censo individual, no el arbolado me
 conjunto. Procesar cada área como un problema independiente reduciría la extensión del
 \textit{dataset} a la escala en que el \textit{solver} produce rutas limpias con la configuración
 actual; esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su
-costo se midió después sobre las áreas reales (Sección~\ref{sec:areas-reales}), donde resulta ser
-una ruta adicional y el triple de cómputo, no kilómetros de caminata. El problema que esa extensión
+costo se mide sobre las áreas reales en la Sección~\ref{sec:areas-reales}. El problema que esa extensión
 plantea ---repartir un territorio en distritos compactos y equilibrados antes de rutear--- tiene
 tratamiento propio en la literatura bajo la denominación de diseño territorial
 \citep{kalcsics2005towards,rios2009reactive}, cuyos criterios de compacidad y de balance coinciden
@@ -988,10 +994,9 @@ implemente el selector, extensión que se documenta en la Sección~\ref{sec:posi
 \subsection{Evaluación sobre áreas reales de censo y precio de la partición}
 \label{sec:areas-reales}
 
-Las comparaciones anteriores se ejecutaron sobre el conjunto de evaluación de $n = 1\,607$ árboles,
-que reúne el arbolado de las dos bases legadas en una sola instancia. Los árboles que lo componen
-son reales, pero la agrupación carece de correlato operativo, dado que el censo histórico se
-organizó por área. Queda entonces sin responder la pregunta que la operación plantea de forma
+Las comparaciones anteriores se ejecutaron sobre la instancia de estrés agregada, cuya falta de
+correlato operativo quedó declarada en la Sección~\ref{sec:protocolo-evaluacion}. Queda entonces
+sin responder la pregunta que la operación plantea de forma
 directa: qué obtiene un censo real cuando el problema se entrega en su escala natural ---un área
 individual de extensión $\leq 1{,}32$\,km--- en lugar de la unión de varias. Este apartado la
 responde con una medición propia y, además, pone precio a la partición misma.
@@ -1285,7 +1290,9 @@ Este resultado convierte en medición lo que la Sección~\ref{sec:discusion-cali
 la geometría. La segmentación previa por área, que la Sección~\ref{sec:posibles-mejoras} documenta
 como trabajo futuro, deja de sostenerse solo en que el régimen disperso produce auto-cruces y pasa a
 tener un costo cuantificado ---una ruta adicional, jornadas cortas y triple cómputo--- frente a un
-beneficio también cuantificado, a saber, instancias con correlato operativo y menor varianza. El
+beneficio también cuantificado, a saber, instancias con correlato operativo y menor varianza. Es
+esta medición la que sostiene la tesis con que abre el capítulo, y que las conclusiones retoman: la
+unidad operativa correcta del motor es el área de censo individual. El
 protocolo, los comandos reproducibles y los datos crudos se encuentran versionados en
 \texttt{docs/experiments/} (reporte \texttt{area-partition-20260726.md} y los archivos CSV
 asociados).
