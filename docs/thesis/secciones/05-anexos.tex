@@ -8,7 +8,7 @@
   Documentación de la API REST & \pageref{anx:api} \\
   Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
   Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
-  Grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
+  Perfil de rendimiento, grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
   Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
   Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
   Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
@@ -505,13 +505,177 @@ docker compose -f docker-compose.prod.yml run --rm backend \
   \end{tabularx}
 \end{table}
 
-\anexo{4}{Grilla de variantes y auditoría de robustez}{Grilla de variantes y auditoría de robustez}
+\anexo{4}{Perfil de rendimiento, grilla de variantes y auditoría de robustez}{Perfil de rendimiento, grilla de variantes y auditoría de robustez}
 \label{anx:grilla-variantes}
 
-Este anexo complementa las Secciones~\ref{sec:variantes-duracion} y~\ref{sec:discusion-calidad} con
-el detalle de la grilla de variantes operacionales, la descripción de la suite de instancias
-congeladas sobre la que se ejecutó el barrido de configuración y la descripción completa de los
-cuatro defectos de instrumentación detectados en la serie experimental.
+Este anexo complementa las Secciones~\ref{sec:protocolo-evaluacion}
+y~\ref{sec:discusion-calidad} con el perfil de rendimiento del optimizador, el detalle de la
+grilla de variantes operacionales, la descripción de la suite de instancias congeladas sobre la
+que se ejecutó el barrido de configuración y la descripción completa de los cuatro defectos de
+instrumentación detectados en la serie experimental.
+
+\subsubsection*{Perfil de rendimiento del optimizador}
+\phantomsection\label{anx:perfil-rendimiento}
+
+El tiempo de ejecución se concentra en la metaheurística cuando la caché de la matriz está caliente
+---el GLS acapara el $98{,}1$\,\% del total--- y en OSRM cuando está fría. Este apartado documenta
+ese comportamiento: en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
+varían las soluciones ante los parámetros operacionales (tiempo de servicio por árbol y cota dura
+$T_{\max}$) y cuál es la sensibilidad del sistema al tamaño del problema y al presupuesto del
+\textit{solver}. Todas las cifras provienen del experimento de perfilado ejecutado el 11--12 de
+julio de 2026, cuyo protocolo y datos crudos se encuentran versionados en el directorio
+\texttt{docs/experiments/} del repositorio (reporte \texttt{profiling-20260711.md} y archivos CSV
+asociados), y son reproducibles mediante el comando de gestión \texttt{baseline\_sweep}, verificado
+previamente sobre una corrida sintética de $n=80$ (\texttt{baseline-sweep-20260711.md}).
+
+Corresponde advertir que las cifras de este apartado provienen de un régimen de medición anterior al
+de la Sección~\ref{sec:comparacion-estrategias}: se obtuvieron con la estrategia \texttt{global}, un
+límite de \textit{solver} de 180\,s y una versión del código previa a la corrección del redondeo del
+tránsito (el truncamiento entero descrito al final del apartado de variaciones de duración, más abajo). Ese
+era el régimen vigente en producción al momento del perfilamiento, y son sus propios resultados los
+que lo dejaron obsoleto: la sensibilidad al límite de \textit{solver} es la que motivó bajarlo de
+180 a 120\,s ---remedida sobre el código vigente en la Tabla~\ref{tab:sensibilidad-tl}---, mientras
+que la adopción de \texttt{spatial\_term} como estrategia por defecto proviene del experimento de
+comparación de la Sección~\ref{sec:comparacion-estrategias}. El perfil documenta, por tanto, el
+estado previo a ambas decisiones y no se reejecutó bajo el régimen nuevo: sus tablas ---en
+particular la grilla de seis variantes de la Tabla~\ref{tab:grilla-variantes}--- no deben cruzarse
+arco a arco con las de la Sección~\ref{sec:comparacion-estrategias}, por las razones que allí se
+detallan. El perfil se conserva porque sus hallazgos son de \textit{tiempo} ---la dominancia del
+GLS y el carácter \textit{OSRM-bound} en frío---, que no dependen de la estrategia ni del redondeo,
+y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de \textit{solver}
+como variable del experimento y no como constante del régimen.
+
+\subsubsection*{Desglose de tiempo por fase}
+
+El \textit{pipeline} se instrumentó por fases: construcción de la matriz de costos
+(\texttt{cost\_matrix}), construcción del modelo (\texttt{model\_build}), resolución
+(\texttt{solve}, subdividida en primera solución y metaheurística), extracción de la solución
+(\texttt{solution\_extraction}) y cálculo de métricas (\texttt{metrics}). El hallazgo central es que
+el perfil depende del estado de la caché de la matriz de distancias: en operación normal (caché
+caliente) el \textit{pipeline} está acotado por el \textit{solver} (\textit{solve-bound}), y solo en
+el primer contacto con un \textit{dataset} está acotado por OSRM (\textit{OSRM-bound}).
+
+Con la caché caliente, la metaheurística GLS concentra el 98,1\,\% del tiempo total, y todas las
+demás fases combinadas representan menos del 2\,\% (Tabla~\ref{tab:fases-caliente}), media de las
+18 corridas de la grilla. Optimizar la construcción del modelo, la extracción o el cálculo de
+métricas no tendría, por tanto, ningún efecto medible.
+
+\begin{table}[H]
+  \centering
+  \caption{Desglose de tiempo por fase con caché de matriz caliente.}
+  \label{tab:fases-caliente}
+  \begin{tabularx}{\textwidth}{lXX}
+    \toprule
+    Fase &
+      Tiempo [s] &
+      \% del total \\
+    \midrule
+    \texttt{cost\_matrix} (consulta de caché) &
+      0{,}57 &
+      0{,}5\,\% \\
+    \texttt{model\_build} &
+      $<0{,}01$ &
+      $\approx 0$\,\% \\
+    \texttt{solve} (primera solución) &
+      1{,}4 &
+      1{,}3\,\% \\
+    \texttt{solve} (metaheurística GLS) &
+      103{,}4 &
+      98{,}1\,\% \\
+    \texttt{solution\_extraction} &
+      0{,}01 &
+      $\approx 0$\,\% \\
+    \texttt{metrics} &
+      0{,}02 &
+      $\approx 0$\,\% \\
+    \midrule
+    Total del \textit{pipeline} &
+      105{,}4 &
+      100\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+En frío ---caché de matriz vacía, primera corrida sobre el \textit{dataset}--- el perfil se
+invierte: la consulta a OSRM domina con el 97,6\,\% del tiempo (Tabla~\ref{tab:fases-frio}), medido
+en la corrida piloto con tiempo de servicio de 2\,min y $T_{\max}=3$\,h. Con $n=1\,607$ la
+fragmentación por longitud de URL (175 coordenadas por bloque) convierte la matriz en una grilla de
+$10 \times 10 = 100$ solicitudes al servicio \texttt{/table}, con un costo total de 170{,}8\,s que
+escala aproximadamente como $O(n^2)$ con el número de celdas. La cifra difiere en un 4\,\% de la
+corrida en frío citada en la Sección~\ref{sec:metricas-calidad}, dispersión propia de la latencia de
+cien solicitudes HTTP sucesivas. Este costo se paga una única vez por \textit{dataset}: la matriz
+queda almacenada en caché (indexada por el hash SHA-256 de los identificadores de árboles activos),
+de modo que toda corrida posterior es \textit{solve-bound}.
+
+\begin{table}[H]
+  \centering
+  \caption{Desglose de tiempo por fase en frío.}
+  \label{tab:fases-frio}
+  \begin{tabularx}{\textwidth}{lXX}
+    \toprule
+    Fase &
+      Tiempo [s] &
+      \% del total \\
+    \midrule
+    \texttt{cost\_matrix} (consulta OSRM) &
+      170{,}8 &
+      97{,}6\,\% \\
+    \texttt{cost\_matrix} (ensamblado y caché) &
+      0{,}2 &
+      0{,}1\,\% \\
+    \texttt{solve} &
+      3{,}9 &
+      2{,}2\,\% \\
+    Fases restantes &
+      $<0{,}05$ &
+      $\approx 0$\,\% \\
+    \midrule
+    Total del \textit{pipeline} &
+      174{,}9 &
+      100\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+En la corrida piloto de la Tabla~\ref{tab:fases-frio} el GLS terminó a los 3,9\,s; en la grilla
+completa el tiempo de resolución observado para el mismo \textit{dataset} varió entre 29 y 180\,s,
+según si la búsqueda agota o no el presupuesto de tiempo asignado.
+
+\phantomsection
+\subsubsection*{Variaciones de duración sobre el \textit{dataset} real}
+\label{anx:variantes-duracion}
+
+Se evaluaron las seis combinaciones de tiempo de servicio por árbol $\{1, 2, 3\}$\,min y cota dura
+$T_{\max} \in \{2, 3\}$\,h sobre el \textit{dataset} real completo de $n=1\,607$ árboles, con tres
+semillas y un límite de \textit{solver} de 180\,s vigente al momento del perfilamiento; ese tope se
+bajó a 120\,s a partir del análisis de sensibilidad al presupuesto del \textit{solver}, remedido en
+la Tabla~\ref{tab:sensibilidad-tl}. El compromiso entre balance, flota y costo total, junto con el
+efecto de las semillas, se documenta más abajo en este anexo
+(Tabla~\ref{tab:grilla-variantes}). El hallazgo de esta grilla que no depende del régimen es que el
+GLS agota o no el presupuesto según la variante: en las de $T_{\max}=2$\,h la búsqueda consume el
+tiempo asignado de forma consistente, mientras que en la de servicio de 3\,min con $T_{\max}=3$\,h
+termina antes (media de 49\,s).
+
+La grilla registra, además, rutas cuyo tiempo estimado excede $T_{\max}$ en las configuraciones de
+2\,h. Este exceso no constituye una infactibilidad del \textit{solver}, sino un artefacto de
+redondeo: el \textit{callback} de tránsito trunca cada arco a aritmética entera (\texttt{int(travel
++ service)}), mientras que la métrica de duración estimada suma los mismos términos en punto
+flotante; con 30 a 70 arcos por ruta, el truncamiento acumula una discrepancia de 10 a 70\,s por
+ruta. La cota dura $T_{\max}$ se respeta estrictamente en la aritmética entera del \textit{solver}.
+
+\subsubsection*{Sensibilidad al tamaño del problema}
+
+Con el objetivo de aislar el efecto del tamaño del problema se repitió la grilla sobre un área
+reducida del mismo origen legado ($n=157$). La fase que peor escala es la consulta a OSRM en frío:
+de 1,7\,s con $n=157$ a 170,8\,s con $n=1\,607$ ---un factor de $\approx 100\times$ para $10\times$
+el número de nodos, consistente con el crecimiento $O(n^2)$ del número de celdas de la matriz---. La
+primera solución del \textit{solver} pasa de 0,022\,s a 1,4\,s ($\approx 63\times$). La
+metaheurística, en cambio, no escala de forma monótona con $n$ a presupuesto fijo: con $n=157$ el
+GLS agota los 180\,s en casi todas las variantes (media de 167\,s), mientras que con $n=1\,607$
+corta antes en varias (media de 103\,s). El límite de tiempo de reloj enmascara el costo por
+iteración: lo que crece con $n$ es el costo de explorar cada vecindario, no el tiempo total
+observado.
+
 
 \subsubsection*{Grilla de seis variantes}
 

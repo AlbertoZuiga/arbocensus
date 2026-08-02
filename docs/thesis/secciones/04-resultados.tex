@@ -1,29 +1,177 @@
 \chapter{RESULTADOS OBTENIDOS Y POSIBLES MEJORAS}
 \label{cap:resultados}
 
+Este capítulo responde tres preguntas sobre el producto: si el motor de optimización genera planes
+de censo que cumplen los criterios de aceptación comprometidos en el
+Capítulo~\ref{cap:solucion}; si esos planes son mejores que los de una alternativa trivial; y en
+qué régimen geográfico se sostienen ambas respuestas. La Sección~\ref{sec:resultados-obtenidos} las
+responde en ese orden: primero declara el protocolo de evaluación ---instancias, entorno de
+medición, presupuesto de cómputo y criterios
+(Sección~\ref{sec:protocolo-evaluacion})---, luego acredita la calidad del plan sobre la instancia
+de mayor tamaño (Sección~\ref{sec:metricas-calidad}) y su mejora sobre la alternativa trivial
+(Sección~\ref{sec:comparacion-greedy}), después mide el efecto del término de dispersión geográfica
+(Sección~\ref{sec:comparacion-estrategias}) y el papel del régimen geográfico de la instancia
+(Sección~\ref{sec:discusion-calidad}), y cierra con la evaluación sobre las áreas de censo reales
+(Sección~\ref{sec:areas-reales}). Las conclusiones (Sección~\ref{sec:conclusiones}) recogen lo que
+esos resultados muestran sobre el problema y el cumplimiento de criterios y atributos; las dos
+secciones finales registran las limitaciones del sistema y las mejoras posibles.
+
+Conviene anticipar el hallazgo central, porque ordena la lectura de todo el capítulo: no existe una
+configuración única de la función objetivo que gane en todos los regímenes geográficos, y la unidad
+operativa correcta del motor es el área de censo individual, no el arbolado metropolitano agregado.
+Por eso la instancia de mayor tamaño, de 1\,607 árboles, se emplea en lo que sigue como instancia
+de estrés ---acredita que el sistema sostiene sus criterios en el peor caso de tamaño--- y no como
+caso operativo.
+
 \section{RESULTADOS OBTENIDOS}
-\subsection{Métricas de calidad de rutas}
-\label{sec:metricas-calidad}
+\label{sec:resultados-obtenidos}
+
+\subsection{Qué se mide, con qué instancias y contra qué criterios}
+\label{sec:protocolo-evaluacion}
 
 La calidad de la solución producida por el motor de optimización se evalúa sobre doce instancias
 reales congeladas, entre $n = 43$ y $n = 1\,607$ árboles, versionadas en la suite del
-\hyperref[anx:suite-instancias]{Anexo 4}. Este apartado reporta en detalle una de ellas, la
-instancia de referencia descrita en la Sección~\ref{sec:legacy} y en la
-Sección~\ref{sec:estado-actual} (ambas fuentes, \texttt{legacy\_api} + \texttt{legacy\_app} con
-mediana de posición por código QR), de $N = 1\,607$ árboles, porque es la que fija los criterios de
-aceptación del Capítulo~\ref{cap:solucion}. Las once restantes ---entre ellas tres áreas de censo
-individuales de la operación histórica--- sostienen los apartados siguientes, y conviene anticipar
-que no siempre coinciden con ella: la Sección~\ref{sec:areas-reales} muestra que varias conclusiones
-obtenidas en el régimen agregado no se trasladan sin más al régimen de área individual, que es el de
-la operación habitual. El conjunto no corresponde
-a una única comuna: reúne una porción del arbolado disponible en ambas bases legadas, elegida por
-reproducibilidad y no la totalidad del universo importable (Sección~\ref{sec:legacy}).
-Se emplean los parámetros temporales por defecto ($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s),
-un tiempo de servicio de 2 minutos por árbol y los \textit{defaults} de producción del motor: la
-estrategia \texttt{spatial\_term} ---que agrega al objetivo un término de dispersión geográfica,
-véase la Sección~\ref{sec:estrategias}--- y un tiempo límite de \textit{solver} de 120\,s, que es el
-valor que produce la heurística $\min(30 + 1{,}5\,n,\ 120)$ para cualquier \textit{dataset} de este
-tamaño. Se reportan nueve indicadores:
+\hyperref[anx:suite-instancias]{Anexo 4}. La suite cubre dos regímenes geográficos de naturaleza
+distinta. El primero es el régimen agregado de la instancia de referencia \texttt{reference-n1607},
+descrita en las Secciones \ref{sec:legacy} y \ref{sec:estado-actual}: 1\,607 árboles de ambas
+fuentes legadas (\texttt{legacy\_api} + \texttt{legacy\_app} con mediana de posición por código QR)
+repartidos en 10,3\,km de extensión. Los árboles son reales, pero la agrupación carece de correlato
+operativo, dado que el censo histórico se organizó por áreas, y el conjunto no corresponde a una
+única comuna: reúne una porción del arbolado disponible en ambas bases legadas, elegida por
+reproducibilidad y no la totalidad del universo importable (Sección~\ref{sec:legacy}). El segundo
+es el régimen de área de censo individual ---diámetros de hasta 1,32\,km---, que corresponde a la
+operación habitual. La instancia agregada funciona como instancia de estrés: es la de mayor tamaño
+y la que fija los criterios de aceptación del Capítulo~\ref{cap:solucion}. Las áreas reales miden
+el motor en su unidad operativa (Sección~\ref{sec:areas-reales}), y varias conclusiones obtenidas
+en el régimen agregado no se trasladan sin más a ellas.
+
+Los resultados se contrastan contra dos tipos de criterio que conviene no confundir. Los criterios
+de aceptación CA-01 a CA-06 (Sección~\ref{sec:criterios-aceptacion}) se comprometieron en el
+Capítulo~\ref{cap:solucion} antes de construir el sistema y califican al producto. Los criterios de
+decisión, en cambio, pertenecen a cada ciclo experimental: se fijan y versionan antes de ejecutar
+la corrida, califican una hipótesis específica ---qué estrategia gana, si un coeficiente ayuda---
+y su incumplimiento descarta la hipótesis, no el producto. Cuando el texto invoca el criterio de
+decisión, remite al pre-registro del experimento que se está reportando, enunciado al inicio del
+apartado correspondiente.
+
+Salvo indicación en contrario, los experimentos emplean los parámetros temporales por defecto
+($T_{\min} = 7\,200$\,s y $T_{\max} = 10\,800$\,s), un tiempo de servicio de 2 minutos por árbol y
+los \textit{defaults} de producción del motor: la estrategia \texttt{spatial\_term} ---que agrega
+al objetivo un término de dispersión geográfica, véase la Sección~\ref{sec:estrategias}--- y un
+tiempo límite de \textit{solver} de 120\,s, el valor que produce la heurística
+$\min(30 + 1{,}5\,n,\ 120)$ para cualquier \textit{dataset} de estos tamaños.
+
+Las réplicas de cada corrida no provienen de una semilla de generador pseudoaleatorio
+---\textit{OR-Tools} no la expone--- sino de permutar el orden de entrada de los nodos. Esta
+permutación altera el desempate en la heurística de construcción inicial
+(\texttt{PATH\_CHEAPEST\_ARC}), que recorre los arcos en orden de índice, y propaga la perturbación
+a toda la trayectoria del metaheurístico GLS \citep{voudouris1999guided}: aunque el \textit{solver}
+es determinista dados sus parámetros de entrada, el orden de los nodos ---información irrelevante
+para el problema matemático--- basta para generar soluciones distintas. La sensibilidad al orden de
+entrada no se limita al tiempo de desplazamiento: sobre las métricas de calidad alcanza un orden de
+magnitud mayor, y las barras de error entre semillas de una corrida no acotan la varianza entre
+corridas distintas (\hyperref[anx:alcance-replicas]{Anexo 4}).
+
+\phantomsection\label{sec:entorno-medicion}%
+Las mediciones de este capítulo preceden al despliegue productivo del sistema
+(Sección~\ref{sec:despliegue-produccion}), incorporado al cierre de la iteración, y se realizaron
+sobre una réplica local del entorno de producción definida en \texttt{docker-compose.prod.yml}
+---un archivo distinto del que gobierna el despliegue, \texttt{docker-compose.production.yml},
+aunque ambos usan las mismas imágenes---. Esta réplica
+usa imágenes construidas con el \textit{target} \texttt{prod} del \texttt{Dockerfile} (sin
+\textit{bind-mounts} de código ni recarga en caliente, con usuario no privilegiado), una instancia
+real de OSRM \citep{osrm} cargada con el extracto completo de Chile de \textit{OpenStreetMap}
+(\texttt{chile-latest.osm.pbf}), preprocesado con el algoritmo \textit{Multi-Level Dijkstra}
+\citep{delling2017customizable} y perfil peatonal, además de PostGIS \citep{postgis} 15--3.3 y Redis
+7. Las versiones empleadas fueron Python 3.12.11, Django \citep{django} 6.0, \textit{OR-Tools}
+\citep{ortools} 9.15 y NumPy 2.4.6.
+
+Este entorno difiere del despliegue real en tres condiciones que acotan la extrapolación de sus
+cifras. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con los
+contenedores de base de datos y OSRM emulados en \texttt{linux/amd64} mediante Rosetta, mientras que
+el servidor de producción del sistema es x86 nativo con recursos muy inferiores
+(Sección~\ref{sec:despliegue-produccion}). La comunicación con OSRM y
+la base de datos ocurre, además, por la red interna de \textit{compose} en la misma máquina, con
+latencia cercana a cero, mientras que en un centro de datos la latencia de red encarecería la fase
+de consulta a OSRM (100 solicitudes HTTP para $n=1\,607$). Por último, el punto de entrada fue el
+comando de gestión ejecutado secuencialmente dentro del contenedor, en lugar del flujo
+API~$\rightarrow$~Celery del sistema en operación; ambos recorren el mismo código
+(\texttt{OptimizationPipeline.run}), por lo que la diferencia agrega únicamente latencia de
+encolado, no de cómputo.
+
+El perfil de tiempo del \textit{pipeline}, documentado en detalle en el
+\hyperref[anx:perfil-rendimiento]{Anexo 4}, fija el término dominante del costo de planificación.
+Con la caché de la matriz de costos caliente ---el caso de operación normal--- el GLS concentra el
+$98{,}1$\,\% del tiempo total y las demás fases suman menos del 2\,\%; en el primer contacto con un
+\textit{dataset}, con la caché fría, domina en cambio la consulta a OSRM con el $97{,}6$\,\%
+(170{,}8\,s para $n=1\,607$, 100 solicitudes que escalan como $O(n^2)$), costo que se paga una sola
+vez por \textit{dataset} porque la matriz queda en caché indexada por SHA-256. Una medición de
+contraste sobre el servidor de producción (1--2 de agosto de 2026) confirma ambos regímenes en el
+hardware real: el \textit{pipeline} caliente tomó entre 120{,}0 y 122{,}7\,s según la instancia,
+mientras que en frío las 100 solicitudes de la matriz costaron 780{,}9\,s frente a los 170{,}8\,s
+de la réplica local (un factor de 4{,}6), con lo que el \textit{pipeline} frío completo ronda los
+15\,min. La operación normal del sistema desplegado queda por tanto acotada por el presupuesto del
+\textit{solver}, igual que en la réplica local.
+
+Dado que el GLS domina el tiempo en operación normal, su presupuesto es el parámetro de operación
+relevante. La Tabla~\ref{tab:sensibilidad-tl} muestra la sensibilidad de la calidad de la solución
+al límite de tiempo para la variante central (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$,
+estrategia \texttt{spatial\_term} vigente, tres semillas por punto;
+\texttt{tl-sensitivity-20260730.csv}): el número de rutas queda fijo en $k=25$ desde los 60\,s, y el
+desplazamiento total medio mejora un $3{,}5$\,\% entre 60\,s y 120\,s y solo un $0{,}6$\,\%
+adicional entre 120\,s y 180\,s. Un límite de 120\,s captura por tanto la mayor parte de la mejora
+alcanzable con 180\,s, lo que justifica el valor de producción sin pérdida de calidad relevante.
+
+\begin{table}[H]
+  \centering
+  \caption{Sensibilidad al límite de tiempo del \textit{solver}.}
+  \label{tab:sensibilidad-tl}
+  \begin{tabularx}{\textwidth}{rXXXX}
+    \toprule
+    Límite [s] &
+      $k$ &
+      Balance &
+      Desplaz. total [s] &
+      $\Delta$ desplaz. vs.\ 60\,s \\
+    \midrule
+    60  &
+      25 &
+      0{,}847 &
+      60\,465 $\pm$ 200  &
+      --- \\
+    120 &
+      25 &
+      0{,}838 &
+      58\,320 $\pm$ 1\,359 &
+      $-3{,}5$\,\% \\
+    180 &
+      25 &
+      0{,}838 &
+      57\,942 $\pm$ 1\,559 &
+      $-4{,}2$\,\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+La dispersión entre semillas crece con el límite de tiempo (de $\pm 200$\,s a $\pm 1\,559$\,s): a
+mayor presupuesto, el GLS tiene más oportunidad de divergir hacia óptimos locales distintos según el
+orden de nodos de partida. El número de rutas no varía en este rango y el balance se mueve dentro de
+una banda estrecha ($0{,}847$ a los 60\,s, $0{,}838$ a los 120\,s y 180\,s), siempre por sobre el
+umbral de CA-03; la mejora de desplazamiento es monótona pero de magnitud decreciente, y a partir de
+los 120\,s queda por debajo de la dispersión entre semillas del propio punto de medición.
+
+Una reserva de instrumento acota, por último, las cifras de auto-cruces que aparecen a lo largo del
+capítulo: salvo indicación en contrario, se calculan sobre la cuerda recta entre paradas, cuya
+correlación con el conteo sobre el trazado real de calles es parcial ($\rho$ de Spearman de
+$0{,}527$) y se invierte en la instancia agregada, por lo que ningún criterio de decisión del
+capítulo se fija sobre esa métrica (\hyperref[anx:auditoria-robustez]{Anexo 4}).
+
+\subsection{Métricas de calidad de rutas sobre la instancia de estrés}
+\label{sec:metricas-calidad}
+
+Este apartado acredita los criterios de aceptación sobre la instancia de estrés
+\texttt{reference-n1607}, bajo la configuración de producción declarada en la
+Sección~\ref{sec:protocolo-evaluacion}. Se reportan nueve indicadores:
 \begin{enumerate}[label=\alph*)]
   \item el número de rutas $k$, salida automática del \textit{solver};
   \item el tiempo promedio por ruta $\bar{T}$;
@@ -40,13 +188,12 @@ tamaño. Se reportan nueve indicadores:
   \item el número de auto-cruces sobre el trazado real de calles, descriptivo y sin criterio
      en esta corrida.
 \end{enumerate}
-La Tabla~\ref{tab:metricas} resume estos resultados ---los de la configuración de producción recién
-descrita: estrategia \texttt{spatial\_term} y presupuesto de \textit{solver} de 120\,s--- como el
-promedio de tres repeticiones (semillas 42, 43 y 44), y remite, en su columna de criterio, a los
-criterios de aceptación comprometidos en la Sección~\ref{sec:criterios-aceptacion}.
+La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de tres repeticiones (semillas
+42, 43 y 44), y remite, en su columna de criterio, a los criterios de aceptación comprometidos en
+la Sección~\ref{sec:criterios-aceptacion}.
 
 \begin{xltabular}{\textwidth}{lXX}
-  \caption{Métricas de calidad de rutas sobre la instancia de referencia.}
+  \caption{Métricas de calidad de rutas sobre la instancia de estrés \texttt{reference-n1607}.}
   \label{tab:metricas} \\
   \toprule
   Métrica & Valor & Criterio \\
@@ -129,29 +276,17 @@ rutas $k$ coincide en las tres repeticiones y el índice de balance varía dentr
 estrecho (0{,}829 a 0{,}837), pero la varianza en el tiempo total de desplazamiento no es
 despreciable.
 
-Esa varianza refleja la mecánica de replicación del \textit{solver}. El \textit{OR-Tools} no expone
-una semilla de generador pseudoaleatorio; en cambio, las réplicas se construyen permutando el orden
-de entrada de los nodos. Esta permutación altera el desempate en la heurística de construcción
-inicial (\texttt{PATH\_CHEAPEST\_ARC}), que recorre los arcos en orden de índice, propagando así la
-perturbación a toda la trayectoria del GLS. Aunque el \textit{solver} es determinista dados sus
-parámetros de entrada, el orden de los nodos ---información irrelevante para el problema
-matemático--- es suficiente para generar trayectorias del GLS distintas y, con ellas, valores
-finales diversos. La desviación estándar de 559\,s en la duración de las rutas individuales
-(Tabla~\ref{tab:metricas}) es el promedio de las desviaciones estándar calculadas dentro de cada
-repetición, no la desviación del conjunto agregado de rutas.
-
-La sensibilidad al orden de entrada no se limita al tiempo de desplazamiento: sobre las métricas de
-calidad alcanza un orden de magnitud mayor, y las barras de error entre semillas de una corrida no
-acotan la varianza entre corridas distintas (\hyperref[anx:alcance-replicas]{Anexo 4}).
+Esa varianza refleja la mecánica de replicación por permutación del orden de nodos descrita en la
+Sección~\ref{sec:protocolo-evaluacion}. La desviación estándar de 559\,s en la duración de las
+rutas individuales (Tabla~\ref{tab:metricas}) es el promedio de las desviaciones estándar
+calculadas dentro de cada repetición, no la desviación del conjunto agregado de rutas.
 
 El criterio de $< 5$ minutos (CA-05) se enuncia sobre la corrida completa, y esa corrida la domina
 el presupuesto de 120\,s que se configura al \textit{solver}: mientras ese presupuesto se mantenga
 bajo el umbral el criterio no puede fallar, de modo que acota la configuración elegida antes que
-medir el sistema. La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad de
-la Tabla~\ref{tab:sensibilidad-tl}, remedido sobre el código y la estrategia vigentes, y que la
-Sección~\ref{sec:cumplimiento-criterios} retoma. Su lectura en simple es que conceder más tiempo ya
-no compra nada: el número de rutas no se mueve, y pasar de 120\,s a 180\,s mejora el desplazamiento
-un $0{,}6$\,\%, frente al $3{,}5$\,\% que se gana al pasar de 60\,s a 120\,s.
+medir el sistema. La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad
+de la Tabla~\ref{tab:sensibilidad-tl}, ya presentado en la
+Sección~\ref{sec:protocolo-evaluacion} y que la Sección~\ref{sec:cumplimiento-criterios} retoma.
 
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en caché. En la corrida
 de referencia de julio de 2026 que instrumentó esos tiempos
@@ -732,7 +867,7 @@ variantes de la grilla.
 Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head} de la
 Tabla~\ref{tab:estrategias}, que es el único contraste homogéneo disponible: mismo código, mismo
 presupuesto de \textit{solver} y mismas semillas. La grilla de seis variantes del perfil de
-rendimiento (Sección~\ref{sec:perfil-rendimiento}, Tabla~\ref{tab:grilla-variantes}) proviene de un
+rendimiento (\hyperref[anx:perfil-rendimiento]{Anexo 4}, Tabla~\ref{tab:grilla-variantes}) proviene de un
 régimen de medición distinto ---estrategia \texttt{global}, código previo a la corrección del
 redondeo del tránsito y límite de \textit{solver} de 180\,s--- y por tanto no es comparable arco a
 arco con la Tabla~\ref{tab:grilla-spatial}: cualquier diferencia entre ambas estaría confundida
@@ -1249,261 +1384,6 @@ instancia concreta y dejar que un criterio explícito ---y no el autor--- resuel
 El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
 experimental midió.
 
-\section{PERFIL DE RENDIMIENTO DEL OPTIMIZADOR}
-\label{sec:perfil-rendimiento}
-
-El tiempo de ejecución se concentra en la metaheurística cuando la caché de la matriz está caliente
----el GLS acapara el $98{,}1$\,\% del total--- y en OSRM cuando está fría. Esta sección documenta
-ese comportamiento: en qué fases del \textit{pipeline} se concentra el tiempo de ejecución, cómo
-varían las soluciones ante los parámetros operacionales (tiempo de servicio por árbol y cota dura
-$T_{\max}$) y cuál es la sensibilidad del sistema al tamaño del problema y al presupuesto del
-\textit{solver}. Todas las cifras provienen del experimento de perfilado ejecutado el 11--12 de
-julio de 2026, cuyo protocolo y datos crudos se encuentran versionados en el directorio
-\texttt{docs/experiments/} del repositorio (reporte \texttt{profiling-20260711.md} y archivos CSV
-asociados), y son reproducibles mediante el comando de gestión \texttt{baseline\_sweep}, verificado
-previamente sobre una corrida sintética de $n=80$ (\texttt{baseline-sweep-20260711.md}).
-
-Corresponde advertir que las cifras de esta sección provienen de un régimen de medición anterior al
-de la Sección~\ref{sec:comparacion-estrategias}: se obtuvieron con la estrategia \texttt{global}, un
-límite de \textit{solver} de 180\,s y una versión del código previa a la corrección del redondeo del
-tránsito (el truncamiento entero descrito al final de la Sección~\ref{sec:variantes-duracion}). Ese
-era el régimen vigente en producción al momento del perfilamiento, y son sus propios resultados los
-que lo dejaron obsoleto: la sensibilidad al límite de \textit{solver} es la que motivó bajarlo de
-180 a 120\,s ---remedida sobre el código vigente en la Tabla~\ref{tab:sensibilidad-tl}---, mientras
-que la adopción de \texttt{spatial\_term} como estrategia por defecto proviene del experimento de
-comparación de la Sección~\ref{sec:comparacion-estrategias}. El perfil documenta, por tanto, el
-estado previo a ambas decisiones y no se reejecutó bajo el régimen nuevo: sus tablas ---en
-particular la grilla de seis variantes de la Tabla~\ref{tab:grilla-variantes}--- no deben cruzarse
-arco a arco con las de la Sección~\ref{sec:comparacion-estrategias}, por las razones que allí se
-detallan. La sección se conserva porque sus hallazgos son de \textit{tiempo} ---la dominancia del
-GLS y el carácter \textit{OSRM-bound} en frío---, que no dependen de la estrategia ni del redondeo,
-y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de \textit{solver}
-como variable del experimento y no como constante del régimen.
-
-\subsection{Entorno de medición}
-\label{sec:entorno-medicion}
-
-Las mediciones de este capítulo preceden al despliegue productivo del sistema
-(Sección~\ref{sec:despliegue-produccion}), incorporado al cierre de la iteración, y se realizaron
-sobre una réplica local del entorno de producción definida en \texttt{docker-compose.prod.yml}
----un archivo distinto del que gobierna el despliegue, \texttt{docker-compose.production.yml},
-aunque ambos usan las mismas imágenes---. Esta réplica
-usa imágenes construidas con el \textit{target} \texttt{prod} del \texttt{Dockerfile} (sin
-\textit{bind-mounts} de código ni recarga en caliente, con usuario no privilegiado), una instancia
-real de OSRM cargada con el extracto completo de Chile de \textit{OpenStreetMap}
-(\texttt{chile-latest.osm.pbf}), preprocesado con el algoritmo \textit{Multi-Level Dijkstra}
-\citep{delling2017customizable} y perfil peatonal, además de PostGIS \citep{postgis} 15--3.3 y Redis
-7. Las versiones empleadas fueron Python 3.12.11, Django \citep{django} 6.0, \textit{OR-Tools}
-\citep{ortools} 9.15 y NumPy 2.4.6.
-
-Este entorno difiere del despliegue real en tres condiciones que acotan la extrapolación de sus
-cifras. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con los
-contenedores de base de datos y OSRM emulados en \texttt{linux/amd64} mediante Rosetta, mientras que
-el servidor de producción del sistema es x86 nativo con recursos muy inferiores
-(Sección~\ref{sec:despliegue-produccion}). La comunicación con OSRM y
-la base de datos ocurre, además, por la red interna de \textit{compose} en la misma máquina, con
-latencia cercana a cero, mientras que en un centro de datos la latencia de red encarecería la fase
-de consulta a OSRM (100 solicitudes HTTP para $n=1\,607$). Por último, el punto de entrada fue el
-comando de gestión ejecutado secuencialmente dentro del contenedor, en lugar del flujo
-API~$\rightarrow$~Celery del sistema en operación; ambos recorren el mismo código
-(\texttt{OptimizationPipeline.run}), por lo que la diferencia agrega únicamente latencia de
-encolado, no de cómputo.
-
-Tras el despliegue se ejecutó una medición de contraste sobre el servidor de producción (1--2 de
-agosto de 2026), con el mismo comando \texttt{baseline\_sweep} del
-\hyperref[anx:comandos]{Anexo 3} sobre tres instancias congeladas (\texttt{area-29-n43},
-\texttt{area-26-n157} y \texttt{reference-n1607}), la estrategia \texttt{global}, tres
-repeticiones y el límite de \textit{solver} vigente de 120\,s (archivos
-\texttt{20260802-droplet-profile-*.csv} en \texttt{docs\slash experiments\slash}). El contraste
-confirma ambos regímenes en el hardware real. Con la caché caliente, el \textit{pipeline}
-completo tomó entre 120{,}0 y 122{,}7\,s según la instancia: las fases fuera de \texttt{solve}
-suman menos de 3\,s incluso con $n=1\,607$, de modo que el carácter \textit{solve-bound} se
-mantiene en una máquina de un solo núcleo. En frío, la consulta a OSRM vuelve a dominar y es
-donde el hardware inferior se paga: las 100 solicitudes de la matriz de $n=1\,607$ costaron
-780{,}9\,s frente a los 170{,}8\,s de la réplica local (un factor de 4{,}6), con lo que el
-\textit{pipeline} frío completo ronda los 15\,min, frente a los cerca de 5\,min que suman las
-mismas fases en la réplica local con igual presupuesto de \textit{solver}. Este costo se sigue pagando
-una sola vez por \textit{dataset}, por lo que la operación normal del sistema desplegado queda
-acotada por el presupuesto del \textit{solver}, igual que en la réplica local.
-
-\subsection{Desglose de tiempo por fase}
-
-El \textit{pipeline} se instrumentó por fases: construcción de la matriz de costos
-(\texttt{cost\_matrix}), construcción del modelo (\texttt{model\_build}), resolución
-(\texttt{solve}, subdividida en primera solución y metaheurística), extracción de la solución
-(\texttt{solution\_extraction}) y cálculo de métricas (\texttt{metrics}). El hallazgo central es que
-el perfil depende del estado de la caché de la matriz de distancias: en operación normal (caché
-caliente) el \textit{pipeline} está acotado por el \textit{solver} (\textit{solve-bound}), y solo en
-el primer contacto con un \textit{dataset} está acotado por OSRM (\textit{OSRM-bound}).
-
-Con la caché caliente, la metaheurística GLS concentra el 98,1\,\% del tiempo total, y todas las
-demás fases combinadas representan menos del 2\,\% (Tabla~\ref{tab:fases-caliente}), media de las
-18 corridas de la grilla. Optimizar la construcción del modelo, la extracción o el cálculo de
-métricas no tendría, por tanto, ningún efecto medible.
-
-\begin{table}[H]
-  \centering
-  \caption{Desglose de tiempo por fase con caché de matriz caliente.}
-  \label{tab:fases-caliente}
-  \begin{tabularx}{\textwidth}{lXX}
-    \toprule
-    Fase &
-      Tiempo [s] &
-      \% del total \\
-    \midrule
-    \texttt{cost\_matrix} (consulta de caché) &
-      0{,}57 &
-      0{,}5\,\% \\
-    \texttt{model\_build} &
-      $<0{,}01$ &
-      $\approx 0$\,\% \\
-    \texttt{solve} (primera solución) &
-      1{,}4 &
-      1{,}3\,\% \\
-    \texttt{solve} (metaheurística GLS) &
-      103{,}4 &
-      98{,}1\,\% \\
-    \texttt{solution\_extraction} &
-      0{,}01 &
-      $\approx 0$\,\% \\
-    \texttt{metrics} &
-      0{,}02 &
-      $\approx 0$\,\% \\
-    \midrule
-    Total del \textit{pipeline} &
-      105{,}4 &
-      100\,\% \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-En frío ---caché de matriz vacía, primera corrida sobre el \textit{dataset}--- el perfil se
-invierte: la consulta a OSRM domina con el 97,6\,\% del tiempo (Tabla~\ref{tab:fases-frio}), medido
-en la corrida piloto con tiempo de servicio de 2\,min y $T_{\max}=3$\,h. Con $n=1\,607$ la
-fragmentación por longitud de URL (175 coordenadas por bloque) convierte la matriz en una grilla de
-$10 \times 10 = 100$ solicitudes al servicio \texttt{/table}, con un costo total de 170{,}8\,s que
-escala aproximadamente como $O(n^2)$ con el número de celdas. La cifra difiere en un 4\,\% de la
-corrida en frío citada en la Sección~\ref{sec:metricas-calidad}, dispersión propia de la latencia de
-cien solicitudes HTTP sucesivas. Este costo se paga una única vez por \textit{dataset}: la matriz
-queda almacenada en caché (indexada por el hash SHA-256 de los identificadores de árboles activos),
-de modo que toda corrida posterior es \textit{solve-bound}.
-
-\begin{table}[H]
-  \centering
-  \caption{Desglose de tiempo por fase en frío.}
-  \label{tab:fases-frio}
-  \begin{tabularx}{\textwidth}{lXX}
-    \toprule
-    Fase &
-      Tiempo [s] &
-      \% del total \\
-    \midrule
-    \texttt{cost\_matrix} (consulta OSRM) &
-      170{,}8 &
-      97{,}6\,\% \\
-    \texttt{cost\_matrix} (ensamblado y caché) &
-      0{,}2 &
-      0{,}1\,\% \\
-    \texttt{solve} &
-      3{,}9 &
-      2{,}2\,\% \\
-    Fases restantes &
-      $<0{,}05$ &
-      $\approx 0$\,\% \\
-    \midrule
-    Total del \textit{pipeline} &
-      174{,}9 &
-      100\,\% \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-En la corrida piloto de la Tabla~\ref{tab:fases-frio} el GLS terminó a los 3,9\,s; en la grilla
-completa el tiempo de resolución observado para el mismo \textit{dataset} varió entre 29 y 180\,s,
-según si la búsqueda agota o no el presupuesto de tiempo asignado.
-
-
-\subsection{Variaciones de duración sobre el \textit{dataset} real}
-\label{sec:variantes-duracion}
-
-Se evaluaron las seis combinaciones de tiempo de servicio por árbol $\{1, 2, 3\}$\,min y cota dura
-$T_{\max} \in \{2, 3\}$\,h sobre el \textit{dataset} real completo de $n=1\,607$ árboles, con tres
-semillas y un límite de \textit{solver} de 180\,s vigente al momento del perfilamiento; ese tope se
-bajó a 120\,s a partir del análisis de sensibilidad al presupuesto del \textit{solver}, remedido en
-la Tabla~\ref{tab:sensibilidad-tl}. El compromiso entre balance, flota y costo total, junto con el
-efecto de las semillas, se documenta en el \hyperref[anx:grilla-variantes]{Anexo 4}
-(Tabla~\ref{tab:grilla-variantes}). El hallazgo de esta grilla que no depende del régimen es que el
-GLS agota o no el presupuesto según la variante: en las de $T_{\max}=2$\,h la búsqueda consume el
-tiempo asignado de forma consistente, mientras que en la de servicio de 3\,min con $T_{\max}=3$\,h
-termina antes (media de 49\,s).
-
-La grilla registra, además, rutas cuyo tiempo estimado excede $T_{\max}$ en las configuraciones de
-2\,h. Este exceso no constituye una infactibilidad del \textit{solver}, sino un artefacto de
-redondeo: el \textit{callback} de tránsito trunca cada arco a aritmética entera (\texttt{int(travel
-+ service)}), mientras que la métrica de duración estimada suma los mismos términos en punto
-flotante; con 30 a 70 arcos por ruta, el truncamiento acumula una discrepancia de 10 a 70\,s por
-ruta. La cota dura $T_{\max}$ se respeta estrictamente en la aritmética entera del \textit{solver}.
-
-\subsection{Sensibilidad al tamaño del problema y al presupuesto del \textit{solver}}
-
-Con el objetivo de aislar el efecto del tamaño del problema se repitió la grilla sobre un área
-reducida del mismo origen legado ($n=157$). La fase que peor escala es la consulta a OSRM en frío:
-de 1,7\,s con $n=157$ a 170,8\,s con $n=1\,607$ ---un factor de $\approx 100\times$ para $10\times$
-el número de nodos, consistente con el crecimiento $O(n^2)$ del número de celdas de la matriz---. La
-primera solución del \textit{solver} pasa de 0,022\,s a 1,4\,s ($\approx 63\times$). La
-metaheurística, en cambio, no escala de forma monótona con $n$ a presupuesto fijo: con $n=157$ el
-GLS agota los 180\,s en casi todas las variantes (media de 167\,s), mientras que con $n=1\,607$
-corta antes en varias (media de 103\,s). El límite de tiempo de reloj enmascara el costo por
-iteración: lo que crece con $n$ es el costo de explorar cada vecindario, no el tiempo total
-observado.
-
-Dado que el GLS domina el tiempo en operación normal, su presupuesto es el parámetro de operación
-relevante. La Tabla~\ref{tab:sensibilidad-tl} muestra la sensibilidad de la calidad de la solución
-al límite de tiempo para la variante central (servicio de 2\,min, $T_{\max}=3$\,h, $n=1\,607$,
-estrategia \texttt{spatial\_term} vigente, tres semillas por punto;
-\texttt{tl-sensitivity-20260730.csv}): el número de rutas queda fijo en $k=25$ desde los 60\,s, y el
-desplazamiento total medio mejora un $3{,}5$\,\% entre 60\,s y 120\,s y solo un $0{,}6$\,\%
-adicional entre 120\,s y 180\,s. Un límite de 120\,s captura por tanto la mayor parte de la mejora
-alcanzable con 180\,s, lo que justifica el valor de producción sin pérdida de calidad relevante.
-
-\begin{table}[H]
-  \centering
-  \caption{Sensibilidad al límite de tiempo del \textit{solver}.}
-  \label{tab:sensibilidad-tl}
-  \begin{tabularx}{\textwidth}{rXXXX}
-    \toprule
-    Límite [s] &
-      $k$ &
-      Balance &
-      Desplaz. total [s] &
-      $\Delta$ desplaz. vs.\ 60\,s \\
-    \midrule
-    60  &
-      25 &
-      0{,}847 &
-      60\,465 $\pm$ 200  &
-      --- \\
-    120 &
-      25 &
-      0{,}838 &
-      58\,320 $\pm$ 1\,359 &
-      $-3{,}5$\,\% \\
-    180 &
-      25 &
-      0{,}838 &
-      57\,942 $\pm$ 1\,559 &
-      $-4{,}2$\,\% \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-La dispersión entre semillas crece con el límite de tiempo (de $\pm 200$\,s a $\pm 1\,559$\,s): a
-mayor presupuesto, el GLS tiene más oportunidad de divergir hacia óptimos locales distintos según el
-orden de nodos de partida. El número de rutas no varía en este rango y el balance se mueve dentro de
-una banda estrecha ($0{,}847$ a los 60\,s, $0{,}838$ a los 120\,s y 180\,s), siempre por sobre el
-umbral de CA-03; la mejora de desplazamiento es monótona pero de magnitud decreciente, y a partir de
-los 120\,s queda por debajo de la dispersión entre semillas del propio punto de medición.
-
 \section{CONCLUSIONES}
 \label{sec:conclusiones}
 
@@ -1539,7 +1419,8 @@ lo hace: el $98{,}1$\,\% del tiempo está en la metaheurística y no en la infra
 rodea. Lo que sí constituye evidencia sobre la elección del tope es el análisis de sensibilidad de
 la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la mejora alcanzable
 con presupuestos mayores; conviene registrar que la decisión de bajar el tope se tomó en el régimen
-anterior de la Sección~\ref{sec:perfil-rendimiento} y que esa tabla es la remedición posterior, ya
+anterior del perfil de rendimiento (\hyperref[anx:perfil-rendimiento]{Anexo 4}) y que esa tabla es
+la remedición posterior, ya
 sobre la estrategia \texttt{spatial\_term} y el código vigente. Con caché fría la corrida completa
 sube a $299{,}3$\,s por la construcción de la matriz contra OSRM, al borde del umbral; el criterio
 se enuncia sobre el caso con caché precisamente porque es el de operación normal, pero el margen en
