@@ -513,15 +513,9 @@ del archivo y por lo tanto reproducibles en cualquier máquina.
 \subsection{Calidad geográfica de rutas y comparación de estrategias}
 \label{sec:comparacion-estrategias}
 
-Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se caracterizó la calidad
-espacial de la solución producida por la formulación actual: un único \textit{Open mTSP} global
-resuelto con \textit{OR-Tools}, sin agrupamiento previo de los nodos. El interés no es el balance
-temporal ---ya controlado por la penalización blanda sobre $T_{\min}$--- sino la compacidad
-geográfica de cada ruta y el grado de solapamiento (\textit{interleaving}) entre rutas
-distintas.
-
-Se definieron los siguientes indicadores sobre las coordenadas reales de las paradas
-(\texttt{RouteStop}), usando la distancia de \textit{haversine} \citep{sinnott1984virtues}:
+La comparación de estrategias emplea los siguientes indicadores de calidad geográfica, definidos
+sobre las coordenadas reales de las paradas (\texttt{RouteStop}) y calculados con la distancia de
+\textit{haversine} \citep{sinnott1984virtues}:
 
 \begin{itemize}[label=--]
   \item Compacidad ($\sum r_{\max}$): suma, sobre las rutas, del radio máximo de cada ruta
@@ -536,59 +530,17 @@ Se definieron los siguientes indicadores sobre las coordenadas reales de las par
 \end{itemize}
 
 El balance temporal se reporta como $\min_r T_r / \max_r T_r$ (\textit{balance\_score} del modelo).
-Se ejecutó un barrido reproducible mediante el comando \texttt{baseline\_sweep} ($5$ semillas
-$\times$ $3$ tamaños de \textit{dataset}, $n \in \{20, 40, 80\}$) sobre la zona de
-Providencia/Santiago Centro, con distribución uniforme de nodos y el límite de \textit{solver} por
-defecto de $180$\,s, promediando las métricas por semilla (Tabla~\ref{tab:baseline-geo}).
 
-\begin{table}[H]
-  \centering
-  \caption{\textit{Baseline} de calidad geográfica del VRP global.}
-  \label{tab:baseline-geo}
-  \begin{tabularx}{\textwidth}{rXXXXXX}
-    \toprule
-    $n$ &
-      Rutas $k$ &
-      Balance &
-      $\sum r_{\max}$ [m] &
-      Solap. total &
-      Solap.\slash ruta &
-      IoU peor par \\
-    \midrule
-    20 &
-      3{,}0 &
-      0{,}946 &
-      6\,530  &
-      0{,}4  &
-      0{,}13 &
-      0{,}01 \\
-    40 &
-      5{,}0 &
-      0{,}949 &
-      8\,758  &
-      6{,}6  &
-      1{,}32 &
-      0{,}13 \\
-    80 &
-      8{,}0 &
-      0{,}872 &
-      13\,126 &
-      25{,}8 &
-      3{,}23 &
-      0{,}28 \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-El hallazgo principal es un desacople entre balance temporal y calidad geográfica: el balance se
-mantiene alto ($0{,}87$--$0{,}95$) mientras el solapamiento entre rutas crece de forma monótona con
-la densidad, tanto en términos absolutos ($0{,}4 \to 6{,}6 \to 25{,}8$) como normalizado por ruta
-($0{,}13 \to 1{,}32 \to 3{,}23$). El IoU del peor par sigue la misma tendencia ($0{,}01 \to 0{,}13
-\to 0{,}28$). El efecto es sistémico y dependiente de la densidad: con $n=20$ el solapamiento es
-prácticamente nulo, pero crece de forma sostenida al aumentar la densidad de nodos, con un caso
-recurrente: una ruta compacta geográficamente contenida dentro de la caja envolvente de otra más
-extensa. Esto es coherente con que el modelo optimiza tiempo total con un término de balance blando,
-sin ningún criterio espacial explícito en la partición.
+Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, la formulación vigente
+---un único \textit{Open mTSP} global resuelto con \textit{OR-Tools}, sin agrupamiento previo de
+los nodos--- se caracterizó con un diagnóstico sobre nodos sintéticos de distribución uniforme
+($n \in \{20, 40, 80\}$ en la zona de Providencia/Santiago Centro), la única medición de esta
+memoria que no usa arbolado real; su protocolo y sus cifras se documentan en el
+\hyperref[anx:baseline-geo-sintetico]{Anexo 4}. El hallazgo es un desacople entre balance temporal
+y calidad geográfica: el balance se mantiene alto ($0{,}87$--$0{,}95$) mientras el solapamiento
+entre rutas crece de forma monótona con la densidad, con un caso recurrente de una ruta compacta
+contenida dentro de la caja envolvente de otra más extensa, coherente con que el modelo optimiza
+tiempo total con un término de balance blando y sin criterio espacial explícito en la partición.
 
 \subsubsection*{Estrategias evaluadas}
 
@@ -1338,54 +1290,42 @@ protocolo, los comandos reproducibles y los datos crudos se encuentran versionad
 \texttt{docs/experiments/} (reporte \texttt{area-partition-20260726.md} y los archivos CSV
 asociados).
 
-% ---- 4.1.6 ------------------------------------------------------
-\subsection{Auditoría de robustez metodológica}
-\label{sec:auditoria-robustez}
-
-La serie experimental registra dieciséis ciclos de evaluación\footnote{Se cuenta como ciclo de
-evaluación el que somete a prueba una hipótesis sobre la formulación o sus coeficientes con un
-criterio de decisión fijado y versionado antes de ejecutar la corrida. El directorio
-\texttt{docs\slash experiments\slash } contiene además informes de perfilado, de auditoría de
-instrumento y de corridas de referencia, que no constituyen ciclos bajo esa definición y no entran
-en el recuento.} cerrados durante julio de 2026. El
-análisis retrospectivo identificó cuatro defectos de instrumentación en los ciclos iniciales
----semillas no propagadas, una cota de relleno inalcanzable, la métrica de auto-cruces sobre cuerdas
-en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos distintos---,
-que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla con el alcance necesario para reproducir
-cada corrección.
-
-Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones: de los
-dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el instrumento
-corregido sin que cambiara el descarte final y los demás descansan en criterios ---tiempo de viaje,
-relleno, balance--- ajenos a los defectos detectados. El caso de mayor alcance es el 2-opt
-intra-ruta (Sección~\ref{sec:postpass}), rechazado en un ciclo de evaluación anterior por empeorar
-los auto-cruces medidos en cuerdas: la auditoría de instrumento mostró que ese empeoramiento era
-artefacto de la métrica y que el algoritmo limpia la geometría real, lo que revirtió el rechazo y lo
-incorporó a la configuración de producción. Es el único cambio de configuración por defecto de toda
-la serie, y no proviene de barrer términos de la función objetivo sino de corregir el instrumento de
-medición.
-
-Hay un hallazgo transversal a los apartados anteriores que conviene enunciar por separado, porque no
-pertenece a ninguno y explica una decisión de diseño del Capítulo~\ref{cap:diseno}. En casi ningún
-ciclo de la serie apareció un brazo que ganara en todas las instancias a la vez. Lo habitual fue lo
-contrario: una configuración que mejora la geometría en el régimen agregado empeora el balance en
-las áreas pequeñas, una que elimina las rutas cortas paga tiempo de desplazamiento, y el orden entre
-dos brazos se invierte al cambiar la densidad o el tamaño de la instancia. Los apartados anteriores
-muestran cuatro casos de ese patrón: el término espacial compra compacidad y cede tiempo y balance;
-la comparación con el heurístico depende por completo de si el competidor recibe el mismo
-refinamiento; el criterio de decisión sobre áreas reales se cumple en dos de las tres; y el
-coeficiente espacial no ordena las instancias de forma monótona.
-
-Esa ausencia sistemática de un ganador único es la evidencia que descartó fijar un
-\textit{default} único y la que motivó el abanico de seis candidatas con selección lexicográfica que
-describe la Sección~\ref{sec:abanico}: si ninguna combinación domina a las demás en todas las
-instancias, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la
-instancia concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
-El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
-experimental midió.
-
 \section{CONCLUSIONES}
 \label{sec:conclusiones}
+
+\subsection{Lo que los resultados muestran sobre el problema}
+
+Más allá del cumplimiento de los criterios, la serie de experimentos arroja un hallazgo conceptual
+que no era la hipótesis de partida y que reorienta el problema.
+
+La calidad geométrica de las rutas ---su compacidad, su solapamiento mutuo y sus auto-cruces--- no
+es una propiedad del presupuesto de cómputo sino del régimen geográfico de la instancia y de la
+forma de la función objetivo. Aumentar el tiempo del \textit{solver} de 120 a 180\,s no cambia la
+geometría; redirigir el objetivo blando superior sí la cambia de forma drástica, y hacerlo mejora la
+geometría en el conjunto agregado a la vez que la empeora en las áreas individuales. Dicho de otro
+modo: no existe una configuración de la función objetivo que sea la correcta para todo tamaño y toda
+densidad, y la búsqueda de una ---la hipótesis con que se abrió el barrido de configuración por
+algoritmo--- queda refutada con datos.
+
+El corolario operacional es que la unidad correcta del problema es el área de censo individual y no
+el arbolado metropolitano agregado: los auto-cruces que motivaron buena parte de la experimentación
+son propios del régimen disperso del conjunto agregado (Sección~\ref{sec:discusion-calidad}) y no
+aparecen sobre un área real, donde la configuración de producción ya genera rutas limpias. Esto
+convierte la segmentación previa por área, que la Sección~\ref{sec:posibles-mejoras} documenta como
+trabajo futuro, en la extensión de mayor impacto del sistema: no porque el motor esté mal calibrado,
+sino porque el motor se comporta como corresponde cuando el problema se le entrega en su escala
+natural.
+
+El argumento dejó de ser solo geométrico cuando se midió sobre las áreas reales
+(Sección~\ref{sec:areas-reales}). Particionar no cuesta caminata en el territorio del censo
+histórico, porque las áreas están suficientemente separadas; cuesta una ruta adicional, tres
+jornadas por debajo de $T_{\min}$ y el triple de cómputo, a cambio de instancias con correlato
+operativo y de una varianza entre repeticiones sustancialmente menor. Esa misma medición expuso el
+límite del \textit{solver} en el otro extremo del rango: en un área de 72 árboles la búsqueda
+entrega dos medias jornadas donde el \textit{greedy} cubre una jornada única, y la instrumentación
+del objetivo muestra que no es un fallo de búsqueda sino el precio vigente ---la partición resulta
+$4{,}2$ veces más barata bajo cotas blandas que no dependen de la instancia---, de modo que el
+margen de mejora pendiente está en hacer esas cotas sensibles a la densidad y no en la búsqueda.
 
 \subsection{Cumplimiento de los criterios de aceptación}
 \label{sec:cumplimiento-criterios}
@@ -1488,44 +1428,15 @@ instancias de prueba. El resto de los componentes de la función objetivo actúa
 forma indirecta y sin evidencia equivalente sobre calle real, de modo que el atributo se sostiene
 sobre ese post-proceso y no sobre el modelo completo.
 
-\subsection{Lo que los resultados muestran sobre el problema}
-
-Más allá del cumplimiento de los criterios, la serie de experimentos arroja un hallazgo conceptual
-que no era la hipótesis de partida y que reorienta el problema.
-
-La calidad geométrica de las rutas ---su compacidad, su solapamiento mutuo y sus auto-cruces--- no
-es una propiedad del presupuesto de cómputo sino del régimen geográfico de la instancia y de la
-forma de la función objetivo. Aumentar el tiempo del \textit{solver} de 120 a 180\,s no cambia la
-geometría; redirigir el objetivo blando superior sí la cambia de forma drástica, y hacerlo mejora la
-geometría en el conjunto agregado a la vez que la empeora en las áreas individuales. Dicho de otro
-modo: no existe una configuración de la función objetivo que sea la correcta para todo tamaño y toda
-densidad, y la búsqueda de una ---la hipótesis con que se abrió el barrido de configuración por
-algoritmo--- queda refutada con datos.
-
-El corolario operacional es que la unidad correcta del problema es el área de censo individual y no
-el arbolado metropolitano agregado: los auto-cruces que motivaron buena parte de la experimentación
-son propios del régimen disperso del conjunto agregado (Sección~\ref{sec:discusion-calidad}) y no
-aparecen sobre un área real, donde la configuración de producción ya genera rutas limpias. Esto
-convierte la segmentación previa por área, que la Sección~\ref{sec:posibles-mejoras} documenta como
-trabajo futuro, en la extensión de mayor impacto del sistema: no porque el motor esté mal calibrado,
-sino porque el motor se comporta como corresponde cuando el problema se le entrega en su escala
-natural.
-
-El argumento dejó de ser solo geométrico cuando se midió sobre las áreas reales
-(Sección~\ref{sec:areas-reales}). Particionar no cuesta caminata en el territorio del censo
-histórico, porque las áreas están suficientemente separadas; cuesta una ruta adicional, tres
-jornadas por debajo de $T_{\min}$ y el triple de cómputo, a cambio de instancias con correlato
-operativo y de una varianza entre repeticiones sustancialmente menor. Esa misma medición expuso el
-límite del \textit{solver} en el otro extremo del rango: en un área de 72 árboles la búsqueda
-entrega dos medias jornadas donde el \textit{greedy} cubre una jornada única, y la instrumentación
-del objetivo muestra que no es un fallo de búsqueda sino el precio vigente ---la partición resulta
-$4{,}2$ veces más barata bajo cotas blandas que no dependen de la instancia---, de modo que el
-margen de mejora pendiente está en hacer esas cotas sensibles a la densidad y no en la búsqueda.
-
 \subsection{Lo que aportó la metodología}
 
-Dieciséis ciclos de evaluación cerrados produjeron un solo cambio en la configuración por defecto
-del sistema. Leído a la ligera, eso parece un resultado nulo; leído con propiedad, es el resultado.
+Dieciséis ciclos de evaluación\footnote{Se cuenta como ciclo de
+evaluación el que somete a prueba una hipótesis sobre la formulación o sus coeficientes con un
+criterio de decisión fijado y versionado antes de ejecutar la corrida. El directorio
+\texttt{docs\slash experiments\slash } contiene además informes de perfilado, de auditoría de
+instrumento y de corridas de referencia, que no constituyen ciclos bajo esa definición y no entran
+en el recuento.} cerrados durante julio de 2026 produjeron un solo
+cambio en la configuración por defecto del sistema. Leído a la ligera, eso parece un resultado nulo; leído con propiedad, es el resultado.
 
 En cada ciclo se fijó el criterio de decisión antes de ejecutarlo, se versionaron sus datos crudos y
 se publicó su veredicto con independencia de si confirmaba o refutaba la hipótesis que lo motivaba.
@@ -1561,6 +1472,35 @@ de viaje y de geometría en las doce instancias de prueba. El aprendizaje metodo
 transferible y vale más que el cambio concreto: en una serie experimental larga, auditar el
 instrumento tiene mayor rendimiento esperado que añadir un brazo más al barrido.
 
+El análisis retrospectivo de la serie identificó cuatro defectos de instrumentación en los ciclos iniciales
+---semillas no propagadas, una cota de relleno inalcanzable, la métrica de auto-cruces sobre cuerdas
+en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos distintos---,
+que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla con el alcance necesario para reproducir
+cada corrección.
+Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones: de los
+dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el instrumento
+corregido sin que cambiara el descarte final y los demás descansan en criterios
+---tiempo de viaje, relleno, balance--- ajenos a los defectos detectados.
+
+Hay un hallazgo transversal a los apartados anteriores que conviene enunciar por separado, porque no
+pertenece a ninguno y explica una decisión de diseño del Capítulo~\ref{cap:diseno}. En casi ningún
+ciclo de la serie apareció un brazo que ganara en todas las instancias a la vez. Lo habitual fue lo
+contrario: una configuración que mejora la geometría en el régimen agregado empeora el balance en
+las áreas pequeñas, una que elimina las rutas cortas paga tiempo de desplazamiento, y el orden entre
+dos brazos se invierte al cambiar la densidad o el tamaño de la instancia. Los apartados anteriores
+muestran cuatro casos de ese patrón: el término espacial compra compacidad y cede tiempo y balance;
+la comparación con el heurístico depende por completo de si el competidor recibe el mismo
+refinamiento; el criterio de decisión sobre áreas reales se cumple en dos de las tres; y el
+coeficiente espacial no ordena las instancias de forma monótona.
+
+Esa ausencia sistemática de un ganador único es la evidencia que descartó fijar un
+\textit{default} único y la que motivó el abanico de seis candidatas con selección lexicográfica que
+describe la Sección~\ref{sec:abanico}: si ninguna combinación domina a las demás en todas las
+instancias, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la
+instancia concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
+El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
+experimental midió.
+
 \subsection{Alcance y validez de lo concluido}
 
 Las conclusiones anteriores valen dentro de un perímetro que conviene delimitar con precisión, y que
@@ -1568,8 +1508,8 @@ corresponde al alcance declarado en la Sección~\ref{sec:verificacion} y a las r
 Sección~\ref{sec:restricciones}.
 
 Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción del
-diagnóstico geográfico inicial de la Tabla~\ref{tab:baseline-geo}, medido sobre nodos sintéticos de
-distribución uniforme--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
+diagnóstico geográfico inicial sobre nodos sintéticos de distribución uniforme
+(\hyperref[anx:baseline-geo-sintetico]{Anexo 4})--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
 densidad controlada; no se emplearon los bancos de referencia de la literatura
 \citep{solomon1987algorithms}, cuyas instancias sintéticas suponen un depósito central y ventanas
 de tiempo, condiciones ajenas al problema de rutas abiertas sobre una red vial real aquí tratado.
@@ -1591,8 +1531,8 @@ Por último, dos reservas de instrumento acompañan a la lectura de la geometrí
 las cifras de auto-cruces de este capítulo se calcula sobre cuerdas rectas, cuya correspondencia con
 el trazado real está medida y es parcial, y la replicación de los experimentos se obtiene permutando
 el orden de los nodos, lo que acota la varianza entre semillas de una corrida pero no la varianza
-entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez de la
-Sección~\ref{sec:discusion-calidad}, y ninguna de las dos afecta a los criterios de aceptación
+entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez del
+\hyperref[anx:auditoria-robustez]{Anexo 4}, y ninguna de las dos afecta a los criterios de aceptación
 ---cobertura, jornada, balance, flota y tiempo---, que descansan en magnitudes ajenas a ellas.
 
 \section{LIMITACIONES DEL SISTEMA}

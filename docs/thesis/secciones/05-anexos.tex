@@ -734,6 +734,71 @@ las variantes en que la búsqueda agota el presupuesto, las tres repeticiones co
 casi idénticas.
 
 \phantomsection
+\subsubsection*{Diagnóstico geográfico sobre nodos sintéticos}
+\label{anx:baseline-geo-sintetico}
+
+Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se caracterizó la calidad
+espacial de la solución producida por la formulación actual: un único \textit{Open mTSP} global
+resuelto con \textit{OR-Tools}, sin agrupamiento previo de los nodos. El interés no es el balance
+temporal ---ya controlado por la penalización blanda sobre $T_{\min}$--- sino la compacidad
+geográfica de cada ruta y el grado de solapamiento (\textit{interleaving}) entre rutas
+distintas. Los indicadores son los que define la Sección~\ref{sec:comparacion-estrategias}.
+
+Se ejecutó un barrido reproducible mediante el comando \texttt{baseline\_sweep} ($5$ semillas
+$\times$ $3$ tamaños de \textit{dataset}, $n \in \{20, 40, 80\}$) sobre la zona de
+Providencia/Santiago Centro, con distribución uniforme de nodos y el límite de \textit{solver} por
+defecto de $180$\,s, promediando las métricas por semilla (Tabla~\ref{tab:baseline-geo}).
+
+\begin{table}[H]
+  \centering
+  \caption{\textit{Baseline} de calidad geográfica del VRP global.}
+  \label{tab:baseline-geo}
+  \begin{tabularx}{\textwidth}{rXXXXXX}
+    \toprule
+    $n$ &
+      Rutas $k$ &
+      Balance &
+      $\sum r_{\max}$ [m] &
+      Solap. total &
+      Solap.\slash ruta &
+      IoU peor par \\
+    \midrule
+    20 &
+      3{,}0 &
+      0{,}946 &
+      6\,530  &
+      0{,}4  &
+      0{,}13 &
+      0{,}01 \\
+    40 &
+      5{,}0 &
+      0{,}949 &
+      8\,758  &
+      6{,}6  &
+      1{,}32 &
+      0{,}13 \\
+    80 &
+      8{,}0 &
+      0{,}872 &
+      13\,126 &
+      25{,}8 &
+      3{,}23 &
+      0{,}28 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+El hallazgo principal es un desacople entre balance temporal y calidad geográfica: el balance se
+mantiene alto ($0{,}87$--$0{,}95$) mientras el solapamiento entre rutas crece de forma monótona con
+la densidad, tanto en términos absolutos ($0{,}4 \to 6{,}6 \to 25{,}8$) como normalizado por ruta
+($0{,}13 \to 1{,}32 \to 3{,}23$). El IoU del peor par sigue la misma tendencia ($0{,}01 \to 0{,}13
+\to 0{,}28$). El efecto es sistémico y dependiente de la densidad: con $n=20$ el solapamiento es
+prácticamente nulo, pero crece de forma sostenida al aumentar la densidad de nodos, con un caso
+recurrente: una ruta compacta geográficamente contenida dentro de la caja envolvente de otra más
+extensa. Esto es coherente con que el modelo optimiza tiempo total con un término de balance blando,
+sin ningún criterio espacial explícito en la partición.
+
+\phantomsection
 \subsubsection*{Suite de instancias congeladas}
 \label{anx:suite-instancias}
 
