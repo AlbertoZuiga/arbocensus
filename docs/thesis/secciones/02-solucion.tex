@@ -28,8 +28,9 @@ las iteraciones anteriores de Arbocensus, publicar el plan como asignación de t
 identificados y recoger de vuelta, parada por parada, la observación histórica de cada árbol. Esa
 cadena ---catastro legado, optimización, asignación, captura en terreno e historial--- es lo que el
 producto aporta, y es específica del dominio y no del algoritmo. A ello se añade una consideración
-de costo: una instancia de 1\,607 árboles exige una matriz de más de dos millones y medio de tiempos
-de desplazamiento, volumen que con una API externa de pago implicaría un gasto recurrente en cada
+de costo: instancias del orden de cientos de árboles ---y hasta los 1\,607 del caso mayor
+evaluado--- exigen matrices de cientos de miles a millones de
+tiempos de desplazamiento, volumen que con una API externa de pago implicaría un gasto recurrente en cada
 campaña, mientras que la alternativa adoptada lo elimina al desplegar el servicio localmente sobre
 datos cartográficos abiertos ---los de \textit{OpenStreetMap} \citep{openstreetmap}---.
 
@@ -73,15 +74,15 @@ gobierna las decisiones de diseño del Capítulo~\ref{cap:diseno}.
 \begin{itemize}[label=--]
   \item Administrador de campaña. Coordina el censo dentro del proyecto Arbocensus. No se supone en
         él conocimiento de optimización combinatoria: no debe tener que declarar cuántos equipos
-        necesita ni ajustar coeficientes del \textit{solver}. Trabaja desde un
+        necesita ni ajustar coeficientes del \textit{solver}: el número de censistas que
+        requiere una campaña lo determina el sistema automáticamente
+        (RF-07 y Sección~\ref{sec:flota}). Trabaja desde un
         computador de escritorio, con conexión estable, en sesiones de planificación previas a la
         jornada de terreno. Se espera un único administrador activo por campaña.
   \item Censista. Participa en la jornada de terreno recorriendo a pie la ruta que le fue asignada.
         Utiliza su propio teléfono con datos móviles, en la vía pública, durante una jornada acotada
         a dos o tres horas por la autonomía de la batería del dispositivo. La conectividad puede
-        degradarse de forma intermitente. Cuántos censistas requiere una campaña no es algo que el
-        administrador declare: lo determina el sistema a partir del tiempo de servicio y de la
-        jornada máxima que se configuren (RF-07 y Sección~\ref{sec:flota}).
+        degradarse de forma intermitente.
 \end{itemize}
 
 De ese contraste se derivan tres exigencias concretas: el portal debe ser operable con una sola mano
