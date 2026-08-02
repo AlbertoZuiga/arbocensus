@@ -20,7 +20,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AlbertoZuiga/arbocensus-routing.git"
+    "url": "git+https://github.com/Arbocensus/arbocensus-routing.git"
   },
   "keywords": [
     "optimization",
@@ -33,9 +33,9 @@
   "license": "MIT",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/AlbertoZuiga/arbocensus-routing/issues"
+    "url": "https://github.com/Arbocensus/arbocensus-routing/issues"
   },
-  "homepage": "https://github.com/AlbertoZuiga/arbocensus-routing#readme",
+  "homepage": "https://github.com/Arbocensus/arbocensus-routing#readme",
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",

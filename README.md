@@ -22,7 +22,7 @@ Proyecto de Titulo - Ingeniería Civil en Ciencias de la Computación
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/AlbertoZuiga/arbocensus-routing.git
+git clone https://github.com/Arbocensus/arbocensus-routing.git
 cd arbocensus-routing
 
 # 2. Configurar variables de entorno
@@ -251,7 +251,7 @@ Luego abre la consola web como `root` y corre estas tres líneas — no hay nada
 
 ```bash
 apt-get update && apt-get install -y git
-git clone https://github.com/AlbertoZuiga/arbocensus-routing.git /srv/arbocensus
+git clone https://github.com/Arbocensus/arbocensus-routing.git /srv/arbocensus
 bash /srv/arbocensus/scripts/bootstrap-droplet.sh
 ```
 
