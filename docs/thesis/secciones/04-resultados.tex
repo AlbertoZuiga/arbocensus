@@ -690,7 +690,7 @@ La comparación de estrategias emplea tres indicadores de calidad geográfica, d
 coordenadas reales de las paradas y calculados con la distancia de \textit{haversine}
 \citep{sinnott1984virtues}: la compacidad ($\sum r_{\max}$, suma sobre las rutas del radio máximo
 de cada una; menor es mejor), el solapamiento (\textit{interleaving}: paradas de otras rutas dentro
-de la caja envolvente de una ruta dada, sumado sobre todas y también normalizado por $k$; mayor es
+de la caja envolvente de una ruta dada, sumado sobre todas las rutas y normalizado por $k$; mayor es
 peor) y el IoU del peor par (intersección sobre unión de las cajas envolventes del par de rutas con
 mayor superposición; mayor es peor). Su lectura operacional es directa: cada ruta se asigna a un
 censista distinto, de modo que dos rutas entrelazadas obligan a dos censistas a recorrer las mismas
@@ -708,6 +708,7 @@ la partición. Ese diagnóstico es el que motivó las dos estrategias de partici
 Sección~\ref{sec:estrategias}, que aquí se miden contra la formulación vigente (\texttt{global})
 sobre la instancia de estrés.
 
+\begin{enumerate}
 \item Protocolo.
 
 Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones idénticas: mismo
@@ -926,7 +927,7 @@ evidencia recogida sobre él.
 \begin{enumerate}
 
   \item Límites del producto
-  \begin{itemize}
+  \begin{enumerate}
     \item Seguridad de sesión: los \textit{tokens} JWT se almacenan en \texttt{localStorage}, más
         expuesto ante \textit{cross-site scripting} que una \textit{cookie} \texttt{HttpOnly}. El
         despliegue sirve la aplicación solo sobre HTTPS con HSTS, lo que protege el \textit{token}
@@ -1012,7 +1013,7 @@ evidencia recogida sobre él.
         una jornada de terreno con registro de tiempos, fuera del alcance. Cabe esperar un error
         sistemático, más sensible para las cifras absolutas de duración que para las comparaciones
         relativas.
-  \end{itemize}
+  \end{enumerate}
 
 \end{enumerate}
 
@@ -1100,7 +1101,7 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
       cuesta sostener y la compacidad exigió un término explícito en el objetivo. Si se retoma,
       debe construirse un criterio de corte que optimice la partición en lugar de heredarla del
       recorrido.
-\end{itemize}
+\end{enumerate}
 
 Una extensión adicional se evaluó y quedó descartada por la propia medición: la compuerta de
 régimen por saturación, que activaría \texttt{upper-tmax-tmin9000} por encima de

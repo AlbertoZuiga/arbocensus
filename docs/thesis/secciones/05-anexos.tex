@@ -591,7 +591,7 @@ GLS y el carácter \textit{OSRM-bound} en frío---, que no dependen de la estrat
 y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de \textit{solver}
 como variable del experimento y no como constante del régimen.
 
-\subsubsection*{Entorno de medición --- detalle}
+\item Entorno de medición --- detalle.
 
 El entorno local de la Sección~\ref{sec:protocolo-evaluacion} difiere del despliegue real en tres
 condiciones. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con
@@ -611,7 +611,7 @@ comando de gestión sobre las mismas instancias congeladas: el \textit{pipeline}
 costaron 780{,}9\,s frente a los 170{,}8\,s de la réplica local (un factor de 4{,}6), con lo que el
 \textit{pipeline} frío completo ronda los 15\,min en ese hardware.
 
-\subsubsection*{Desglose de tiempo por fase}
+\item Desglose de tiempo por fase.
 
 El \textit{pipeline} se instrumentó por fases: construcción de la matriz de costos
 (\texttt{cost\_matrix}), construcción del modelo (\texttt{model\_build}), resolución
@@ -997,9 +997,8 @@ que la compuerta habilitaría: la mediana de auto-cruces sobre el trazado de cal
 $69$ en \texttt{reference-n1607} ($\overline{\text{sat}} = 0{,}94$), de $46$ a $75$ en
 \texttt{battery-n1000} ($0{,}91$) y de $26$ a $59$ en \texttt{battery-n800} ($0{,}89$).
 
-\phantomsection
-\subsubsection*{Instrumentación del objetivo en \texttt{area-27}}
-\label{anx:objetivo-area27}
+\item Instrumentación del objetivo en \texttt{area-27}.
+\phantomsection\label{anx:objetivo-area27}
 
 El diagnóstico de relleno por $T_{\min}$ de la Sección~\ref{sec:areas-reales} se estableció
 instrumentando el valor de la función objetivo del \textit{solver}
@@ -1029,9 +1028,8 @@ y en la unión la ruta más larga de cada semilla queda en el $82$--$83$\,\% de 
 debajo de los $9\,000$\,s del objetivo superior, con duraciones medias por semilla de $8\,204$,
 $8\,121$ y $8\,936$\,s.
 
-\phantomsection
-\subsubsection*{Grilla operacional de \texttt{spatial\_term}}
-\label{anx:grilla-spatial}
+\item Grilla operacional de \texttt{spatial\_term}.
+\phantomsection\label{anx:grilla-spatial}
 
 La Tabla~\ref{tab:grilla-spatial} detalla la grilla de seis variantes operacionales que la
 Sección~\ref{sec:comparacion-estrategias} resume, ejecutada con la estrategia
@@ -1118,9 +1116,8 @@ la grilla del perfilamiento (Tabla~\ref{tab:grilla-variantes}), anterior al rég
   \end{tabularx}
 \end{table}
 
-\phantomsection
-\subsubsection*{Serie de auto-cruces sobre calle por instancia}
-\label{anx:crossings-areas}
+\item Serie de auto-cruces sobre calle por instancia.
+\phantomsection\label{anx:crossings-areas}
 
 La Tabla~\ref{tab:areas-crossings} detalla la serie descriptiva de auto-cruces sobre el trazado
 real de calles que la Sección~\ref{sec:areas-reales} resume: configuración de producción, tres
@@ -1163,9 +1160,8 @@ de la Sección~\ref{sec:metricas-calidad}.
   \end{tabularx}
 \end{table}
 
-\phantomsection
-\subsubsection*{Auditoría de robustez metodológica --- detalle}
-\label{anx:auditoria-robustez}
+\item Auditoría de robustez metodológica --- detalle.
+\phantomsection\label{anx:auditoria-robustez}
 
 La Sección~\ref{sec:discusion-calidad} resume los cuatro defectos de
 instrumentación detectados en la serie experimental. Este apartado los describe
@@ -1290,6 +1286,8 @@ absolutas de duración de jornada y mucho menos sensible para las comparaciones
 relativas entre configuraciones, que son las que sostienen las conclusiones del
 capítulo de resultados. Contrastar la estimación contra tiempos reales de terreno es
 la validación pendiente de mayor valor para el uso operativo de la plataforma.
+
+\end{enumerate}
 
 \anexo{5}{Trazabilidad de requisitos y verificación automatizada}{Trazabilidad de requisitos y verificación automatizada}
 \label{anx:trazabilidad}
