@@ -142,9 +142,12 @@ de PostgreSQL \citep{postgis}.
 La Ilustración~\ref{fig:arquitectura} resume las capas del sistema y el recorrido de una
 optimización: el navegador solicita el trabajo a la API, esta lo encola en Celery en lugar de
 resolverlo en el ciclo de la petición HTTP, y el \textit{worker} ejecuta el \textit{pipeline}, que
-consulta OSRM para construir la matriz de costos y persiste la solución en PostGIS. El
-\textit{frontend} consulta el estado del trabajo por \textit{polling} hasta que alcanza un estado
-terminal. El trazo continuo marca las capas del monolito Django; el trazo discontinuo, los servicios
+consulta OSRM para construir la matriz de costos y persiste la solución en PostGIS. La petición
+HTTP termina en cuanto los trabajos quedan encolados, de modo que el navegador nunca espera al
+\textit{solver}: el \textit{frontend} consulta el estado por \textit{polling} hasta que alcanza un
+estado terminal, y un fallo del \textit{worker} deja el trabajo en \texttt{failed} con el mensaje
+de la excepción, que el panel muestra sin necesidad de un canal de error distinto del de estado. El
+trazo continuo marca las capas del monolito Django; el trazo discontinuo, los servicios
 de apoyo desplegados como contenedores independientes.
 
 \begin{figure}[H]
@@ -178,68 +181,6 @@ de apoyo desplegados como contenedores independientes.
   \end{tikzpicture}
   \caption{Arquitectura de Arbocensus.}
   \label{fig:arquitectura}
-\end{figure}
-
-La Ilustración~\ref{fig:secuencia} detalla ese recorrido en el tiempo, para uno de los seis trabajos
-que despliega una solicitud (Sección~\ref{sec:abanico}). La petición HTTP termina en cuanto los
-trabajos quedan encolados, de modo que el navegador nunca espera al \textit{solver}; el estado se
-obtiene después por \textit{polling}. Un fallo del \textit{worker} deja el trabajo en
-\texttt{failed} con el mensaje de la excepción, que el panel muestra sin necesidad de un canal de
-error distinto del de estado.
-
-\begin{figure}[H]
-  \centering
-  \shorthandoff{<>}%
-  \begin{tikzpicture}[
-      scale=0.78, transform shape,
-      actor/.style={draw, rounded corners=2pt, align=center, font=\scriptsize,
-                    minimum width=2.35cm, minimum height=0.85cm},
-      vida/.style={dashed, gray},
-      msj/.style={->, >=stealth, semithick},
-      ret/.style={->, >=stealth, semithick, dashed},
-      et/.style={font=\scriptsize, midway, above, inner sep=1.5pt},
-      etl/.style={font=\scriptsize, inner sep=1.5pt},
-      nota/.style={draw, fill=black!4, rounded corners=2pt, align=center,
-                   font=\scriptsize, inner sep=3pt}
-    ]
-    \def\yb{-11.7}
-    \node[actor] (pa) at (0,0)    {Panel\\ (\textit{React})};
-    \node[actor] (ap) at (3.1,0)  {API REST};
-    \node[actor] (re) at (6.2,0)  {Redis\\ (cola)};
-    \node[actor] (wo) at (9.3,0)  {\textit{Worker}\\ (\textit{pipeline})};
-    \node[actor] (os) at (12.4,0) {OSRM};
-    \node[actor] (bd) at (15.2,0) {PostGIS};
-
-    \foreach \n in {pa,ap,re,wo,os,bd} { \draw[vida] (\n.south) -- ($(\n.south)+(0,\yb)$); }
-
-    \draw[msj] (0,-1.2) -- (3.1,-1.2);
-    \node[etl, anchor=south west] at (0.05,-1.15)
-      {\texttt{POST /optimization/jobs/} ($T_{\min}$, $T_{\max}$, $s$)};
-    \draw[msj] (3.1,-2.1) -- (15.2,-2.1) node[et]
-      {crea la \texttt{RoutingConfig} y seis \texttt{OptimizationJob} en estado \texttt{queued}};
-    \draw[msj] (3.1,-3.0) -- (6.2,-3.0) node[et] {encola seis tareas};
-    \draw[ret] (3.1,-3.9) -- (0,-3.9);
-    \node[etl, anchor=south east] at (3.05,-3.85) {\texttt{201} con los seis trabajos};
-    \draw[msj] (6.2,-4.8) -- (9.3,-4.8) node[et] {entrega la tarea};
-    \draw[msj] (9.3,-5.7) -- (15.2,-5.7) node[et] {estado \texttt{running}};
-    \draw[msj] (9.3,-6.9) -- (12.4,-6.9) node[et, align=center]
-      {\texttt{/table}, solo si la matriz\\ no está en la caché};
-    \draw[ret] (12.4,-7.7) -- (9.3,-7.7) node[et] {matriz $n \times n$};
-    \node[nota, anchor=east, text width=2.6cm] at (9.15,-8.7)
-      {estima $k$ · resuelve el VRP · 2-opt intra-ruta};
-    \draw[msj] (9.2,-8.7) -- (9.3,-8.7);
-    \draw[msj] (9.3,-9.7) -- (15.2,-9.7) node[et, align=center]
-      {persiste \texttt{RoutingSolution}, \texttt{Route} y \texttt{RouteStop}\\
-        en una transacción; estado \texttt{completed}};
-    \draw[msj] (0,-10.6) -- (3.1,-10.6);
-    \node[etl, anchor=south west] at (0.05,-10.55)
-      {\texttt{GET /optimization/jobs/} cada $3$\,s};
-    \draw[ret] (3.1,-11.4) -- (0,-11.4);
-    \node[etl, anchor=south east] at (3.05,-11.35)
-      {estado y métricas; el \textit{polling} cesa en estado terminal};
-  \end{tikzpicture}
-  \caption{Ciclo de vida de un \texttt{OptimizationJob}.}
-  \label{fig:secuencia}
 \end{figure}
 
 \subsection{Despliegue de producción}
@@ -1164,18 +1105,8 @@ cualquier árbol, de forma que los tres mecanismos anteriores actúan como broch
 usuario refina antes de confirmar. Solo al confirmar ---indicando el nombre del \textit{dataset}---
 se emite la solicitud de creación. El resultado es que el recorte territorial del censo es una
 decisión explícita del administrador, tomada sobre la evidencia cartográfica, y no una consecuencia
-de cómo estaban organizadas las áreas en el sistema anterior.
-
-El mapa de selección (\texttt{/admin/datasets/legacy-import}) con una sesión en curso aparece en la
-Ilustración~\ref{fig:ui_legacy}.
-
-\capturaui{flow-09-legacy-import-seleccion-poligono.png}{Mapa de selección de arbolado legado}{Mapa
-de selección de arbolado legado.}{fig:ui_legacy}
-
-El color de cada marcador codifica el estado del árbol en el sistema: verde para disponible, azul
-para seleccionado en la sesión actual y gris para ya importado en otro \textit{dataset}. El panel
-lateral lista la selección acumulada ---3\,182 árboles en la sesión de la ilustración--- y permite
-revisarla árbol por árbol antes de confirmar la creación del \textit{dataset}.
+de cómo estaban organizadas las áreas en el sistema anterior.\footnote{Ver
+\hyperref[anx:capturas]{Anexo 6}.}
 
 % ---- 3.5 -------------------------------------------------------
 \section{RE-CENSO Y REGISTRO DE OBSERVACIONES}
@@ -1413,22 +1344,13 @@ parámetros temporales encabeza el mismo panel.
 El panel derecho concentra la configuración de parámetros ($T_{\min}$, $T_{\max}$ y tiempo de
 servicio) y el estado de la última optimización; el clic sobre un marcador del mapa despliega el
 historial de observaciones de ese árbol, lo que permite al administrador verificar si ya fue censado
-antes de lanzar la optimización.
-
-El panel de asignación aparece en la Ilustración~\ref{fig:ui_routes}: el mismo detalle muestra el
-plan publicado como polilíneas coloreadas sobre la red peatonal y, por cada ruta, sus paradas, su
-duración estimada y el censista asignado.
-
-\capturaui{flow-22-asignacion-aplicada.png}{Detalle de un \textit{dataset}: panel de asignación}{Detalle de un
-\textit{dataset}: panel de asignación.}{fig:ui_routes}
-
-Cada candidata resume tres métricas ---número de rutas, tiempo de caminata y puntaje de balance--- y
-destaca en cuáles de ellas es la mejor de la corrida; los árboles que quedan fuera de ruta, las
-rutas degeneradas y el balance bajo el umbral no se presentan como cifras sino como advertencias en
-lenguaje llano, porque son condiciones que descalifican a la candidata y no magnitudes que el
-administrador deba ponderar. El panel derecho materializa la asignación de cada ruta a un censista.
-Como dos corridas con parámetros temporales distintos no son comparables entre sí, la lista muestra
-una sola corrida a la vez y un selector permite alternar entre ellas.
+antes de lanzar la optimización. Cada candidata de la lista resume tres métricas ---número de
+rutas, tiempo de caminata y puntaje de balance--- y destaca en cuáles de ellas es la mejor de la
+corrida; los árboles que quedan fuera de ruta, las rutas degeneradas y el balance bajo el umbral no
+se presentan como cifras sino como advertencias en lenguaje llano, porque son condiciones que
+descalifican a la candidata y no magnitudes que el administrador deba ponderar. Como dos corridas
+con parámetros temporales distintos no son comparables entre sí, la lista muestra una sola corrida
+a la vez y un selector permite alternar entre ellas.
 
 Publicado el plan, el administrador supervisa el avance del censo desde la pestaña de progreso: el
 tablero resume el porcentaje de árboles censados, omitidos y pendientes, los sitúa sobre el mapa

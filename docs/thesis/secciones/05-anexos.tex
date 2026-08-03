@@ -1239,10 +1239,9 @@ donde se documenta su realización y, cuando corresponde, al inventario de
 Este anexo recorre el flujo completo de la plataforma sobre un \textit{dataset} de demostración de
 288 árboles seleccionados por polígono en Providencia, primero desde la perspectiva del
 administrador y luego desde la del censista en terreno. Las capturas complementan a las incluidas
-en la Sección~\ref{sec:ui}, que muestran la selección de arbolado legado
-(Ilustración~\ref{fig:ui_legacy}), el panel de optimización
-(Ilustración~\ref{fig:ui_optimization}), el panel de asignación (Ilustración~\ref{fig:ui_routes})
-y el portal del censista (Ilustración~\ref{fig:ui_surveyor}).
+en la Sección~\ref{sec:ui}, que muestran el panel de optimización
+(Ilustración~\ref{fig:ui_optimization}) y el portal del censista
+(Ilustración~\ref{fig:ui_surveyor}).
 
 \subsection*{Flujo del administrador}
 
@@ -1284,13 +1283,18 @@ de disponibles}{Importación de arbolado legado: filtro de disponibles.}{fig:anx
 Los dos modos de selección por región se muestran en las
 Ilustraciones~\ref{fig:anx_import_rect} y~\ref{fig:anx_import_poly}: rectángulo arrastrable y
 polígono de vértices editables. El resultado de cerrar un polígono sobre el arbolado aparece en la
-Ilustración~\ref{fig:ui_legacy} de la Sección~\ref{sec:ui}.
+Ilustración~\ref{fig:ui_legacy}: verde para disponible, azul para seleccionado en la sesión actual
+y gris para ya importado en otro \textit{dataset}; el panel lateral lista la selección acumulada
+---3\,182 árboles en esa sesión--- y permite revisarla árbol por árbol antes de confirmar.
 
 \capturaanexo{flow-07-legacy-import-modo-rectangulo.png}{Selección por rectángulo}{Selección por
 rectángulo.}{fig:anx_import_rect}
 
 \capturaanexo{flow-08-legacy-import-modo-poligono.png}{Selección por polígono}{Selección por
 polígono.}{fig:anx_import_poly}
+
+\capturaanexo{flow-09-legacy-import-seleccion-poligono.png}{Mapa de selección de arbolado
+legado}{Mapa de selección de arbolado legado.}{fig:ui_legacy}
 
 Confirmada la selección, el diálogo de creación ofrece dos salidas: un único \textit{dataset}
 (Ilustración~\ref{fig:anx_crear}) o la partición de la selección en varios \textit{datasets}
@@ -1346,8 +1350,9 @@ El panel de asignación presenta cada ruta con su selector de censista
 (Ilustración~\ref{fig:anx_asignacion}). La asignación automática opera en dos pasos: primero
 muestra la carga acumulada de cada censista (Ilustración~\ref{fig:anx_asig_modal}) y luego
 previsualiza la propuesta con los saldos resultantes (Ilustración~\ref{fig:anx_asig_prev}) antes de
-aplicarla; el estado final aparece en la Ilustración~\ref{fig:ui_routes} de la
-Sección~\ref{sec:ui}.
+aplicarla; el estado final ---el plan publicado como polilíneas sobre la red peatonal y, por cada
+ruta, sus paradas, su duración estimada y el censista asignado--- aparece en la
+Ilustración~\ref{fig:ui_routes}.
 
 \capturaanexo{flow-19-asignacion-panel.png}{Panel de asignación de rutas}{Panel de asignación de
 rutas.}{fig:anx_asignacion}
@@ -1357,6 +1362,9 @@ censistas}{Asignación automática: carga de los censistas.}{fig:anx_asig_modal}
 
 \capturaanexo{flow-21-asignacion-previsualizacion.png}{Asignación automática:
 previsualización}{Asignación automática: previsualización.}{fig:anx_asig_prev}
+
+\capturaanexo{flow-22-asignacion-aplicada.png}{Detalle de un \textit{dataset}: panel de
+asignación}{Detalle de un \textit{dataset}: panel de asignación.}{fig:ui_routes}
 
 El tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}) abre en cero al publicar
 el plan (Ilustración~\ref{fig:anx_avance_cero}). La Ilustración~\ref{fig:ui_progress} lo muestra

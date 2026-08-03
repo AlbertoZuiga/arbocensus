@@ -940,8 +940,7 @@ comprime las cajas envolventes, pero no separa el par de rutas vecinas que se su
 más densa del \textit{dataset}: ese par persiste como problema de geometría local y no lo resuelve
 un coeficiente global. La ganancia de \texttt{spatial\_term} es, en consecuencia, agregada (menos
 paradas ajenas dentro de cada caja, rutas más compactas) y no la eliminación del peor caso. Ese par
-se reproduce en la Ilustración~\ref{fig:peor-par} de la Sección~\ref{sec:discusion-calidad}, donde
-se discute su origen geométrico.
+se retoma en la Sección~\ref{sec:discusion-calidad}, donde se discute su origen geométrico.
 
 Conviene además notar que las métricas de forma son las más sensibles a la semilla, pese a que las
 de coste no lo son: las tres repeticiones de cada estrategia convergen a soluciones prácticamente
@@ -1159,18 +1158,9 @@ plana entre ambos regímenes: el agregado no produce más auto-cruces por ruta, 
 \end{figure}
 
 El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
-de $0{,}55$, se reproduce en la Ilustración~\ref{fig:peor-par}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
-  \caption{Par de rutas con mayor solapamiento espacial en el \textit{dataset} de evaluación.}
-  \label{fig:peor-par}
-\end{figure}
-
-El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría
-local del par, y ningún coeficiente global lo elimina sin penalizar las rutas circundantes; la
-solución estructural es la segmentación previa por área de censo.
+de $0{,}55$, persiste con la estrategia \texttt{spatial\_term} porque su solapamiento responde a la
+geometría local del par, y ningún coeficiente global lo elimina sin penalizar las rutas
+circundantes; la solución estructural es la segmentación previa por área de censo.
 
 La lectura que estos resultados dejan explícita es que los auto-cruces responden a la forma de la
 función objetivo y al régimen geográfico de la instancia, no a una limitación del tiempo de
