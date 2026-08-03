@@ -420,11 +420,12 @@ def test_legacy_trees_returns_503_when_not_configured(settings):
 
 
 @pytest.mark.django_db
-def test_from_legacy_selection_creates_exact_trees(legacy_db):
+def test_partition_with_k_of_one_creates_exact_trees(legacy_db):
     response = _client("admin").post(
-        "/api/datasets/from-legacy-selection/",
+        "/api/datasets/partition-legacy-selection/",
         {
             "name": "Selección mixta",
+            "k": 1,
             "trees": [
                 {"source": legacy.SOURCE_API, "external_id": 776},
                 {"source": legacy.SOURCE_APP, "external_id": 96905},
@@ -433,14 +434,16 @@ def test_from_legacy_selection_creates_exact_trees(legacy_db):
         format="json",
     )
     assert response.status_code == 201
-    assert response.data["name"] == "Selección mixta"
-    assert response.data["total_trees"] == 2
-    trees = Tree.objects.filter(dataset_id=response.data["id"])
+    assert response.data[0]["name"] == "Selección mixta"
+    assert response.data[0]["total_trees"] == 2
+    trees = Tree.objects.filter(dataset_id=response.data[0]["id"])
     assert {(tree.source, tree.external_id) for tree in trees} == {
         (legacy.SOURCE_API, 776),
         (legacy.SOURCE_APP, 96905),
     }
-    observations = TreeObservation.objects.filter(tree__dataset_id=response.data["id"])
+    observations = TreeObservation.objects.filter(
+        tree__dataset_id=response.data[0]["id"]
+    )
     assert {(o.source, o.tree.external_id) for o in observations} == {
         (legacy.SOURCE_API, 776),
         (legacy.SOURCE_APP, 96905),
@@ -449,11 +452,12 @@ def test_from_legacy_selection_creates_exact_trees(legacy_db):
 
 
 @pytest.mark.django_db
-def test_from_legacy_selection_deduplicates_selection(legacy_db):
+def test_partition_with_k_of_one_deduplicates_selection(legacy_db):
     response = _client("admin").post(
-        "/api/datasets/from-legacy-selection/",
+        "/api/datasets/partition-legacy-selection/",
         {
             "name": "Con duplicados",
+            "k": 1,
             "trees": [
                 {"source": legacy.SOURCE_API, "external_id": 776},
                 {"source": legacy.SOURCE_API, "external_id": 776},
@@ -462,15 +466,16 @@ def test_from_legacy_selection_deduplicates_selection(legacy_db):
         format="json",
     )
     assert response.status_code == 201
-    assert response.data["total_trees"] == 1
+    assert response.data[0]["total_trees"] == 1
 
 
 @pytest.mark.django_db
-def test_from_legacy_selection_unknown_tree_returns_400(legacy_db):
+def test_partition_unknown_tree_returns_400(legacy_db):
     response = _client("admin").post(
-        "/api/datasets/from-legacy-selection/",
+        "/api/datasets/partition-legacy-selection/",
         {
             "name": "Inexistente",
+            "k": 1,
             "trees": [{"source": legacy.SOURCE_API, "external_id": 99999}],
         },
         format="json",
@@ -480,21 +485,22 @@ def test_from_legacy_selection_unknown_tree_returns_400(legacy_db):
 
 
 @pytest.mark.django_db
-def test_from_legacy_selection_empty_trees_returns_400(legacy_db):
+def test_partition_empty_trees_returns_400(legacy_db):
     response = _client("admin").post(
-        "/api/datasets/from-legacy-selection/",
-        {"name": "Vacío", "trees": []},
+        "/api/datasets/partition-legacy-selection/",
+        {"name": "Vacío", "k": 1, "trees": []},
         format="json",
     )
     assert response.status_code == 400
 
 
 @pytest.mark.django_db
-def test_from_legacy_selection_forbidden_for_surveyor(legacy_db):
+def test_partition_forbidden_for_surveyor(legacy_db):
     response = _client("surveyor").post(
-        "/api/datasets/from-legacy-selection/",
+        "/api/datasets/partition-legacy-selection/",
         {
             "name": "X",
+            "k": 1,
             "trees": [{"source": legacy.SOURCE_API, "external_id": 776}],
         },
         format="json",

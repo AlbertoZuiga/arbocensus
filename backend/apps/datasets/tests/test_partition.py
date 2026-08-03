@@ -52,10 +52,21 @@ def test_kmeans_preserves_source_and_external_id():
     )
 
 
-@pytest.mark.parametrize("k", [1, 4])
+@pytest.mark.parametrize("k", [0, 4])
 def test_kmeans_rejects_a_k_that_starves_the_datasets(k):
-    with pytest.raises(ValueError, match="between 2 and 3"):
+    with pytest.raises(ValueError, match="between 1 and 3"):
         partition.by_kmeans("Selección", WEST + EAST, k)
+
+
+def test_k_of_one_returns_the_whole_selection_unsplit():
+    rows = WEST + EAST
+    partitions = partition.by_kmeans("Selección", rows, 1)
+
+    assert len(partitions) == 1
+    assert partitions[0].dataset_name == "Selección"
+    assert [row.external_id for row in partitions[0].trees] == [
+        row.external_id for row in rows
+    ]
 
 
 def test_kmeans_rejects_a_selection_too_small_to_split():
@@ -113,6 +124,21 @@ def test_partition_endpoint_keeps_the_natural_key_of_every_tree(
 
     keys = set(Tree.objects.values_list("source", "external_id"))
     assert keys == {(legacy.SOURCE_API, external_id) for external_id, *_ in API_TREES}
+
+
+@pytest.mark.django_db
+def test_partition_endpoint_with_k_of_one_creates_a_single_dataset(
+    legacy_db,  # noqa: F811
+    small_datasets_allowed,
+):
+    response = _admin_client().post(
+        "/api/datasets/partition-legacy-selection/", _payload(k=1), format="json"
+    )
+
+    assert response.status_code == 201
+    assert len(response.data) == 1
+    assert response.data[0]["name"] == "Selección"
+    assert response.data[0]["total_trees"] == len(API_TREES)
 
 
 @pytest.mark.django_db

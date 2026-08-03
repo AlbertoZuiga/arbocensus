@@ -11,12 +11,14 @@ MIN_TREES_PER_DATASET = 51
 
 
 def by_kmeans(name: str, rows: list[LegacyTreeRow], k: int) -> list[LegacyAreaImport]:
-    max_k = len(rows) // MIN_TREES_PER_DATASET
-    if not 2 <= k <= max_k:
+    max_k = max(1, len(rows) // MIN_TREES_PER_DATASET)
+    if not 1 <= k <= max_k:
         raise ValueError(
             f"{len(rows)} trees allow at most {max_k} datasets averaging "
-            f"{MIN_TREES_PER_DATASET} trees; k must be between 2 and {max_k}"
+            f"{MIN_TREES_PER_DATASET} trees; k must be between 1 and {max_k}"
         )
+    if k == 1:
+        return [LegacyAreaImport(dataset_name=name, trees=list(rows))]
     coords = project_equirectangular([(row.lat, row.lon) for row in rows])
     labels = kmeans(coords, k)
     groups: dict[int, list[LegacyTreeRow]] = {}
