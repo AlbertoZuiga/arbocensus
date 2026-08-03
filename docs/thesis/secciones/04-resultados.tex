@@ -86,8 +86,8 @@ dispersión que generan es mayor en las métricas de calidad que en el tiempo de
 acota la variación dentro de una corrida, no la variación entre corridas
 distintas.\footnote{Ver \hyperref[anx:alcance-replicas]{Anexo 4}.}
 
-\subsubsection*{Entorno de medición}
-\phantomsection\label{sec:entorno-medicion}%
+\begin{enumerate}[leftmargin=*]
+\item Entorno de medición.
 Todas las mediciones de este capítulo se ejecutaron en un entorno local que replica al de
 producción.\footnote{El servidor del despliegue productivo
 (Sección~\ref{sec:despliegue-produccion}), incorporado al cierre de la iteración, no es el entorno
@@ -124,7 +124,7 @@ de la réplica local (un factor de 4{,}6), con lo que el \textit{pipeline} frío
 15\,min. La operación normal del sistema desplegado queda por tanto acotada por el presupuesto del
 \textit{solver}, igual que en la réplica local.
 
-\subsubsection*{Sensibilidad al presupuesto del \textit{solver}}
+\item Sensibilidad al presupuesto del \textit{solver}.
 
 Dado que el GLS domina el tiempo en operación normal, su presupuesto es el parámetro de operación
 relevante. La Tabla~\ref{tab:sensibilidad-tl} muestra la sensibilidad de la calidad de la solución
@@ -177,6 +177,8 @@ capítulo: salvo indicación en contrario, se calculan sobre la cuerda recta ent
 correlación con el conteo sobre el trazado real de calles es parcial ($\rho$ de Spearman de
 $0{,}527$) y se invierte en la instancia agregada, por lo que ningún criterio de decisión del
 capítulo se fija sobre esa métrica.\footnote{Ver \hyperref[anx:auditoria-robustez]{Anexo 4}.}
+
+\end{enumerate}
 
 \subsection{Métricas de calidad de rutas sobre la instancia de estrés}
 \label{sec:metricas-calidad}
@@ -304,7 +306,7 @@ programáticamente sobre el mismo \textit{dataset} ($N = 1\,607$),
 con la misma matriz de costos de OSRM ---la caché de la corrida anterior--- y con los mismos
 parámetros temporales ($T_{\max} = 10\,800$\,s y 2 minutos de servicio por árbol) que la solución de
 \textit{OR-Tools} de la Sección~\ref{sec:metricas-calidad}, producida con la versión $9.15$ de la
-biblioteca \citep{ortools} que detalla la Sección~\ref{sec:entorno-medicion}. El \textit{baseline}
+biblioteca \citep{ortools} que detalla la Sección~\ref{sec:protocolo-evaluacion}. El \textit{baseline}
 construye cada ruta encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el
 siguiente salto haría exceder el presupuesto temporal de la ruta; entonces abre una ruta nueva con
 el primer árbol que quede sin visitar. No hay optimización global, ni balance de carga, ni
@@ -482,7 +484,8 @@ directa: qué obtiene un censo real cuando el problema se entrega en su escala n
 individual de extensión $\leq 1{,}32$\,km--- en lugar de la unión de varias. Este apartado la
 responde con una medición propia y, además, pone precio a la partición misma.
 
-\subsubsection*{Instancias y brazos}
+\begin{enumerate}[leftmargin=*]
+\item Instancias y brazos.
 
 Se emplearon las tres áreas del censo histórico con mayor arbolado y su unión, congeladas como
 instancias versionadas en el repositorio. Las tres áreas son disjuntas por
@@ -534,7 +537,7 @@ refinado o lo empeora en a lo más un 5\,\%, ninguna de sus rutas queda sobre el
 y su balance alcanza al menos $0{,}80$. El margen se fijó en desplazamiento y saturación, nunca en
 auto-cruces, por la reserva de instrumento que documenta la Sección~\ref{sec:protocolo-evaluacion}.
 
-\subsubsection*{Resultados por área}
+\item Resultados por área.
 
 La Tabla~\ref{tab:areas-brazos} reúne los tres brazos. Las cifras de \textit{OR-Tools} son la media
 de las tres semillas. La saturación máxima es la duración de la ruta más larga dividida por
@@ -654,7 +657,7 @@ completa. No hay aquí ruta degenerada que reprochar al \textit{baseline}: su so
 censista preferiría. Como el criterio exigía las tres áreas, el veredicto global frente al
 pre-registro es de incumplimiento, y así se reporta.
 
-\subsubsection*{Diagnóstico de \texttt{area-27}: relleno por $T_{\min}$}
+\item Diagnóstico de \texttt{area-27}: relleno por $T_{\min}$.
 
 El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de búsqueda: es un
 régimen de relleno por $T_{\min}$, propio de instancias que no saturan su presupuesto temporal,
@@ -703,7 +706,7 @@ recalibración de coeficientes son la palanca pertinente aquí: ambas vías ---p
 combinado, recalibración de penalizaciones--- ya fueron exploradas y descartadas por otras razones
 (Sección~\ref{sec:discusion-calidad}).
 
-\subsubsection*{Serie de auto-cruces sobre calle}
+\item Serie de auto-cruces sobre calle.
 
 La relación entre el régimen geográfico y los auto-cruces que analiza la
 Sección~\ref{sec:discusion-calidad} se midió en una corrida propia: configuración de producción,
@@ -759,7 +762,7 @@ y, con él, el conteo absoluto que la inspección visual percibe. La serie es de
 parte del criterio pre-registrado de este apartado, que se fijó en desplazamiento, saturación y
 balance.
 
-\subsubsection*{Precio de particionar}
+\item Precio de particionar.
 
 El segundo contraste enfrenta la unión de las tres áreas contra la suma de resolverlas por separado.
 Se pre-registró que particionar costaría kilómetros, por prohibir rutas que crucen el borde entre
@@ -833,6 +836,8 @@ unidad operativa correcta del motor es el área de censo individual. El
 protocolo, los comandos reproducibles y los datos crudos de este experimento se encuentran
 versionados en el repositorio.
 
+\end{enumerate}
+
 \section{ANÁLISIS DE CONFIGURACIÓN Y RÉGIMEN GEOGRÁFICO}
 \label{sec:analisis-configuracion}
 
@@ -880,7 +885,8 @@ entre rutas crece de forma monótona con la densidad, con un caso recurrente de 
 contenida dentro de la caja envolvente de otra más extensa, coherente con que el modelo optimiza
 tiempo total con un término de balance blando y sin criterio espacial explícito en la partición.
 
-\subsubsection*{Estrategias evaluadas}
+\begin{enumerate}[leftmargin=*]
+\item Estrategias evaluadas.
 
 Ese diagnóstico es el que motivó las dos estrategias de partición espacial que la
 Sección~\ref{sec:estrategias} describe ---\texttt{spatial\_term} y \texttt{cluster\_first}---, y que
@@ -891,7 +897,7 @@ En \texttt{cluster\_first}, la estimación de $k$ emplea el viaje medio al vecin
 presupuesto del \textit{solver} se reparte entre los grupos en proporción a su tamaño, condiciones
 necesarias para medir la estrategia en igualdad con las otras dos.
 
-\subsubsection*{Protocolo}
+\item Protocolo.
 
 Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones idénticas: mismo
 \textit{dataset} ($n = 1\,607$), misma variante operacional (tiempo de servicio de 2\,min y
@@ -948,7 +954,7 @@ Tabla~\ref{tab:estrategias} resume los resultados como media de las tres repetic
   \end{tabularx}
 \end{table}
 
-\subsubsection*{Resultados}
+\item Resultados.
 
 \texttt{spatial\_term} reduce el solapamiento por ruta a menos de la mitad ($168{,}0 \rightarrow
 77{,}3$, un $-54$\,\%) y comprime las rutas ($\sum r_{\max}$ cae un $12{,}8$\,\%), a cambio de un
@@ -998,7 +1004,7 @@ alcanza a cubrirlos dentro de $T_{\max}$, y los sub-problemas ---que ahora recib
 presupuesto de tiempo, repartida entre los $\approx 34$ grupos--- activan las disyunciones
 penalizadas antes de encontrar una asignación completa.
 
-\subsubsection*{Grilla operacional de la estrategia ganadora}
+\item Grilla operacional de la estrategia ganadora.
 
 Confirmada \texttt{spatial\_term}, se ejecutó sobre ella una grilla de seis variantes operacionales
 ---el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
@@ -1106,7 +1112,7 @@ pequeñas diferencias observadas (desplazamiento de $60\,588$ frente a $60\,611$
 $75{,}2$ frente a $77{,}3$) provienen del corte por reloj de pared del GLS y acotan la precisión con
 que deben leerse todas las comparaciones de esta subsección.
 
-\subsubsection*{Alcance de las comparaciones y decisión}
+\item Alcance de las comparaciones y decisión.
 
 Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head} de la
 Tabla~\ref{tab:estrategias}, el único contraste homogéneo disponible: mismo código, mismo
@@ -1132,10 +1138,13 @@ global separa. Se adopta, en consecuencia, \texttt{spatial\_term} como estrategi
 completo, los comandos reproducibles y los datos crudos de este experimento se encuentran
 versionados en el repositorio.
 
+\end{enumerate}
+
 \subsection{El régimen geográfico de la instancia}
 \label{sec:discusion-calidad}
 
-\subsubsection*{Análisis causal de la función objetivo}
+\begin{enumerate}[leftmargin=*]
+\item Análisis causal de la función objetivo.
 
 La razón entre las dos penalizaciones blandas de la dimensión temporal, resumidas junto al resto de
 la función objetivo en la Sección~\ref{sec:protocolo-evaluacion}, es de $20\mathord{:}1$
@@ -1162,7 +1171,7 @@ dos observaciones independientes: el presupuesto del \textit{solver} no altera e
 el balance por sobre los 120\,s (Tabla~\ref{tab:sensibilidad-tl}), y la re-medición sobre
 \texttt{crossings\_road} invierte el signo del efecto de este mismo brazo sobre la geometría real.
 
-\subsubsection*{El régimen geográfico del \textit{dataset} de evaluación}
+\item El régimen geográfico del \textit{dataset} de evaluación.
 
 El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. El conjunto
 de evaluación de $n = 1\,607$ árboles agrega arbolado real de múltiples áreas de censo dispersas en
@@ -1217,7 +1226,7 @@ tratamiento propio en la literatura bajo la denominación de diseño territorial
 \citep{kalcsics2005towards,rios2009reactive}, cuyos criterios de compacidad y de balance coinciden
 con los dos ejes que esta sección mide.
 
-\subsubsection*{Barrido de configuraciones sobre la suite completa}
+\item Barrido de configuraciones sobre la suite completa.
 
 Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
 configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
@@ -1243,6 +1252,8 @@ re-medición de sus soluciones sobre el trazado real de calles invierte el signo
 geométrico precisamente en el régimen que esa compuerta habilitaría, y la
 Sección~\ref{sec:posibles-mejoras} registra
 el descarte.
+
+\end{enumerate}
 
 \section{LIMITACIONES DEL SISTEMA}
 \label{sec:limitaciones}

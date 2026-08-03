@@ -392,7 +392,8 @@ se cachea una vez por conjunto de árboles activos, no una vez por optimización
 \subsection{Formulación del problema}
 \label{sec:formulacion}
 
-\subsubsection*{Conjuntos, parámetros y variables}
+\begin{enumerate}[leftmargin=*]
+\item Conjuntos, parámetros y variables.
 
 La formulación sigue la estructura estándar de los problemas de ruteo de vehículos
 \citep{toth2014vehicle}. El problema se define sobre un conjunto de puntos $P = \{p_1, p_2, \ldots,
@@ -429,7 +430,7 @@ A ellas se añaden las variables acumuladas $t_i \geq 0$ de la dimensión tempor
 tiempo transcurrido al abandonar el nodo $i$, y su análogo $g_i \geq 0$ sobre la dimensión
 geográfica.
 
-\subsubsection*{Restricciones}
+\item Restricciones.
 
 Cada árbol incluido en el plan se visita exactamente una vez, y cada visita es consistente entre la
 entrada y la salida del nodo:
@@ -492,7 +493,7 @@ la Sección~\ref{sec:solver}. En consecuencia, una solución puede presentar rut
 inferior a $T_{\min}$; el Capítulo~\ref{cap:resultados} las observa en las áreas reales de baja
 carga, no en la instancia de referencia.
 
-\subsubsection*{Función objetivo}
+\item Función objetivo.
 
 El modelo es monobjetivo: los tres propósitos enunciados más abajo se escalarizan en una suma
 ponderada de seis términos, y no se resuelven de forma lexicográfica ni se construye un frente de
@@ -620,6 +621,8 @@ los valores por defecto, ese precio es de $-9\,999$ mientras la ruta está por d
 $\tau$, y de $+501$ por encima de $\tau$. Esa asimetría, y no el costo de arco, es el canal
 dominante del objetivo, y explica los resultados de sensibilidad a las penalizaciones de la
 Sección~\ref{sec:discusion-calidad}.
+
+\end{enumerate}
 
 % ---- 3.3.2 ------------------------------------------------------
 \subsection{Construcción de la matriz de costos}

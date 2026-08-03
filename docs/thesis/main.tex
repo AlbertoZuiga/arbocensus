@@ -10,6 +10,15 @@
 \usepackage[T1]{fontenc}
 \usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
 \renewcommand{\labelenumi}{\alph{enumi})}
+% \romannumeral primitivo y no \roman{}: babel-spanish tipografía los romanos
+% en versalitas y la plantilla exige minúsculas (i, ii, iii).
+% Robusto y con \romannumeral primitivo: babel-spanish tipografía \roman{} en
+% versalitas (la plantilla exige i, ii, iii) y enumitem expande la etiqueta con
+% \edef, lo que vacía un \romannumeral no protegido.
+\DeclareRobustCommand{\lcroman}[1]{\romannumeral\value{#1}}
+\renewcommand{\labelenumii}{\lcroman{enumii})}
+\renewcommand{\labelitemi}{--}
+\renewcommand{\labelitemii}{--}
 % El \% de babel-spanish inspecciona \lastskip, lo que revienta con
 % "Incompatible glue units" en la pasada de medición de una columna X de
 % tabularx. Se desactiva y el espacio fino se escribe explícito (\,\%).
@@ -47,11 +56,6 @@
   {\normalfont\fontsize{12}{14}}
   {\thesubsection}{0.5em}{#1}
 \titlespacing*{\subsection}{0pt}{10pt}{4pt}
-
-\titleformat{\subsubsection}[block]
-  {\normalfont\fontsize{12}{14}}
-  {}{0pt}{#1}
-\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
 
 % ---- Índices y Nombres -----------------------------------------
 \usepackage{tocloft}

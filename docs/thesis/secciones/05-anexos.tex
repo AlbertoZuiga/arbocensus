@@ -557,7 +557,8 @@ grilla de variantes operacionales, la descripción de la suite de instancias con
 que se ejecutó el barrido de configuración y la descripción completa de los cuatro defectos de
 instrumentación detectados en la serie experimental.
 
-\subsubsection*{Perfil de rendimiento del optimizador}
+\begin{enumerate}[leftmargin=*]
+\item Perfil de rendimiento del optimizador.
 \phantomsection\label{anx:perfil-rendimiento}
 
 El tiempo de ejecución se concentra en la metaheurística cuando la caché de la matriz está caliente
@@ -588,7 +589,7 @@ GLS y el carácter \textit{OSRM-bound} en frío---, que no dependen de la estrat
 y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de \textit{solver}
 como variable del experimento y no como constante del régimen.
 
-\subsubsection*{Desglose de tiempo por fase}
+\item Desglose de tiempo por fase.
 
 El \textit{pipeline} se instrumentó por fases: construcción de la matriz de costos
 (\texttt{cost\_matrix}), construcción del modelo (\texttt{model\_build}), resolución
@@ -685,7 +686,7 @@ completa el tiempo de resolución observado para el mismo \textit{dataset} vari�
 según si la búsqueda agota o no el presupuesto de tiempo asignado.
 
 \phantomsection
-\subsubsection*{Variaciones de duración sobre el \textit{dataset} real}
+\item Variaciones de duración sobre el \textit{dataset} real.
 \label{anx:variantes-duracion}
 
 Se evaluaron las seis combinaciones de tiempo de servicio por árbol $\{1, 2, 3\}$\,min y cota dura
@@ -706,7 +707,7 @@ redondeo: el \textit{callback} de tránsito trunca cada arco a aritmética enter
 flotante; con 30 a 70 arcos por ruta, el truncamiento acumula una discrepancia de 10 a 70\,s por
 ruta. La cota dura $T_{\max}$ se respeta estrictamente en la aritmética entera del \textit{solver}.
 
-\subsubsection*{Sensibilidad al tamaño del problema}
+\item Sensibilidad al tamaño del problema.
 
 Con el objetivo de aislar el efecto del tamaño del problema se repitió la grilla sobre un área
 reducida del mismo origen legado ($n=157$). La fase que peor escala es la consulta a OSRM en frío:
@@ -720,7 +721,7 @@ iteración: lo que crece con $n$ es el costo de explorar cada vecindario, no el 
 observado.
 
 
-\subsubsection*{Grilla de seis variantes}
+\item Grilla de seis variantes.
 
 La Tabla~\ref{tab:grilla-variantes} reporta las seis combinaciones de tiempo de servicio por árbol
 $\{1, 2, 3\}$\,min y cota dura $T_{\max} \in \{2, 3\}$\,h sobre el \textit{dataset} real de
@@ -777,7 +778,7 @@ las variantes en que la búsqueda agota el presupuesto, las tres repeticiones co
 casi idénticas.
 
 \phantomsection
-\subsubsection*{Diagnóstico geográfico sobre nodos sintéticos}
+\item Diagnóstico geográfico sobre nodos sintéticos.
 \label{anx:baseline-geo-sintetico}
 
 Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, se caracterizó la calidad
@@ -842,7 +843,7 @@ extensa. Esto es coherente con que el modelo optimiza tiempo total con un térmi
 sin ningún criterio espacial explícito en la partición.
 
 \phantomsection
-\subsubsection*{Suite de instancias congeladas}
+\item Suite de instancias congeladas.
 \label{anx:suite-instancias}
 
 Las doce instancias sobre las que se ejecutó el barrido de configuración
@@ -891,7 +892,7 @@ la instancia no puede regenerarse desde el importador actual y se emplea siempre
 congelada y versionada.
 
 \phantomsection
-\subsubsection*{Reservas del experimento de sensibilidad a penalizaciones}
+\item Reservas del experimento de sensibilidad a penalizaciones.
 \label{anx:reservas-sensibilidad}
 
 La Sección~\ref{sec:discusion-calidad} resume en una frase las tres reservas que acotan la lectura
@@ -925,7 +926,7 @@ efectivamente propagadas al \textit{solver} y reportar los auto-cruces sobre el 
 instrumentación que el repositorio ya soporta y que este trabajo no ejecutó.
 
 \phantomsection
-\subsubsection*{Barrido de configuración $\times$ algoritmo $\times$ tamaño --- detalle}
+\item Barrido de configuración $\times$ algoritmo $\times$ tamaño --- detalle.
 \label{anx:barrido-configuraciones}
 
 La Sección~\ref{sec:discusion-calidad} resume el barrido ejecutado sobre las doce instancias
@@ -975,7 +976,7 @@ $69$ en \texttt{reference-n1607} ($\overline{\text{sat}} = 0{,}94$), de $46$ a $
 \texttt{battery-n1000} ($0{,}91$) y de $26$ a $59$ en \texttt{battery-n800} ($0{,}89$).
 
 \phantomsection
-\subsubsection*{Auditoría de robustez metodológica --- detalle}
+\item Auditoría de robustez metodológica --- detalle.
 \label{anx:auditoria-robustez}
 
 La Sección~\ref{sec:discusion-calidad} resume los cuatro defectos de
@@ -1043,7 +1044,7 @@ indirecta, con lo que cuarenta y cinco de las ciento seis filas re-juzgables que
 absueltas y sesenta y una persisten por duración.
 
 \phantomsection
-\subsubsection*{Alcance de las réplicas y de las barras de error}
+\item Alcance de las réplicas y de las barras de error.
 \label{anx:alcance-replicas}
 
 La sensibilidad al orden de entrada que la Sección~\ref{sec:metricas-calidad} mide
@@ -1071,7 +1072,7 @@ comparar medias de corridas distintas queda fuera de lo que la instrumentación
 actual justifica.
 
 \phantomsection
-\subsubsection*{Efectos no medidos}
+\item Efectos no medidos.
 \label{anx:efectos-no-medidos}
 
 Costo de las disyunciones de nodos.
@@ -1101,6 +1102,8 @@ absolutas de duración de jornada y mucho menos sensible para las comparaciones
 relativas entre configuraciones, que son las que sostienen las conclusiones del
 capítulo de resultados. Contrastar la estimación contra tiempos reales de terreno es
 la validación pendiente de mayor valor para el uso operativo de la plataforma.
+
+\end{enumerate}
 
 \anexo{5}{Trazabilidad de requisitos al diseño}{Trazabilidad de requisitos al diseño}
 \label{anx:trazabilidad}
