@@ -1,11 +1,13 @@
 import hashlib
 import time
+import zlib
 
 import numpy as np
 import requests
 from apps.datasets.models import DistanceMatrix
 from apps.optimization.profiling import PhaseTimer
 from django.conf import settings
+from django.db import connection, transaction
 
 try:
     from line_profiler import profile  # type: ignore[import-untyped]
@@ -24,6 +26,7 @@ OSRM_MAX_TREES_PER_REQUEST = 350
 OSRM_CHUNK_SIZE = OSRM_MAX_TREES_PER_REQUEST // 2
 # matrix_data JSON grows O(n²): 2000² floats ≈ 32MB per DistanceMatrix row.
 OSRM_MAX_MATRIX_DIMENSION = 2000
+MATRIX_LOCK_NS = 815001
 
 
 class OSRMCostMatrixBuilder:
@@ -41,25 +44,39 @@ class OSRMCostMatrixBuilder:
         if cached is not None:
             return cached
 
-        fetch_start = time.perf_counter()
-        matrix = self._fetch_from_osrm(trees, timer)
-        fetch_elapsed = time.perf_counter() - fetch_start
-        osrm_fetch_elapsed = timer.as_dict()["cost_matrix"]["osrm_fetch"]
-        timer.record(
-            "cost_matrix",
-            max(0.0, fetch_elapsed - osrm_fetch_elapsed),
-            "chunk_assembly",
-        )
+        # Concurrent workers (fanout jobs) racing on an empty cache would each
+        # rebuild the same ~100-request OSRM matrix. The advisory xact lock
+        # serializes them; the loser re-checks the cache the winner just wrote.
+        with transaction.atomic():
+            lock_key = zlib.crc32(dataset.id.bytes) & 0x7FFFFFFF
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT pg_advisory_xact_lock(%s, %s)",
+                    [MATRIX_LOCK_NS, lock_key],
+                )
+            cached = self._lookup_cache(dataset, source_hash)
+            if cached is not None:
+                return cached
 
-        with timer.phase("cost_matrix", "persist"):
-            DistanceMatrix.objects.update_or_create(
-                dataset=dataset,
-                defaults={
-                    "source_hash": source_hash,
-                    "matrix_data": matrix.tolist(),
-                    "dimension": matrix.shape[0],
-                },
+            fetch_start = time.perf_counter()
+            matrix = self._fetch_from_osrm(trees, timer)
+            fetch_elapsed = time.perf_counter() - fetch_start
+            osrm_fetch_elapsed = timer.as_dict()["cost_matrix"]["osrm_fetch"]
+            timer.record(
+                "cost_matrix",
+                max(0.0, fetch_elapsed - osrm_fetch_elapsed),
+                "chunk_assembly",
             )
+
+            with timer.phase("cost_matrix", "persist"):
+                DistanceMatrix.objects.update_or_create(
+                    dataset=dataset,
+                    defaults={
+                        "source_hash": source_hash,
+                        "matrix_data": matrix.tolist(),
+                        "dimension": matrix.shape[0],
+                    },
+                )
         return matrix
 
     @profile
@@ -71,9 +88,14 @@ class OSRMCostMatrixBuilder:
 
     @profile
     def _lookup_cache(self, dataset, source_hash):
-        cached = DistanceMatrix.objects.filter(dataset=dataset).first()
-        if cached is not None and cached.source_hash == source_hash:
-            return np.array(cached.matrix_data, dtype=float)
+        # matrix_data is ~40MB at n=1607; defer it so stale/miss lookups never parse it.
+        row = (
+            DistanceMatrix.objects.only("id", "source_hash")
+            .filter(dataset=dataset)
+            .first()
+        )
+        if row is not None and row.source_hash == source_hash:
+            return np.array(row.matrix_data, dtype=float)
         return None
 
     @profile

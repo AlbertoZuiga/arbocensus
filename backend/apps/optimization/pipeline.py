@@ -27,10 +27,15 @@ def default_time_limit_sec(tree_count):
     return min(int(30 + 1.5 * tree_count), SOLVER_TIME_LIMIT_SEC)
 
 
+# Sentinel: None is a legitimate caller-provided value (no cached matrix).
+_UNSET = object()
+
+
 def estimate_fleet_from_cache(
     dataset,
     min_route_time_sec=RoutingConfig.DEFAULT_MIN_ROUTE_TIME_SEC,
     service_time_sec=RoutingConfig.DEFAULT_SERVICE_TIME_SEC,
+    matrix=_UNSET,
 ):
     trees = sorted(
         Tree.objects.filter(dataset=dataset, is_active=True),
@@ -39,7 +44,8 @@ def estimate_fleet_from_cache(
     if len(trees) < 2:
         return None
 
-    matrix = OSRMCostMatrixBuilder().get_cached(trees)
+    if matrix is _UNSET:
+        matrix = OSRMCostMatrixBuilder().get_cached(trees)
     if matrix is None:
         return None
 

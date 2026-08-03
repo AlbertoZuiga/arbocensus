@@ -686,6 +686,37 @@ def test_fleet_estimate_cache_miss_returns_null(make_dataset_with_trees, monkeyp
     fetch.assert_not_called()
 
 
+def test_fleet_estimate_loads_matrix_once(make_dataset_with_trees, monkeypatch):
+    from apps.datasets.models import DistanceMatrix
+    from apps.optimization.cost_matrix import OSRMCostMatrixBuilder
+
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    builder = OSRMCostMatrixBuilder()
+    sorted_trees = sorted(trees, key=lambda tree: tree.id)
+    DistanceMatrix.objects.create(
+        dataset=dataset,
+        source_hash=builder._compute_hash(sorted_trees),
+        matrix_data=[[0, 5], [5, 0]],
+        dimension=2,
+    )
+    original_get_cached = OSRMCostMatrixBuilder.get_cached
+    calls = []
+
+    def counting_get_cached(self, trees):
+        calls.append(1)
+        return original_get_cached(self, trees)
+
+    monkeypatch.setattr(OSRMCostMatrixBuilder, "get_cached", counting_get_cached)
+
+    response = _client("admin").get(
+        "/api/optimization/estimate/", {"dataset": str(dataset.id)}
+    )
+
+    assert response.status_code == 200
+    assert isinstance(response.data["n_estimated"], int)
+    assert len(calls) == 1
+
+
 def test_fleet_estimate_rejected_for_non_admin(make_dataset_with_trees):
     dataset, _ = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
 

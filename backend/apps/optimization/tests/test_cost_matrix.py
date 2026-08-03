@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 from urllib.parse import unquote
 
 import numpy as np
@@ -91,6 +92,60 @@ def test_cache_hit_skips_osrm(requests_mock, make_dataset_with_trees):
 
     assert adapter.call_count == 0
     np.testing.assert_array_equal(matrix, np.array([[0, 5], [5, 0]], dtype=float))
+
+
+def test_stale_lookup_does_not_load_matrix_data(
+    make_dataset_with_trees, django_assert_num_queries
+):
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    builder = OSRMCostMatrixBuilder()
+    sorted_trees = sorted(trees, key=lambda tree: tree.id)
+    source_hash = builder._compute_hash(sorted_trees)
+    DistanceMatrix.objects.create(
+        dataset=dataset,
+        source_hash="stale-hash",
+        matrix_data=[[0, 5], [5, 0]],
+        dimension=2,
+    )
+
+    with django_assert_num_queries(1):
+        assert builder._lookup_cache(dataset, source_hash) is None
+
+    DistanceMatrix.objects.filter(dataset=dataset).update(source_hash=source_hash)
+
+    with django_assert_num_queries(2):
+        matrix = builder._lookup_cache(dataset, source_hash)
+
+    np.testing.assert_array_equal(matrix, np.array([[0, 5], [5, 0]], dtype=float))
+
+
+def test_build_skips_fetch_when_cache_written_concurrently(
+    make_dataset_with_trees, monkeypatch
+):
+    dataset, trees = make_dataset_with_trees([(-70.65, -33.45), (-70.66, -33.46)])
+    builder = OSRMCostMatrixBuilder()
+    sorted_trees = sorted(trees, key=lambda tree: tree.id)
+    source_hash = builder._compute_hash(sorted_trees)
+
+    def fetch_and_write_like_other_worker(fetch_trees, timer=None):
+        DistanceMatrix.objects.update_or_create(
+            dataset=dataset,
+            defaults={
+                "source_hash": source_hash,
+                "matrix_data": [[0, 5], [5, 0]],
+                "dimension": 2,
+            },
+        )
+        return np.array([[0, 5], [5, 0]], dtype=float)
+
+    fetch = MagicMock(side_effect=fetch_and_write_like_other_worker)
+    monkeypatch.setattr(builder, "_fetch_from_osrm", fetch)
+
+    first = builder.build(trees)
+    second = builder.build(trees)
+
+    assert fetch.call_count == 1
+    np.testing.assert_array_equal(second, first)
 
 
 def test_fetch_rejects_dataset_over_matrix_dimension():
