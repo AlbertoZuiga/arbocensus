@@ -510,45 +510,12 @@ $4{,}7$\,\% menos de caminata, de un 93\,\% de ocupación media en lugar de un 9
 residual menos patológica es un intercambio favorable, aunque el margen es más estrecho de lo que
 sugiere la comparación contra un \textit{baseline} sin refinar.
 
-Comando reproducible (entorno \texttt{docker-compose.prod.yml}, sobre el mismo \textit{dataset} de
-la Sección~\ref{sec:metricas-calidad}):
-
-\begin{verbatim}
-docker compose -f docker-compose.prod.yml run --rm backend \
-  python manage.py baseline_postpass \
-    --dataset reference-n1607 \
-    --strategy spatial_term --seeds 42,43,44 \
-    --csv /results/greedy-postpass-20260726-ortools.csv
-
-docker compose -f docker-compose.prod.yml run --rm backend \
-  python manage.py greedy_baseline \
-    --dataset 8c827643-dfa8-5f4a-8d57-25766d005fbd \
-    --service-time 2 --t-max 3 \
-    --csv /results/greedy-postpass-20260726-greedy-raw.csv
-
-docker compose -f docker-compose.prod.yml run --rm backend \
-  python manage.py greedy_baseline \
-    --dataset 8c827643-dfa8-5f4a-8d57-25766d005fbd \
-    --service-time 2 --t-max 3 --postpass \
-    --csv /results/greedy-postpass-20260726-greedy-postpass.csv
-\end{verbatim}
-
-\begin{sloppypar}
-Los datos crudos de las tres columnas se conservan en el repositorio como
-\texttt{docs/experiments/greedy-postpass-20260726-ortools.csv}, \texttt{-greedy-raw.csv} y
-\texttt{-greedy-postpass.csv}, y el análisis completo del ciclo ---con el criterio de comparación
-fijado antes de ejecutar los tres brazos, es decir, las tres variantes que el experimento
-contrasta--- en \texttt{docs/experiments/greedy-postpass-20260726.md}. Los tres CSV contienen las
-métricas agregadas de cada brazo. Las cifras por ruta de las dos columnas del \textit{greedy} ---el
-desglose de árboles y desplazamiento de cada ruta, y el tiempo de cómputo del heurístico--- las
-imprime \texttt{greedy\_baseline} junto con esas métricas; las de la columna de \textit{OR-Tools}
----saturación máxima y ruta más pequeña--- no quedan en el CSV, que consolida una fila por semilla,
-y re-derivarlas exige volver a correr la instancia con \texttt{route\_audit}, que sí emite una fila
-por ruta. El heurístico es determinista ---no consume aleatoriedad---, por lo que cada variante se
-ejecuta una sola vez y no requiere repeticiones con semillas distintas; el \textit{dataset} es la
-instancia \texttt{reference-n1607} congelada en \texttt{docs/experiments/instances/}, cuyos
-identificadores son función pura del archivo y por lo tanto reproducibles en cualquier máquina.
-\end{sloppypar}
+El comando reproducible de los tres brazos, sus datos crudos y el análisis del ciclo ---con el
+criterio de comparación fijado antes de ejecutarlos--- se documentan en el
+\hyperref[anx:comandos]{Anexo 3} (\texttt{greedy-postpass-20260726}). El heurístico es determinista,
+por lo que cada variante se ejecuta una sola vez; el \textit{dataset} es la instancia
+\texttt{reference-n1607} congelada en \texttt{docs/experiments/instances/}, cuyos identificadores
+son función pura del archivo y por lo tanto reproducibles en cualquier máquina.
 
 % ---- 4.1.3 -----------------------------------------------------
 \subsection{Calidad geográfica de rutas y comparación de estrategias}

@@ -512,6 +512,42 @@ docker compose -f docker-compose.prod.yml run --rm backend \
   \end{tabularx}
 \end{table}
 
+La comparación de la Sección~\ref{sec:comparacion-greedy} ---\textit{OR-Tools} contra las dos
+variantes del heurístico, sobre la misma instancia congelada y la misma matriz de costos--- se
+reproduce con:
+
+\begin{verbatim}
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py baseline_postpass \
+    --dataset reference-n1607 \
+    --strategy spatial_term --seeds 42,43,44 \
+    --csv /results/greedy-postpass-20260726-ortools.csv
+
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py greedy_baseline \
+    --dataset 8c827643-dfa8-5f4a-8d57-25766d005fbd \
+    --service-time 2 --t-max 3 \
+    --csv /results/greedy-postpass-20260726-greedy-raw.csv
+
+docker compose -f docker-compose.prod.yml run --rm backend \
+  python manage.py greedy_baseline \
+    --dataset 8c827643-dfa8-5f4a-8d57-25766d005fbd \
+    --service-time 2 --t-max 3 --postpass \
+    --csv /results/greedy-postpass-20260726-greedy-postpass.csv
+\end{verbatim}
+
+\begin{sloppypar}
+Los datos crudos de los tres brazos se conservan en
+\texttt{docs/experiments/greedy-postpass-20260726-ortools.csv}, \texttt{-greedy-raw.csv} y
+\texttt{-greedy-postpass.csv}, y el análisis completo del ciclo ---con el criterio de comparación
+fijado antes de ejecutar los tres brazos--- en \texttt{docs/experiments/greedy-postpass-20260726.md}.
+Los tres CSV consolidan una fila por semilla con las métricas agregadas de cada brazo. El desglose
+por ruta del heurístico ---árboles, desplazamiento y tiempo de cómputo--- lo imprime
+\texttt{greedy\_baseline} junto con esas métricas; el de \textit{OR-Tools} ---saturación máxima y
+ruta más pequeña--- no queda en el CSV y se re-deriva con \texttt{route\_audit}, que emite una fila
+por ruta.
+\end{sloppypar}
+
 \anexo{4}{Perfil de rendimiento, grilla de variantes y auditoría de robustez}{Perfil de rendimiento, grilla de variantes y auditoría de robustez}
 \label{anx:grilla-variantes}
 
