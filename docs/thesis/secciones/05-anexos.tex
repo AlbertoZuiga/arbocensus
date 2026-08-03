@@ -1283,12 +1283,9 @@ que la Sección~\ref{sec:verificacion} resume.
   \end{figure}%
 }
 
-Este anexo recorre el flujo completo de la plataforma sobre un \textit{dataset} de demostración de
-288 árboles seleccionados por polígono en Providencia, primero desde la perspectiva del
-administrador y luego desde la del censista en terreno. Las capturas complementan a las incluidas
-en la Sección~\ref{sec:ui}, que muestran el panel de optimización
-(Ilustración~\ref{fig:ui_optimization}) y el portal del censista
-(Ilustración~\ref{fig:ui_surveyor}).
+Este anexo recorre el flujo completo de la plataforma descrito en la Sección~\ref{sec:ui}, sobre un
+\textit{dataset} de demostración de 288 árboles seleccionados por polígono en Providencia, primero
+desde la perspectiva del administrador y luego desde la del censista en terreno.
 
 \subsection*{Flujo del administrador}
 
@@ -1373,10 +1370,14 @@ optimización}{Formulario de configuración de la optimización.}{fig:anx_opt_fo
 \capturaanexo{flow-14-optimizacion-en-progreso.png}{Optimización en progreso}{Optimización en
 progreso.}{fig:anx_opt_progreso}
 
-Terminada la corrida, las candidatas a plan se listan ordenadas por el criterio de selección, cada
-una con sus rutas, caminata, balance de carga y la caminata adicional respecto de la recomendada
-(Ilustración~\ref{fig:anx_candidatas}); el detalle del trabajo compara las estrategias de búsqueda
-ejecutadas (Ilustración~\ref{fig:anx_job}).
+Terminada la corrida, el panel de optimización muestra la solución recomendada sobre la red
+peatonal (Ilustración~\ref{fig:ui_optimization}) y las candidatas a plan se listan ordenadas por el
+criterio de selección, cada una con sus rutas, caminata, balance de carga y la caminata adicional
+respecto de la recomendada (Ilustración~\ref{fig:anx_candidatas}); el detalle del trabajo compara
+las estrategias de búsqueda ejecutadas (Ilustración~\ref{fig:anx_job}).
+
+\capturaanexo{flow-16-optimizacion-candidatas.png}{Detalle de un \textit{dataset}: panel de
+optimización}{Detalle de un \textit{dataset}: panel de optimización.}{fig:ui_optimization}
 
 \capturaanexo{flow-16b-optimizacion-candidatas-detalle.png}{Candidatas a plan con sus
 métricas}{Candidatas a plan con sus métricas.}{fig:anx_candidatas}
@@ -1440,12 +1441,17 @@ censo con trazado de rutas.}{fig:anx_avance_trazado}
 
 Las vistas del censista son \textit{mobile-first} y se presentan aquí en pares. Tras el acceso,
 el selector de rutas lista las rutas del plan vigente asignadas al usuario
-(Ilustración~\ref{fig:anx_cen_login}); la vista general de la ruta activa corresponde a la
-Ilustración~\ref{fig:ui_surveyor} de la Sección~\ref{sec:ui}.
+(Ilustración~\ref{fig:anx_cen_login}); la vista general de la ruta activa
+(Ilustración~\ref{fig:ui_surveyor}) presenta el mapa con las paradas numeradas, la parada activa
+---aquí dentro del radio de proximidad («en rango»), con el registro habilitado--- y la lista de
+paradas con su estado.
 
 \capturamovil{flow-25-login-movil.png}{flow-27-censista-selector-rutas.png}{Acceso móvil y selector
 de rutas}{Acceso móvil (izquierda) y selector de rutas del censista
 (derecha).}{fig:anx_cen_login}
+
+\capturaanexo{flow-27b-censista-vista-general.png}{Portal del censista en vista
+\textit{mobile}}{Portal del censista en vista \textit{mobile}.}{fig:ui_surveyor}
 
 El registro de un árbol abre una hoja con los estados posibles y la captura fotográfica
 (Ilustración~\ref{fig:anx_cen_registro}); la fotografía se toma con la cámara del dispositivo y se
