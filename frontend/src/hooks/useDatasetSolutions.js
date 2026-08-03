@@ -6,6 +6,6 @@ export function useDatasetSolutions(datasetId, hasActiveJob = false) {
     queryKey: ["dataset-solutions", datasetId],
     queryFn: () => fetchSolutionsForDataset(datasetId),
     enabled: !!datasetId,
-    refetchInterval: () => (hasActiveJob ? 3000 : false),
+    refetchInterval: (query) => (hasActiveJob && !query.state.error ? 3000 : false),
   });
 }

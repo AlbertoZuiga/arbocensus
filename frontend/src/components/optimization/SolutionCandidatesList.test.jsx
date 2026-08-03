@@ -8,6 +8,7 @@ import {
   fetchSolutionsForDataset,
   publishSolution,
 } from "@/api/optimization.js";
+import { toast } from "@/store/toastStore.js";
 
 vi.mock("@/api/optimization.js", () => ({
   fetchSolutionsForDataset: vi.fn(),
@@ -146,18 +147,32 @@ describe("SolutionCandidatesList", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides candidates beyond the first three behind a toggle", async () => {
+  it("hides candidates beyond the first six behind a toggle", async () => {
     fetchSolutionsForDataset.mockResolvedValue(
-      ["s1", "s2", "s3", "s4"].map((id) => ({ ...baseSolution, id })),
+      ["s1", "s2", "s3", "s4", "s5", "s6", "s7"].map((id) => ({
+        ...baseSolution,
+        id,
+      })),
     );
 
     renderList({ onViewSolution: vi.fn() });
 
     const toggle = await screen.findByRole("button", { name: "Ver 1 más" });
-    expect(screen.getAllByText("Ver en el mapa")).toHaveLength(3);
+    expect(screen.getAllByText("Ver en el mapa")).toHaveLength(6);
 
     fireEvent.click(toggle);
-    expect(screen.getAllByText("Ver en el mapa")).toHaveLength(4);
+    expect(screen.getAllByText("Ver en el mapa")).toHaveLength(7);
+  });
+
+  it("shows the card with a placeholder while an active sweep has no solutions yet", async () => {
+    fetchSolutionsForDataset.mockResolvedValue([]);
+
+    renderList({ hasActiveJob: true });
+
+    expect(
+      await screen.findByText("Esta corrida todavía no tiene soluciones."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Candidatos a plan")).toBeInTheDocument();
   });
 
   it("hides solutions from another sweep when viewedConfig is given", async () => {
@@ -230,5 +245,21 @@ describe("SolutionCandidatesList", () => {
     expect(confirm).toHaveBeenCalled();
     expect(publishSolution).not.toHaveBeenCalled();
     confirm.mockRestore();
+  });
+
+  it("shows an error toast when publishing fails", async () => {
+    fetchSolutionsForDataset.mockResolvedValue([baseSolution]);
+    publishSolution.mockRejectedValue(new Error("boom"));
+    const errorToast = vi.spyOn(toast, "error");
+
+    renderList();
+
+    fireEvent.click(await screen.findByText("Publicar"));
+    await waitFor(() =>
+      expect(errorToast).toHaveBeenCalledWith(
+        expect.stringContaining("No se pudo publicar la solución"),
+      ),
+    );
+    errorToast.mockRestore();
   });
 });

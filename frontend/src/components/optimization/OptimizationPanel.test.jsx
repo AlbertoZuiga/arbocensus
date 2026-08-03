@@ -49,7 +49,7 @@ describe("OptimizationPanel", () => {
     renderPanel();
 
     expect(
-      await screen.findByText("Optimizando… 1 de 2 configuraciones listas."),
+      await screen.findByText("Optimizando… 1 de 2 soluciones listas."),
     ).toBeInTheDocument();
   });
 
@@ -63,22 +63,26 @@ describe("OptimizationPanel", () => {
     expect(screen.queryByText(/Optimizando…/)).not.toBeInTheDocument();
   });
 
-  it("flags a failed job in the sweep", async () => {
+  it("keeps the progress counter alongside the failure notice", async () => {
     fetchJobs.mockResolvedValue([
       {
-        id: "j1",
+        id: "j4",
         config: "c1",
         status: "failed",
         error_message: "OSRM table request timed out",
         solution_ids: {},
       },
+      { id: "j3", config: "c1", status: "completed", solution_ids: {} },
+      { id: "j2", config: "c1", status: "completed", solution_ids: {} },
+      { id: "j1", config: "c1", status: "completed", solution_ids: {} },
     ]);
     renderPanel();
 
     expect(
-      await screen.findByText(
-        "Una de las configuraciones falló; puede faltar una solución.",
-      ),
+      await screen.findByText(/Optimizando… 3 de 4 soluciones listas\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/1 corridas fallaron; pueden faltar soluciones\./),
     ).toBeInTheDocument();
   });
 
