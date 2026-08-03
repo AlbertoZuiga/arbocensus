@@ -430,35 +430,9 @@ propia y, además, pone precio a la partición misma.
 Se emplearon las tres áreas del censo histórico con mayor arbolado y su unión, congeladas como
 instancias versionadas en el repositorio. Las tres áreas son disjuntas por identidad de árbol
 ---con $157 + 72 + 43 = 272$ igual al cardinal de la unión---, de modo que la unión y la suma de
-las partes resuelven exactamente el mismo arbolado. La Tabla~\ref{tab:areas-instancias} las
-describe; el diámetro es la mayor distancia de \textit{haversine} entre dos árboles de la
-instancia.
-
-\begin{table}[H]
-  \centering
-  \caption{Instancias de área real y su unión, con el diámetro de cada una.}
-  \label{tab:areas-instancias}
-  \begin{tabularx}{\textwidth}{Xll}
-    \toprule
-    Instancia &
-      $n$ &
-      Diámetro \\
-    \midrule
-    \texttt{area-26-n157}         &
-      157 &
-      $1\,349$\,m \\
-    \texttt{area-27-n72}          &
-      72  &
-      $979$\,m \\
-    \texttt{area-29-n43}          &
-      43  &
-      $417$\,m \\
-    \texttt{areas-26-27-29-n272}  &
-      272 &
-      $2\,685$\,m \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+las partes resuelven exactamente el mismo arbolado. Sus diámetros ---la mayor distancia de
+\textit{haversine} entre dos árboles de la instancia--- son de $1\,349$, $979$ y $417$\,m, frente a
+los $2\,685$\,m de la unión \texttt{areas-26-27-29-n272}.
 
 Sobre cada instancia se ejecutaron los mismos tres brazos de la
 Sección~\ref{sec:comparacion-greedy} ---se llama brazo a cada método comparado bajo condiciones
@@ -620,46 +594,9 @@ quedan dentro de la banda $[7\,200,\ 9\,000]$ en que no se paga nada.
 
 La relación entre el régimen geográfico y los auto-cruces que analiza la
 Sección~\ref{sec:discusion-calidad} se midió en una corrida propia: configuración de producción,
-tres semillas por instancia, el límite de \textit{solver} de la heurística de producción ---94\,s
-en \texttt{area-29-n43}, 120\,s en las demás instancias--- y auto-cruces contados sobre el trazado
-real de calles. La Tabla~\ref{tab:areas-crossings}
-resume la serie junto a la corrida de referencia unificada de la
-Sección~\ref{sec:metricas-calidad}, medida el mismo día con la misma configuración y semillas.
-
-\begin{table}[H]
-  \centering
-  \caption{Auto-cruces sobre calle por instancia bajo la configuración de producción.}
-  \label{tab:areas-crossings}
-  \begin{tabularx}{\textwidth}{lXXX}
-    \toprule
-    Instancia &
-      $k$ &
-      Auto-cruces por solución (media de 3 semillas) &
-      Auto-cruces por ruta \\
-    \midrule
-    \texttt{area-26-n157} &
-      3 &
-      $4{,}7$ (2--6) &
-      $1{,}56$ \\
-    \texttt{area-27-n72} &
-      2 &
-      $3{,}0$ (2--4) &
-      $1{,}50$ \\
-    \texttt{area-29-n43} &
-      1 &
-      $1{,}3$ (0--3) &
-      $1{,}33$ \\
-    \texttt{areas-26-27-29-n272} &
-      5 &
-      $7{,}7$ (6--10) &
-      $1{,}53$ \\
-    \texttt{reference-n1607} &
-      25 &
-      $31{,}3$ (24--37) &
-      $1{,}25$ \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+tres semillas por instancia y auto-cruces contados sobre el trazado real de calles, junto a la
+corrida de referencia unificada de la Sección~\ref{sec:metricas-calidad}, medida el mismo día con
+la misma configuración y semillas.\footnote{Ver \hyperref[anx:crossings-areas]{Anexo 4}.}
 
 Las soluciones sobre áreas reales no están libres de auto-cruces ---solo una de las doce corridas
 de área registró cero---, aunque sus conteos absolutos son bajos: entre 0 y 6 por solución
@@ -712,9 +649,8 @@ reporta igual. La Tabla~\ref{tab:precio-particion} enfrenta ambas magnitudes.
   \end{tabularx}
 \end{table}
 
-Particionar no cuesta desplazamiento en este territorio. Las tres áreas están separadas ---diámetros
-de $1\,349$, $979$ y $417$\,m frente a $2\,685$\,m de la unión---, de modo que apenas existe ruta
-que gane cruzando el borde entre ellas, y la ventaja de la unión no es geométrica sino de llenado:
+Particionar no cuesta desplazamiento en este territorio. Las tres áreas están separadas entre sí,
+de modo que apenas existe ruta que gane cruzando el borde entre ellas, y la ventaja de la unión no es geométrica sino de llenado:
 con 272 árboles el \textit{solver} arma cinco jornadas de aproximadamente $8\,400$\,s en lugar de
 seis de unos $6\,800$\,s, de las cuales tres quedarían bajo $T_{\min}$.
 
@@ -870,88 +806,8 @@ disyunciones penalizadas antes de encontrar una asignación completa.
 Confirmada \texttt{spatial\_term}, se ejecutó sobre ella una grilla de seis variantes operacionales
 ---el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
 combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), sobre el
-\textit{dataset} de $n=1\,607$, con el mismo límite de 120\,s y tres semillas
-(Tabla~\ref{tab:grilla-spatial}).
-
-\begin{table}[H]
-  \centering
-  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term}.}
-  \label{tab:grilla-spatial}
-  \small
-  \begin{tabularx}{\textwidth}{rrXXXXXXX}
-    \toprule
-    Serv. [min] &
-      $T_{\max}$ [h] &
-      $k$ &
-      Balance &
-      $\sigma(T)$ [s] &
-      Descart. &
-      Des\-plaz. [s] &
-      $\sum r_{\max}$ [m] &
-      Solap.\slash ruta \\
-    \midrule
-    1 &
-      2 &
-      23{,}0 &
-      0{,}996 &
-      7   &
-      0     &
-      68\,410 &
-      20\,937 &
-      109{,}2 \\
-      \addlinespace
-    1 &
-      3 &
-      16{,}0 &
-      0{,}835 &
-      601 &
-      0     &
-      59\,491 &
-      19\,905 &
-      146{,}1 \\
-      \addlinespace
-    2 &
-      2 &
-      36{,}0 &
-      0{,}998 &
-      3   &
-      1{,}0 &
-      65\,727 &
-      16\,917 &
-      82{,}8  \\
-      \addlinespace
-    2 &
-      3 &
-      25{,}0 &
-      0{,}833 &
-      606 &
-      0     &
-      60\,588 &
-      19\,588 &
-      75{,}2  \\
-      \addlinespace
-    3 &
-      2 &
-      49{,}0 &
-      0{,}998 &
-      2   &
-      2{,}0 &
-      63\,146 &
-      17\,347 &
-      55{,}8  \\
-      \addlinespace
-    3 &
-      3 &
-      34{,}0 &
-      0{,}836 &
-      522 &
-      0     &
-      61\,611 &
-      24\,267 &
-      79{,}9  \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+\textit{dataset} de $n=1\,607$, con el mismo límite de 120\,s y tres
+semillas.\footnote{Ver \hyperref[anx:grilla-spatial]{Anexo 4}.}
 
 La estructura de la grilla es la ya descrita para el compromiso entre balance y costo:
 $T_{\max}=2$\,h fuerza un balance $\approx 1{,}0$ y dispara la flota ($23 \rightarrow 36
@@ -1127,7 +983,7 @@ evidencia recogida sobre él.
     \item Cobertura bajo presupuesto temporal estrecho: la cobertura total no está garantizada a
         priori cuando la carga de servicio excede la capacidad de la flota bajo $T_{\max}$: las
         configuraciones con $T_{\max}=2$\,h y servicio alto descartan uno o dos árboles de forma
-        consistente (Tabla~\ref{tab:grilla-spatial}); garantizar cobertura total exige
+        consistente (Sección~\ref{sec:comparacion-estrategias}); garantizar cobertura total exige
         $T_{\max}=3$\,h bajo esas condiciones.
   \end{enumerate}
 
@@ -1302,7 +1158,8 @@ una reserva de protocolo que corresponde declarar.
 
 La cobertura del censo (CA-01) es total bajo la configuración censal de referencia; el criterio
 deja de cumplirse únicamente cuando la carga de servicio excede la capacidad de la flota bajo
-$T_{\max}=2$\,h, frontera caracterizada en la Tabla~\ref{tab:grilla-spatial}. La jornada máxima
+$T_{\max}=2$\,h, frontera caracterizada en la grilla de variantes operacionales de la
+Sección~\ref{sec:comparacion-estrategias}. La jornada máxima
 (CA-02) se respeta sin excepción, por construcción del modelo. El balance de carga (CA-03) queda
 dentro del criterio, con un índice de $0{,}829$ a $0{,}837$ frente al $0{,}80$ exigido; el índice
 acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto equitativo de
@@ -1343,7 +1200,8 @@ Sección~\ref{sec:atributos-calidad} son afirmaciones más amplias sobre el prod
 declarar con qué grado y con qué salvedades se sostienen.
 
 La robustez del plan se sostiene con una excepción caracterizada: sobre la grilla de variantes
-operacionales (Tabla~\ref{tab:grilla-spatial}), cuatro de las seis combinaciones mantienen
+operacionales (Sección~\ref{sec:comparacion-estrategias}), cuatro de las seis combinaciones
+mantienen
 cobertura total y las dos de $T_{\max}=2$\,h con servicio alto descartan uno y dos árboles,
 reportándolo de forma explícita; el balance supera $0{,}80$ en las seis. El atributo se cumple en
 todo el rango salvo en su borde de capacidad, documentado junto con la configuración que lo evita.

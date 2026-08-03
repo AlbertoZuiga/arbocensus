@@ -1030,6 +1030,140 @@ debajo de los $9\,000$\,s del objetivo superior, con duraciones medias por semil
 $8\,121$ y $8\,936$\,s.
 
 \phantomsection
+\subsubsection*{Grilla operacional de \texttt{spatial\_term}}
+\label{anx:grilla-spatial}
+
+La Tabla~\ref{tab:grilla-spatial} detalla la grilla de seis variantes operacionales que la
+Sección~\ref{sec:comparacion-estrategias} resume, ejecutada con la estrategia
+\texttt{spatial\_term} vigente y el límite de \textit{solver} de 120\,s; no debe confundirse con
+la grilla del perfilamiento (Tabla~\ref{tab:grilla-variantes}), anterior al régimen vigente.
+
+\begin{table}[H]
+  \centering
+  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term}.}
+  \label{tab:grilla-spatial}
+  \small
+  \begin{tabularx}{\textwidth}{rrXXXXXXX}
+    \toprule
+    Serv. [min] &
+      $T_{\max}$ [h] &
+      $k$ &
+      Balance &
+      $\sigma(T)$ [s] &
+      Descart. &
+      Des\-plaz. [s] &
+      $\sum r_{\max}$ [m] &
+      Solap.\slash ruta \\
+    \midrule
+    1 &
+      2 &
+      23{,}0 &
+      0{,}996 &
+      7   &
+      0     &
+      68\,410 &
+      20\,937 &
+      109{,}2 \\
+      \addlinespace
+    1 &
+      3 &
+      16{,}0 &
+      0{,}835 &
+      601 &
+      0     &
+      59\,491 &
+      19\,905 &
+      146{,}1 \\
+      \addlinespace
+    2 &
+      2 &
+      36{,}0 &
+      0{,}998 &
+      3   &
+      1{,}0 &
+      65\,727 &
+      16\,917 &
+      82{,}8  \\
+      \addlinespace
+    2 &
+      3 &
+      25{,}0 &
+      0{,}833 &
+      606 &
+      0     &
+      60\,588 &
+      19\,588 &
+      75{,}2  \\
+      \addlinespace
+    3 &
+      2 &
+      49{,}0 &
+      0{,}998 &
+      2   &
+      2{,}0 &
+      63\,146 &
+      17\,347 &
+      55{,}8  \\
+      \addlinespace
+    3 &
+      3 &
+      34{,}0 &
+      0{,}836 &
+      522 &
+      0     &
+      61\,611 &
+      24\,267 &
+      79{,}9  \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\phantomsection
+\subsubsection*{Serie de auto-cruces sobre calle por instancia}
+\label{anx:crossings-areas}
+
+La Tabla~\ref{tab:areas-crossings} detalla la serie descriptiva de auto-cruces sobre el trazado
+real de calles que la Sección~\ref{sec:areas-reales} resume: configuración de producción, tres
+semillas por instancia y el límite de \textit{solver} de la heurística de producción ---94\,s en
+\texttt{area-29-n43}, 120\,s en las demás instancias---, junto a la corrida de referencia unificada
+de la Sección~\ref{sec:metricas-calidad}.
+
+\begin{table}[H]
+  \centering
+  \caption{Auto-cruces sobre calle por instancia bajo la configuración de producción.}
+  \label{tab:areas-crossings}
+  \begin{tabularx}{\textwidth}{lXXX}
+    \toprule
+    Instancia &
+      $k$ &
+      Auto-cruces por solución (media de 3 semillas) &
+      Auto-cruces por ruta \\
+    \midrule
+    \texttt{area-26-n157} &
+      3 &
+      $4{,}7$ (2--6) &
+      $1{,}56$ \\
+    \texttt{area-27-n72} &
+      2 &
+      $3{,}0$ (2--4) &
+      $1{,}50$ \\
+    \texttt{area-29-n43} &
+      1 &
+      $1{,}3$ (0--3) &
+      $1{,}33$ \\
+    \texttt{areas-26-27-29-n272} &
+      5 &
+      $7{,}7$ (6--10) &
+      $1{,}53$ \\
+    \texttt{reference-n1607} &
+      25 &
+      $31{,}3$ (24--37) &
+      $1{,}25$ \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\phantomsection
 \subsubsection*{Auditoría de robustez metodológica --- detalle}
 \label{anx:auditoria-robustez}
 
