@@ -1285,39 +1285,27 @@ para activación y su código permanece como opción experimental no activa.
 De las tres preguntas que abren el capítulo, las dos primeras ---la calidad del plan contra los
 criterios comprometidos y su mejora sobre la alternativa trivial--- se responden en la
 Sección~\ref{sec:cumplimiento-criterios}. La tercera, el régimen en que ambas respuestas se
-sostienen, es la que la serie de experimentos convierte en el hallazgo conceptual del capítulo: no
-era la hipótesis de partida y reorienta el problema.
+sostienen, es el hallazgo conceptual del capítulo: no era la hipótesis de partida y reorienta el
+problema.
 
-La calidad geométrica de las rutas ---su compacidad, su solapamiento mutuo y sus auto-cruces--- no
-es una propiedad del presupuesto de cómputo sino del régimen geográfico de la instancia y de la
-forma de la función objetivo. Aumentar el tiempo del \textit{solver} de 120 a 180\,s no cambia la
-geometría; redirigir el objetivo blando superior sí la cambia de forma drástica, y hacerlo mejora la
-geometría en el conjunto agregado a la vez que la empeora en las áreas individuales. Dicho de otro
-modo: no existe una configuración de la función objetivo que sea la correcta para todo tamaño y toda
-densidad, y la búsqueda de una ---la hipótesis con que se abrió el barrido de configuración por
-algoritmo--- queda refutada con datos.
+La calidad geométrica de las rutas no es una propiedad del presupuesto de cómputo sino del régimen
+geográfico de la instancia y de la forma de la función objetivo: aumentar el tiempo del
+\textit{solver} no cambia la geometría, y redirigir el objetivo blando superior la mejora en el
+conjunto agregado a la vez que la empeora en las áreas individuales. No existe una configuración de
+la función objetivo correcta para todo tamaño y toda densidad, y la búsqueda de una ---la hipótesis
+con que se abrió el barrido--- queda refutada con datos.
 
 El corolario operacional es que la unidad correcta del problema es el área de censo individual y no
-el arbolado metropolitano agregado. La serie de auto-cruces sobre calle de la
-Sección~\ref{sec:areas-reales} precisa el alcance de esa ventaja: es de conteo absoluto ---menos
-rutas y, con ellas, un orden de magnitud menos de auto-cruces por solución---, no una geometría por
-ruta intrínsecamente más limpia, porque la tasa por ruta es comparable entre regímenes. Esto
-convierte la segmentación previa por área, que
-la Sección~\ref{sec:posibles-mejoras} documenta como trabajo futuro, en la extensión de mayor
-impacto del sistema, sostenida por el precio medido de la partición y el correlato operativo de las
-instancias más que por la geometría: el motor entrega soluciones con pocos auto-cruces absolutos
-cuando el problema se le entrega en su escala natural.
-
-El argumento dejó de ser solo geométrico cuando se midió sobre las áreas reales
-(Sección~\ref{sec:areas-reales}). Particionar no cuesta caminata en el territorio del censo
-histórico, porque las áreas están suficientemente separadas; cuesta una ruta adicional, tres
-jornadas por debajo de $T_{\min}$ y el triple de cómputo, a cambio de instancias con correlato
-operativo y de una varianza entre repeticiones sustancialmente menor. Esa misma medición expuso el
-límite del \textit{solver} en el otro extremo del rango: en un área de 72 árboles la búsqueda
-entrega dos medias jornadas donde el \textit{greedy} cubre una jornada única, y la instrumentación
-del objetivo muestra que no es un fallo de búsqueda sino el precio vigente ---la partición resulta
-$4{,}2$ veces más barata bajo cotas blandas que no dependen de la instancia---, de modo que el
-margen de mejora pendiente está en hacer esas cotas sensibles a la densidad y no en la búsqueda.
+el arbolado metropolitano agregado. La ventaja es de conteo absoluto ---menos rutas y, con ellas,
+un orden de magnitud menos de auto-cruces por solución---, no una geometría por ruta
+intrínsecamente más limpia, y la medición sobre las áreas reales le puso precio: particionar no
+cuesta caminata en este territorio; cuesta una ruta adicional, tres jornadas por debajo de
+$T_{\min}$ y el triple de cómputo, a cambio de instancias con correlato operativo y menor varianza.
+Esa misma medición expuso el límite del \textit{solver} en el otro extremo del rango: en un área de
+72 árboles la búsqueda entrega dos medias jornadas donde el \textit{greedy} cubre una jornada
+única, y no por fallo de búsqueda sino por el precio vigente de cotas blandas que no dependen de la
+instancia, de modo que el margen de mejora pendiente está en hacerlas sensibles a la densidad. La
+segmentación previa por área queda así como la extensión de mayor impacto del sistema.
 
 \subsection{Cumplimiento de los criterios de aceptación}
 \label{sec:cumplimiento-criterios}
@@ -1326,61 +1314,40 @@ Los seis criterios comprometidos en la Sección~\ref{sec:criterios-aceptacion}, 
 experimento alguno, se contrastan aquí contra lo medido. Cinco se cumplen y el sexto se cumple con
 una reserva de protocolo que corresponde declarar.
 
-La cobertura del censo (CA-01) es total bajo la configuración censal de referencia: las tres
-repeticiones de la corrida de referencia asignan los $1\,607$ árboles a una ruta, sin que el modelo
-active la disyunción que le permitiría descartarlos. El criterio deja de cumplirse únicamente cuando
-la carga de servicio excede la capacidad de la flota bajo $T_{\max}=2$\,h, y esa frontera está
-caracterizada en la Tabla~\ref{tab:grilla-spatial}. La jornada máxima (CA-02) se respeta sin
-excepción: la cota es dura por construcción del modelo. El balance de carga (CA-03) queda dentro
-del criterio, con un índice de $0{,}829$ a $0{,}837$ según la repetición frente al $0{,}80$
-exigido, acompañado de una desviación estándar de $564$\,s equivalente al $5{,}6$\,\% del promedio;
-el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto
-equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
-(CA-04) es en efecto una salida del sistema: el administrador declara la duración de la jornada y el
-tiempo de servicio, y el número de censistas necesarios se deriva de ellos, lo que constituye la
-diferencia funcional más nítida respecto de la planificación manual descrita en la
+La cobertura del censo (CA-01) es total bajo la configuración censal de referencia; el criterio
+deja de cumplirse únicamente cuando la carga de servicio excede la capacidad de la flota bajo
+$T_{\max}=2$\,h, frontera caracterizada en la Tabla~\ref{tab:grilla-spatial}. La jornada máxima
+(CA-02) se respeta sin excepción, por construcción del modelo. El balance de carga (CA-03) queda
+dentro del criterio, con un índice de $0{,}829$ a $0{,}837$ frente al $0{,}80$ exigido; el índice
+acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto equitativo de
+una flota saturada (Sección~\ref{sec:comparacion-greedy}). La flota (CA-04) es en efecto una salida
+del sistema: el administrador declara la jornada y el tiempo de servicio, y el número de censistas
+se deriva de ellos, la diferencia funcional más nítida respecto de la planificación manual de la
 Sección~\ref{sec:estado-actual}.
 
 El costo de planificación (CA-05) se cumple con $123{,}3$\,s de corrida completa sobre la matriz en
 caché, pero su lectura exige una precisión: $120$\,s de esa cifra son el tope configurado del
-\textit{solver} y no una medición de convergencia, de modo que el criterio se satisface por
-construcción mientras el tope se mantenga bajo cinco minutos. Solo los $3{,}3$\,s restantes
----lectura del \textit{dataset}, acierto de caché de la matriz y persistencia de la solución--- son
-tiempo que el sistema podría hacer crecer hasta incumplirlo, y el desglose confirma que no
-lo hace: el $97{,}3$\,\% del tiempo está en la metaheurística y no en la infraestructura que la
-rodea. Lo que sí constituye evidencia sobre la elección del tope es el análisis de sensibilidad de
-la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la mejora alcanzable
-con presupuestos mayores. Con caché fría la corrida completa
-sube a $334{,}6$\,s por la construcción de la matriz contra OSRM, por sobre el umbral de los
-$300$\,s; el criterio se enuncia sobre el caso con caché precisamente porque es el de operación
-normal, pero el primer cálculo de un \textit{dataset} nuevo lo excede y así se reporta.
+\textit{solver}, de modo que el criterio se satisface por construcción mientras el tope se mantenga
+bajo cinco minutos; solo los $3{,}3$\,s restantes son tiempo que el sistema podría hacer crecer
+hasta incumplirlo, y no lo hace. La evidencia sobre la elección del tope es el análisis de
+sensibilidad de la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la
+mejora alcanzable con presupuestos mayores. Con caché fría la corrida sube a $334{,}6$\,s, por
+sobre el umbral: el criterio se enuncia sobre el caso con caché porque es el de operación normal,
+pero el primer cálculo de un \textit{dataset} nuevo lo excede y así se reporta.
 
-La mejora sobre la alternativa trivial (CA-06) se cumple. Sobre la misma instancia congelada, con
-la misma matriz de costos y con el heurístico dotado del mismo post-proceso de resecuenciación
-(Tabla~\ref{tab:comparativa}), el ahorro es de $2\,907$\,s ---un $4{,}7$\,\% del desplazamiento
-total del \textit{baseline} refinado--- y supera la dispersión entre semillas del \textit{solver}
-($1\,538$\,s), de modo que la reducción es atribuible al método y no al azar de la búsqueda. El
-margen es menor que el que sugeriría un contraste ingenuo: alrededor de un tercio de la ventaja
-contra el \textit{greedy} sin refinar es atribuible al post-proceso que solo un lado recibiría
-(Sección~\ref{sec:comparacion-greedy}). Junto al margen subsiste una diferencia cualitativa: el
-\textit{baseline} produce una ruta degenerada de cinco árboles con $9\,466$\,s de caminata y satura
-las jornadas a un promedio del $98$\,\% de $T_{\max}$, mientras que la solución del modelo opera al
-$93$\,\% y su ruta más pequeña visita entre seis y doce árboles; la atenuación de esa patología es
-de grado y no de naturaleza.
-
-El alcance de este veredicto es el de la instancia sobre la que el criterio se comprometió: la
-configuración censal de referencia, cuyo régimen satura la jornada. La evaluación sobre las áreas
-reales (Sección~\ref{sec:areas-reales}) muestra que el margen no se generaliza al régimen no
-saturado: en \texttt{area-27-n72} el \textit{greedy} refinado cubre los 72 árboles en una jornada
-única y la partición del \textit{solver} gasta un $57$\,\% más de caminata, y en
-\texttt{area-29-n43} ambos métodos resuelven el mismo recorrido único. La mejora sobre la
-alternativa trivial es, por tanto, una propiedad del régimen saturado y no un dominio uniforme del
-método. En el régimen de área pequeña la ventaja en desplazamiento deja de ser uniforme ---el
-\textit{solver} gana un $11{,}7$\,\% en \texttt{area-26-n157} y pierde en \texttt{area-27-n72}--- y
-lo que se sostiene es la entrega de jornadas ejecutables ---\texttt{area-26-n157}, con balance de
-$0{,}872$ frente a $0{,}276$ y ninguna jornada sobre el $82$\,\% de $T_{\max}$---, mientras que el
-caso adverso queda diagnosticado como defecto de cotas blandas insensibles a la densidad, con su
-corrección identificada en la Sección~\ref{sec:posibles-mejoras}.
+La mejora sobre la alternativa trivial (CA-06) se cumple. Sobre la misma instancia, con la misma
+matriz y con el heurístico dotado del mismo post-proceso (Tabla~\ref{tab:comparativa}), el ahorro
+es de $2\,907$\,s ---un $4{,}7$\,\%--- y supera la dispersión entre semillas ($1\,538$\,s), de modo
+que la reducción es atribuible al método y no al azar de la búsqueda; alrededor de un tercio de la
+ventaja contra el \textit{greedy} sin refinar es atribuible al post-proceso que solo un lado
+recibiría. Junto al margen subsiste una diferencia cualitativa: el \textit{baseline} produce una
+ruta degenerada de cinco árboles y satura las jornadas al $98$\,\% de $T_{\max}$, mientras que el
+modelo opera al $93$\,\%; la atenuación de esa patología es de grado y no de naturaleza. El alcance
+del veredicto es el del régimen saturado en que el criterio se comprometió: sobre las áreas reales
+el margen no se generaliza ---el \textit{solver} gana un $11{,}7$\,\% en \texttt{area-26-n157} y
+pierde en \texttt{area-27-n72}---, y lo que se sostiene es la entrega de jornadas ejecutables, con
+el caso adverso diagnosticado como defecto de cotas blandas insensibles a la densidad
+(Sección~\ref{sec:posibles-mejoras}).
 
 \subsection{Cumplimiento de los atributos de calidad}
 \label{sec:cumplimiento-atributos}
@@ -1389,48 +1356,31 @@ Los criterios de aceptación fijan umbrales sobre una configuración; los cuatro
 Sección~\ref{sec:atributos-calidad} son afirmaciones más amplias sobre el producto, y conviene
 declarar con qué grado y con qué salvedades se sostienen.
 
-La robustez del plan se sostiene con una excepción caracterizada. Sobre la grilla de variantes
-operacionales bajo la configuración vigente (Tabla~\ref{tab:grilla-spatial}) ---las combinaciones
-de tiempo de servicio y jornada máxima con que puede configurarse una campaña---, las tres variantes
-de $T_{\max}=3$\,h y la de servicio de 1\,min bajo $T_{\max}=2$\,h mantienen cobertura total,
-mientras que las dos restantes ---servicio de 2 y de 3\,min bajo $T_{\max}=2$\,h--- descartan uno y
-dos árboles respectivamente, de forma consistente en las tres semillas, y lo reportan de forma
-explícita en lugar de omitirlo en silencio. El índice de balance supera $0{,}80$ en las seis
-variantes. El atributo se cumple, por tanto, en todo el rango
-salvo en su borde de capacidad, y ese borde está documentado junto con la configuración que lo
-evita: bajo $T_{\max}=3$\,h la cobertura es total con los tres tiempos de servicio.
+La robustez del plan se sostiene con una excepción caracterizada: sobre la grilla de variantes
+operacionales (Tabla~\ref{tab:grilla-spatial}), cuatro de las seis combinaciones mantienen
+cobertura total y las dos de $T_{\max}=2$\,h con servicio alto descartan uno y dos árboles,
+reportándolo de forma explícita; el balance supera $0{,}80$ en las seis. El atributo se cumple en
+todo el rango salvo en su borde de capacidad, documentado junto con la configuración que lo evita.
 
-La operabilidad en terreno es el atributo cuyo cumplimiento esta memoria acredita con menos fuerza,
-y por dos razones distintas. La primera es de alcance de la evidencia: el portal se verificó por
-partes y nunca en una jornada de censo con censistas reales, de modo que lo que se comprueba es que
-el sistema hace lo que su diseño dice, no que resista la calle. La segunda es de grado de
-implementación: el registro sobrevive a pérdidas de conexión momentáneas mediante una cola local,
-pero no se implementó la sincronización diferida robusta ni el almacenamiento de teselas de mapa que
-exigiría una intermitencia prolongada. El atributo se cumple en su forma débil ---no se pierde lo
-registrado ante un corte breve--- y queda pendiente en la fuerte.
+La operabilidad en terreno es el atributo que esta memoria acredita con menos fuerza, por dos
+razones: el portal se verificó por partes y nunca en una jornada con censistas reales, y el
+registro sobrevive a pérdidas de conexión momentáneas pero no a una intermitencia prolongada. El
+atributo se cumple en su forma débil ---no se pierde lo registrado ante un corte breve--- y queda
+pendiente en la fuerte.
 
-La eficiencia de cómputo se cumple en sus dos componentes. Planificar la instancia cuesta
-$123{,}3$\,s de reloj con la matriz en caché, muy por debajo de la cota, y el análisis de
-sensibilidad de la Tabla~\ref{tab:sensibilidad-tl} muestra que ese presupuesto captura la mayor
-parte de la mejora alcanzable: ampliarlo a $180$\,s altera el desplazamiento total en un $0{,}6$\,\%
----por debajo de la dispersión entre semillas--- y no cambia ni el número de rutas ni el balance. La
-salvedad sobre el carácter de tope configurado de esa cifra ya quedó declarada en la
-Sección~\ref{sec:cumplimiento-criterios} y no se repite aquí.
+La eficiencia de cómputo se cumple en sus dos componentes: planificar cuesta $123{,}3$\,s con la
+matriz en caché, muy por debajo de la cota, y ampliar el presupuesto a $180$\,s altera el
+desplazamiento en un $0{,}6$\,\% ---bajo la dispersión entre semillas--- sin cambiar rutas ni
+balance.
 
 La calidad geográfica de las rutas se cumple de forma acotada, y su alcance quedó redefinido por la
-propia experimentación. La métrica sobre la que el atributo se juzga es el número de auto-cruces
-sobre el trazado real de calles, y no la de cuerdas rectas entre paradas consecutivas, porque la
-auditoría de instrumento (Sección~\ref{sec:discusion-calidad}) midió entre ambas una correlación
-débil ($\rho$ de Spearman de $0{,}527$) e invertida en el conjunto de evaluación agregado ($\rho =
--0{,}575$): una mejora en cuerdas no garantiza una mejora en calle. Bajo esa métrica, el único
-componente del \textit{pipeline} que mejora la geometría con evidencia directa es el post-proceso de
+propia experimentación: el atributo se juzga sobre el trazado real de calles, porque la correlación
+de la métrica de cuerdas con la calle es débil e invertida en el conjunto agregado. Bajo esa
+métrica, el único componente con evidencia directa de mejorar la geometría es el post-proceso de
 resecuenciación, que reduce simultáneamente el tiempo de viaje y los auto-cruces en las doce
-instancias de prueba. El resto de los componentes de la función objetivo actúa sobre la geometría de
-forma indirecta y sin evidencia equivalente sobre calle real, de modo que el atributo se sostiene
-sobre ese post-proceso y no sobre el modelo completo. En el régimen de operación real ---el área de
-censo individual--- la serie medida en la Sección~\ref{sec:areas-reales} sitúa el cumplimiento en
-conteos absolutos bajos por solución, con una tasa por ruta comparable a la de la instancia de
-estrés, y no en la ausencia de auto-cruces.
+instancias; el resto del modelo actúa de forma indirecta y sin evidencia equivalente. En el régimen
+de operación real, el cumplimiento se sitúa en conteos absolutos bajos por solución, no en la
+ausencia de auto-cruces.
 
 \subsection{Lo que aportó la metodología}
 
@@ -1463,77 +1413,49 @@ y uno con la adopción de un cambio. Los doce descartes fueron:
 \end{enumerate}
 La conclusión que emerge del conjunto no es que no se encontró nada, sino que la configuración de
 producción ya era la adecuada para su régimen de operación, y que el margen de mejora que se le
-suponía a la función objetivo no existía. Descartar doce alternativas plausibles es un resultado más
-informativo que adoptar la primera que hubiera parecido prometedora.
+suponía a la función objetivo no existía. Descartar doce alternativas plausibles es un resultado
+más informativo que adoptar la primera que hubiera parecido prometedora.
 
 El único cambio adoptado ---el post-proceso de resecuenciación de la Sección~\ref{sec:postpass}---
 refuerza esa lectura, porque no provino de barrer términos del objetivo sino de reparar el
-instrumento de medición. El algoritmo había sido rechazado por empeorar los auto-cruces medidos
-sobre cuerdas rectas; cuando la validación posterior mostró que esa métrica está débilmente
-correlacionada con la geometría real de calles ---y que en el \textit{dataset} de evaluación apunta
-en sentido contrario---, la re-medición sobre el trazado real reveló una mejora simultánea de tiempo
-de viaje y de geometría en las doce instancias de prueba. El aprendizaje metodológico es
-transferible y vale más que el cambio concreto: en una serie experimental larga, auditar el
-instrumento tiene mayor rendimiento esperado que añadir un brazo más al barrido.
+instrumento de medición: el algoritmo había sido rechazado por empeorar los auto-cruces medidos
+sobre cuerdas, y la re-medición sobre el trazado real reveló una mejora simultánea de tiempo de
+viaje y geometría en las doce instancias. El aprendizaje metodológico es transferible y vale más
+que el cambio concreto: en una serie experimental larga, auditar el instrumento tiene mayor
+rendimiento esperado que añadir un brazo más al barrido. El análisis retrospectivo identificó
+cuatro defectos de instrumentación en los ciclos iniciales ---semillas no propagadas, una cota de
+relleno inalcanzable, la métrica de cuerdas y un criterio de degeneración que mezclaba dos
+fenómenos---,\footnote{Ver \hyperref[anx:auditoria-robustez]{Anexo 4}.} cuya corrección se originó
+dentro de la propia serie y no invalida sus conclusiones: de los dieciséis ciclos, uno queda con el
+veredicto impugnado, dos se releyeron con el instrumento corregido sin que cambiara el descarte y
+los demás descansan en criterios ajenos a los defectos detectados.
 
-El análisis retrospectivo de la serie identificó cuatro defectos de instrumentación en los ciclos iniciales
----semillas no propagadas, una cota de relleno inalcanzable, la métrica de auto-cruces sobre cuerdas
-en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos
-distintos---.\footnote{Ver \hyperref[anx:auditoria-robustez]{Anexo 4}.}
-La corrección de estos defectos se originó dentro de la propia serie y no invalida sus conclusiones: de los
-dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el instrumento
-corregido sin que cambiara el descarte final y los demás descansan en criterios
----tiempo de viaje, relleno, balance--- ajenos a los defectos detectados.
-
-Hay un hallazgo transversal a los apartados anteriores que conviene enunciar por separado, porque no
-pertenece a ninguno y explica una decisión de diseño del Capítulo~\ref{cap:diseno}. En casi ningún
-ciclo de la serie apareció un brazo que ganara en todas las instancias a la vez, y el orden entre
-dos brazos se invierte al cambiar la densidad o el tamaño de la instancia. Los apartados anteriores
-muestran cuatro casos de ese patrón: el término espacial compra compacidad y cede tiempo y balance;
-la comparación con el heurístico depende por completo de si el competidor recibe el mismo
-refinamiento; el criterio de decisión sobre áreas reales se cumple en dos de las tres; y el
-coeficiente espacial no ordena las instancias de forma monótona.
-
-Esa ausencia sistemática de un ganador único es la evidencia que descartó fijar un
-\textit{default} único y la que motivó el abanico de seis candidatas con selección lexicográfica que
-describe la Sección~\ref{sec:abanico}: si ninguna combinación domina a las demás en todas las
-instancias, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la
-instancia concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
-El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
-experimental midió.
+Hay un hallazgo transversal que explica una decisión de diseño del Capítulo~\ref{cap:diseno}: en
+casi ningún ciclo apareció un brazo que ganara en todas las instancias a la vez, y el orden entre
+dos brazos se invierte al cambiar la densidad o el tamaño. Esa ausencia sistemática de un ganador
+único es la evidencia que descartó fijar un \textit{default} único y la que motivó el abanico de
+seis candidatas con selección lexicográfica de la Sección~\ref{sec:abanico}: si ninguna combinación
+domina, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la instancia
+concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
 
 \subsection{Alcance y validez de lo concluido}
 
-Las conclusiones anteriores valen dentro de un perímetro que conviene delimitar con precisión, y que
-corresponde al alcance declarado en la Sección~\ref{sec:verificacion} y a las restricciones de la
-Sección~\ref{sec:restricciones}.
-
-Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción del
-diagnóstico geográfico inicial sobre nodos sintéticos de distribución uniforme--- y sobre doce
-instancias reales de entre $43$ y $1\,607$ nodos, con
-densidad controlada; no se emplearon los bancos de referencia de la literatura
-\citep{solomon1987algorithms}, cuyas instancias sintéticas suponen un depósito central y ventanas
-de tiempo, condiciones ajenas al problema de rutas abiertas sobre una red vial real aquí tratado.
-Las comparaciones son internas: contrastan el sistema contra otras configuraciones de sí mismo y
-contra un heurístico de vecino más cercano escrito para este trabajo. La conclusión sobre la unidad
-operativa descansa, además, en la sub-familia más pequeña de la suite: tres áreas de un mismo
-territorio y su unión (Sección~\ref{sec:areas-reales}).
-No hay anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo que las
+Las conclusiones anteriores valen sobre el arbolado real de las dos bases legadas ---con la
+excepción del diagnóstico geográfico inicial sobre nodos sintéticos--- y sobre doce instancias
+reales de entre $43$ y $1\,607$ nodos; no se emplearon los bancos de referencia de la literatura
+\citep{solomon1987algorithms}, cuyas instancias suponen un depósito central y ventanas de tiempo,
+condiciones ajenas al problema aquí tratado. Las comparaciones son internas ---el sistema contra
+otras configuraciones de sí mismo y contra un heurístico escrito para este trabajo--- y la
+conclusión sobre la unidad operativa descansa en la sub-familia más pequeña de la suite. No hay
+anclaje externo ni cota de optimalidad aplicada al resultado principal, de modo que las
 afirmaciones son de mejora relativa y nunca de proximidad al óptimo.
 
-Las cifras absolutas de tiempo provienen de un entorno de medición emulado y no del servidor de
-producción, y aunque el sistema quedó desplegado al cierre de la iteración
-(Sección~\ref{sec:despliegue-produccion}), no fue operado en una jornada real de censo. En
-consecuencia,
-lo verificado es que el producto hace lo que su diseño declara ---en los términos de la
-Sección~\ref{sec:verificacion}--- y no que resuelva en terreno el problema logístico que lo motivó.
-Esa última comprobación queda pendiente y es, de todas las extensiones identificadas, la de mayor
-valor para el proyecto.
-
-Por último, dos reservas de instrumento acompañan a la lectura de la geometría: la mayor parte de
-las cifras de auto-cruces de este capítulo se calcula sobre cuerdas rectas, cuya correspondencia con
-el trazado real está medida y es parcial, y la replicación de los experimentos se obtiene permutando
-el orden de los nodos, lo que acota la varianza entre semillas de una corrida pero no la varianza
-entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez, y ninguna de las
-dos afecta a los criterios de aceptación
----cobertura, jornada, balance, flota y tiempo---, que descansan en magnitudes ajenas a ellas.
+Las cifras absolutas de tiempo provienen de un entorno de medición emulado, y aunque el sistema
+quedó desplegado al cierre de la iteración, no fue operado en una jornada real de censo: lo
+verificado es que el producto hace lo que su diseño declara y no que resuelva en terreno el
+problema logístico que lo motivó. Esa comprobación queda pendiente y es, de todas las extensiones
+identificadas, la de mayor valor para el proyecto. Dos reservas de instrumento acompañan, por
+último, la lectura de la geometría: la mayor parte de las cifras de auto-cruces se calcula sobre
+cuerdas rectas, de correspondencia parcial con el trazado real, y la replicación por permutación
+acota la varianza entre semillas de una corrida pero no la varianza entre corridas. Ninguna de las
+dos afecta a los criterios de aceptación, que descansan en magnitudes ajenas a ellas.
