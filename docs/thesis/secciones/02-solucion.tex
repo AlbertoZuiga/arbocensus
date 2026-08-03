@@ -227,40 +227,29 @@ propiedades.
   \end{tabularx}
 \end{table}
 
-La robustez del plan es alta porque el sistema no se opera bajo una única configuración. Los dos
-parámetros que el administrador fija en cada campaña ---el tiempo de servicio por árbol y la jornada
-máxima--- desplazan el problema entre regímenes de trabajo distintos. Al acortar la jornada o
-alargar el servicio, el trabajo por árbol domina la capacidad de cada ruta y el reparto cambia de
-naturaleza, de modo que un plan correcto bajo una combinación no acredita nada bajo otra. Un
-atributo verificado sobre una sola configuración sería, por eso, una afirmación vacía. Los dos
-componentes de la robustez son los que un censo no puede sacrificar: cobertura y reparto. El reparto
-se observa mediante el índice de balance de carga, definido como el cociente entre la duración de la
-ruta más corta y la de la más larga; esta es la única noción de balance que emplea esta memoria, es
-la que el sistema almacena junto a cada plan y el umbral exigible se fija en el criterio CA-03, que
-esta memoria adopta como exigencia de reparto y no como resultado de una medición previa.
+La robustez del plan es alta porque el sistema no se opera bajo una única configuración: los dos
+parámetros que el administrador fija en cada campaña desplazan el problema entre regímenes de
+trabajo distintos, de modo que un plan correcto bajo una combinación no acredita nada bajo otra.
+Sus dos componentes son los que un censo no puede sacrificar: cobertura y reparto. El reparto se
+observa mediante el índice de balance de carga ---el cociente entre la duración de la ruta más
+corta y la de la más larga---, la única noción de balance que emplea esta memoria; el umbral
+exigible se fija en CA-03 como exigencia de reparto, no como resultado de una medición previa.
 
-La operabilidad en terreno eleva a propiedad del producto las tres exigencias que impone el contexto
-del censista ---pantalla de teléfono como formato primario, recorrido sin desbloqueos repetidos y
-registro que sobrevive a una caída de red---. Ninguna de ellas es una función que el sistema
-ofrezca, sino una condición bajo la que todas sus funciones deben seguir sirviendo. Su prioridad es
-alta porque una observación perdida en terreno no se recupera: la jornada ya terminó y el árbol
-quedó sin dato.
+La operabilidad en terreno eleva a propiedad del producto las tres exigencias del contexto del
+censista; ninguna es una función que el sistema ofrezca, sino una condición bajo la que todas sus
+funciones deben seguir sirviendo. Su prioridad es alta porque una observación perdida en terreno no
+se recupera: la jornada ya terminó y el árbol quedó sin dato.
 
-La eficiencia de cómputo aparece con prioridad media, y no alta, porque la planificación no es una
-interacción sino un encargo: el administrador la despacha y consulta su resultado después. La
-magnitud relevante no es entonces la latencia percibida sino el costo de planificar una campaña,
-acotado por el uso previsto ---la preparación de una jornada, no una consulta interactiva---. A ese
-costo se añade una exigencia de suficiencia: como la búsqueda se corta por tiempo y no por
-convergencia demostrada, el presupuesto asignado debe capturar la mejora alcanzable en lugar de
-truncarla, lo que se observa comparando la solución obtenida frente a la que se obtiene con un
-presupuesto mayor.
+La eficiencia de cómputo aparece con prioridad media porque la planificación no es una interacción
+sino un encargo: la magnitud relevante es el costo de planificar una campaña, no la latencia
+percibida. Se añade una exigencia de suficiencia: como la búsqueda se corta por tiempo y no por
+convergencia demostrada, el presupuesto asignado debe capturar la mejora alcanzable, lo que se
+observa comparando contra un presupuesto mayor.
 
 La calidad geográfica de las rutas se juzga sobre el trazado real de calles porque el censista
-camina por la vereda y no en línea recta: una ruta puede parecer limpia entre cuerdas y obligar
-sobre el pavimento a un retroceso que cuesta minutos. Su prioridad es media porque una ruta con
-auto-cruces sigue siendo ejecutable ---no invalida el censo, lo encarece---, y porque el tiempo de
-desplazamiento, que sí es objetivo explícito del modelo, ya penaliza buena parte de esa
-ineficiencia.
+camina por la vereda y no en línea recta. Su prioridad es media porque una ruta con auto-cruces
+sigue siendo ejecutable ---no invalida el censo, lo encarece--- y porque el tiempo de
+desplazamiento, objetivo explícito del modelo, ya penaliza buena parte de esa ineficiencia.
 
 Los cuatro se retoman en la Sección~\ref{sec:cumplimiento-atributos}, ya con las mediciones a la
 vista.
