@@ -13,14 +13,14 @@ catastros de arbolado urbano registran dónde está cada ejemplar y en qué esta
 crece con la cantidad de atributos registrados y con la frecuencia de actualización.
 
 Arbocensus, desarrollado en la Universidad de los Andes en el marco del proyecto Fondef ID21110360,
-aborda esa necesidad de información: levanta un catastro masivo del arbolado urbano asistido por
-tecnología, mediante visión artificial y participación ciudadana
-\citep{binder-cortes2023,pizarro-zumaeta2024}. El propósito declarado es entregar al municipio
+propone resolver ese problema mediante un catastro masivo del arbolado urbano asistido por
+tecnología, con visión artificial y participación ciudadana
+\citep{binder-cortes2023,pizarro-zumaeta2024}. Su propósito es entregar al municipio
 información sobre el número y el estado de los árboles de la comuna, que le permita priorizar
 aquellos que presentan mayor riesgo.
 
 Ese propósito no se agota en localizar cada árbol una vez. Requiere un historial de observaciones
-por árbol a lo largo del tiempo ---objetivo declarado del proyecto \citep{pizarro-zumaeta2024}--- y
+por árbol a lo largo del tiempo \citep{pizarro-zumaeta2024} y
 datos etiquetados que permitan clasificar los ejemplares por nivel de riesgo (riesgoso/no-riesgoso)
 para entrenar los modelos de inteligencia artificial. Construir ese historial exige un re-censo
 estructurado: volver sobre un conjunto conocido de árboles ya georreferenciados y registrar una
@@ -28,14 +28,15 @@ observación nueva de cada uno, en lugar de recolectar muestras dispersas sin co
 campañas. Ese cambio de modalidad convierte al censo en un problema de asignación de trabajo: el
 arbolado debe repartirse entre los equipos en terreno mediante rutas eficientes de desplazamiento.
 
-El desafío logístico se formula así: dado un conjunto de $n$ puntos geográficos correspondientes a
-árboles distribuidos en el espacio urbano, se requiere generar un conjunto de rutas que garanticen
-la cobertura total, minimicen tiempos de desplazamiento y respeten jornadas acotadas temporalmente.
+El desafío logístico consiste en generar esas rutas: repartir el arbolado entre los equipos y
+ordenar las visitas de cada uno, de modo que se garantice la cobertura total, se minimicen los
+tiempos de desplazamiento y se respeten jornadas acotadas temporalmente.
 Los tres objetivos se derivan directamente del re-censo. La cobertura total es un requisito porque
 el historial exige una observación de cada árbol ya georreferenciado; la jornada acotada refleja que
 el censista es voluntario a pie, sin jornada completa (Sección~\ref{sec:usuarios}); y el tiempo de
 desplazamiento es el único costo que la planificación puede reducir, dado que el tiempo de
-inspección por árbol es fijo.
+inspección por árbol es fijo. La formulación precisa de ese problema y la solución que se propone
+para resolverlo corresponden al Capítulo~\ref{cap:solucion}.
 
 Una planificación inadecuada de rutas traería consecuencias operacionales inmediatas: viajes
 innecesarios entre puntos lejanos, sobrecarga de ciertos equipos mientras otros subutilizan su
@@ -97,10 +98,9 @@ jornada de censo en una escala donde repartir el arbolado entre equipos y ordena
 mano deja de ser practicable; las instancias experimentales derivadas de él se describen en el
 Capítulo~\ref{cap:resultados}.
 
-Ninguna de esas iteraciones abordó la planificación de rutas. En las campañas documentadas por
-Binder y Cortés \citeyearpar{binder-cortes2023} y Pizarro y Zumaeta
-\citeyearpar{pizarro-zumaeta2024}, la planificación de rutas quedó fuera del alcance. Las jornadas
-de terreno se organizaban sin un sistema de asignación formal, y los censistas recorrían las zonas
+En las campañas documentadas por Binder y Cortés \citeyearpar{binder-cortes2023} y Pizarro y
+Zumaeta \citeyearpar{pizarro-zumaeta2024}, las jornadas
+de terreno se organizaban sin un sistema de asignación formal: los censistas recorrían las zonas
 sin una secuencia de visitas predeterminada ni consideración de costos reales de desplazamiento o
 restricciones de jornada. Sobre ese estado, el re-censo estructurado que el proyecto necesita para
 construir el historial por árbol carece de la pieza que lo haría ejecutable en terreno.
@@ -108,9 +108,8 @@ construir el historial por árbol carece de la pieza que lo haría ejecutable en
 \section{ALCANCE}
 \label{sec:alcance-desarrollo}
 
-Esta iteración se hace cargo de la pieza que las anteriores no abordaron: llevar el catastro ya
-levantado hasta una jornada de terreno planificada y traer de vuelta una observación nueva por cada
-árbol visitado. Ese propósito se descompone en tres partes.
+Esta iteración lleva el catastro ya levantado hasta una jornada de terreno planificada y trae de
+vuelta una observación nueva por cada árbol visitado. Ese propósito se descompone en tres partes.
 
 La primera es la planificación. Se desarrolla un motor de optimización que determina cuántos equipos
 se necesitan, reparte los árboles entre ellos y ordena las visitas de cada uno, sobre tiempos de
@@ -133,3 +132,12 @@ simples, sin garantizar que sea la mejor posible.} simple. Queda fuera del alcan
 sistema en una jornada de censo real, con
 censistas en terreno: lo que esta memoria acredita es que el producto cumple lo que su diseño
 declara, no que resuelva en terreno el problema logístico que lo motiva.
+
+La hipótesis de trabajo que ordena ese alcance es la siguiente: una formulación de ruteo de
+vehículos sobre tiempos de desplazamiento reales puede producir, sin intervención experta, planes
+de re-censo que cubran todo el arbolado seleccionado, respeten la jornada máxima, equilibren la
+carga entre censistas y determinen por sí mismos el número de equipos. Esos planes deben, además,
+reducir el desplazamiento frente a una planificación heurística simple y obtenerse en un tiempo
+compatible con la preparación de una campaña. El Capítulo~\ref{cap:solucion} traduce esa hipótesis a criterios de aceptación
+verificables (Sección~\ref{sec:criterios-aceptacion}) y el Capítulo~\ref{cap:resultados} la
+contrasta contra mediciones sobre el arbolado real del proyecto.
