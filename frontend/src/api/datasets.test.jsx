@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-  createDatasetFromLegacySelection,
   deleteDataset,
   fetchDatasets,
   fetchTreeObservations,
+  partitionLegacySelection,
   uploadDataset,
 } from "./datasets.js";
 import client from "./client.js";
@@ -48,14 +48,14 @@ describe("uploadDataset", () => {
   });
 });
 
-describe("createDatasetFromLegacySelection", () => {
-  it("posts the name and tree refs as JSON", async () => {
+describe("partitionLegacySelection", () => {
+  it("posts the name, tree refs and k as JSON", async () => {
     const trees = [{ source: "legacy_api", external_id: 776 }];
-    await createDatasetFromLegacySelection({ name: "Selección", trees });
+    await partitionLegacySelection({ name: "Selección", trees, k: 1 });
 
     const [url, body] = client.post.mock.calls[0];
-    expect(url).toBe("/datasets/from-legacy-selection/");
-    expect(body).toEqual({ name: "Selección", trees });
+    expect(url).toBe("/datasets/partition-legacy-selection/");
+    expect(body).toEqual({ name: "Selección", trees, k: 1 });
   });
 });
 

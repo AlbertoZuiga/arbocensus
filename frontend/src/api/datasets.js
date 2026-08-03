@@ -37,14 +37,6 @@ export async function fetchLegacyTrees() {
   return data;
 }
 
-export async function createDatasetFromLegacySelection({ name, trees }) {
-  const { data } = await client.post("/datasets/from-legacy-selection/", {
-    name,
-    trees,
-  });
-  return data;
-}
-
 export async function partitionLegacySelection({ name, trees, k }) {
   const { data } = await client.post("/datasets/partition-legacy-selection/", {
     name,

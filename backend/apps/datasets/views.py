@@ -15,7 +15,6 @@ from .serializers import (
     DatasetSerializer,
     DeactivateTreesSerializer,
     LegacyPartitionSerializer,
-    LegacySelectionSerializer,
 )
 
 
@@ -34,7 +33,6 @@ class DatasetViewSet(viewsets.ModelViewSet):
             "legacy_trees",
             "legacy_tree_observations",
             "import_legacy",
-            "from_legacy_selection",
             "partition_legacy_selection",
             "deactivate_trees",
         ):
@@ -85,29 +83,6 @@ class DatasetViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-
-    @action(detail=False, methods=["post"], url_path="from-legacy-selection")
-    def from_legacy_selection(self, request):
-        serializer = LegacySelectionSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        selection = list(
-            dict.fromkeys(
-                (tree["source"], tree["external_id"])
-                for tree in serializer.validated_data["trees"]
-            )
-        )
-        try:
-            rows = legacy.load_selection(selection)
-        except LegacyDatabaseNotConfiguredError as exc:
-            return Response(
-                {"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        except ValueError as exc:
-            raise ValidationError({"trees": str(exc)}) from exc
-        dataset = legacy.create_dataset(serializer.validated_data["name"], rows)
-        return Response(
-            self.get_serializer(dataset).data, status=status.HTTP_201_CREATED
-        )
 
     @action(detail=False, methods=["post"], url_path="partition-legacy-selection")
     def partition_legacy_selection(self, request):

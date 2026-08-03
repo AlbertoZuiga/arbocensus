@@ -15,7 +15,7 @@ class LegacySelectionSerializer(serializers.Serializer):
 
 
 class LegacyPartitionSerializer(LegacySelectionSerializer):
-    k = serializers.IntegerField(min_value=2)
+    k = serializers.IntegerField(min_value=1)
 
 
 class DatasetSerializer(serializers.ModelSerializer):
