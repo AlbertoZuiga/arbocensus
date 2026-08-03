@@ -50,10 +50,20 @@ export async function fetchRoutesGeojson(solutionId) {
 }
 
 export async function fetchRoutes(solutionId) {
-  const { data } = await client.get("/routes/", {
-    params: solutionId ? { solution_id: solutionId } : undefined,
-  });
-  return data.results ?? data;
+  const results = [];
+  let page = 1;
+  for (;;) {
+    const { data } = await client.get("/routes/", {
+      params: {
+        ...(solutionId ? { solution_id: solutionId } : {}),
+        ...(page > 1 ? { page } : {}),
+      },
+    });
+    if (!data.results) return page === 1 ? data : results;
+    results.push(...data.results);
+    if (!data.next) return results;
+    page += 1;
+  }
 }
 
 export async function assignRoute(routeId, surveyorId) {
