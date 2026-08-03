@@ -9,12 +9,14 @@ import RoutingConfigForm from "./RoutingConfigForm";
 import SolutionCandidatesList from "./SolutionCandidatesList";
 
 function sweepStatusText(sweepJobs) {
-  if (sweepJobs.some((job) => job.status === "failed")) {
-    return "Una de las configuraciones falló; puede faltar una solución.";
-  }
   const done = sweepJobs.filter((job) => job.status === "completed").length;
+  const failed = sweepJobs.filter((job) => job.status === "failed").length;
   if (done === sweepJobs.length) return null;
-  return `Optimizando… ${done} de ${sweepJobs.length} configuraciones listas.`;
+  let text = `Optimizando… ${done} de ${sweepJobs.length} soluciones listas.`;
+  if (failed > 0) {
+    text += ` ${failed} corridas fallaron; pueden faltar soluciones.`;
+  }
+  return text;
 }
 
 export default function OptimizationPanel({

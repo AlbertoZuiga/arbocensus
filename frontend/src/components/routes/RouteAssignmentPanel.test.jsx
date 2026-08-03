@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/api/routes.js", () => ({
+  assignRoute: vi.fn(),
   fetchRoutes: vi.fn(),
   fetchWorkload: vi.fn(),
   suggestAssignment: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock("@/hooks/useAssignRoute", () => ({
 }));
 
 import {
+  assignRoute,
   fetchRoutes,
   fetchWorkload,
   setSolutionParticipants,
@@ -31,6 +33,7 @@ import {
 } from "@/api/routes.js";
 import { fetchSolution } from "@/api/optimization.js";
 import { fetchSurveyors } from "@/api/surveyors.js";
+import { useToastStore } from "@/store/toastStore.js";
 import RouteAssignmentPanel from "./RouteAssignmentPanel.jsx";
 
 const SOLUTION_ID = "sol-aaaa-1111";
@@ -96,11 +99,13 @@ function renderPanel() {
 describe("RouteAssignmentPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useToastStore.setState({ toasts: [] });
     fetchSolution.mockResolvedValue(SOLUTION);
     fetchRoutes.mockResolvedValue(ROUTES);
     fetchSurveyors.mockResolvedValue(SURVEYORS);
     fetchWorkload.mockResolvedValue(WORKLOAD);
     setSolutionParticipants.mockResolvedValue({ participant_count: 1 });
+    assignRoute.mockResolvedValue({ id: ROUTE_ID, surveyor: SURVEYOR_ID });
   });
 
   it("shows 'Asignación automática' button when solution is published", async () => {
@@ -162,10 +167,7 @@ describe("RouteAssignmentPanel", () => {
     expect(mockAssignMutate).not.toHaveBeenCalled();
   });
 
-  it("confirmar asignación calls assign.mutate for each route and closes modal", async () => {
-    suggestAssignment.mockResolvedValue(SUGGESTION);
-    renderPanel();
-
+  async function confirmSuggestion() {
     await userEvent.click(
       await screen.findByRole("button", { name: "Asignación automática" }),
     );
@@ -175,23 +177,91 @@ describe("RouteAssignmentPanel", () => {
     await waitFor(() =>
       screen.getByRole("button", { name: "Confirmar asignación" }),
     );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Confirmar asignación" }),
+    );
+  }
 
-    await userEvent.click(screen.getByRole("button", { name: "Confirmar asignación" }));
+  it("confirmar asignación assigns each route in bulk and closes modal", async () => {
+    suggestAssignment.mockResolvedValue(SUGGESTION);
+    renderPanel();
+
+    await confirmSuggestion();
 
     await waitFor(() =>
       expect(setSolutionParticipants).toHaveBeenCalledWith(SOLUTION_ID, [
         SURVEYOR_ID,
       ]),
     );
-    expect(mockAssignMutate).toHaveBeenCalledWith({
-      routeId: ROUTE_ID,
-      surveyorId: SURVEYOR_ID,
-    });
+    await waitFor(() =>
+      expect(assignRoute).toHaveBeenCalledWith(ROUTE_ID, SURVEYOR_ID),
+    );
+    expect(mockAssignMutate).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts).toContainEqual(
+        expect.objectContaining({
+          variant: "success",
+          message: "Rutas asignadas",
+        }),
+      ),
+    );
     await waitFor(() =>
       expect(
         screen.queryByRole("button", { name: "Confirmar asignación" }),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  it("shows partial failure toast when some bulk assignments fail", async () => {
+    suggestAssignment.mockResolvedValue({
+      assignments: [
+        {
+          route_id: ROUTE_ID,
+          route_number: 1,
+          surveyor_id: SURVEYOR_ID,
+          utilization: 0.42,
+        },
+        {
+          route_id: "route-dddd-4444",
+          route_number: 2,
+          surveyor_id: SURVEYOR_ID,
+          utilization: 0.3,
+        },
+      ],
+      balance: { [SURVEYOR_ID]: -0.12 },
+    });
+    assignRoute
+      .mockResolvedValueOnce({ id: ROUTE_ID, surveyor: SURVEYOR_ID })
+      .mockRejectedValueOnce(new Error("boom"));
+    renderPanel();
+
+    await confirmSuggestion();
+
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts).toContainEqual(
+        expect.objectContaining({
+          variant: "error",
+          message: "1 de 2 asignaciones fallaron",
+        }),
+      ),
+    );
+  });
+
+  it("disables the button and selects while bulk assignment is pending", async () => {
+    suggestAssignment.mockResolvedValue(SUGGESTION);
+    assignRoute.mockReturnValue(new Promise(() => {}));
+    renderPanel();
+
+    await confirmSuggestion();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Asignación automática" }),
+      ).toBeDisabled(),
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Censista ruta 1" }),
+    ).toBeDisabled();
   });
 
   it("'Volver' regresa a paso 1 sin llamar mutate", async () => {

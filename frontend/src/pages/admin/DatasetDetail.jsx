@@ -23,7 +23,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/store/toastStore.js";
-import { cn } from "@/lib/utils";
 
 function toLeafletPositions(featureCollection) {
   const features = featureCollection?.features ?? [];
@@ -196,28 +195,22 @@ export default function DatasetDetail() {
             )}
           </div>
 
-          <div
-            className={cn(
-              "absolute right-0 top-0 z-[1001] h-full w-full max-w-sm overflow-y-auto border-l bg-background p-4 shadow-xl transition-transform",
-              openPanel === "optimization" ? "translate-x-0" : "translate-x-full",
-            )}
-          >
-            <OptimizationPanel
-              key={id}
-              datasetId={id}
-              activeSolutionId={solutionId}
-              onViewSolution={handleViewSolution}
-            />
-          </div>
+          {openPanel === "optimization" && (
+            <div className="absolute right-0 top-0 z-[1001] h-full w-full max-w-sm overflow-y-auto border-l bg-background p-4 shadow-xl">
+              <OptimizationPanel
+                key={id}
+                datasetId={id}
+                activeSolutionId={solutionId}
+                onViewSolution={handleViewSolution}
+              />
+            </div>
+          )}
 
-          <div
-            className={cn(
-              "absolute right-0 top-0 z-[1001] h-full w-full max-w-sm overflow-y-auto border-l bg-background p-4 shadow-xl transition-transform",
-              openPanel === "assign" ? "translate-x-0" : "translate-x-full",
-            )}
-          >
-            <RouteAssignmentPanel datasetSolutionIds={datasetSolutionIds} />
-          </div>
+          {openPanel === "assign" && (
+            <div className="absolute right-0 top-0 z-[1001] h-full w-full max-w-sm overflow-y-auto border-l bg-background p-4 shadow-xl">
+              <RouteAssignmentPanel datasetSolutionIds={datasetSolutionIds} />
+            </div>
+          )}
         </div>
       </div>
 

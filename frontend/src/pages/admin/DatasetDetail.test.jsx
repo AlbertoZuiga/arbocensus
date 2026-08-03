@@ -115,17 +115,40 @@ describe("DatasetDetail", () => {
   });
 
   it("renders the dataset name and the optimization config form", async () => {
+    const user = userEvent.setup();
     fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
     fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
     renderDetail();
 
     expect(await screen.findByText("Providencia")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "⚙ Optimización" }));
     expect(
-      screen.getByText("Configuración de rutas"),
+      await screen.findByText("Configuración de rutas"),
     ).toBeInTheDocument();
   });
 
+  it("keeps both panels out of the DOM until their button is clicked", async () => {
+    const user = userEvent.setup();
+    fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
+    fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
+    fetchSolutionsForDataset.mockResolvedValue(SOLUTIONS);
+    renderDetail();
+
+    await screen.findByText("Providencia");
+    await waitFor(() => expect(fetchRoutesGeojson).toHaveBeenCalledWith("s2"));
+    expect(screen.queryByText("Configuración de rutas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Asignación de rutas")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "⚙ Optimización" }));
+    expect(await screen.findByText("Configuración de rutas")).toBeInTheDocument();
+    expect(screen.queryByText("Asignación de rutas")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "👤 Asignación" }));
+    expect(await screen.findByText("Asignación de rutas")).toBeInTheDocument();
+  });
+
   it("shows a sweep switcher when a past sweep exists", async () => {
+    const user = userEvent.setup();
     fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
     fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
     fetchJobs.mockResolvedValue([
@@ -138,12 +161,14 @@ describe("DatasetDetail", () => {
     ]);
     renderDetail();
 
+    await user.click(await screen.findByRole("button", { name: "⚙ Optimización" }));
     expect(
       await screen.findByRole("combobox", { name: "Corrida" }),
     ).toBeInTheDocument();
   });
 
   it("hides the sweep switcher when there is only the current sweep", async () => {
+    const user = userEvent.setup();
     fetchDataset.mockResolvedValue({ id: "d1", name: "Providencia" });
     fetchDatasetTrees.mockResolvedValue({ type: "FeatureCollection", features: [] });
     fetchJobs.mockResolvedValue([
@@ -151,7 +176,8 @@ describe("DatasetDetail", () => {
     ]);
     renderDetail();
 
-    await screen.findByText("Providencia");
+    await user.click(await screen.findByRole("button", { name: "⚙ Optimización" }));
+    await screen.findByText("Configuración de rutas");
     expect(
       screen.queryByRole("combobox", { name: "Corrida" }),
     ).not.toBeInTheDocument();

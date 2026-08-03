@@ -125,6 +125,31 @@ describe("DatasetMap dropped markers", () => {
   });
 });
 
+describe("DatasetMap routes error", () => {
+  it("shows a retry overlay when the geojson fails and refetches on click", async () => {
+    fetchRoutesGeojson.mockRejectedValue(new Error("boom"));
+    const markers = [{ id: "t9", position: [-33.4, -70.6] }];
+    renderMap({ markers });
+
+    const retry = await screen.findByRole(
+      "button",
+      { name: "Reintentar" },
+      { timeout: 4000 },
+    );
+    expect(screen.getByText("No se pudieron cargar las rutas.")).toBeInTheDocument();
+    expect(screen.getAllByTestId("marker")).toHaveLength(1);
+
+    const callsBefore = fetchRoutesGeojson.mock.calls.length;
+    fetchRoutesGeojson.mockResolvedValue(ROUTES_GEOJSON);
+    await userEvent.click(retry);
+
+    await waitFor(() =>
+      expect(fetchRoutesGeojson.mock.calls.length).toBeGreaterThan(callsBefore),
+    );
+    expect(await screen.findByTestId("route-line")).toBeInTheDocument();
+  });
+});
+
 describe("DatasetMap stop popups", () => {
   it("keeps the tree history of a stop out of the network until its popup opens", async () => {
     renderMap();

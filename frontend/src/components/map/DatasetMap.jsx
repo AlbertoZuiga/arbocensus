@@ -9,6 +9,7 @@ import {
   totalDurationSec,
 } from "@/lib/optimization.js";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import BaseMap from "./BaseMap.jsx";
 import { geojsonToRoutes } from "./routeGeojson.js";
 import TreeHistoryPopup from "./TreeHistoryPopup.jsx";
@@ -17,11 +18,12 @@ export default function DatasetMap({ markers, solutionId, droppedIds = new Set()
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [openTreeId, setOpenTreeId] = useState(null);
 
-  const { data } = useQuery({
+  const { data, isError, refetch, isFetching } = useQuery({
     queryKey: ["routes-geojson", solutionId],
     queryFn: () => fetchRoutesGeojson(solutionId),
     enabled: !!solutionId,
     staleTime: Infinity,
+    retry: 1,
   });
 
   const routes = useMemo(() => geojsonToRoutes(data), [data]);
@@ -140,6 +142,17 @@ export default function DatasetMap({ markers, solutionId, droppedIds = new Set()
           );
         })}
       </BaseMap>
+
+      {isError && (
+        <div className="absolute inset-0 z-[1000] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2 rounded-md border bg-background/95 p-4 shadow-md">
+            <span className="text-sm">No se pudieron cargar las rutas.</span>
+            <Button size="sm" onClick={() => refetch()} disabled={isFetching}>
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {hasRoutes && (
         <div className="absolute bottom-3 left-3 z-[1000] max-h-[45%] w-56 overflow-y-auto rounded-lg border bg-background/90 p-2 shadow-md backdrop-blur">

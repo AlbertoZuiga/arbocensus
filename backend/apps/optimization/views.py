@@ -2,7 +2,7 @@ import uuid
 from typing import Any
 
 from apps.accounts.permissions import IsAdminRole
-from apps.datasets.models import Dataset
+from apps.datasets.models import Dataset, Tree
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .config_presets import CONFIG_PRESETS
+from .cost_matrix import OSRMCostMatrixBuilder
 from .feasibility import check_config
 from .models import OptimizationJob, RoutingConfig, RoutingSolution
 from .pipeline import estimate_fleet_from_cache
@@ -215,13 +216,15 @@ def fleet_estimate(request):
         )
 
     dataset = get_object_or_404(Dataset, pk=dataset_id)
+    trees = list(Tree.objects.filter(dataset=dataset, is_active=True))
+    matrix = OSRMCostMatrixBuilder().get_cached(trees) if len(trees) >= 2 else None
     feasibility = check_config(
-        dataset, min_route_time_sec, max_route_time_sec, service_time_sec
+        dataset, min_route_time_sec, max_route_time_sec, service_time_sec, matrix=matrix
     )
     return Response(
         {
             "n_estimated": estimate_fleet_from_cache(
-                dataset, min_route_time_sec, service_time_sec
+                dataset, min_route_time_sec, service_time_sec, matrix=matrix
             ),
             "blocking": feasibility["blocking"],
             "warnings": feasibility["warnings"],

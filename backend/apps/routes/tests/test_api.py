@@ -2,8 +2,10 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.routes.models import Route, RouteStop
+from django.contrib.gis.geos import LineString
 from rest_framework.test import APIClient
 from tests.factories import CustomUserFactory, observation_photo
 
@@ -160,6 +162,68 @@ def test_geojson_keeps_route_order_when_fetches_finish_out_of_order(
         "total_estimated_time_sec",
         "stops",
     }
+
+
+def test_geojson_serves_persisted_geometry_without_osrm(
+    solution_with_route, monkeypatch
+):
+    solution, route, _ = solution_with_route
+    street_path = [[-70.65, -33.45], [-70.655, -33.455], [-70.66, -33.46]]
+    route.geometry = LineString(street_path, srid=4326)
+    route.save(update_fields=["geometry"])
+
+    def fetch(coordinates):
+        raise AssertionError("OSRM must not be called for persisted geometry")
+
+    monkeypatch.setattr("apps.routes.osrm.fetch_route_path", fetch)
+
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/routes/geojson/?solution_id={solution.id}")
+
+    assert response.status_code == 200
+    assert response.data["features"][0]["geometry"]["coordinates"] == street_path
+
+
+def test_geojson_persists_fetched_geometry(solution_with_route, monkeypatch):
+    solution, route, _ = solution_with_route
+    street_path = [[-70.65, -33.45], [-70.655, -33.455], [-70.66, -33.46]]
+    fetch = MagicMock(return_value=street_path)
+    monkeypatch.setattr("apps.routes.osrm.fetch_route_path", fetch)
+    admin = CustomUserFactory(role="admin")
+    url = f"/api/routes/geojson/?solution_id={solution.id}"
+
+    first = _client(admin).get(url)
+
+    assert first.status_code == 200
+    assert fetch.call_count == 1
+    route.refresh_from_db()
+    assert route.geometry is not None
+
+    second = _client(admin).get(url)
+
+    assert second.status_code == 200
+    assert fetch.call_count == 1
+    assert second.data["features"][0]["geometry"]["coordinates"] == street_path
+
+
+def test_geojson_falls_back_to_stops_when_osrm_fails(solution_with_route, monkeypatch):
+    solution, route, _ = solution_with_route
+
+    def fetch(coordinates):
+        raise requests.RequestException("osrm down")
+
+    monkeypatch.setattr("apps.routes.osrm.fetch_route_path", fetch)
+
+    admin = CustomUserFactory(role="admin")
+    response = _client(admin).get(f"/api/routes/geojson/?solution_id={solution.id}")
+
+    assert response.status_code == 200
+    assert response.data["features"][0]["geometry"]["coordinates"] == [
+        [-70.65, -33.45],
+        [-70.66, -33.46],
+    ]
+    route.refresh_from_db()
+    assert route.geometry is None
 
 
 def test_path_returns_street_following_geometry_for_single_route(

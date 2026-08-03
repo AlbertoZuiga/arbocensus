@@ -28,7 +28,7 @@ const REPLACE_WARNING =
   "Ya hay un plan publicado para este dataset. Publicar esta solución " +
   "reemplazará el plan vigente. ¿Continuar?";
 
-const COLLAPSED_COUNT = 3;
+const COLLAPSED_COUNT = 6;
 
 function MetricGrid({ metrics, solution, bestByKey }) {
   return (
@@ -174,7 +174,7 @@ export default function SolutionCandidatesList({
     );
   }
 
-  if (solutions.length === 0 && sweeps.length <= 1) return null;
+  if (solutions.length === 0 && sweeps.length <= 1 && !hasActiveJob) return null;
 
   const bestByKey = Object.fromEntries(
     KEY_METRICS.map((metric) => [

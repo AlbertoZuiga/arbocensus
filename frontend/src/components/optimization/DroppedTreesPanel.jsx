@@ -71,7 +71,7 @@ export default function DroppedTreesPanel({
                 Esto marcará {droppedTreeIds.length} árbol
                 {droppedTreeIds.length !== 1 ? "es" : ""} como inactivo
                 {droppedTreeIds.length !== 1 ? "s" : ""}. La acción es
-                reversible reimportando desde la selección legacy.
+                reversible volviendo a importarlos desde Arbocensus.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

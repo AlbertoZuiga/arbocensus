@@ -7,6 +7,7 @@ vi.mock("../api/routes.js", () => ({
 }));
 
 import { assignRoute } from "../api/routes.js";
+import { useToastStore } from "../store/toastStore.js";
 import { useAssignRoute } from "./useAssignRoute.js";
 
 function makeClient() {
@@ -26,6 +27,7 @@ function makeWrapper(client) {
 describe("useAssignRoute", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useToastStore.setState({ toasts: [] });
   });
 
   it("assigns a surveyor and invalidates routes and surveyors queries", async () => {
@@ -55,5 +57,41 @@ describe("useAssignRoute", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(assignRoute).toHaveBeenCalledWith("r1", null);
+  });
+
+  it("shows an error toast when the assignment fails", async () => {
+    assignRoute.mockRejectedValue({
+      response: { data: { detail: "Ruta ya iniciada" } },
+    });
+    const client = makeClient();
+    const { result } = renderHook(() => useAssignRoute(), {
+      wrapper: makeWrapper(client),
+    });
+
+    result.current.mutate({ routeId: "r1", surveyorId: "u1" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    const toasts = useToastStore.getState().toasts;
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0]).toMatchObject({
+      variant: "error",
+      message: "Ruta ya iniciada",
+    });
+  });
+
+  it("falls back to a generic error toast without response detail", async () => {
+    assignRoute.mockRejectedValue(new Error("network"));
+    const client = makeClient();
+    const { result } = renderHook(() => useAssignRoute(), {
+      wrapper: makeWrapper(client),
+    });
+
+    result.current.mutate({ routeId: "r1", surveyorId: "u1" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(useToastStore.getState().toasts[0]).toMatchObject({
+      variant: "error",
+      message: "No se pudo asignar la ruta",
+    });
   });
 });

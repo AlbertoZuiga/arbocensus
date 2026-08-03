@@ -13,7 +13,9 @@ from apps.optimization.route_resequencer import resequence_routes
 from apps.optimization.solver import DEFAULT_PENALTIES, build_open_matrix
 from apps.optimization.strategies import SPATIAL_SPAN_COEF, solve_by_strategy
 from apps.optimization.warm_start import build_warm_start_routes
+from apps.routes import osrm as routes_osrm
 from apps.routes.models import Route, RouteStop
+from django.contrib.gis.geos import LineString
 from django.db import transaction
 
 SOLVER_TIME_LIMIT_SEC = 120
@@ -27,10 +29,15 @@ def default_time_limit_sec(tree_count):
     return min(int(30 + 1.5 * tree_count), SOLVER_TIME_LIMIT_SEC)
 
 
+# Sentinel: None is a legitimate caller-provided value (no cached matrix).
+_UNSET = object()
+
+
 def estimate_fleet_from_cache(
     dataset,
     min_route_time_sec=RoutingConfig.DEFAULT_MIN_ROUTE_TIME_SEC,
     service_time_sec=RoutingConfig.DEFAULT_SERVICE_TIME_SEC,
+    matrix=_UNSET,
 ):
     trees = sorted(
         Tree.objects.filter(dataset=dataset, is_active=True),
@@ -39,7 +46,8 @@ def estimate_fleet_from_cache(
     if len(trees) < 2:
         return None
 
-    matrix = OSRMCostMatrixBuilder().get_cached(trees)
+    if matrix is _UNSET:
+        matrix = OSRMCostMatrixBuilder().get_cached(trees)
     if matrix is None:
         return None
 
@@ -262,9 +270,18 @@ class OptimizationPipeline:
         if dropped_nodes:
             solution.dropped.set(trees[n] for n in dropped_nodes)
 
+        route_coords = [
+            [[trees[node].location.x, trees[node].location.y] for node in route]
+            for route in routes
+        ]
+        try:
+            paths = routes_osrm.fetch_route_paths(route_coords)
+        except Exception:
+            paths = [None] * len(routes)
+
         stops = []
-        for route_number, (route, travel, estimated) in enumerate(
-            zip(routes, route_times, estimated_times, strict=True), start=1
+        for route_number, (route, travel, estimated, path) in enumerate(
+            zip(routes, route_times, estimated_times, paths, strict=True), start=1
         ):
             route_obj = Route.objects.create(
                 solution=solution,
@@ -272,6 +289,9 @@ class OptimizationPipeline:
                 total_trees=len(route),
                 travel_time_sec=math.ceil(travel),
                 total_estimated_time_sec=math.ceil(estimated),
+                geometry=(
+                    LineString(path, srid=4326) if path and len(path) >= 2 else None
+                ),
             )
             for sequence, node in enumerate(route, start=1):
                 stops.append(

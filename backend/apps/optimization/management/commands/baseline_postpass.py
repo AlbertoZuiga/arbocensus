@@ -1,14 +1,17 @@
 import csv
 import statistics
+import time
 from datetime import UTC, datetime
 
-from apps.datasets.models import Dataset, Tree
+from apps.datasets.models import Dataset, DistanceMatrix, Tree
 from apps.optimization.models import OptimizationJob, RoutingConfig, RoutingSolution
 from apps.optimization.pipeline import SOLVER_TIME_LIMIT_SEC, OptimizationPipeline
 from apps.optimization.route_audit import (
     audit_solution,
+    road_self_crossings,
     summarize_audit,
 )
+from apps.routes.osrm import fetch_route_paths
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
@@ -40,6 +43,14 @@ class Command(BaseCommand):
             default=None,
             help="Output CSV path (default: docs/experiments/postpass-default-YYYYMMDD-HHMMSS.csv)",
         )
+        parser.add_argument(
+            "--cold-first",
+            action="store_true",
+            help=(
+                "Drop the cached cost matrix before the first seed so that "
+                "repetition measures the cold end-to-end wall clock"
+            ),
+        )
 
     def handle(self, **options):
         dataset = self._get_dataset(options["dataset"])
@@ -47,14 +58,19 @@ class Command(BaseCommand):
         strategy = options["strategy"]
 
         tree_count = Tree.objects.filter(dataset=dataset, is_active=True).count()
+        if options["cold_first"]:
+            DistanceMatrix.objects.filter(dataset=dataset).delete()
         rows = []
-        for seed in seeds:
+        for index, seed in enumerate(seeds):
             print(f"Running seed {seed}...")
+            wall_start = time.perf_counter()
             solution, dropped = self._run_pipeline(dataset, strategy, seed)
+            wall_clock_sec = round(time.perf_counter() - wall_start, 1)
+            min_route_time_sec = 7200
             max_route_time_sec = 10800
             audited = audit_solution(
                 solution,
-                min_route_time_sec=7200,
+                min_route_time_sec=min_route_time_sec,
                 max_route_time_sec=max_route_time_sec,
             )
             summary = summarize_audit(audited)
@@ -67,6 +83,10 @@ class Command(BaseCommand):
             routes_over_t_max = sum(
                 1 for d in route_durations if d > max_route_time_sec
             )
+            routes_under_t_min = sum(
+                1 for d in route_durations if d < min_route_time_sec
+            )
+            t_matrix_sec = solution.timing.get("cost_matrix", {}).get("total", 0)
 
             row = {
                 "instance": dataset.name,
@@ -85,6 +105,13 @@ class Command(BaseCommand):
                 "route_time_mean_sec": int(route_time_mean),
                 "route_time_std_sec": int(route_time_std),
                 "routes_over_t_max": routes_over_t_max,
+                "routes_under_t_min": routes_under_t_min,
+                "crossings_road": self._crossings_road(solution),
+                "wall_clock_sec": wall_clock_sec,
+                "t_matrix_sec": round(t_matrix_sec, 1),
+                "cache_state": (
+                    "cold" if options["cold_first"] and index == 0 else "warm"
+                ),
             }
             rows.append(row)
             print(
@@ -93,6 +120,16 @@ class Command(BaseCommand):
 
         csv_path = self._write_csv(rows, options["csv"])
         self.stdout.write(self.style.SUCCESS(f"CSV: {csv_path}"))
+
+    def _crossings_road(self, solution):
+        coordinate_lists = []
+        for route in solution.routes.order_by("route_number"):
+            stops = route.stops.select_related("tree").order_by("sequence")
+            coordinate_lists.append(
+                [(stop.tree.location.x, stop.tree.location.y) for stop in stops]
+            )
+        paths = fetch_route_paths(coordinate_lists)
+        return sum(road_self_crossings(path) for path in paths)
 
     def _get_dataset(self, dataset_name):
         try:

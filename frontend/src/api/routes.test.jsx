@@ -35,6 +35,34 @@ describe("routes api", () => {
     expect(result).toEqual([{ id: "r1" }]);
   });
 
+  it("follows pagination and concatenates all pages", async () => {
+    client.get
+      .mockResolvedValueOnce({
+        data: { results: [{ id: "r1" }, { id: "r2" }], next: "http://x/routes/?page=2" },
+      })
+      .mockResolvedValueOnce({
+        data: { results: [{ id: "r3" }], next: null },
+      });
+
+    const result = await fetchRoutes("s1");
+
+    expect(client.get).toHaveBeenCalledTimes(2);
+    expect(client.get).toHaveBeenNthCalledWith(2, "/routes/", {
+      params: { solution_id: "s1", page: 2 },
+    });
+    expect(result).toEqual([{ id: "r1" }, { id: "r2" }, { id: "r3" }]);
+  });
+
+  it("returns non-paginated responses as-is", async () => {
+    const plain = [{ id: "r1" }];
+    client.get.mockResolvedValue({ data: plain });
+
+    const result = await fetchRoutes();
+
+    expect(client.get).toHaveBeenCalledTimes(1);
+    expect(result).toBe(plain);
+  });
+
   it("assigns a surveyor to a route", async () => {
     client.patch.mockResolvedValue({ data: { id: "r1", surveyor: "u1" } });
 

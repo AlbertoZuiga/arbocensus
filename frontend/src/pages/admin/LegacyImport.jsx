@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  createDatasetFromLegacySelection,
   fetchLegacyAreas,
   fetchLegacyTrees,
   partitionLegacySelection,
@@ -39,6 +38,11 @@ const EMPTY_SELECTION = { manualKeys: new Set(), excludedKeys: new Set() };
 const NO_AREAS = [];
 // Mirrors MIN_TREES_PER_DATASET in apps/datasets/partition.py, which validates it.
 const MIN_TREES_PER_DATASET = 51;
+// Mirrors OSRM_MAX_TREES_PER_REQUEST in apps/optimization/cost_matrix.py: up to
+// this size the OSRM matrix is a single request (~3 s); past it the cost jumps.
+const OSRM_MAX_TREES_PER_REQUEST = 350;
+// Mirrors OSRM_MAX_MATRIX_DIMENSION in apps/optimization/cost_matrix.py.
+const OSRM_MAX_MATRIX_DIMENSION = 2000;
 const IMPORT_FILTERS = [
   ["all", "Todos"],
   ["available", "Disponibles"],
@@ -65,8 +69,7 @@ export default function LegacyImport() {
   const [selectionMode, setSelectionMode] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [datasetName, setDatasetName] = useState("");
-  const [partitionBy, setPartitionBy] = useState("single");
-  const [clusterCount, setClusterCount] = useState("2");
+  const [clusterCount, setClusterCount] = useState("1");
   const [importFilter, setImportFilter] = useState("all");
   const [datasetFilter, setDatasetFilter] = useState(new Set());
 
@@ -194,26 +197,19 @@ export default function LegacyImport() {
 
   const filtersActive = importFilter !== "all" || datasetFilter.size > 0;
 
-  const createDataset = useMutation({
-    mutationFn: createDatasetFromLegacySelection,
-    onSuccess: (dataset) => {
-      queryClient.invalidateQueries({ queryKey: ["datasets"] });
-      queryClient.invalidateQueries({ queryKey: ["legacy-trees"] });
-      toast.success(
-        `Dataset "${dataset.name}" creado con ${dataset.total_trees} árboles`,
-      );
-      navigate(`/admin/datasets/${dataset.id}`);
-    },
-    onError: (err) => {
-      toast.error(getErrorMessage(err, "No se pudo crear el dataset"));
-    },
-  });
-
   const partitionDatasets = useMutation({
     mutationFn: partitionLegacySelection,
     onSuccess: (datasets) => {
       queryClient.invalidateQueries({ queryKey: ["datasets"] });
       queryClient.invalidateQueries({ queryKey: ["legacy-trees"] });
+      if (datasets.length === 1) {
+        const [dataset] = datasets;
+        toast.success(
+          `Dataset "${dataset.name}" creado con ${dataset.total_trees} árboles`,
+        );
+        navigate(`/admin/datasets/${dataset.id}`);
+        return;
+      }
       const total = datasets.reduce(
         (sum, dataset) => sum + dataset.total_trees,
         0,
@@ -236,21 +232,24 @@ export default function LegacyImport() {
   );
 
   const k = Number(clusterCount);
-  const maxK = Math.floor(selectedKeys.size / MIN_TREES_PER_DATASET);
-  const invalidK =
-    partitionBy === "kmeans" && (!Number.isInteger(k) || k < 2 || k > maxK);
-  const pending = createDataset.isPending || partitionDatasets.isPending;
+  const maxK = Math.max(
+    1,
+    Math.floor(selectedKeys.size / MIN_TREES_PER_DATASET),
+  );
+  const invalidK = !Number.isInteger(k) || k < 1 || k > maxK;
+  const suggestedK = Math.min(
+    maxK,
+    Math.max(1, Math.ceil(selectedKeys.size / OSRM_MAX_TREES_PER_REQUEST)),
+  );
+  const oversizedDatasets =
+    !invalidK && Math.ceil(selectedKeys.size / k) > OSRM_MAX_MATRIX_DIMENSION;
+  const pending = partitionDatasets.isPending;
 
   const handleConfirm = (event) => {
     event.preventDefault();
     const name = datasetName.trim();
     if (!name || selectedKeys.size === 0 || invalidK) return;
-    const trees = selectionPayload(selectedKeys);
-    if (partitionBy === "single") {
-      createDataset.mutate({ name, trees });
-      return;
-    }
-    partitionDatasets.mutate({ name, trees, k });
+    partitionDatasets.mutate({ name, trees: selectionPayload(selectedKeys), k });
   };
 
   const error = treesError ?? areasError;
@@ -282,7 +281,7 @@ export default function LegacyImport() {
           size="sm"
           disabled={selectedKeys.size === 0 || pending}
           onClick={() => {
-            setPartitionBy("single");
+            setClusterCount(String(suggestedK));
             setDialogOpen(true);
           }}
         >
@@ -498,9 +497,7 @@ export default function LegacyImport() {
         <DialogContent>
           <form onSubmit={handleConfirm} className="grid gap-4">
             <DialogHeader>
-              <DialogTitle>
-                {partitionBy === "single" ? "Crear dataset" : "Crear datasets"}
-              </DialogTitle>
+              <DialogTitle>Importar selección</DialogTitle>
             </DialogHeader>
             <div className="grid gap-2">
               <Label htmlFor="dataset-name">Nombre del dataset</Label>
@@ -512,63 +509,44 @@ export default function LegacyImport() {
                 autoFocus
               />
             </div>
-            <fieldset className="grid gap-2">
-              <legend className="mb-2 text-sm font-medium">Partición</legend>
-              {[
-                ["single", "Un solo dataset"],
-                ["kmeans", "Dividir en k grupos por cercanía"],
-              ].map(([value, label]) => (
-                <Label
-                  key={value}
-                  htmlFor={`partition-${value}`}
-                  className="flex items-center gap-2 font-normal"
-                >
-                  <input
-                    id={`partition-${value}`}
-                    type="radio"
-                    name="partition-by"
-                    value={value}
-                    checked={partitionBy === value}
-                    disabled={value === "kmeans" && maxK < 2}
-                    onChange={() => setPartitionBy(value)}
-                  />
-                  {label}
-                </Label>
-              ))}
-              {maxK < 2 && (
-                <p className="text-sm text-muted-foreground">
-                  La selección necesita al menos {MIN_TREES_PER_DATASET * 2}{" "}
-                  árboles para dividirse: cada dataset debe alcanzar para una
-                  jornada completa.
+            <div className="grid gap-2">
+              <Label htmlFor="cluster-count">Cantidad de grupos (k)</Label>
+              <Input
+                id="cluster-count"
+                type="number"
+                min={1}
+                max={maxK}
+                value={clusterCount}
+                onChange={(event) => setClusterCount(event.target.value)}
+              />
+              {invalidK && (
+                <p className="text-sm text-destructive">
+                  k debe ser un entero entre 1 y {maxK}: cada dataset necesita
+                  al menos {MIN_TREES_PER_DATASET} árboles.
                 </p>
               )}
-            </fieldset>
-            {partitionBy === "kmeans" && (
-              <div className="grid gap-2">
-                <Label htmlFor="cluster-count">Cantidad de grupos (k)</Label>
-                <Input
-                  id="cluster-count"
-                  type="number"
-                  min={2}
-                  max={maxK}
-                  value={clusterCount}
-                  onChange={(event) => setClusterCount(event.target.value)}
-                />
-                {invalidK ? (
-                  <p className="text-sm text-destructive">
-                    k debe ser un entero entre 2 y {maxK}: cada dataset necesita
-                    al menos {MIN_TREES_PER_DATASET} árboles.
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    ≈ {Math.round(selectedKeys.size / k)} árboles por grupo.
-                  </p>
-                )}
-              </div>
+              {suggestedK > 1 && k !== suggestedK && (
+                <p className="text-sm text-muted-foreground">
+                  Sugerido: k={suggestedK} (≈{OSRM_MAX_TREES_PER_REQUEST}{" "}
+                  árboles por dataset acelera la optimización).
+                </p>
+              )}
+            </div>
+            {!invalidK && (
+              <p className="text-sm text-muted-foreground">
+                {k === 1
+                  ? `Se creará un solo dataset con ${selectedKeys.size} árboles.`
+                  : `Se importarán ${selectedKeys.size} árboles, ≈ ${Math.round(
+                      selectedKeys.size / k,
+                    )} árboles por grupo.`}
+              </p>
             )}
-            <p className="text-sm text-muted-foreground">
-              Se importarán {selectedKeys.size} árboles.
-            </p>
+            {oversizedDatasets && (
+              <p className="text-sm text-destructive">
+                Con k={k} cada dataset supera los {OSRM_MAX_MATRIX_DIMENSION}{" "}
+                árboles y la optimización lo rechazará.
+              </p>
+            )}
             {reimportCount > 0 && (
               <p className="text-sm text-amber-600">
                 {reimportCount} de {selectedKeys.size}{" "}
@@ -592,7 +570,7 @@ export default function LegacyImport() {
               >
                 {pending
                   ? "Creando…"
-                  : partitionBy === "single"
+                  : k === 1
                     ? "Crear dataset"
                     : "Crear datasets"}
               </Button>

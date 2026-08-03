@@ -197,7 +197,8 @@ export default function RoutingConfigForm({
             {mutation.isPending ? "Generando…" : "Generar y comparar rutas"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Corre 3 configuraciones × 3 estrategias y recomienda la mejor.
+            Corre 3 configuraciones × 2 estrategias (6 soluciones) y recomienda
+            la mejor.
           </p>
         </form>
       </CardContent>
