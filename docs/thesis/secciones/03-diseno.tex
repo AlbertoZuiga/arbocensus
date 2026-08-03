@@ -1098,55 +1098,12 @@ completar la anterior.
 
 El comportamiento descrito en este capítulo ---y con él los requisitos funcionales comprometidos en
 la Sección~\ref{sec:requisitos-funcionales}--- se sostiene sobre una suite de pruebas automatizadas
-que se ejecuta en cada integración de cambios. La Tabla~\ref{tab:verificacion} resume su volumen y
-las comprobaciones que la acompañan.
-
-% La tabla no cabe en el remanente de la página y su columna de alcance no admite recorte: en un
-% flotante [H] se desborda 330 pt fuera de la caja de texto. En xltabular se parte entre páginas y
-% queda donde la prosa la introduce.
-\small
-\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.2cm} X@{}}
-  \caption{Verificación automatizada del sistema.}
-  \label{tab:verificacion} \\
-  \toprule
-  Componente &
-    Volumen &
-    Alcance \\
-  \midrule
-  \endfirsthead
-  \toprule
-  Componente &
-    Volumen &
-    Alcance \\
-  \midrule
-  \endhead
-  \bottomrule
-  \endlastfoot
-  Pruebas de \textit{backend} &
-    524 funciones en 47 archivos &
-    \textit{Solver} y \textit{pipeline} de optimización, estimación de flota, construcción y caché
-    de la matriz de costos, importadores de CSV y de ambas fuentes legadas, ciclo de publicación,
-    autorización por rol y registro de visitas y omisiones. \\
-  Pruebas de \textit{frontend} &
-    304 casos en 44 archivos &
-    Componentes de la interfaz, cliente de API, cola \textit{offline}, utilidades de selección
-    cartográfica y de progreso. \\
-  Análisis estático &
-    Tres verificaciones &
-    Estilo y formato con \textit{Ruff}, tipos con \textit{Pyright} y estilo de \textit{JavaScript}
-    con \textit{ESLint}. \\
-  Integración continua (CI) &
-    Tres flujos de trabajo &
-    Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato
-    de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso
-    del \textit{frontend}, la construcción del paquete de producción. \\
-  Entrega continua (CD) &
-    Un flujo de trabajo &
-    Construcción y publicación de las imágenes de producción y actualización del servidor por SSH
-    ante cada \textit{push} a la rama \texttt{production}
-    (Sección~\ref{sec:despliegue-produccion}). \\
-\end{xltabular}
-\normalsize
+que se ejecuta en cada integración de cambios: 524 funciones de prueba de \textit{backend} en 47
+archivos y 304 casos de \textit{frontend} en 44, acompañados de análisis estático
+---\textit{Ruff}, \textit{Pyright} y \textit{ESLint}--- y de los flujos de integración y entrega
+continuas que encadenan análisis, pruebas y construcción, y que actualizan el servidor ante cada
+\textit{push} a la rama \texttt{production}
+(Sección~\ref{sec:despliegue-produccion}).\footnote{Ver \hyperref[anx:trazabilidad]{Anexo 5}.}
 
 Las pruebas del \textit{backend} se apoyan en \textit{pytest} con una base de datos PostGIS real y
 no en dobles de prueba, de modo que las consultas geográficas y las restricciones de unicidad

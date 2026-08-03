@@ -9,7 +9,7 @@
   Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
   Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
   Perfil de rendimiento, grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
-  Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
+  Trazabilidad de requisitos y verificación automatizada & \pageref{anx:trazabilidad} \\
   Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
   Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
   Alternativas de \textit{stack} evaluadas & \pageref{anx:stack} \\
@@ -1157,9 +1157,7 @@ relativas entre configuraciones, que son las que sostienen las conclusiones del
 capítulo de resultados. Contrastar la estimación contra tiempos reales de terreno es
 la validación pendiente de mayor valor para el uso operativo de la plataforma.
 
-\end{enumerate}
-
-\anexo{5}{Trazabilidad de requisitos al diseño}{Trazabilidad de requisitos al diseño}
+\anexo{5}{Trazabilidad de requisitos y verificación automatizada}{Trazabilidad de requisitos y verificación automatizada}
 \label{anx:trazabilidad}
 
 La Tabla~\ref{tab:trazabilidad} remite cada requisito funcional de la
@@ -1207,6 +1205,53 @@ donde se documenta su realización y, cuando corresponde, al inventario de
   RF-25 & \S\ref{sec:legacy} \\
   RF-26 & \S\ref{sec:api} \\
 \end{xltabular}
+
+La Tabla~\ref{tab:verificacion} detalla el volumen y el alcance de la verificación automatizada
+que la Sección~\ref{sec:verificacion} resume.
+
+\small
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.2cm} X@{}}
+  \caption{Verificación automatizada del sistema.}
+  \label{tab:verificacion} \\
+  \toprule
+  Componente &
+    Volumen &
+    Alcance \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Componente &
+    Volumen &
+    Alcance \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
+  Pruebas de \textit{backend} &
+    524 funciones en 47 archivos &
+    \textit{Solver} y \textit{pipeline} de optimización, estimación de flota, construcción y caché
+    de la matriz de costos, importadores de CSV y de ambas fuentes legadas, ciclo de publicación,
+    autorización por rol y registro de visitas y omisiones. \\
+  Pruebas de \textit{frontend} &
+    304 casos en 44 archivos &
+    Componentes de la interfaz, cliente de API, cola \textit{offline}, utilidades de selección
+    cartográfica y de progreso. \\
+  Análisis estático &
+    Tres verificaciones &
+    Estilo y formato con \textit{Ruff}, tipos con \textit{Pyright} y estilo de \textit{JavaScript}
+    con \textit{ESLint}. \\
+  Integración continua (CI) &
+    Tres flujos de trabajo &
+    Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato
+    de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso
+    del \textit{frontend}, la construcción del paquete de producción. \\
+  Entrega continua (CD) &
+    Un flujo de trabajo &
+    Construcción y publicación de las imágenes de producción y actualización del servidor por SSH
+    ante cada \textit{push} a la rama \texttt{production}
+    (Sección~\ref{sec:despliegue-produccion}). \\
+\end{xltabular}
+\normalsize
 
 \anexo{6}{Capturas complementarias de la interfaz}{Capturas complementarias de la interfaz}
 \label{anx:capturas}
