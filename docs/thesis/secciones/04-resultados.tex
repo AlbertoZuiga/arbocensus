@@ -1534,8 +1534,8 @@ entre corridas distintas. Ambas están cuantificadas en la auditoría de robuste
 \label{sec:limitaciones}
 
 Se documentan a continuación las limitaciones aceptadas en el alcance de esta iteración de
-Arbocensus, agrupadas en tres bloques: las que acotan el producto construido, las que acotan la
-evidencia recogida sobre él y los resultados del propio capítulo que condicionan cómo debe leerse.
+Arbocensus, agrupadas en dos bloques: las que acotan el producto construido y las que acotan la
+evidencia recogida sobre él.
 
 \begin{itemize}[label=--]
 
@@ -1611,12 +1611,9 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
         es un registro colgado en la lista de trabajos, sin efecto sobre las soluciones ya
         publicadas. La corrección se documenta en el apartado de posibles mejoras.
 
-    \item Estrategia \texttt{cluster\_first}: la estrategia de particionamiento previo mediante
-        $k$-medias quedó descartada como opción de producción por incumplir, frente a
-        \texttt{spatial\_term}, dos de las tres salvaguardas del criterio de decisión ---balance y
-        desplazamiento total--- y dejar además 12 árboles sin asignar
-        (Sección~\ref{sec:comparacion-estrategias}); se conserva en el código como opción de
-        comparación para investigación, no como alternativa de censo.
+    \item Estrategia \texttt{cluster\_first}: descartada como opción de producción por el
+        \textit{head-to-head} de la Sección~\ref{sec:comparacion-estrategias}; se conserva en el
+        código como opción de comparación para investigación, no como alternativa de censo.
 
     \item Cobertura bajo presupuesto temporal estrecho: la formulación admite descartes mediante
         disyunciones penalizadas ($1\,000\,000$\,s por árbol no cubierto), de modo que la cobertura
@@ -1676,24 +1673,6 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
         rutas se estiman con el mismo perfil sobre la misma red---, lo que lo hace más sensible para
         las cifras absolutas de duración que para las comparaciones relativas entre configuraciones
         (\hyperref[anx:efectos-no-medidos]{Anexo 4}).
-  \end{itemize}
-
-  \item Resultados que acotan la lectura
-  \begin{itemize}
-    \item Solapamiento inter-ruta: el par de rutas con mayor superposición espacial presenta un
-        \textit{IoU} de $0{,}55$ (Ilustración~\ref{fig:peor-par}). Su origen es la geometría local
-        del par y no la formulación, de modo que ningún coeficiente global lo corrige y la vía
-        estructural es la segmentación previa por área de censo
-        (Sección~\ref{sec:discusion-calidad}).
-    \item Cercanía del \textit{baseline greedy} en tiempo total: el margen de \textit{OR-Tools}
-        frente al heurístico del vecino más cercano con el mismo post-proceso de resecuenciación es
-        estrecho ---un $4{,}7$\,\% del desplazamiento total (Tabla~\ref{tab:comparativa})---, y es
-        un artefacto de saturación: el \textit{greedy} llena cada ruta hasta el borde de $T_{\max}$,
-        lo que también infla su índice de balance sin que medie un reparto deliberado
-        (Sección~\ref{sec:comparacion-greedy}).
-    \item Jerarquía de penalizaciones blandas: la razón $20\mathord{:}1$ entre el coeficiente de la
-        penalización inferior y el de la superior es un compromiso de diseño calibrado y no un
-        defecto; su efecto está medido en la Sección~\ref{sec:discusion-calidad}.
   \end{itemize}
 
 \end{itemize}
