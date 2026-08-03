@@ -4,7 +4,7 @@ from apps.accounts.models import CustomUser
 from apps.accounts.permissions import IsAdminRole, IsSurveyorRole
 from apps.datasets import legacy
 from apps.datasets.models import Dataset, Tree
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import LineString, Point
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
@@ -76,11 +76,23 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
             for stop in route.stops.all()
         ]
 
-    @classmethod
-    def _route_geometry(cls, route):
-        stop_coordinates = cls._stop_coordinates(route)
-        coordinates = osrm.fetch_route_path(stop_coordinates)
-        return stop_coordinates, coordinates
+    @staticmethod
+    def _persist_geometry(route, path):
+        if path is not None and len(path) >= 2:
+            Route.objects.filter(pk=route.pk).update(
+                geometry=LineString(path, srid=4326)
+            )
+
+    def _route_coordinates(self, route):
+        if route.geometry is not None:
+            return [[x, y] for x, y in route.geometry.coords]
+        stop_coordinates = self._stop_coordinates(route)
+        try:
+            path = osrm.fetch_route_path(stop_coordinates)
+        except Exception:
+            return stop_coordinates
+        self._persist_geometry(route, path)
+        return path
 
     @action(detail=False, methods=["get"])
     def geojson(self, request):
@@ -90,11 +102,32 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
                 status=400,
             )
         routes = list(self.get_queryset())
-        paths = osrm.fetch_route_paths(
-            [self._stop_coordinates(route) for route in routes]
-        )
+        coordinates_per_route = [
+            [[x, y] for x, y in route.geometry.coords]
+            if route.geometry is not None
+            else None
+            for route in routes
+        ]
+        missing = [
+            index
+            for index, coordinates in enumerate(coordinates_per_route)
+            if coordinates is None
+        ]
+        if missing:
+            stop_coordinates = [
+                self._stop_coordinates(routes[index]) for index in missing
+            ]
+            try:
+                paths = osrm.fetch_route_paths(stop_coordinates)
+            except Exception:
+                paths = stop_coordinates
+            else:
+                for index, path in zip(missing, paths, strict=True):
+                    self._persist_geometry(routes[index], path)
+            for index, path in zip(missing, paths, strict=True):
+                coordinates_per_route[index] = path
         features = []
-        for route, coordinates in zip(routes, paths, strict=True):
+        for route, coordinates in zip(routes, coordinates_per_route, strict=True):
             features.append(
                 {
                     "type": "Feature",
@@ -115,8 +148,9 @@ class RouteViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["get"])
     def path(self, request, pk=None):
         route = self.get_object()
-        _, coordinates = self._route_geometry(route)
-        return Response({"type": "LineString", "coordinates": coordinates})
+        return Response(
+            {"type": "LineString", "coordinates": self._route_coordinates(route)}
+        )
 
     @action(detail=True, methods=["patch"])
     def assign(self, request, pk=None):
