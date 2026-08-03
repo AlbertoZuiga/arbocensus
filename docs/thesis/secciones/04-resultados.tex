@@ -4,17 +4,7 @@
 Este capítulo responde tres preguntas sobre el producto: si el motor de optimización genera planes
 de censo que cumplen los criterios de aceptación comprometidos en el
 Capítulo~\ref{cap:solucion}; si esos planes son mejores que los de una alternativa trivial; y en
-qué régimen geográfico se sostienen ambas respuestas. La Sección~\ref{sec:resultados-obtenidos} las
-responde en ese orden: primero declara el protocolo de evaluación ---instancias, entorno de
-medición, presupuesto de cómputo y criterios
-(Sección~\ref{sec:protocolo-evaluacion})---, luego acredita la calidad del plan sobre la instancia
-de mayor tamaño (Sección~\ref{sec:metricas-calidad}) y su mejora sobre la alternativa trivial
-(Sección~\ref{sec:comparacion-greedy}), después mide el efecto del término de dispersión geográfica
-(Sección~\ref{sec:comparacion-estrategias}) y el papel del régimen geográfico de la instancia
-(Sección~\ref{sec:discusion-calidad}), y cierra con la evaluación sobre las áreas de censo reales
-(Sección~\ref{sec:areas-reales}). Las conclusiones (Sección~\ref{sec:conclusiones}) recogen lo que
-esos resultados muestran sobre el problema y el cumplimiento de criterios y atributos; las dos
-secciones finales registran las limitaciones del sistema y las mejoras posibles.
+qué régimen geográfico se sostienen ambas respuestas.
 
 Conviene anticipar el hallazgo central, porque ordena la lectura de todo el capítulo: no existe una
 configuración única de la función objetivo que gane en todos los regímenes geográficos, y la unidad
@@ -84,24 +74,25 @@ los experimentos del capítulo razonan sobre esa estructura de precios, en parti
 penalizaciones blandas de la dimensión temporal y sobre el término de extensión geográfica que
 distingue a \texttt{spatial\_term} de \texttt{global}.
 
-Las réplicas de cada corrida no provienen de una semilla de generador pseudoaleatorio
----\textit{OR-Tools} no la expone--- sino de permutar el orden de entrada de los nodos. Esta
-permutación altera el desempate en la heurística de construcción inicial
-(\texttt{PATH\_CHEAPEST\_ARC}), que recorre los arcos en orden de índice, y propaga la perturbación
-a toda la trayectoria del metaheurístico GLS \citep{voudouris1999guided}: aunque el \textit{solver}
-es determinista dados sus parámetros de entrada, el orden de los nodos ---información irrelevante
-para el problema matemático--- basta para generar soluciones distintas. La sensibilidad al orden de
-entrada no se limita al tiempo de desplazamiento: sobre las métricas de calidad alcanza un orden de
-magnitud mayor, y las barras de error entre semillas de una corrida no acotan la varianza entre
-corridas distintas (\hyperref[anx:alcance-replicas]{Anexo 4}).
+Cada corrida se repite tres veces. \textit{OR-Tools} no expone una semilla de generador
+pseudoaleatorio que produzca repeticiones distintas (restricción RE-05 de la
+Sección~\ref{sec:restricciones}), de modo que cada repetición se construye permutando el orden en
+que los nodos entran al \textit{solver}. Ese orden no cambia el problema matemático, pero decide
+los empates de la heurística que construye la solución inicial y, con ella, toda la trayectoria de
+la búsqueda local del GLS \citep{voudouris1999guided}: tres órdenes distintos producen tres
+soluciones distintas del mismo problema. El texto llama «semillas» a esas permutaciones. La
+dispersión que generan es mayor en las métricas de calidad que en el tiempo de desplazamiento, y
+acota la variación dentro de una corrida, no la variación entre corridas distintas
+(\hyperref[anx:alcance-replicas]{Anexo 4}).
 
 \subsubsection*{Entorno de medición}
 \phantomsection\label{sec:entorno-medicion}%
-Las mediciones de este capítulo preceden al despliegue productivo del sistema
-(Sección~\ref{sec:despliegue-produccion}), incorporado al cierre de la iteración, y se realizaron
-sobre una réplica local del entorno de producción: las mismas imágenes de contenedor del
-despliegue, una instancia real de OSRM \citep{osrm} cargada con el extracto completo de Chile de
-\textit{OpenStreetMap} con perfil peatonal, y PostGIS \citep{postgis} como base de datos. Las
+Todas las mediciones de este capítulo se ejecutaron en un entorno local que replica al de
+producción; el servidor del despliegue productivo (Sección~\ref{sec:despliegue-produccion}),
+incorporado al cierre de la iteración, no es el entorno de medición y aporta únicamente la corrida
+de contraste que cierra este apartado. La réplica local emplea las mismas imágenes de contenedor
+del despliegue, una instancia real de OSRM \citep{osrm} cargada con el extracto completo de Chile
+de \textit{OpenStreetMap} con perfil peatonal, y PostGIS \citep{postgis} como base de datos. Las
 versiones de todas las piezas quedan fijadas en el repositorio; la que condiciona la reproducción
 de las cifras es la de \textit{OR-Tools} (9.15), que el \hyperref[anx:comandos]{Anexo 3} precisa
 junto a los comandos.
@@ -310,7 +301,6 @@ de estrategias de la Sección~\ref{sec:comparacion-estrategias} provienen de cor
 sobre el mismo arbolado ---con órdenes internos de nodos distintos y, por tanto, trayectorias del
 GLS distintas--- y no deben compararse arco a arco.
 
-% ---- 4.1.2 ------------------------------------------------------
 \subsection{Mejora sobre la alternativa trivial (CA-06)}
 \label{sec:comparacion-greedy}
 
@@ -485,417 +475,6 @@ por lo que cada variante se ejecuta una sola vez; el \textit{dataset} es la inst
 \texttt{reference-n1607} congelada en \texttt{docs/experiments/instances/}, cuyos identificadores
 son función pura del archivo y por lo tanto reproducibles en cualquier máquina.
 
-% ---- 4.1.3 -----------------------------------------------------
-\subsection{Calidad geográfica de rutas y comparación de estrategias}
-\label{sec:comparacion-estrategias}
-
-La comparación de estrategias emplea los siguientes indicadores de calidad geográfica, definidos
-sobre las coordenadas reales de las paradas (\texttt{RouteStop}) y calculados con la distancia de
-\textit{haversine} \citep{sinnott1984virtues}:
-
-\begin{itemize}[label=--]
-  \item Compacidad ($\sum r_{\max}$): suma, sobre las rutas, del radio máximo de cada ruta
-        (distancia del centroide a su parada más lejana). Menor es mejor.
-  \item Solapamiento (\textit{interleaving}): número de paradas pertenecientes a \textit{otras}
-        rutas que caen dentro de la caja envolvente (\textit{bounding box}) de una ruta dada, sumado
-        sobre todas las rutas. Se reporta tanto el total como su valor normalizado por número de
-        rutas ($\overline{\text{solap}} = \text{total}/k$), para comparar entre tamaños de
-        \textit{dataset}. Mayor indica peor partición espacial.
-  \item IoU peor par: intersección sobre unión de las cajas envolventes del par de rutas con mayor
-        superposición. Mayor indica mayor solapamiento espacial entre dos rutas.
-\end{itemize}
-
-Estos indicadores tienen lectura operacional directa: cada ruta del plan se asigna a un censista
-distinto, de modo que dos rutas entrelazadas obligan a dos censistas a recorrer las mismas calles y
-desdibujan el territorio del que cada uno responde, mientras que la compacidad acota la extensión
-que una jornada debe cubrir. El solapamiento y la compacidad miden, por tanto, la calidad de la
-partición territorial del plan y no solo su geometría.
-
-El balance temporal se reporta como $\min_r T_r / \max_r T_r$ (\textit{balance\_score} del modelo).
-
-Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, la formulación vigente
----un único \textit{Open mTSP} global resuelto con \textit{OR-Tools}, sin agrupamiento previo de
-los nodos--- se caracterizó con un diagnóstico sobre nodos sintéticos de distribución uniforme
-($n \in \{20, 40, 80\}$ en la zona de Providencia/Santiago Centro), la única medición de esta
-memoria que no usa arbolado real; su protocolo y sus cifras se documentan en el
-\hyperref[anx:baseline-geo-sintetico]{Anexo 4}. El hallazgo es un desacople entre balance temporal
-y calidad geográfica: el balance se mantiene alto ($0{,}87$--$0{,}95$) mientras el solapamiento
-entre rutas crece de forma monótona con la densidad, con un caso recurrente de una ruta compacta
-contenida dentro de la caja envolvente de otra más extensa, coherente con que el modelo optimiza
-tiempo total con un término de balance blando y sin criterio espacial explícito en la partición.
-
-\subsubsection*{Estrategias evaluadas}
-
-Ese diagnóstico es el que motivó las dos estrategias de partición espacial que la
-Sección~\ref{sec:estrategias} describe ---\texttt{spatial\_term} y \texttt{cluster\_first}---, y que
-aquí se miden contra la formulación vigente (\texttt{global}) sobre la instancia de estrés de
-$n = 1\,607$ árboles.
-
-Las cifras de \texttt{cluster\_first} corresponden a una implementación corregida en dos puntos
-respecto de su versión inicial ---la estimación de $k$ emplea el viaje medio al vecino más cercano
-en lugar del promedio entre todos los pares, y el presupuesto del \textit{solver} se reparte entre
-los grupos en proporción a su tamaño---, sin lo cual la estrategia no era medible en condiciones
-homogéneas.
-
-\subsubsection*{Protocolo}
-
-Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones idénticas: mismo
-\textit{dataset} ($n = 1\,607$), misma variante operacional (tiempo de servicio de 2\,min y
-$T_{\max} = 3$\,h, la configuración censal de referencia) y mismo límite de \textit{solver} (120\,s,
-justificado en la Tabla~\ref{tab:sensibilidad-tl}, que acota el presupuesto de tiempo del
-\textit{solver} y no compara estrategias entre sí). También se fijaron las mismas tres semillas (42,
-43 y 44) y la misma versión del código, posterior a la corrección del redondeo del tránsito. El
-criterio de decisión se fijó antes de ejecutar el experimento: una estrategia supera a la
-\textit{baseline} si reduce el solapamiento por ruta o mejora el IoU del peor par \textit{sin}
-degradar el balance temporal respecto de \texttt{global}, sin producir rutas que excedan $T_{\max}$
-y con un tiempo total de desplazamiento dentro de un 10\,\% del de \texttt{global}. La
-Tabla~\ref{tab:estrategias} resume los resultados como media de las tres repeticiones.
-
-\begin{table}[H]
-  \centering
-  \caption{Comparación de estrategias sobre la instancia de estrés \texttt{reference-n1607}.}
-  \label{tab:estrategias}
-  \small
-  \begin{tabularx}{\textwidth}{lXXXXXXX}
-    \toprule
-    Estrategia &
-      $k$ &
-      Balance &
-      Descart. &
-      Des\-plaz. [s] &
-      $\sum r_{\max}$ [m] &
-      Solap.\slash ruta &
-      IoU peor par \\
-    \midrule
-    \texttt{global}        &
-      25{,}0 &
-      0{,}838 &
-      0  &
-      59\,725 &
-      22\,455 &
-      168{,}0 &
-      0{,}51 \\
-    \texttt{spatial\_term} &
-      25{,}0 &
-      0{,}833 &
-      0  &
-      60\,611 &
-      19\,578 &
-      77{,}3  &
-      0{,}55 \\
-    \texttt{cluster\_first}& 34{,}0 &
-      0{,}698 &
-      12 &
-      69\,813 &
-      9\,714  &
-      20{,}0  &
-      0{,}48 \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-\subsubsection*{Resultados}
-
-\texttt{spatial\_term} reduce el solapamiento por ruta a menos de la mitad ($168{,}0 \rightarrow
-77{,}3$, un $-54$\,\%) y comprime las rutas ($\sum r_{\max}$ cae un $12{,}8$\,\%), a cambio de un
-$+1{,}5$\,\% de tiempo total de desplazamiento ---muy por debajo del margen del 10\,\% admitido---.
-Lo hace con el mismo número de rutas, cobertura total y un balance de $0{,}833$ frente a $0{,}838$
-de la \textit{baseline}, diferencia inferior a la dispersión entre semillas de la propia
-\texttt{global}. Cumple, por tanto, el criterio de decisión pre-registrado que este apartado fijó
-al inicio de su protocolo.
-
-El veredicto tiene el alcance de la corrida que lo produjo: la instancia de referencia, con la
-configuración censal de 2\,min de servicio y $T_{\max}=3$\,h, y bajo la métrica de solapamiento
-entre rutas. No es un veredicto sobre toda instancia ni sobre todo indicador. Dos apartados
-posteriores lo acotan: la Sección~\ref{sec:areas-reales} lleva esta misma configuración de
-producción a las áreas reales del censo, donde el criterio de decisión se cumple en dos de las tres
-y no en las tres; y el barrido del coeficiente espacial que cierra este apartado muestra que la
-compacidad que la estrategia compra se paga en tiempo de desplazamiento y en balance.
-
-El resultado admite además una matización dentro de esta misma corrida: el IoU del peor par no mejora, sino que empeora levemente
-($0{,}51 \rightarrow 0{,}55$; en esta métrica un valor mayor es peor). La penalización del
-\textit{span} actúa sobre la extensión de cada ruta considerada de forma individual, de modo que
-comprime las cajas envolventes, pero no separa el par de rutas vecinas que se superponen en la zona
-más densa del \textit{dataset}: ese par persiste como problema de geometría local y no lo resuelve
-un coeficiente global. La ganancia de \texttt{spatial\_term} es, en consecuencia, agregada (menos
-paradas ajenas dentro de cada caja, rutas más compactas) y no la eliminación del peor caso. Ese par
-se reproduce en la Ilustración~\ref{fig:peor-par} de la Sección~\ref{sec:discusion-calidad}, donde
-se discute su origen geométrico.
-
-Conviene además notar que las métricas de forma son las más sensibles a la semilla, pese a que las
-de coste no lo son: las tres repeticiones de cada estrategia convergen a soluciones prácticamente
-idénticas en $k$, balance y desplazamiento (dispersión $\leq 0{,}5$\,\%), pero \texttt{global}
-produce solapamientos por ruta de $177$, $150$ y $177$ e IoU de $0{,}54$, $0{,}45$ y $0{,}55$ según
-la repetición, de modo que su media esconde una repetición notoriamente mejor. Aun contra esa mejor
-repetición de \texttt{global} ($150$), \texttt{spatial\_term} ($81$, $75$ y $75$) reduce el
-solapamiento en al menos un $45$\,\%, por lo que la conclusión no depende de la agregación.
-
-\texttt{cluster\_first} queda descartada con datos, incluso en su versión corregida.
-Alcanza, como era esperable, la mejor separación espacial de las tres ---solapamiento de $20$ por
-ruta ($-88$\,\%) y $\sum r_{\max}$ de $9\,714$\,m ($-57$\,\%)---, cifras que sirven como cota de la
-separación alcanzable, pero lo hace incumpliendo dos de las tres salvaguardas del criterio: a)
-degrada el balance a $0{,}698$ frente al $0{,}838$ de \texttt{global}; b) encarece el desplazamiento
-total en un $16{,}9$\,\%, por sobre el margen del $10$\,\% admitido. A ello se suman dos costos que
-el criterio no pondera y un censo sí: deja 12 árboles fuera de la solución ---la estrategia es
-determinista, dado que el $k$-medias emplea una semilla propia fija y las tres repeticiones producen
-exactamente la misma partición--- y usa $k=34$ rutas ($+36$\,\% de flota). La causa es estructural:
-el particionamiento duro impide reasignar árboles de borde cuando el grupo que los contiene no
-alcanza a cubrirlos dentro de $T_{\max}$, y los sub-problemas ---que ahora reciben una fracción del
-presupuesto de tiempo, repartida entre los $\approx 34$ grupos--- activan las disyunciones
-penalizadas antes de encontrar una asignación completa.
-
-\subsubsection*{Grilla operacional de la estrategia ganadora}
-
-Confirmada \texttt{spatial\_term}, se repitió sobre ella la grilla de seis variantes operacionales
----el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
-combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), sobre el
-\textit{dataset} de $n=1\,607$, con el mismo límite de 120\,s y tres semillas
-(Tabla~\ref{tab:grilla-spatial}).
-
-\begin{table}[H]
-  \centering
-  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term}.}
-  \label{tab:grilla-spatial}
-  \small
-  \begin{tabularx}{\textwidth}{rrXXXXXXX}
-    \toprule
-    Serv. [min] &
-      $T_{\max}$ [h] &
-      $k$ &
-      Balance &
-      $\sigma(T)$ [s] &
-      Descart. &
-      Des\-plaz. [s] &
-      $\sum r_{\max}$ [m] &
-      Solap.\slash ruta \\
-    \midrule
-    1 &
-      2 &
-      23{,}0 &
-      0{,}996 &
-      7   &
-      0     &
-      68\,410 &
-      20\,937 &
-      109{,}2 \\
-      \addlinespace
-    1 &
-      3 &
-      16{,}0 &
-      0{,}835 &
-      601 &
-      0     &
-      59\,491 &
-      19\,905 &
-      146{,}1 \\
-      \addlinespace
-    2 &
-      2 &
-      36{,}0 &
-      0{,}998 &
-      3   &
-      1{,}0 &
-      65\,727 &
-      16\,917 &
-      82{,}8  \\
-      \addlinespace
-    2 &
-      3 &
-      25{,}0 &
-      0{,}833 &
-      606 &
-      0     &
-      60\,588 &
-      19\,588 &
-      75{,}2  \\
-      \addlinespace
-    3 &
-      2 &
-      49{,}0 &
-      0{,}998 &
-      2   &
-      2{,}0 &
-      63\,146 &
-      17\,347 &
-      55{,}8  \\
-      \addlinespace
-    3 &
-      3 &
-      34{,}0 &
-      0{,}836 &
-      522 &
-      0     &
-      61\,611 &
-      24\,267 &
-      79{,}9  \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-La estructura de la grilla es la ya descrita para el compromiso entre balance y costo:
-$T_{\max}=2$\,h fuerza un balance $\approx 1{,}0$ y dispara la flota ($23 \rightarrow 36 \rightarrow
-49$ conforme crece el tiempo de servicio), mientras que $T_{\max}=3$\,h reduce $k$ en torno a un
-30\,\% con un balance de $\approx 0{,}83$. En la única variante para la que se dispone de un
-contraste homogéneo ---servicio de 2\,min con $T_{\max}=3$\,h, la del \textit{head-to-head}---
-\texttt{spatial\_term} emplea el mismo número de rutas que \texttt{global} ($k=25$), lo que indica
-que el término espacial \textit{no} infla la flota; para las cinco variantes restantes no existe una
-corrida de \texttt{global} bajo el mismo régimen de medición, de modo que la comparación no se
-extiende a ellas (véase el apartado siguiente). La observación operacional relevante es que las
-variantes de $T_{\max}=2$\,h con tiempo de servicio alto descartan árboles (uno con servicio de
-2\,min, dos con 3\,min, de forma consistente en las tres semillas): esa configuración opera al
-límite de la capacidad temporal, de modo que si el censo exige cobertura total debe emplearse
-$T_{\max}=3$\,h.
-
-Debe notarse que la fila de servicio 2\,min con $T_{\max}=3$\,h de la Tabla~\ref{tab:grilla-spatial}
-es la misma configuración de la Tabla~\ref{tab:estrategias}, ejecutada en una corrida distinta; las
-pequeñas diferencias observadas (desplazamiento de $60\,588$ frente a $60\,611$\,s, solapamiento de
-$75{,}2$ frente a $77{,}3$) provienen del corte por reloj de pared del GLS y acotan la precisión con
-que deben leerse todas las comparaciones de esta subsección.
-
-\subsubsection*{Alcance de las comparaciones y decisión}
-
-Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head} de la
-Tabla~\ref{tab:estrategias}, el único contraste homogéneo disponible: mismo código, mismo
-presupuesto de \textit{solver} y mismas semillas. La grilla del perfil de rendimiento del
-\hyperref[anx:perfil-rendimiento]{Anexo 4} proviene de un régimen de medición anterior y no es
-comparable arco a arco con la Tabla~\ref{tab:grilla-spatial}, por las razones que ese anexo
-detalla.
-
-El valor del coeficiente \texttt{SPATIAL\_SPAN\_COEF} se sometió a un barrido posterior sobre los
-valores $\{0,\,3,\,10,\,30\}$, con tres semillas por punto y las doce instancias congeladas del
-\hyperref[anx:suite-instancias]{Anexo 4}. Su resultado no habilita ningún valor mejor que el de
-fábrica, pero tampoco lo confirma como óptimo: sobre la instancia de referencia los auto-cruces
-sobre calle no varían de forma monótona con el coeficiente ---$39{,}7$ sin penalización espacial,
-$34{,}3$ en el valor de producción, y $46{,}0$ y $48{,}0$ al subirlo a $10$ y a $30$---, la mejora
-del valor de producción sobre no penalizar ($13{,}6$\,\%) queda lejos del umbral pre-registrado de
-ese ciclo y suprimir la penalización entrega mejor tiempo de desplazamiento ($57\,352$\,s frente a
-$58\,948$\,s) y mejor balance ($0{,}874$ frente a $0{,}839$). Lo que \texttt{spatial\_term} compra
-es compacidad y menor solapamiento entre rutas, y lo paga en tiempo y en balance; no es una mejora
-en todos los ejes a la vez. La decisión pondera esos ejes desde la operación del censo: el
-sobrecosto queda dentro de la dispersión entre semillas de la propia \texttt{global}, la reducción
-del solapamiento a menos de la mitad cambia la calidad territorial del plan y el único eje con
-señal pendiente ---el IoU del peor par--- es un problema de geometría local que ningún coeficiente
-global separa. Se adopta, en consecuencia, \texttt{spatial\_term} como estrategia por defecto, con
-\texttt{SPATIAL\_SPAN\_COEF} $=3$ y el límite de \textit{solver} de 120\,s;
-\texttt{cluster\_first} se mantiene como opción de comparación, no de producción. El protocolo
-completo, los comandos reproducibles y los datos crudos de este experimento se encuentran
-versionados en \texttt{docs/experiments/} (reportes \texttt{route-quality-20260712.md} y
-\texttt{spatial-span-20260730.md}, con los archivos CSV asociados).
-
-% ---- 4.1.4 ------------------------------------------------------
-\subsection{El régimen geográfico de la instancia}
-\label{sec:discusion-calidad}
-
-\subsubsection*{Análisis causal de la función objetivo}
-
-La razón entre las dos penalizaciones blandas de la dimensión temporal, resumidas junto al resto de
-la función objetivo en la Sección~\ref{sec:protocolo-evaluacion}, es de $20\mathord{:}1$
-($10\,000 / 500$), y el
-experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se conservan en
-\texttt{docs/experiments/penalty-sensitivity-20260713-reference.csv}--- ofrece evidencia causal de
-la función que cumple cada término. Al suprimir la penalización inferior (coeficiente $= 0$),
-manteniendo fijo el resto de los coeficientes, el balance de carga cae de $0{,}838$ a $0{,}739$, la
-flota sube de 25 a 32 rutas y el número de rutas que quedan por debajo de $T_{\min}$ pasa, en esa
-corrida, de 3 a 26,
-lo que confirma que ese componente es el mecanismo que sostiene la distribución de carga y evita la
-fragmentación en rutas demasiado cortas.
-
-La penalización superior actúa sobre la geometría: al redirigir su objetivo desde el punto medio del
-intervalo hasta $T_{\max}$, el número de auto-cruces medido sobre cuerdas cae de $76{,}3$ a $6{,}3$
----una reducción del $91{,}7$\,\%--- sin variar el presupuesto de cómputo ni el número de rutas. Esa
-cifra no sostiene, sin embargo, una relación causal directa: el barrido no tiene réplicas de semilla
-independientes, la métrica de cuerdas está invertida ($\rho = -0{,}575$) precisamente en la
-instancia donde se midió, y el mismo brazo degrada el balance de $0{,}838$ a $0{,}715$. El
-\hyperref[anx:reservas-sensibilidad]{Anexo 4} detalla las tres reservas. Con ellas, lo que el
-material sostiene es evidencia consistente con la hipótesis de que la geometría de las rutas
-responde a la configuración de la función objetivo y no al corte por tiempo del GLS, reforzada por
-dos observaciones independientes: el presupuesto del \textit{solver} no altera el número de rutas ni
-el balance por sobre los 120\,s (Tabla~\ref{tab:sensibilidad-tl}), y la re-medición sobre
-\texttt{crossings\_road} invierte el signo del efecto de este mismo brazo sobre la geometría real.
-
-\subsubsection*{El régimen geográfico del \textit{dataset} de evaluación}
-
-El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. El conjunto
-de evaluación de $n = 1\,607$ árboles agrega arbolado real de múltiples áreas de censo dispersas en
-$\approx 10{,}3$\,km de extensión ($12{,}5$\,km de diagonal), frente a $1{,}32$\,km del área
-individual mayor ---razón cercana a $8\times$, según las instancias versionadas en
-\texttt{docs/experiments/instances/}---. Los árboles son reales; lo sin correlato operativo es
-tratar esa unión ---las veintiuna áreas no vacías de \texttt{legacy\_api} (429 árboles, 27\,\% del
-conjunto) más los 1\,178 árboles de \texttt{legacy\_app}, sin área asignada--- como un único trabajo
-de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). La serie sistemática de
-\texttt{crossings\_road} por área individual (Sección~\ref{sec:areas-reales}) acota lo que ese
-régimen significa para los auto-cruces: entre 0 y 6 por solución completa en las áreas reales
-frente a 24--37 en el conjunto agregado ---situación que en operación solo surgiría si se
-procesaran múltiples áreas de censo como un único problema---, con una tasa por ruta esencialmente
-plana entre ambos regímenes: el agregado no produce más auto-cruces por ruta, sino más rutas.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
-  \caption{
-    Régimen disperso (\textit{dataset} de evaluación agregado) frente a régimen real (áreas
-    individuales del arbolado legado).
-  }
-  \label{fig:regimen-disperso-vs-real}
-\end{figure}
-
-El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
-de $0{,}55$, se reproduce en la Ilustración~\ref{fig:peor-par}.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
-  \caption{Par de rutas con mayor solapamiento espacial en el \textit{dataset} de evaluación.}
-  \label{fig:peor-par}
-\end{figure}
-
-El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría
-local del par, y ningún coeficiente global lo elimina sin penalizar las rutas circundantes; la
-solución estructural es la segmentación previa por área de censo.
-
-La lectura que estos resultados dejan explícita es que los auto-cruces responden a la forma de la
-función objetivo y al régimen geográfico de la instancia, no a una limitación del tiempo de
-cómputo: ampliar el presupuesto del \textit{solver} no los altera
-(Tabla~\ref{tab:sensibilidad-tl}) y redirigir la penalización blanda superior sí.
-
-La unidad operativa del motor es el área de censo individual, no el arbolado metropolitano en su
-conjunto. Procesar cada área como un problema independiente reduciría la extensión del
-\textit{dataset} a la escala en que el \textit{solver} produce soluciones con pocos auto-cruces
-absolutos con la configuración actual; esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su
-costo se mide sobre las áreas reales en la Sección~\ref{sec:areas-reales}. El problema que esa extensión
-plantea ---repartir un territorio en distritos compactos y equilibrados antes de rutear--- tiene
-tratamiento propio en la literatura bajo la denominación de diseño territorial
-\citep{kalcsics2005towards,rios2009reactive}, cuyos criterios de compacidad y de balance coinciden
-con los dos ejes que esta sección mide.
-
-\subsubsection*{Barrido de configuraciones sobre la suite completa}
-
-Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
-configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
-sobre las doce instancias reales congeladas del \hyperref[anx:suite-instancias]{Anexo 4} ($n=43$ a
-$n=1\,607$). El único brazo que satisface el criterio de decisión sobre $n=1\,607$
----\texttt{upper-tmax-tmin9000}, que ancla la penalización blanda superior en $T_{\max}$ y eleva el
-piso blando--- reduce los auto-cruces sobre cuerdas un $92{,}5$\,\% sin costo de viaje ni de balance
-en esa instancia, porque a esa densidad las rutas saturan $T_{\max}$ de forma natural
-($\overline{\text{sat}} = 0{,}94$). El mismo brazo produce, sin embargo, el peor resultado sobre las
-áreas reales individuales, donde la instancia no satura $T_{\max}$: fuerza relleno de trayecto con
-incrementos de viaje de hasta $+89$\,\%. Los brazos restantes no mejoran el criterio (el término de
-\textit{span} temporal queda por debajo del umbral exigido) o rompen el balance de carga en varias
-instancias. El \hyperref[anx:barrido-configuraciones]{Anexo 4} detalla las ocho configuraciones
-evaluadas, brazo por brazo, sobre las 96 celdas del barrido.
-
-La conclusión del barrido es que no existe una configuración única ganadora para todos los regímenes
-sin una compuerta previa: la hipótesis queda refutada. El escenario donde
-\texttt{upper-tmax-tmin9000} gana ---el conjunto agregado de $n=1\,607$--- no tiene correlato
-operativo en el censo histórico, que se organizó por área; representa en cambio el régimen de
-escalamiento, un censo de cobertura mayor o el ruteo de una comuna completa como un solo problema.
-La decisión adoptada es conservar la configuración de producción sin modificación. El brazo ganador
-del régimen agregado tampoco se adopta tras una compuerta de activación por saturación: la
-re-medición de sus soluciones sobre el trazado real de calles invierte el signo de su efecto
-geométrico precisamente en el régimen que esa compuerta habilitaría
-(\hyperref[anx:barrido-configuraciones]{Anexo 4}), y la Sección~\ref{sec:posibles-mejoras} registra
-el descarte.
-% ---- 4.1.5 ------------------------------------------------------
 \subsection{Evaluación sobre áreas reales de censo y precio de la partición}
 \label{sec:areas-reales}
 
@@ -954,7 +533,7 @@ El criterio de decisión se fijó y versionó antes de ejecutar el experimento: 
 si, en las tres áreas y contra el tercer brazo, su desplazamiento no supera al del \textit{greedy}
 refinado o lo empeora en a lo más un 5\,\%, ninguna de sus rutas queda sobre el 95\,\% de $T_{\max}$
 y su balance alcanza al menos $0{,}80$. El margen se fijó en desplazamiento y saturación, nunca en
-auto-cruces, por la reserva de instrumento que documenta la Sección~\ref{sec:discusion-calidad}. Se
+auto-cruces, por la reserva de instrumento que documenta la Sección~\ref{sec:protocolo-evaluacion}. Se
 declaró también que un estrechamiento o una inversión del margen se publicaría igual.
 
 \subsubsection*{Resultados por área}
@@ -1079,9 +658,9 @@ pre-registro es de incumplimiento, y así se reporta.
 
 \subsubsection*{El caso \texttt{area-27} es el régimen de relleno por $T_{\min}$}
 
-El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de búsqueda: es el
-régimen de relleno que la Sección~\ref{sec:discusion-calidad} caracteriza para instancias que no
-saturan su presupuesto temporal. Con la configuración de producción las cotas
+El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de búsqueda: es un
+régimen de relleno por $T_{\min}$, propio de instancias que no saturan su presupuesto temporal,
+cuyo análisis en el plano de la función objetivo desarrolla la Sección~\ref{sec:discusion-calidad}. Con la configuración de producción las cotas
 blandas no dependen de la instancia: el método \texttt{PenaltyConfig.vehicle\_bounds} devuelve, para
 las cuatro instancias de este apartado, un piso en $T_{\min} = 7\,200$\,s con coeficiente
 $10\,000\,\text{s}^{-1}$ y un objetivo superior en el punto medio de $9\,000$\,s con coeficiente
@@ -1108,8 +687,8 @@ partición que devuelve el \textit{solver}, un factor cercano a $4{,}2$ a favor 
 jornada única. No hay óptimo local que reprochar a la búsqueda: el GLS encontró y conservó la
 solución más barata bajo el precio vigente.
 
-El mecanismo es el mismo régimen de relleno por $T_{\min}$ documentado en la
-Sección~\ref{sec:discusion-calidad}: cuando $k \cdot T_{\min}$ excede holgadamente el trabajo real
+El mecanismo del relleno por $T_{\min}$ es general
+(Sección~\ref{sec:discusion-calidad}): cuando $k \cdot T_{\min}$ excede holgadamente el trabajo real
 de la instancia ---aquí $2 \times 7\,200 = 14\,400$\,s frente a los $10\,694$\,s que exige recorrer
 los 72 árboles en una sola ruta---, partir y rellenar hasta el piso resulta más barato que una única
 ruta que se pasa del objetivo superior. La palanca para este defecto ya se intentó por la vía de los
@@ -1128,10 +707,11 @@ combinado, recalibración de penalizaciones--- ya fueron exploradas y descartada
 
 \subsubsection*{Serie de auto-cruces sobre calle}
 
-La afirmación de la Sección~\ref{sec:discusion-calidad} sobre el régimen de área real se midió en
-una corrida propia, posterior al ciclo de partición: configuración de producción, tres semillas por
-instancia y auto-cruces contados sobre el trazado real de calles
-(\texttt{docs/experiments/areas-crossings-road-20260802.csv}). La Tabla~\ref{tab:areas-crossings}
+La relación entre el régimen geográfico y los auto-cruces que analiza la
+Sección~\ref{sec:discusion-calidad} se midió en una corrida propia: configuración de producción,
+tres semillas por instancia, el límite de \textit{solver} de la heurística de producción ---94\,s
+en \texttt{area-29-n43}, 120\,s en las demás instancias--- y auto-cruces contados sobre el trazado
+real de calles (\texttt{docs/experiments/areas-crossings-road-20260802.csv}). La Tabla~\ref{tab:areas-crossings}
 resume la serie junto a la corrida de referencia unificada de la
 Sección~\ref{sec:metricas-calidad}, medida el mismo día con la misma configuración y semillas.
 
@@ -1170,7 +750,7 @@ Sección~\ref{sec:metricas-calidad}, medida el mismo día con la misma configura
   \end{tabularx}
 \end{table}
 
-La serie corrige la forma fuerte de la observación cualitativa que este capítulo arrastraba: las
+Las
 soluciones sobre áreas reales no están libres de auto-cruces ---solo una de las doce corridas de
 área registró cero---, aunque sus conteos absolutos son bajos, entre 0 y 6 por solución completa y
 entre 6 y 10 en la unión, un orden de magnitud por debajo de los 24--37 de la instancia de estrés.
@@ -1245,7 +825,7 @@ corresponden a una unidad operativa real y de una varianza entre repeticiones su
 Los auto-cruces y el solapamiento entre rutas se registraron como contexto y no formaron parte del
 criterio de este ciclo.
 
-Este resultado convierte en medición lo que la Sección~\ref{sec:discusion-calidad} argumentaba desde
+Este resultado convierte en medición lo que la Sección~\ref{sec:discusion-calidad} argumenta desde
 la geometría. La segmentación previa por área, que la Sección~\ref{sec:posibles-mejoras} documenta
 como trabajo futuro, deja de sostenerse solo en que el régimen disperso produce auto-cruces y pasa a
 tener un costo cuantificado ---una ruta adicional, jornadas cortas y triple cómputo--- frente a un
@@ -1256,270 +836,422 @@ protocolo, los comandos reproducibles y los datos crudos se encuentran versionad
 \texttt{docs/experiments/} (reporte \texttt{area-partition-20260726.md} y los archivos CSV
 asociados).
 
-\section{CONCLUSIONES}
-\label{sec:conclusiones}
+\section{ANÁLISIS DE CONFIGURACIÓN Y RÉGIMEN GEOGRÁFICO}
+\label{sec:analisis-configuracion}
 
-\subsection{Lo que los resultados muestran sobre el problema}
+Los resultados de la sección anterior acreditan la configuración de producción. Esta sección
+reúne los experimentos que la validan y delimitan: la comparación de estrategias que adoptó el
+término espacial como opción por defecto, el análisis causal de la función objetivo y los barridos
+de configuración que descartaron alternativas. Ninguno modifica la configuración reportada; su
+valor es delimitar el régimen en que esa configuración es la adecuada.
 
-De las tres preguntas que abren el capítulo, las dos primeras ---la calidad del plan contra los
-criterios comprometidos y su mejora sobre la alternativa trivial--- se responden en la
-Sección~\ref{sec:cumplimiento-criterios}. La tercera, el régimen en que ambas respuestas se
-sostienen, es la que la serie de experimentos convierte en el hallazgo conceptual del capítulo: no
-era la hipótesis de partida y reorienta el problema.
 
-La calidad geométrica de las rutas ---su compacidad, su solapamiento mutuo y sus auto-cruces--- no
-es una propiedad del presupuesto de cómputo sino del régimen geográfico de la instancia y de la
-forma de la función objetivo. Aumentar el tiempo del \textit{solver} de 120 a 180\,s no cambia la
-geometría; redirigir el objetivo blando superior sí la cambia de forma drástica, y hacerlo mejora la
-geometría en el conjunto agregado a la vez que la empeora en las áreas individuales. Dicho de otro
-modo: no existe una configuración de la función objetivo que sea la correcta para todo tamaño y toda
-densidad, y la búsqueda de una ---la hipótesis con que se abrió el barrido de configuración por
-algoritmo--- queda refutada con datos.
+\subsection{Calidad geográfica de rutas y comparación de estrategias}
+\label{sec:comparacion-estrategias}
 
-El corolario operacional es que la unidad correcta del problema es el área de censo individual y no
-el arbolado metropolitano agregado. La serie de auto-cruces sobre calle de la
-Sección~\ref{sec:areas-reales} precisa el alcance de esa ventaja: es de conteo absoluto ---menos
-rutas y, con ellas, un orden de magnitud menos de auto-cruces por solución---, no una geometría por
-ruta intrínsecamente más limpia, porque la tasa por ruta es comparable entre regímenes. Esto
-convierte la segmentación previa por área, que
-la Sección~\ref{sec:posibles-mejoras} documenta como trabajo futuro, en la extensión de mayor
-impacto del sistema, sostenida por el precio medido de la partición y el correlato operativo de las
-instancias más que por la geometría: el motor entrega soluciones con pocos auto-cruces absolutos
-cuando el problema se le entrega en su escala natural.
+La comparación de estrategias emplea los siguientes indicadores de calidad geográfica, definidos
+sobre las coordenadas reales de las paradas (\texttt{RouteStop}) y calculados con la distancia de
+\textit{haversine} \citep{sinnott1984virtues}:
 
-El argumento dejó de ser solo geométrico cuando se midió sobre las áreas reales
-(Sección~\ref{sec:areas-reales}). Particionar no cuesta caminata en el territorio del censo
-histórico, porque las áreas están suficientemente separadas; cuesta una ruta adicional, tres
-jornadas por debajo de $T_{\min}$ y el triple de cómputo, a cambio de instancias con correlato
-operativo y de una varianza entre repeticiones sustancialmente menor. Esa misma medición expuso el
-límite del \textit{solver} en el otro extremo del rango: en un área de 72 árboles la búsqueda
-entrega dos medias jornadas donde el \textit{greedy} cubre una jornada única, y la instrumentación
-del objetivo muestra que no es un fallo de búsqueda sino el precio vigente ---la partición resulta
-$4{,}2$ veces más barata bajo cotas blandas que no dependen de la instancia---, de modo que el
-margen de mejora pendiente está en hacer esas cotas sensibles a la densidad y no en la búsqueda.
+\begin{itemize}[label=--]
+  \item Compacidad ($\sum r_{\max}$): suma, sobre las rutas, del radio máximo de cada ruta
+        (distancia del centroide a su parada más lejana). Menor es mejor.
+  \item Solapamiento (\textit{interleaving}): número de paradas pertenecientes a \textit{otras}
+        rutas que caen dentro de la caja envolvente (\textit{bounding box}) de una ruta dada, sumado
+        sobre todas las rutas. Se reporta tanto el total como su valor normalizado por número de
+        rutas ($\overline{\text{solap}} = \text{total}/k$), para comparar entre tamaños de
+        \textit{dataset}. Mayor indica peor partición espacial.
+  \item IoU peor par: intersección sobre unión de las cajas envolventes del par de rutas con mayor
+        superposición. Mayor indica mayor solapamiento espacial entre dos rutas.
+\end{itemize}
 
-\subsection{Cumplimiento de los criterios de aceptación}
-\label{sec:cumplimiento-criterios}
+Estos indicadores tienen lectura operacional directa: cada ruta del plan se asigna a un censista
+distinto, de modo que dos rutas entrelazadas obligan a dos censistas a recorrer las mismas calles y
+desdibujan el territorio del que cada uno responde, mientras que la compacidad acota la extensión
+que una jornada debe cubrir. El solapamiento y la compacidad miden, por tanto, la calidad de la
+partición territorial del plan y no solo su geometría.
 
-Los seis criterios comprometidos en la Sección~\ref{sec:criterios-aceptacion}, antes de ejecutar
-experimento alguno, se contrastan aquí contra lo medido. Cinco se cumplen y el sexto se cumple con
-una reserva de protocolo que corresponde declarar.
+El balance temporal se reporta como $\min_r T_r / \max_r T_r$ (\textit{balance\_score} del modelo).
 
-La cobertura del censo (CA-01) es total bajo la configuración censal de referencia: las tres
-repeticiones de la corrida de referencia asignan los $1\,607$ árboles a una ruta, sin que el modelo
-active la disyunción que le permitiría descartarlos. El criterio deja de cumplirse únicamente cuando
-la carga de servicio excede la capacidad de la flota bajo $T_{\max}=2$\,h, y esa frontera está
-caracterizada en la Tabla~\ref{tab:grilla-spatial}. La jornada máxima (CA-02) se respeta sin
-excepción: la cota es dura por construcción del modelo. El balance de carga (CA-03) queda dentro
-del criterio, con un índice de $0{,}829$ a $0{,}837$ según la repetición frente al $0{,}80$
-exigido, acompañado de una desviación estándar de $564$\,s equivalente al $5{,}6$\,\% del promedio;
-el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto
-equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
-(CA-04) es en efecto una salida del sistema: el administrador declara la duración de la jornada y el
-tiempo de servicio, y el número de censistas necesarios se deriva de ellos, lo que constituye la
-diferencia funcional más nítida respecto de la planificación manual descrita en la
-Sección~\ref{sec:estado-actual}.
+Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, la formulación vigente
+---un único \textit{Open mTSP} global resuelto con \textit{OR-Tools}, sin agrupamiento previo de
+los nodos--- se caracterizó con un diagnóstico sobre nodos sintéticos de distribución uniforme
+($n \in \{20, 40, 80\}$ en la zona de Providencia/Santiago Centro), la única medición de esta
+memoria que no usa arbolado real; su protocolo y sus cifras se documentan en el
+\hyperref[anx:baseline-geo-sintetico]{Anexo 4}. El hallazgo es un desacople entre balance temporal
+y calidad geográfica: el balance se mantiene alto ($0{,}87$--$0{,}95$) mientras el solapamiento
+entre rutas crece de forma monótona con la densidad, con un caso recurrente de una ruta compacta
+contenida dentro de la caja envolvente de otra más extensa, coherente con que el modelo optimiza
+tiempo total con un término de balance blando y sin criterio espacial explícito en la partición.
 
-El costo de planificación (CA-05) se cumple con $123{,}3$\,s de corrida completa sobre la matriz en
-caché, pero su lectura exige una precisión: $120$\,s de esa cifra son el tope configurado del
-\textit{solver} y no una medición de convergencia, de modo que el criterio se satisface por
-construcción mientras el tope se mantenga bajo cinco minutos. Solo los $3{,}3$\,s restantes
----lectura del \textit{dataset}, acierto de caché de la matriz y persistencia de la solución--- son
-tiempo que el sistema podría hacer crecer hasta incumplirlo, y el desglose confirma que no
-lo hace: el $97{,}3$\,\% del tiempo está en la metaheurística y no en la infraestructura que la
-rodea. Lo que sí constituye evidencia sobre la elección del tope es el análisis de sensibilidad de
-la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la mejora alcanzable
-con presupuestos mayores; conviene registrar que la decisión de bajar el tope se tomó en el régimen
-anterior del perfil de rendimiento (\hyperref[anx:perfil-rendimiento]{Anexo 4}) y que esa tabla es
-la remedición posterior, ya
-sobre la estrategia \texttt{spatial\_term} y el código vigente. Con caché fría la corrida completa
-sube a $334{,}6$\,s por la construcción de la matriz contra OSRM, por sobre el umbral de los
-$300$\,s; el criterio se enuncia sobre el caso con caché precisamente porque es el de operación
-normal, pero el primer cálculo de un \textit{dataset} nuevo lo excede y así se reporta.
+\subsubsection*{Estrategias evaluadas}
 
-La mejora sobre la alternativa trivial (CA-06) se cumple. Sobre la misma instancia congelada, con
-la misma matriz de costos y con el heurístico dotado del mismo post-proceso de resecuenciación
-(Tabla~\ref{tab:comparativa}), el ahorro es de $2\,907$\,s ---un $4{,}7$\,\% del desplazamiento
-total del \textit{baseline} refinado--- y supera la dispersión entre semillas del \textit{solver}
-($1\,538$\,s), de modo que la reducción es atribuible al método y no al azar de la búsqueda. El
-margen es menor que el que sugeriría un contraste ingenuo: alrededor de un tercio de la ventaja
-contra el \textit{greedy} sin refinar es atribuible al post-proceso que solo un lado recibiría
-(Sección~\ref{sec:comparacion-greedy}). Junto al margen subsiste una diferencia cualitativa: el
-\textit{baseline} produce una ruta degenerada de cinco árboles con $9\,466$\,s de caminata y satura
-las jornadas a un promedio del $98$\,\% de $T_{\max}$, mientras que la solución del modelo opera al
-$93$\,\% y su ruta más pequeña visita entre seis y doce árboles; la atenuación de esa patología es
-de grado y no de naturaleza.
+Ese diagnóstico es el que motivó las dos estrategias de partición espacial que la
+Sección~\ref{sec:estrategias} describe ---\texttt{spatial\_term} y \texttt{cluster\_first}---, y que
+aquí se miden contra la formulación vigente (\texttt{global}) sobre la instancia de estrés de
+$n = 1\,607$ árboles.
 
-El alcance de este veredicto es el de la instancia sobre la que el criterio se comprometió: la
-configuración censal de referencia, cuyo régimen satura la jornada. La evaluación sobre las áreas
-reales (Sección~\ref{sec:areas-reales}) muestra que el margen no se generaliza al régimen no
-saturado: en \texttt{area-27-n72} el \textit{greedy} refinado cubre los 72 árboles en una jornada
-única y la partición del \textit{solver} gasta un $57$\,\% más de caminata, y en
-\texttt{area-29-n43} ambos métodos resuelven el mismo recorrido único. La mejora sobre la
-alternativa trivial es, por tanto, una propiedad del régimen saturado y no un dominio uniforme del
-método. En el régimen de área pequeña la ventaja en desplazamiento deja de ser uniforme ---el
-\textit{solver} gana un $11{,}7$\,\% en \texttt{area-26-n157} y pierde en \texttt{area-27-n72}--- y
-lo que se sostiene es la entrega de jornadas ejecutables ---\texttt{area-26-n157}, con balance de
-$0{,}872$ frente a $0{,}276$ y ninguna jornada sobre el $82$\,\% de $T_{\max}$---, mientras que el
-caso adverso queda diagnosticado como defecto de cotas blandas insensibles a la densidad, con su
-corrección identificada en la Sección~\ref{sec:posibles-mejoras}.
+En \texttt{cluster\_first}, la estimación de $k$ emplea el viaje medio al vecino más cercano y el
+presupuesto del \textit{solver} se reparte entre los grupos en proporción a su tamaño, condiciones
+necesarias para medir la estrategia en igualdad con las otras dos.
 
-\subsection{Cumplimiento de los atributos de calidad}
-\label{sec:cumplimiento-atributos}
+\subsubsection*{Protocolo}
 
-Los criterios de aceptación fijan umbrales sobre una configuración; los cuatro atributos de la
-Sección~\ref{sec:atributos-calidad} son afirmaciones más amplias sobre el producto, y conviene
-declarar con qué grado y con qué salvedades se sostienen.
+Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones idénticas: mismo
+\textit{dataset} ($n = 1\,607$), misma variante operacional (tiempo de servicio de 2\,min y
+$T_{\max} = 3$\,h, la configuración censal de referencia) y mismo límite de \textit{solver} (120\,s,
+justificado en la Tabla~\ref{tab:sensibilidad-tl}, que acota el presupuesto de tiempo del
+\textit{solver} y no compara estrategias entre sí). También se fijaron las mismas tres semillas (42,
+43 y 44) y la misma versión del código. El
+criterio de decisión se fijó antes de ejecutar el experimento: una estrategia supera a la
+\textit{baseline} si reduce el solapamiento por ruta o mejora el IoU del peor par \textit{sin}
+degradar el balance temporal respecto de \texttt{global}, sin producir rutas que excedan $T_{\max}$
+y con un tiempo total de desplazamiento dentro de un 10\,\% del de \texttt{global}. La
+Tabla~\ref{tab:estrategias} resume los resultados como media de las tres repeticiones.
 
-La robustez del plan se sostiene con una excepción caracterizada. Sobre la grilla de variantes
-operacionales bajo la configuración vigente (Tabla~\ref{tab:grilla-spatial}) ---las combinaciones
-de tiempo de servicio y jornada máxima con que puede configurarse una campaña---, las tres variantes
-de $T_{\max}=3$\,h y la de servicio de 1\,min bajo $T_{\max}=2$\,h mantienen cobertura total,
-mientras que las dos restantes ---servicio de 2 y de 3\,min bajo $T_{\max}=2$\,h--- descartan uno y
-dos árboles respectivamente, de forma consistente en las tres semillas, y lo reportan de forma
-explícita en lugar de omitirlo en silencio. El índice de balance supera $0{,}80$ en las seis
-variantes. El atributo se cumple, por tanto, en todo el rango
-salvo en su borde de capacidad, y ese borde está documentado junto con la configuración que lo
-evita: bajo $T_{\max}=3$\,h la cobertura es total con los tres tiempos de servicio.
+\begin{table}[H]
+  \centering
+  \caption{Comparación de estrategias sobre la instancia de estrés \texttt{reference-n1607}.}
+  \label{tab:estrategias}
+  \small
+  \begin{tabularx}{\textwidth}{lXXXXXXX}
+    \toprule
+    Estrategia &
+      $k$ &
+      Balance &
+      Descart. &
+      Des\-plaz. [s] &
+      $\sum r_{\max}$ [m] &
+      Solap.\slash ruta &
+      IoU peor par \\
+    \midrule
+    \texttt{global}        &
+      25{,}0 &
+      0{,}838 &
+      0  &
+      59\,725 &
+      22\,455 &
+      168{,}0 &
+      0{,}51 \\
+    \texttt{spatial\_term} &
+      25{,}0 &
+      0{,}833 &
+      0  &
+      60\,611 &
+      19\,578 &
+      77{,}3  &
+      0{,}55 \\
+    \texttt{cluster\_first}& 34{,}0 &
+      0{,}698 &
+      12 &
+      69\,813 &
+      9\,714  &
+      20{,}0  &
+      0{,}48 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
-La operabilidad en terreno es el atributo cuyo cumplimiento esta memoria acredita con menos fuerza,
-y por dos razones distintas. La primera es de alcance de la evidencia: el portal se verificó por
-partes y nunca en una jornada de censo con censistas reales, de modo que lo que se comprueba es que
-el sistema hace lo que su diseño dice, no que resista la calle. La segunda es de grado de
-implementación: el registro sobrevive a pérdidas de conexión momentáneas mediante una cola local,
-pero no se implementó la sincronización diferida robusta ni el almacenamiento de teselas de mapa que
-exigiría una intermitencia prolongada. El atributo se cumple en su forma débil ---no se pierde lo
-registrado ante un corte breve--- y queda pendiente en la fuerte.
+\subsubsection*{Resultados}
 
-La eficiencia de cómputo se cumple en sus dos componentes. Planificar la instancia cuesta
-$123{,}3$\,s de reloj con la matriz en caché, muy por debajo de la cota, y el análisis de
-sensibilidad de la Tabla~\ref{tab:sensibilidad-tl} muestra que ese presupuesto captura la mayor
-parte de la mejora alcanzable: ampliarlo a $180$\,s altera el desplazamiento total en un $0{,}6$\,\%
----por debajo de la dispersión entre semillas--- y no cambia ni el número de rutas ni el balance. La
-salvedad sobre el carácter de tope configurado de esa cifra ya quedó declarada en la
-Sección~\ref{sec:cumplimiento-criterios} y no se repite aquí.
+\texttt{spatial\_term} reduce el solapamiento por ruta a menos de la mitad ($168{,}0 \rightarrow
+77{,}3$, un $-54$\,\%) y comprime las rutas ($\sum r_{\max}$ cae un $12{,}8$\,\%), a cambio de un
+$+1{,}5$\,\% de tiempo total de desplazamiento ---muy por debajo del margen del 10\,\% admitido---.
+Lo hace con el mismo número de rutas, cobertura total y un balance de $0{,}833$ frente a $0{,}838$
+de la \textit{baseline}, diferencia inferior a la dispersión entre semillas de la propia
+\texttt{global}. Cumple, por tanto, el criterio de decisión pre-registrado que este apartado fijó
+al inicio de su protocolo.
 
-La calidad geográfica de las rutas se cumple de forma acotada, y su alcance quedó redefinido por la
-propia experimentación. La métrica sobre la que el atributo se juzga es el número de auto-cruces
-sobre el trazado real de calles, y no la de cuerdas rectas entre paradas consecutivas, porque la
-auditoría de instrumento (Sección~\ref{sec:discusion-calidad}) midió entre ambas una correlación
-débil ($\rho$ de Spearman de $0{,}527$) e invertida en el conjunto de evaluación agregado ($\rho =
--0{,}575$): una mejora en cuerdas no garantiza una mejora en calle. Bajo esa métrica, el único
-componente del \textit{pipeline} que mejora la geometría con evidencia directa es el post-proceso de
-resecuenciación, que reduce simultáneamente el tiempo de viaje y los auto-cruces en las doce
-instancias de prueba. El resto de los componentes de la función objetivo actúa sobre la geometría de
-forma indirecta y sin evidencia equivalente sobre calle real, de modo que el atributo se sostiene
-sobre ese post-proceso y no sobre el modelo completo. En el régimen de operación real ---el área de
-censo individual--- la serie medida en la Sección~\ref{sec:areas-reales} sitúa el cumplimiento en
-conteos absolutos bajos por solución, con una tasa por ruta comparable a la de la instancia de
-estrés, y no en la ausencia de auto-cruces.
+El veredicto tiene el alcance de la corrida que lo produjo: la instancia de referencia, con la
+configuración censal de 2\,min de servicio y $T_{\max}=3$\,h, y bajo la métrica de solapamiento
+entre rutas. No es un veredicto sobre toda instancia ni sobre todo indicador. Dos contrastes lo
+acotan: la evaluación sobre las áreas reales del censo con esta misma configuración de producción
+(Sección~\ref{sec:areas-reales}), donde el criterio de decisión se cumple en dos de las tres
+y no en las tres; y el barrido del coeficiente espacial que cierra este apartado, que muestra que la
+compacidad que la estrategia compra se paga en tiempo de desplazamiento y en balance.
 
-\subsection{Lo que aportó la metodología}
+El resultado admite además una matización dentro de esta misma corrida: el IoU del peor par no mejora, sino que empeora levemente
+($0{,}51 \rightarrow 0{,}55$; en esta métrica un valor mayor es peor). La penalización del
+\textit{span} actúa sobre la extensión de cada ruta considerada de forma individual, de modo que
+comprime las cajas envolventes, pero no separa el par de rutas vecinas que se superponen en la zona
+más densa del \textit{dataset}: ese par persiste como problema de geometría local y no lo resuelve
+un coeficiente global. La ganancia de \texttt{spatial\_term} es, en consecuencia, agregada (menos
+paradas ajenas dentro de cada caja, rutas más compactas) y no la eliminación del peor caso. Ese par
+se reproduce en la Ilustración~\ref{fig:peor-par} de la Sección~\ref{sec:discusion-calidad}, donde
+se discute su origen geométrico.
 
-Dieciséis ciclos de evaluación\footnote{Se cuenta como ciclo de
-evaluación el que somete a prueba una hipótesis sobre la formulación o sus coeficientes con un
-criterio de decisión fijado y versionado antes de ejecutar la corrida. El directorio
-\texttt{docs\slash experiments\slash } contiene además informes de perfilado, de auditoría de
-instrumento y de corridas de referencia, que no constituyen ciclos bajo esa definición y no entran
-en el recuento.} cerrados durante julio de 2026 produjeron un solo
-cambio en la configuración por defecto del sistema. Leído a la ligera, eso parece un resultado nulo; leído con propiedad, es el resultado.
+Conviene además notar que las métricas de forma son las más sensibles a la semilla, pese a que las
+de coste no lo son: las tres repeticiones de cada estrategia convergen a soluciones prácticamente
+idénticas en $k$, balance y desplazamiento (dispersión $\leq 0{,}5$\,\%), pero \texttt{global}
+produce solapamientos por ruta de $177$, $150$ y $177$ e IoU de $0{,}54$, $0{,}45$ y $0{,}55$ según
+la repetición, de modo que su media esconde una repetición notoriamente mejor. Aun contra esa mejor
+repetición de \texttt{global} ($150$), \texttt{spatial\_term} ($81$, $75$ y $75$) reduce el
+solapamiento en al menos un $45$\,\%, por lo que la conclusión no depende de la agregación.
 
-En cada ciclo se fijó el criterio de decisión antes de ejecutarlo, se versionaron sus datos crudos y
-se publicó su veredicto con independencia de si confirmaba o refutaba la hipótesis que lo motivaba.
-De los dieciséis ciclos, doce cerraron con un descarte, dos con una corrección del propio
-instrumento de medición, uno con la caracterización de la flojedad de la cota inferior de referencia
-y uno con la adopción de un cambio. Los doce descartes fueron:
-\begin{enumerate}[label=\alph*)]
-  \item piso de balance escalado;
-  \item piso de balance factible;
-  \item piso por número de paradas;
-  \item piso combinado;
-  \item supresión del piso;
-  \item anclaje del objetivo blando superior en $T_{\max}$;
-  \item peso convexo del arco;
-  \item peso lineal del arco;
-  \item agrupamiento previo con restricción blanda;
-  \item \textit{warm start};
-  \item multi-arranque;
-  \item compuerta de régimen a priori.
-\end{enumerate}
-La conclusión que emerge del conjunto no es que no se encontró nada, sino que la configuración de
-producción ya era la adecuada para su régimen de operación, y que el margen de mejora que se le
-suponía a la función objetivo no existía. Descartar doce alternativas plausibles es un resultado más
-informativo que adoptar la primera que hubiera parecido prometedora.
+\texttt{cluster\_first} queda descartada con datos.
+Alcanza, como era esperable, la mejor separación espacial de las tres ---solapamiento de $20$ por
+ruta ($-88$\,\%) y $\sum r_{\max}$ de $9\,714$\,m ($-57$\,\%)---, cifras que sirven como cota de la
+separación alcanzable, pero lo hace incumpliendo dos de las tres salvaguardas del criterio: a)
+degrada el balance a $0{,}698$ frente al $0{,}838$ de \texttt{global}; b) encarece el desplazamiento
+total en un $16{,}9$\,\%, por sobre el margen del $10$\,\% admitido. A ello se suman dos costos que
+el criterio no pondera y un censo sí: deja 12 árboles fuera de la solución ---la estrategia es
+determinista, dado que el $k$-medias emplea una semilla propia fija y las tres repeticiones producen
+exactamente la misma partición--- y usa $k=34$ rutas ($+36$\,\% de flota). La causa es estructural:
+el particionamiento duro impide reasignar árboles de borde cuando el grupo que los contiene no
+alcanza a cubrirlos dentro de $T_{\max}$, y los sub-problemas ---que ahora reciben una fracción del
+presupuesto de tiempo, repartida entre los $\approx 34$ grupos--- activan las disyunciones
+penalizadas antes de encontrar una asignación completa.
 
-El único cambio adoptado ---el post-proceso de resecuenciación de la Sección~\ref{sec:postpass}---
-refuerza esa lectura, porque no provino de barrer términos del objetivo sino de reparar el
-instrumento de medición. El algoritmo había sido rechazado por empeorar los auto-cruces medidos
-sobre cuerdas rectas; cuando la validación posterior mostró que esa métrica está débilmente
-correlacionada con la geometría real de calles ---y que en el \textit{dataset} de evaluación apunta
-en sentido contrario---, la re-medición sobre el trazado real reveló una mejora simultánea de tiempo
-de viaje y de geometría en las doce instancias de prueba. El aprendizaje metodológico es
-transferible y vale más que el cambio concreto: en una serie experimental larga, auditar el
-instrumento tiene mayor rendimiento esperado que añadir un brazo más al barrido.
+\subsubsection*{Grilla operacional de la estrategia ganadora}
 
-El análisis retrospectivo de la serie identificó cuatro defectos de instrumentación en los ciclos iniciales
----semillas no propagadas, una cota de relleno inalcanzable, la métrica de auto-cruces sobre cuerdas
-en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos distintos---,
-que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla con el alcance necesario para reproducir
-cada corrección.
-Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones: de los
-dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el instrumento
-corregido sin que cambiara el descarte final y los demás descansan en criterios
----tiempo de viaje, relleno, balance--- ajenos a los defectos detectados.
+Confirmada \texttt{spatial\_term}, se ejecutó sobre ella una grilla de seis variantes operacionales
+---el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
+combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), sobre el
+\textit{dataset} de $n=1\,607$, con el mismo límite de 120\,s y tres semillas
+(Tabla~\ref{tab:grilla-spatial}).
 
-Hay un hallazgo transversal a los apartados anteriores que conviene enunciar por separado, porque no
-pertenece a ninguno y explica una decisión de diseño del Capítulo~\ref{cap:diseno}. En casi ningún
-ciclo de la serie apareció un brazo que ganara en todas las instancias a la vez, y el orden entre
-dos brazos se invierte al cambiar la densidad o el tamaño de la instancia. Los apartados anteriores
-muestran cuatro casos de ese patrón: el término espacial compra compacidad y cede tiempo y balance;
-la comparación con el heurístico depende por completo de si el competidor recibe el mismo
-refinamiento; el criterio de decisión sobre áreas reales se cumple en dos de las tres; y el
-coeficiente espacial no ordena las instancias de forma monótona.
+\begin{table}[H]
+  \centering
+  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term}.}
+  \label{tab:grilla-spatial}
+  \small
+  \begin{tabularx}{\textwidth}{rrXXXXXXX}
+    \toprule
+    Serv. [min] &
+      $T_{\max}$ [h] &
+      $k$ &
+      Balance &
+      $\sigma(T)$ [s] &
+      Descart. &
+      Des\-plaz. [s] &
+      $\sum r_{\max}$ [m] &
+      Solap.\slash ruta \\
+    \midrule
+    1 &
+      2 &
+      23{,}0 &
+      0{,}996 &
+      7   &
+      0     &
+      68\,410 &
+      20\,937 &
+      109{,}2 \\
+      \addlinespace
+    1 &
+      3 &
+      16{,}0 &
+      0{,}835 &
+      601 &
+      0     &
+      59\,491 &
+      19\,905 &
+      146{,}1 \\
+      \addlinespace
+    2 &
+      2 &
+      36{,}0 &
+      0{,}998 &
+      3   &
+      1{,}0 &
+      65\,727 &
+      16\,917 &
+      82{,}8  \\
+      \addlinespace
+    2 &
+      3 &
+      25{,}0 &
+      0{,}833 &
+      606 &
+      0     &
+      60\,588 &
+      19\,588 &
+      75{,}2  \\
+      \addlinespace
+    3 &
+      2 &
+      49{,}0 &
+      0{,}998 &
+      2   &
+      2{,}0 &
+      63\,146 &
+      17\,347 &
+      55{,}8  \\
+      \addlinespace
+    3 &
+      3 &
+      34{,}0 &
+      0{,}836 &
+      522 &
+      0     &
+      61\,611 &
+      24\,267 &
+      79{,}9  \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
 
-Esa ausencia sistemática de un ganador único es la evidencia que descartó fijar un
-\textit{default} único y la que motivó el abanico de seis candidatas con selección lexicográfica que
-describe la Sección~\ref{sec:abanico}: si ninguna combinación domina a las demás en todas las
-instancias, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la
-instancia concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
-El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
-experimental midió.
+La estructura de la grilla es la ya descrita para el compromiso entre balance y costo:
+$T_{\max}=2$\,h fuerza un balance $\approx 1{,}0$ y dispara la flota ($23 \rightarrow 36 \rightarrow
+49$ conforme crece el tiempo de servicio), mientras que $T_{\max}=3$\,h reduce $k$ en torno a un
+30\,\% con un balance de $\approx 0{,}83$. En la única variante para la que se dispone de un
+contraste homogéneo ---servicio de 2\,min con $T_{\max}=3$\,h, la del \textit{head-to-head}---
+\texttt{spatial\_term} emplea el mismo número de rutas que \texttt{global} ($k=25$), lo que indica
+que el término espacial \textit{no} infla la flota; para las cinco variantes restantes no existe una
+corrida de \texttt{global} bajo el mismo régimen de medición, de modo que la comparación no se
+extiende a ellas (véase el apartado siguiente). La observación operacional relevante es que las
+variantes de $T_{\max}=2$\,h con tiempo de servicio alto descartan árboles (uno con servicio de
+2\,min, dos con 3\,min, de forma consistente en las tres semillas): esa configuración opera al
+límite de la capacidad temporal, de modo que si el censo exige cobertura total debe emplearse
+$T_{\max}=3$\,h.
 
-\subsection{Alcance y validez de lo concluido}
+Debe notarse que la fila de servicio 2\,min con $T_{\max}=3$\,h de la Tabla~\ref{tab:grilla-spatial}
+es la misma configuración de la Tabla~\ref{tab:estrategias}, ejecutada en una corrida distinta; las
+pequeñas diferencias observadas (desplazamiento de $60\,588$ frente a $60\,611$\,s, solapamiento de
+$75{,}2$ frente a $77{,}3$) provienen del corte por reloj de pared del GLS y acotan la precisión con
+que deben leerse todas las comparaciones de esta subsección.
 
-Las conclusiones anteriores valen dentro de un perímetro que conviene delimitar con precisión, y que
-corresponde al alcance declarado en la Sección~\ref{sec:verificacion} y a las restricciones de la
-Sección~\ref{sec:restricciones}.
+\subsubsection*{Alcance de las comparaciones y decisión}
 
-Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción del
-diagnóstico geográfico inicial sobre nodos sintéticos de distribución uniforme
-(\hyperref[anx:baseline-geo-sintetico]{Anexo 4})--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
-densidad controlada; no se emplearon los bancos de referencia de la literatura
-\citep{solomon1987algorithms}, cuyas instancias sintéticas suponen un depósito central y ventanas
-de tiempo, condiciones ajenas al problema de rutas abiertas sobre una red vial real aquí tratado.
-Las comparaciones son internas: contrastan el sistema contra otras configuraciones de sí mismo y
-contra un heurístico de vecino más cercano escrito para este trabajo. La conclusión sobre la unidad
-operativa descansa, además, en la sub-familia más pequeña de la suite: tres áreas de un mismo
-territorio y su unión (Sección~\ref{sec:areas-reales}).
-No hay anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo que las
-afirmaciones son de mejora relativa y nunca de proximidad al óptimo.
+Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head} de la
+Tabla~\ref{tab:estrategias}, el único contraste homogéneo disponible: mismo código, mismo
+presupuesto de \textit{solver} y mismas semillas. La grilla del perfil de rendimiento del
+\hyperref[anx:perfil-rendimiento]{Anexo 4} no es
+comparable arco a arco con la Tabla~\ref{tab:grilla-spatial}, por las razones que ese anexo
+detalla.
 
-Las cifras absolutas de tiempo provienen de un entorno de medición emulado y no del servidor de
-producción, y aunque el sistema quedó desplegado al cierre de la iteración
-(Sección~\ref{sec:despliegue-produccion}), no fue operado en una jornada real de censo. En
-consecuencia,
-lo verificado es que el producto hace lo que su diseño declara ---en los términos de la
-Sección~\ref{sec:verificacion}--- y no que resuelva en terreno el problema logístico que lo motivó.
-Esa última comprobación queda pendiente y es, de todas las extensiones identificadas, la de mayor
-valor para el proyecto.
+El valor del coeficiente \texttt{SPATIAL\_SPAN\_COEF} se sometió a un barrido posterior sobre los
+valores $\{0,\,3,\,10,\,30\}$, con tres semillas por punto y las doce instancias congeladas del
+\hyperref[anx:suite-instancias]{Anexo 4}. Su resultado no habilita ningún valor mejor que el de
+fábrica, pero tampoco lo confirma como óptimo: sobre la instancia de referencia los auto-cruces
+sobre calle no varían de forma monótona con el coeficiente ---$39{,}7$ sin penalización espacial,
+$34{,}3$ en el valor de producción, y $46{,}0$ y $48{,}0$ al subirlo a $10$ y a $30$---, la mejora
+del valor de producción sobre no penalizar ($13{,}6$\,\%) queda lejos del umbral pre-registrado de
+ese ciclo y suprimir la penalización entrega mejor tiempo de desplazamiento ($57\,352$\,s frente a
+$58\,948$\,s) y mejor balance ($0{,}874$ frente a $0{,}839$). Lo que \texttt{spatial\_term} compra
+es compacidad y menor solapamiento entre rutas, y lo paga en tiempo y en balance; no es una mejora
+en todos los ejes a la vez. La decisión pondera esos ejes desde la operación del censo: el
+sobrecosto queda dentro de la dispersión entre semillas de la propia \texttt{global}, la reducción
+del solapamiento a menos de la mitad cambia la calidad territorial del plan y el único eje con
+señal pendiente ---el IoU del peor par--- es un problema de geometría local que ningún coeficiente
+global separa. Se adopta, en consecuencia, \texttt{spatial\_term} como estrategia por defecto, con
+\texttt{SPATIAL\_SPAN\_COEF} $=3$ y el límite de \textit{solver} de 120\,s;
+\texttt{cluster\_first} se mantiene como opción de comparación, no de producción. El protocolo
+completo, los comandos reproducibles y los datos crudos de este experimento se encuentran
+versionados en \texttt{docs/experiments/} (reportes \texttt{route-quality-20260712.md} y
+\texttt{spatial-span-20260730.md}, con los archivos CSV asociados).
 
-Por último, dos reservas de instrumento acompañan a la lectura de la geometría: la mayor parte de
-las cifras de auto-cruces de este capítulo se calcula sobre cuerdas rectas, cuya correspondencia con
-el trazado real está medida y es parcial, y la replicación de los experimentos se obtiene permutando
-el orden de los nodos, lo que acota la varianza entre semillas de una corrida pero no la varianza
-entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez del
-\hyperref[anx:auditoria-robustez]{Anexo 4}, y ninguna de las dos afecta a los criterios de aceptación
----cobertura, jornada, balance, flota y tiempo---, que descansan en magnitudes ajenas a ellas.
+\subsection{El régimen geográfico de la instancia}
+\label{sec:discusion-calidad}
+
+\subsubsection*{Análisis causal de la función objetivo}
+
+La razón entre las dos penalizaciones blandas de la dimensión temporal, resumidas junto al resto de
+la función objetivo en la Sección~\ref{sec:protocolo-evaluacion}, es de $20\mathord{:}1$
+($10\,000 / 500$), y el
+experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se conservan en
+\texttt{docs/experiments/penalty-sensitivity-20260713-reference.csv}--- ofrece evidencia causal de
+la función que cumple cada término. Al suprimir la penalización inferior (coeficiente $= 0$),
+manteniendo fijo el resto de los coeficientes, el balance de carga cae de $0{,}838$ a $0{,}739$, la
+flota sube de 25 a 32 rutas y el número de rutas que quedan por debajo de $T_{\min}$ pasa, en esa
+corrida, de 3 a 26,
+lo que confirma que ese componente es el mecanismo que sostiene la distribución de carga y evita la
+fragmentación en rutas demasiado cortas.
+
+La penalización superior actúa sobre la geometría: al redirigir su objetivo desde el punto medio del
+intervalo hasta $T_{\max}$, el número de auto-cruces medido sobre cuerdas cae de $76{,}3$ a $6{,}3$
+---una reducción del $91{,}7$\,\%--- sin variar el presupuesto de cómputo ni el número de rutas. Esa
+cifra no sostiene, sin embargo, una relación causal directa: el barrido no tiene réplicas de semilla
+independientes, la métrica de cuerdas está invertida ($\rho = -0{,}575$) precisamente en la
+instancia donde se midió, y el mismo brazo degrada el balance de $0{,}838$ a $0{,}715$. El
+\hyperref[anx:reservas-sensibilidad]{Anexo 4} detalla las tres reservas. Con ellas, lo que el
+material sostiene es evidencia consistente con la hipótesis de que la geometría de las rutas
+responde a la configuración de la función objetivo y no al corte por tiempo del GLS, reforzada por
+dos observaciones independientes: el presupuesto del \textit{solver} no altera el número de rutas ni
+el balance por sobre los 120\,s (Tabla~\ref{tab:sensibilidad-tl}), y la re-medición sobre
+\texttt{crossings\_road} invierte el signo del efecto de este mismo brazo sobre la geometría real.
+
+\subsubsection*{El régimen geográfico del \textit{dataset} de evaluación}
+
+El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. El conjunto
+de evaluación de $n = 1\,607$ árboles agrega arbolado real de múltiples áreas de censo dispersas en
+$\approx 10{,}3$\,km de extensión ($12{,}5$\,km de diagonal), frente a $1{,}32$\,km del área
+individual mayor ---razón cercana a $8\times$, según las instancias versionadas en
+\texttt{docs/experiments/instances/}---. Los árboles son reales; lo sin correlato operativo es
+tratar esa unión ---las veintiuna áreas no vacías de \texttt{legacy\_api} (429 árboles, 27\,\% del
+conjunto) más los 1\,178 árboles de \texttt{legacy\_app}, sin área asignada--- como un único trabajo
+de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). La serie sistemática de
+\texttt{crossings\_road} por área individual (Sección~\ref{sec:areas-reales}) acota lo que ese
+régimen significa para los auto-cruces: entre 0 y 6 por solución completa en las áreas reales
+frente a 24--37 en el conjunto agregado ---situación que en operación solo surgiría si se
+procesaran múltiples áreas de censo como un único problema---, con una tasa por ruta esencialmente
+plana entre ambos regímenes: el agregado no produce más auto-cruces por ruta, sino más rutas.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-regimen-disperso-vs-real.png}
+  \caption{
+    Régimen disperso (\textit{dataset} de evaluación agregado) frente a régimen real (áreas
+    individuales del arbolado legado).
+  }
+  \label{fig:regimen-disperso-vs-real}
+\end{figure}
+
+El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
+de $0{,}55$, se reproduce en la Ilustración~\ref{fig:peor-par}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{media/fig-peor-par.png}
+  \caption{Par de rutas con mayor solapamiento espacial en el \textit{dataset} de evaluación.}
+  \label{fig:peor-par}
+\end{figure}
+
+El solapamiento persiste con la estrategia \texttt{spatial\_term} porque responde a la geometría
+local del par, y ningún coeficiente global lo elimina sin penalizar las rutas circundantes; la
+solución estructural es la segmentación previa por área de censo.
+
+La lectura que estos resultados dejan explícita es que los auto-cruces responden a la forma de la
+función objetivo y al régimen geográfico de la instancia, no a una limitación del tiempo de
+cómputo: ampliar el presupuesto del \textit{solver} no los altera
+(Tabla~\ref{tab:sensibilidad-tl}) y redirigir la penalización blanda superior sí.
+
+La unidad operativa del motor es el área de censo individual, no el arbolado metropolitano en su
+conjunto. Procesar cada área como un problema independiente reduciría la extensión del
+\textit{dataset} a la escala en que el \textit{solver} produce soluciones con pocos auto-cruces
+absolutos con la configuración actual; esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su
+costo se mide sobre las áreas reales en la Sección~\ref{sec:areas-reales}. El problema que esa extensión
+plantea ---repartir un territorio en distritos compactos y equilibrados antes de rutear--- tiene
+tratamiento propio en la literatura bajo la denominación de diseño territorial
+\citep{kalcsics2005towards,rios2009reactive}, cuyos criterios de compacidad y de balance coinciden
+con los dos ejes que esta sección mide.
+
+\subsubsection*{Barrido de configuraciones sobre la suite completa}
+
+Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
+configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
+sobre las doce instancias reales congeladas del \hyperref[anx:suite-instancias]{Anexo 4} ($n=43$ a
+$n=1\,607$). El único brazo que satisface el criterio de decisión sobre $n=1\,607$
+---\texttt{upper-tmax-tmin9000}, que ancla la penalización blanda superior en $T_{\max}$ y eleva el
+piso blando--- reduce los auto-cruces sobre cuerdas un $92{,}5$\,\% sin costo de viaje ni de balance
+en esa instancia, porque a esa densidad las rutas saturan $T_{\max}$ de forma natural
+($\overline{\text{sat}} = 0{,}94$). El mismo brazo produce, sin embargo, el peor resultado sobre las
+áreas reales individuales, donde la instancia no satura $T_{\max}$: fuerza relleno de trayecto con
+incrementos de viaje de hasta $+89$\,\%. Los brazos restantes no mejoran el criterio (el término de
+\textit{span} temporal queda por debajo del umbral exigido) o rompen el balance de carga en varias
+instancias. El \hyperref[anx:barrido-configuraciones]{Anexo 4} detalla las ocho configuraciones
+evaluadas, brazo por brazo, sobre las 96 celdas del barrido.
+
+La conclusión del barrido es que no existe una configuración única ganadora para todos los regímenes
+sin una compuerta previa: la hipótesis queda refutada. El escenario donde
+\texttt{upper-tmax-tmin9000} gana ---el conjunto agregado de $n=1\,607$--- no tiene correlato
+operativo en el censo histórico, que se organizó por área; representa en cambio el régimen de
+escalamiento, un censo de cobertura mayor o el ruteo de una comuna completa como un solo problema.
+La decisión adoptada es conservar la configuración de producción sin modificación. El brazo ganador
+del régimen agregado tampoco se adopta tras una compuerta de activación por saturación: la
+re-medición de sus soluciones sobre el trazado real de calles invierte el signo de su efecto
+geométrico precisamente en el régimen que esa compuerta habilitaría
+(\hyperref[anx:barrido-configuraciones]{Anexo 4}), y la Sección~\ref{sec:posibles-mejoras} registra
+el descarte.
 
 \section{LIMITACIONES DEL SISTEMA}
 \label{sec:limitaciones}
@@ -1804,3 +1536,266 @@ signo del efecto precisamente en el régimen que la compuerta habilitaría
 (\hyperref[anx:barrido-configuraciones]{Anexo 4}): sobre la geometría real el brazo empeora aquello
 que pretendía corregir, de modo que la compuerta no se propone para activación y su código permanece
 en el árbol como opción no activa de uso experimental.
+
+
+\section{CONCLUSIONES}
+\label{sec:conclusiones}
+
+\subsection{Lo que los resultados muestran sobre el problema}
+
+De las tres preguntas que abren el capítulo, las dos primeras ---la calidad del plan contra los
+criterios comprometidos y su mejora sobre la alternativa trivial--- se responden en la
+Sección~\ref{sec:cumplimiento-criterios}. La tercera, el régimen en que ambas respuestas se
+sostienen, es la que la serie de experimentos convierte en el hallazgo conceptual del capítulo: no
+era la hipótesis de partida y reorienta el problema.
+
+La calidad geométrica de las rutas ---su compacidad, su solapamiento mutuo y sus auto-cruces--- no
+es una propiedad del presupuesto de cómputo sino del régimen geográfico de la instancia y de la
+forma de la función objetivo. Aumentar el tiempo del \textit{solver} de 120 a 180\,s no cambia la
+geometría; redirigir el objetivo blando superior sí la cambia de forma drástica, y hacerlo mejora la
+geometría en el conjunto agregado a la vez que la empeora en las áreas individuales. Dicho de otro
+modo: no existe una configuración de la función objetivo que sea la correcta para todo tamaño y toda
+densidad, y la búsqueda de una ---la hipótesis con que se abrió el barrido de configuración por
+algoritmo--- queda refutada con datos.
+
+El corolario operacional es que la unidad correcta del problema es el área de censo individual y no
+el arbolado metropolitano agregado. La serie de auto-cruces sobre calle de la
+Sección~\ref{sec:areas-reales} precisa el alcance de esa ventaja: es de conteo absoluto ---menos
+rutas y, con ellas, un orden de magnitud menos de auto-cruces por solución---, no una geometría por
+ruta intrínsecamente más limpia, porque la tasa por ruta es comparable entre regímenes. Esto
+convierte la segmentación previa por área, que
+la Sección~\ref{sec:posibles-mejoras} documenta como trabajo futuro, en la extensión de mayor
+impacto del sistema, sostenida por el precio medido de la partición y el correlato operativo de las
+instancias más que por la geometría: el motor entrega soluciones con pocos auto-cruces absolutos
+cuando el problema se le entrega en su escala natural.
+
+El argumento dejó de ser solo geométrico cuando se midió sobre las áreas reales
+(Sección~\ref{sec:areas-reales}). Particionar no cuesta caminata en el territorio del censo
+histórico, porque las áreas están suficientemente separadas; cuesta una ruta adicional, tres
+jornadas por debajo de $T_{\min}$ y el triple de cómputo, a cambio de instancias con correlato
+operativo y de una varianza entre repeticiones sustancialmente menor. Esa misma medición expuso el
+límite del \textit{solver} en el otro extremo del rango: en un área de 72 árboles la búsqueda
+entrega dos medias jornadas donde el \textit{greedy} cubre una jornada única, y la instrumentación
+del objetivo muestra que no es un fallo de búsqueda sino el precio vigente ---la partición resulta
+$4{,}2$ veces más barata bajo cotas blandas que no dependen de la instancia---, de modo que el
+margen de mejora pendiente está en hacer esas cotas sensibles a la densidad y no en la búsqueda.
+
+\subsection{Cumplimiento de los criterios de aceptación}
+\label{sec:cumplimiento-criterios}
+
+Los seis criterios comprometidos en la Sección~\ref{sec:criterios-aceptacion}, antes de ejecutar
+experimento alguno, se contrastan aquí contra lo medido. Cinco se cumplen y el sexto se cumple con
+una reserva de protocolo que corresponde declarar.
+
+La cobertura del censo (CA-01) es total bajo la configuración censal de referencia: las tres
+repeticiones de la corrida de referencia asignan los $1\,607$ árboles a una ruta, sin que el modelo
+active la disyunción que le permitiría descartarlos. El criterio deja de cumplirse únicamente cuando
+la carga de servicio excede la capacidad de la flota bajo $T_{\max}=2$\,h, y esa frontera está
+caracterizada en la Tabla~\ref{tab:grilla-spatial}. La jornada máxima (CA-02) se respeta sin
+excepción: la cota es dura por construcción del modelo. El balance de carga (CA-03) queda dentro
+del criterio, con un índice de $0{,}829$ a $0{,}837$ según la repetición frente al $0{,}80$
+exigido, acompañado de una desviación estándar de $564$\,s equivalente al $5{,}6$\,\% del promedio;
+el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto
+equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
+(CA-04) es en efecto una salida del sistema: el administrador declara la duración de la jornada y el
+tiempo de servicio, y el número de censistas necesarios se deriva de ellos, lo que constituye la
+diferencia funcional más nítida respecto de la planificación manual descrita en la
+Sección~\ref{sec:estado-actual}.
+
+El costo de planificación (CA-05) se cumple con $123{,}3$\,s de corrida completa sobre la matriz en
+caché, pero su lectura exige una precisión: $120$\,s de esa cifra son el tope configurado del
+\textit{solver} y no una medición de convergencia, de modo que el criterio se satisface por
+construcción mientras el tope se mantenga bajo cinco minutos. Solo los $3{,}3$\,s restantes
+---lectura del \textit{dataset}, acierto de caché de la matriz y persistencia de la solución--- son
+tiempo que el sistema podría hacer crecer hasta incumplirlo, y el desglose confirma que no
+lo hace: el $97{,}3$\,\% del tiempo está en la metaheurística y no en la infraestructura que la
+rodea. Lo que sí constituye evidencia sobre la elección del tope es el análisis de sensibilidad de
+la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la mejora alcanzable
+con presupuestos mayores. Con caché fría la corrida completa
+sube a $334{,}6$\,s por la construcción de la matriz contra OSRM, por sobre el umbral de los
+$300$\,s; el criterio se enuncia sobre el caso con caché precisamente porque es el de operación
+normal, pero el primer cálculo de un \textit{dataset} nuevo lo excede y así se reporta.
+
+La mejora sobre la alternativa trivial (CA-06) se cumple. Sobre la misma instancia congelada, con
+la misma matriz de costos y con el heurístico dotado del mismo post-proceso de resecuenciación
+(Tabla~\ref{tab:comparativa}), el ahorro es de $2\,907$\,s ---un $4{,}7$\,\% del desplazamiento
+total del \textit{baseline} refinado--- y supera la dispersión entre semillas del \textit{solver}
+($1\,538$\,s), de modo que la reducción es atribuible al método y no al azar de la búsqueda. El
+margen es menor que el que sugeriría un contraste ingenuo: alrededor de un tercio de la ventaja
+contra el \textit{greedy} sin refinar es atribuible al post-proceso que solo un lado recibiría
+(Sección~\ref{sec:comparacion-greedy}). Junto al margen subsiste una diferencia cualitativa: el
+\textit{baseline} produce una ruta degenerada de cinco árboles con $9\,466$\,s de caminata y satura
+las jornadas a un promedio del $98$\,\% de $T_{\max}$, mientras que la solución del modelo opera al
+$93$\,\% y su ruta más pequeña visita entre seis y doce árboles; la atenuación de esa patología es
+de grado y no de naturaleza.
+
+El alcance de este veredicto es el de la instancia sobre la que el criterio se comprometió: la
+configuración censal de referencia, cuyo régimen satura la jornada. La evaluación sobre las áreas
+reales (Sección~\ref{sec:areas-reales}) muestra que el margen no se generaliza al régimen no
+saturado: en \texttt{area-27-n72} el \textit{greedy} refinado cubre los 72 árboles en una jornada
+única y la partición del \textit{solver} gasta un $57$\,\% más de caminata, y en
+\texttt{area-29-n43} ambos métodos resuelven el mismo recorrido único. La mejora sobre la
+alternativa trivial es, por tanto, una propiedad del régimen saturado y no un dominio uniforme del
+método. En el régimen de área pequeña la ventaja en desplazamiento deja de ser uniforme ---el
+\textit{solver} gana un $11{,}7$\,\% en \texttt{area-26-n157} y pierde en \texttt{area-27-n72}--- y
+lo que se sostiene es la entrega de jornadas ejecutables ---\texttt{area-26-n157}, con balance de
+$0{,}872$ frente a $0{,}276$ y ninguna jornada sobre el $82$\,\% de $T_{\max}$---, mientras que el
+caso adverso queda diagnosticado como defecto de cotas blandas insensibles a la densidad, con su
+corrección identificada en la Sección~\ref{sec:posibles-mejoras}.
+
+\subsection{Cumplimiento de los atributos de calidad}
+\label{sec:cumplimiento-atributos}
+
+Los criterios de aceptación fijan umbrales sobre una configuración; los cuatro atributos de la
+Sección~\ref{sec:atributos-calidad} son afirmaciones más amplias sobre el producto, y conviene
+declarar con qué grado y con qué salvedades se sostienen.
+
+La robustez del plan se sostiene con una excepción caracterizada. Sobre la grilla de variantes
+operacionales bajo la configuración vigente (Tabla~\ref{tab:grilla-spatial}) ---las combinaciones
+de tiempo de servicio y jornada máxima con que puede configurarse una campaña---, las tres variantes
+de $T_{\max}=3$\,h y la de servicio de 1\,min bajo $T_{\max}=2$\,h mantienen cobertura total,
+mientras que las dos restantes ---servicio de 2 y de 3\,min bajo $T_{\max}=2$\,h--- descartan uno y
+dos árboles respectivamente, de forma consistente en las tres semillas, y lo reportan de forma
+explícita en lugar de omitirlo en silencio. El índice de balance supera $0{,}80$ en las seis
+variantes. El atributo se cumple, por tanto, en todo el rango
+salvo en su borde de capacidad, y ese borde está documentado junto con la configuración que lo
+evita: bajo $T_{\max}=3$\,h la cobertura es total con los tres tiempos de servicio.
+
+La operabilidad en terreno es el atributo cuyo cumplimiento esta memoria acredita con menos fuerza,
+y por dos razones distintas. La primera es de alcance de la evidencia: el portal se verificó por
+partes y nunca en una jornada de censo con censistas reales, de modo que lo que se comprueba es que
+el sistema hace lo que su diseño dice, no que resista la calle. La segunda es de grado de
+implementación: el registro sobrevive a pérdidas de conexión momentáneas mediante una cola local,
+pero no se implementó la sincronización diferida robusta ni el almacenamiento de teselas de mapa que
+exigiría una intermitencia prolongada. El atributo se cumple en su forma débil ---no se pierde lo
+registrado ante un corte breve--- y queda pendiente en la fuerte.
+
+La eficiencia de cómputo se cumple en sus dos componentes. Planificar la instancia cuesta
+$123{,}3$\,s de reloj con la matriz en caché, muy por debajo de la cota, y el análisis de
+sensibilidad de la Tabla~\ref{tab:sensibilidad-tl} muestra que ese presupuesto captura la mayor
+parte de la mejora alcanzable: ampliarlo a $180$\,s altera el desplazamiento total en un $0{,}6$\,\%
+---por debajo de la dispersión entre semillas--- y no cambia ni el número de rutas ni el balance. La
+salvedad sobre el carácter de tope configurado de esa cifra ya quedó declarada en la
+Sección~\ref{sec:cumplimiento-criterios} y no se repite aquí.
+
+La calidad geográfica de las rutas se cumple de forma acotada, y su alcance quedó redefinido por la
+propia experimentación. La métrica sobre la que el atributo se juzga es el número de auto-cruces
+sobre el trazado real de calles, y no la de cuerdas rectas entre paradas consecutivas, porque la
+auditoría de instrumento (Sección~\ref{sec:discusion-calidad}) midió entre ambas una correlación
+débil ($\rho$ de Spearman de $0{,}527$) e invertida en el conjunto de evaluación agregado ($\rho =
+-0{,}575$): una mejora en cuerdas no garantiza una mejora en calle. Bajo esa métrica, el único
+componente del \textit{pipeline} que mejora la geometría con evidencia directa es el post-proceso de
+resecuenciación, que reduce simultáneamente el tiempo de viaje y los auto-cruces en las doce
+instancias de prueba. El resto de los componentes de la función objetivo actúa sobre la geometría de
+forma indirecta y sin evidencia equivalente sobre calle real, de modo que el atributo se sostiene
+sobre ese post-proceso y no sobre el modelo completo. En el régimen de operación real ---el área de
+censo individual--- la serie medida en la Sección~\ref{sec:areas-reales} sitúa el cumplimiento en
+conteos absolutos bajos por solución, con una tasa por ruta comparable a la de la instancia de
+estrés, y no en la ausencia de auto-cruces.
+
+\subsection{Lo que aportó la metodología}
+
+Dieciséis ciclos de evaluación\footnote{Se cuenta como ciclo de
+evaluación el que somete a prueba una hipótesis sobre la formulación o sus coeficientes con un
+criterio de decisión fijado y versionado antes de ejecutar la corrida. El directorio
+\texttt{docs\slash experiments\slash } contiene además informes de perfilado, de auditoría de
+instrumento y de corridas de referencia, que no constituyen ciclos bajo esa definición y no entran
+en el recuento.} cerrados durante julio de 2026 produjeron un solo
+cambio en la configuración por defecto del sistema. Leído a la ligera, eso parece un resultado nulo; leído con propiedad, es el resultado.
+
+En cada ciclo se fijó el criterio de decisión antes de ejecutarlo, se versionaron sus datos crudos y
+se publicó su veredicto con independencia de si confirmaba o refutaba la hipótesis que lo motivaba.
+De los dieciséis ciclos, doce cerraron con un descarte, dos con una corrección del propio
+instrumento de medición, uno con la caracterización de la flojedad de la cota inferior de referencia
+y uno con la adopción de un cambio. Los doce descartes fueron:
+\begin{enumerate}[label=\alph*)]
+  \item piso de balance escalado;
+  \item piso de balance factible;
+  \item piso por número de paradas;
+  \item piso combinado;
+  \item supresión del piso;
+  \item anclaje del objetivo blando superior en $T_{\max}$;
+  \item peso convexo del arco;
+  \item peso lineal del arco;
+  \item agrupamiento previo con restricción blanda;
+  \item \textit{warm start};
+  \item multi-arranque;
+  \item compuerta de régimen a priori.
+\end{enumerate}
+La conclusión que emerge del conjunto no es que no se encontró nada, sino que la configuración de
+producción ya era la adecuada para su régimen de operación, y que el margen de mejora que se le
+suponía a la función objetivo no existía. Descartar doce alternativas plausibles es un resultado más
+informativo que adoptar la primera que hubiera parecido prometedora.
+
+El único cambio adoptado ---el post-proceso de resecuenciación de la Sección~\ref{sec:postpass}---
+refuerza esa lectura, porque no provino de barrer términos del objetivo sino de reparar el
+instrumento de medición. El algoritmo había sido rechazado por empeorar los auto-cruces medidos
+sobre cuerdas rectas; cuando la validación posterior mostró que esa métrica está débilmente
+correlacionada con la geometría real de calles ---y que en el \textit{dataset} de evaluación apunta
+en sentido contrario---, la re-medición sobre el trazado real reveló una mejora simultánea de tiempo
+de viaje y de geometría en las doce instancias de prueba. El aprendizaje metodológico es
+transferible y vale más que el cambio concreto: en una serie experimental larga, auditar el
+instrumento tiene mayor rendimiento esperado que añadir un brazo más al barrido.
+
+El análisis retrospectivo de la serie identificó cuatro defectos de instrumentación en los ciclos iniciales
+---semillas no propagadas, una cota de relleno inalcanzable, la métrica de auto-cruces sobre cuerdas
+en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos distintos---,
+que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla con el alcance necesario para reproducir
+cada corrección.
+Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones: de los
+dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el instrumento
+corregido sin que cambiara el descarte final y los demás descansan en criterios
+---tiempo de viaje, relleno, balance--- ajenos a los defectos detectados.
+
+Hay un hallazgo transversal a los apartados anteriores que conviene enunciar por separado, porque no
+pertenece a ninguno y explica una decisión de diseño del Capítulo~\ref{cap:diseno}. En casi ningún
+ciclo de la serie apareció un brazo que ganara en todas las instancias a la vez, y el orden entre
+dos brazos se invierte al cambiar la densidad o el tamaño de la instancia. Los apartados anteriores
+muestran cuatro casos de ese patrón: el término espacial compra compacidad y cede tiempo y balance;
+la comparación con el heurístico depende por completo de si el competidor recibe el mismo
+refinamiento; el criterio de decisión sobre áreas reales se cumple en dos de las tres; y el
+coeficiente espacial no ordena las instancias de forma monótona.
+
+Esa ausencia sistemática de un ganador único es la evidencia que descartó fijar un
+\textit{default} único y la que motivó el abanico de seis candidatas con selección lexicográfica que
+describe la Sección~\ref{sec:abanico}: si ninguna combinación domina a las demás en todas las
+instancias, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la
+instancia concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
+El abanico no es, por tanto, una precaución de diseño: es la consecuencia directa de lo que la serie
+experimental midió.
+
+\subsection{Alcance y validez de lo concluido}
+
+Las conclusiones anteriores valen dentro de un perímetro que conviene delimitar con precisión, y que
+corresponde al alcance declarado en la Sección~\ref{sec:verificacion} y a las restricciones de la
+Sección~\ref{sec:restricciones}.
+
+Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción del
+diagnóstico geográfico inicial sobre nodos sintéticos de distribución uniforme
+(\hyperref[anx:baseline-geo-sintetico]{Anexo 4})--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
+densidad controlada; no se emplearon los bancos de referencia de la literatura
+\citep{solomon1987algorithms}, cuyas instancias sintéticas suponen un depósito central y ventanas
+de tiempo, condiciones ajenas al problema de rutas abiertas sobre una red vial real aquí tratado.
+Las comparaciones son internas: contrastan el sistema contra otras configuraciones de sí mismo y
+contra un heurístico de vecino más cercano escrito para este trabajo. La conclusión sobre la unidad
+operativa descansa, además, en la sub-familia más pequeña de la suite: tres áreas de un mismo
+territorio y su unión (Sección~\ref{sec:areas-reales}).
+No hay anclaje externo, ni una cota de optimalidad aplicada al resultado principal, de modo que las
+afirmaciones son de mejora relativa y nunca de proximidad al óptimo.
+
+Las cifras absolutas de tiempo provienen de un entorno de medición emulado y no del servidor de
+producción, y aunque el sistema quedó desplegado al cierre de la iteración
+(Sección~\ref{sec:despliegue-produccion}), no fue operado en una jornada real de censo. En
+consecuencia,
+lo verificado es que el producto hace lo que su diseño declara ---en los términos de la
+Sección~\ref{sec:verificacion}--- y no que resuelva en terreno el problema logístico que lo motivó.
+Esa última comprobación queda pendiente y es, de todas las extensiones identificadas, la de mayor
+valor para el proyecto.
+
+Por último, dos reservas de instrumento acompañan a la lectura de la geometría: la mayor parte de
+las cifras de auto-cruces de este capítulo se calcula sobre cuerdas rectas, cuya correspondencia con
+el trazado real está medida y es parcial, y la replicación de los experimentos se obtiene permutando
+el orden de los nodos, lo que acota la varianza entre semillas de una corrida pero no la varianza
+entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez del
+\hyperref[anx:auditoria-robustez]{Anexo 4}, y ninguna de las dos afecta a los criterios de aceptación
+---cobertura, jornada, balance, flota y tiempo---, que descansan en magnitudes ajenas a ellas.

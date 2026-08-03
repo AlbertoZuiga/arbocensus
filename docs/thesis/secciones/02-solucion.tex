@@ -20,33 +20,27 @@ Sin embargo, los problemas de ruteo urbano reales presentan características esp
   \item distancias caminables sobre redes viales reales, no euclidianas.
 \end{enumerate}
 
-Las herramientas de ruteo de propósito general ---entre ellas los módulos de análisis de redes de las
-suites comerciales de sistemas de información geográfica--- resuelven variantes del problema de
-ruteo de vehículos. Lo que no
-cubren es la integración con el flujo de trabajo de este proyecto: partir del catastro que dejaron
+Las herramientas de ruteo de propósito general resuelven variantes del problema de ruteo de
+vehículos; sin embargo, ninguna cubre la integración con el flujo de trabajo de este proyecto:
+partir del catastro que dejaron
 las iteraciones anteriores de Arbocensus, publicar el plan como asignación de trabajo a censistas
 identificados y recoger de vuelta, parada por parada, la observación histórica de cada árbol. Esa
 cadena ---catastro legado, optimización, asignación, captura en terreno e historial--- es lo que el
-producto aporta, y es específica del dominio y no del algoritmo. A ello se añade una consideración
-de costo: instancias del orden de cientos de árboles ---y hasta los 1\,607 del caso mayor
-evaluado--- exigen matrices de cientos de miles a millones de
-tiempos de desplazamiento, volumen que con una API externa de pago implicaría un gasto recurrente en cada
-campaña, mientras que la alternativa adoptada lo elimina al desplegar el servicio localmente sobre
-datos cartográficos abiertos ---los de \textit{OpenStreetMap} \citep{openstreetmap}---.
+producto debe aportar, y es específica del dominio y no del algoritmo.
 
-Se propone el desarrollo de una plataforma web que formula el problema de ruteo de censo como un
+Se propone el desarrollo de una plataforma web que formule el problema de ruteo de censo como un
 problema de ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
 duración por ruta; la taxonomía precisa se detalla en la Sección~\ref{sec:formulacion}. La
-plataforma resuelve esa formulación mediante el \textit{solver} de ruteo vehicular de
-\textit{OR-Tools}, basado en programación con restricciones \citep{ortools}, y cubre las cuatro
+plataforma debe resolver esa formulación mediante el \textit{solver} de ruteo vehicular de
+\textit{OR-Tools}, basado en programación con restricciones \citep{ortools}, y cubrir las cuatro
 carencias que las herramientas genéricas no abordan:
 \begin{enumerate}
-  \item determina automáticamente el número de rutas necesarias $k$ dado el conjunto de árboles $P =
+  \item determinar automáticamente el número de rutas necesarias $k$ dado el conjunto de árboles $P =
         \{p_1, \ldots, p_n\}$ y los parámetros $T_{\min}$, $T_{\max}$, $s$ (tiempo de servicio por
         árbol), sin intervención manual;
-  \item respeta restricciones de jornada global por ruta, no solo ventanas en nodos;
-  \item genera rutas abiertas, adecuadas para operaciones en terreno;
-  \item atiende simultáneamente el número de rutas, el tiempo total de desplazamiento y el
+  \item respetar restricciones de jornada global por ruta, no solo ventanas en nodos;
+  \item generar rutas abiertas, adecuadas para operaciones en terreno;
+  \item atender simultáneamente el número de rutas, el tiempo total de desplazamiento y el
         desbalance de carga entre equipos.
 \end{enumerate}
 
@@ -57,14 +51,14 @@ descartó porque el corte por duración no controla el balance ni la compacidad 
 porque los extremos de cada tramo quedan fijados por un recorrido único que ignora, al construirse,
 la partición que luego se le impone.
 
-El sistema no se agota en el motor de optimización: cubre el ciclo operacional completo de una
-campaña, desde la constitución del conjunto de árboles a censar hasta el seguimiento del avance en
-terreno. El administrador importa el arbolado ---desde archivos o desde las dos bases de datos que
-dejaron las iteraciones anteriores del proyecto---, configura los parámetros de jornada, ejecuta la
-optimización, publica el plan resultante y asigna cada ruta a un censista. El censista recorre su
-ruta desde el navegador de su teléfono y registra, parada por parada, el estado en que encontró cada
-árbol. Cada uno de esos registros se convierte en una observación histórica, que es lo que convierte
-al sistema en una herramienta de re-censo y no de censo inicial.
+El sistema no se agota en el motor de optimización: debe cubrir el ciclo operacional completo de
+una campaña, desde la constitución del conjunto de árboles a censar hasta el seguimiento del avance
+en terreno. El administrador importa el arbolado ---desde archivos o desde las dos bases de datos
+que dejaron las iteraciones anteriores del proyecto---, configura los parámetros de jornada,
+ejecuta la optimización, publica el plan resultante y asigna cada ruta a un censista. El censista
+recorre su ruta desde el navegador de su teléfono y registra, parada por parada, el estado en que
+encontró cada árbol. Cada uno de esos registros se convierte en una observación histórica, que es
+lo que convierte al sistema en una herramienta de re-censo y no de censo inicial.
 
 \section{USUARIOS OBJETIVO}
 \label{sec:usuarios}
@@ -279,7 +273,7 @@ vista.
 \section{RESTRICCIONES}
 \label{sec:restricciones}
 
-La Tabla~\ref{tab:restricciones} enumera las restricciones bajo las que se elaboró el producto. Son
+La Tabla~\ref{tab:restricciones} enumera las restricciones bajo las que se desarrolla el producto. Son
 condiciones impuestas por el entorno de operación, por los datos heredados o por las herramientas
 empleadas: el diseño responde a ellas, pero no puede levantarlas. Se enuncian como condición, y no
 como la respuesta que el diseño les dio.

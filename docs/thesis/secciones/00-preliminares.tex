@@ -39,42 +39,40 @@ memoria continúa.
 \addcontentsline{toc}{chapter}{RESUMEN}
 
 Arbocensus es un proyecto orientado a automatizar la gestión de censos de árboles urbanos. Sus
-iteraciones anteriores desarrollaron una plataforma web de censado con participación ciudadana,
-ludificación y un modelo de estimación de cobertura; esta memoria agrega la etapa siguiente: la
-planificación de las jornadas en terreno. El propósito del proyecto exige un historial de
-observaciones por árbol, y construirlo obliga a volver sobre un conjunto conocido de ejemplares ya
-georreferenciados. Planificar ese re-censo es un problema de asignación de trabajo que las
-iteraciones anteriores no abordaron.
+iteraciones anteriores desarrollaron una plataforma web de censado
+con participación ciudadana, ludificación y un modelo de estimación de cobertura. El propósito del
+proyecto exige un historial de observaciones por árbol, y construirlo obliga a volver sobre un
+conjunto conocido de ejemplares ya georreferenciados. Planificar ese re-censo es un problema de
+asignación de trabajo que las iteraciones anteriores no abordaron.
 
-El problema se formula como un problema de ruteo de vehículos de rutas abiertas con visitas
-opcionales penalizadas y restricción de duración por ruta ---con el número de rutas, la jornada
-acotada y el balance de carga resueltos por el modelo y no declarados por el usuario---, y se
-resuelve mediante el \textit{solver} de ruteo vehicular de \textit{OR-Tools}. Los tiempos de
-desplazamiento peatonal se calculan sobre la red vial real de \textit{OpenStreetMap} mediante OSRM,
-lo que elimina costos de APIs externas. La plataforma cubre el ciclo operacional completo: el
-administrador importa los árboles, configura los parámetros, optimiza y publica el plan; el censista
-accede desde su teléfono a la ruta asignada, con las paradas en secuencia y navegación peatonal por
-parada, sobre un despliegue productivo con HTTPS y entrega continua.
+Esta memoria desarrolla esa etapa mediante una plataforma web que cubre el ciclo operacional
+completo del re-censo y un motor de ruteo que lo planifica. El problema se formula como ruteo de
+vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
+duración por ruta ---con el número de rutas, la jornada acotada y el balance de carga resueltos por
+el modelo y no declarados por el usuario---, y se resuelve mediante el \textit{solver} de ruteo
+vehicular de \textit{OR-Tools}. Los tiempos de desplazamiento peatonal se calculan con OSRM sobre
+la red vial real de \textit{OpenStreetMap}, sin costos de APIs externas. El
+administrador importa los árboles desde las bases legadas del proyecto, configura los parámetros,
+optimiza y publica el plan; el censista accede desde su teléfono a la ruta asignada, con
+navegación peatonal parada por parada, sobre un despliegue productivo con HTTPS y
+entrega continua.
 
-La evaluación cubre doce instancias reales congeladas entre $n=43$ y $n=1\,607$ árboles, incluidas
-tres áreas de censo individuales de la operación histórica. Los resultados muestran que esas áreas
----la escala que corresponde a una jornada real de censo--- son también la escala en que el motor
-rinde mejor: sobre ellas la configuración de producción cubre todos los árboles con conteos bajos
-de auto-cruces, aunque el contraste con un heurístico \textit{greedy} de vecino más
-cercano, exigido en las tres áreas, se cumple solo en dos. Como instancia de estrés, el arbolado
-agregado de 1\,607 árboles acredita los criterios en el peor caso de tamaño: 25 rutas con cobertura
-total, un índice de balance de carga de 0{,}83 y ninguna ruta que exceda la jornada máxima, en un
-presupuesto de cómputo de 120\,s que captura prácticamente toda la mejora alcanzable con
-presupuestos mayores, y un 4{,}7\,\% menos de desplazamiento total ---cerca de 48 minutos--- que el
-heurístico con el mismo refinamiento local.
+Se realizaron experimentos sobre doce instancias reales
+congeladas de entre $43$ y $1\,607$ árboles, organizados en dieciséis ciclos de evaluación con
+criterio fijado antes de cada corrida y datos crudos versionados. Los ciclos
+compararon configuraciones del motor entre sí y contra un heurístico \textit{greedy} de vecino más
+cercano sometido al mismo refinamiento local; doce cerraron descartando la modificación evaluada,
+lo que acota el margen de mejora de la función objetivo.
 
-Estas conclusiones descansan en dieciséis ciclos de evaluación con criterio fijado antes de cada
-corrida y datos crudos versionados, doce de los cuales cerraron descartando la hipótesis que los
-motivaba, lo que acota el margen de mejora atribuible a la función objetivo.
-Se concluye que la formulación propuesta resuelve el problema planteado: satisface los criterios de
-aceptación comprometidos tanto en las áreas reales como en la instancia de estrés, con la sola
-excepción del contraste frente al heurístico en un área de 72 árboles, y lo hace en tiempos
-compatibles con la planificación de una campaña. Su validación en una jornada de terreno queda
-pendiente y es la extensión de mayor valor para el proyecto.
+En la instancia de mayor tamaño, la configuración de producción cubre los 1\,607 árboles con 25
+rutas, un índice de balance de carga de 0{,}83 y ninguna ruta que exceda la jornada máxima, en un
+presupuesto de cómputo de 120\,s que captura casi toda la mejora alcanzable con presupuestos
+mayores,
+y con un 4{,}7\,\% menos de desplazamiento total ---cerca de 48 minutos---
+que el heurístico. En las áreas de censo individuales, la escala de una jornada real, el motor
+cubre todos los árboles con pocos auto-cruces, aunque el contraste frente al heurístico
+se cumple en dos de las tres áreas exigidas. Se concluye que la formulación propuesta resuelve el
+problema planteado en tiempos compatibles con la planificación de una campaña; su validación en
+terreno queda pendiente y es la extensión de mayor valor.
 
 \newpage

@@ -262,10 +262,13 @@ entorno de desarrollo, OSRM opera sobre un extracto de Santiago recortado del de
 reduce sus artefactos preprocesados a una fracción y permite que el servicio quepa en la memoria
 del servidor.
 
-Caddy actúa como único punto de entrada: sirve el paquete estático del \textit{frontend}
----construido por Vite y empaquetado en la propia imagen del proxy---, redirige \texttt{/api},
-\texttt{/admin} y \texttt{/static} a la aplicación y entrega las fotografías desde un volumen
-compartido con ella. El certificado TLS se obtiene y renueva automáticamente contra
+Caddy actúa como proxy inverso y único punto de entrada: sirve el paquete estático del
+\textit{frontend} ---construido por Vite y empaquetado en la propia imagen del proxy--- y redirige
+las peticiones de \texttt{/api}, \texttt{/admin} y \texttt{/static} a la aplicación Django, además
+de entregar las fotografías desde un volumen compartido con ella. El sistema queda accesible
+públicamente en \url{https://134.122.20.233.sslip.io}, un dominio derivado de la IP del servidor
+que permite operar con TLS mientras el proyecto no fija un dominio propio. El certificado se
+obtiene y renueva automáticamente contra
 \textit{Let's Encrypt} \citep{letsencrypt}, y como el \textit{frontend} y la API comparten origen,
 la configuración de producción no requiere excepciones de CORS. La aplicación añade el
 endurecimiento correspondiente: archivos estáticos comprimidos con huella de contenido
