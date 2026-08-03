@@ -8,8 +8,33 @@
 % ---- Codificación y lenguaje ------------------------------------
 % Nota: En LuaLaTeX / XeLaTeX no se requiere el paquete 'inputenc'
 \usepackage[T1]{fontenc}
+% babel-spanish inserta la «ñ» entre la n y la o en \@alph: la plantilla pide el
+% alfabeto latino (a, b, c…), de modo que se conserva el \@alph del kernel y se
+% restaura después de \layoutspanish, que es quien lo pisa.
+\makeatletter
+\let\arbalph@kernel\@alph
+\makeatother
 \usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
+\makeatletter
+\AtBeginDocument{\let\@alph\arbalph@kernel}
+\makeatother
 \renewcommand{\labelenumi}{\alph{enumi})}
+% Robusto y con \romannumeral primitivo: babel-spanish tipografía \roman{} en
+% versalitas (la plantilla exige i, ii, iii) y enumitem expande la etiqueta con
+% \edef, lo que vacía un \romannumeral no protegido.
+\DeclareRobustCommand{\lcroman}[1]{\romannumeral\value{#1}}
+\renewcommand{\labelenumii}{\lcroman{enumii})}
+% \the... alimenta a \ref y debe coincidir con la etiqueta impresa. Aquí va
+% \romannumeral sin proteger: \label lo escribe al .aux con \protected@edef, y
+% un \lcroman robusto llegaría sin expandir a un .aux donde enumii ya vale 0.
+\renewcommand{\theenumi}{\alph{enumi}}
+\renewcommand{\theenumii}{\romannumeral\value{enumii}}
+% Prefijo del \ref a un ítem de segundo nivel: sin él imprimiría «i», ambiguo
+% entre los ítems anidados de todas las letras.
+\makeatletter
+\renewcommand{\p@enumii}{\theenumi)}
+\makeatother
+\renewcommand{\labelitemi}{--}
 % El \% de babel-spanish inspecciona \lastskip, lo que revienta con
 % "Incompatible glue units" en la pasada de medición de una columna X de
 % tabularx. Se desactiva y el espacio fino se escribe explícito (\,\%).
@@ -47,11 +72,6 @@
   {\normalfont\fontsize{12}{14}}
   {\thesubsection}{0.5em}{#1}
 \titlespacing*{\subsection}{0pt}{10pt}{4pt}
-
-\titleformat{\subsubsection}[block]
-  {\normalfont\fontsize{12}{14}}
-  {}{0pt}{#1}
-\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
 
 % ---- Índices y Nombres -----------------------------------------
 \usepackage{tocloft}
@@ -110,6 +130,33 @@
 \usepackage{amssymb}     % Necesario para símbolos matemáticos como \mathbb{R}
 \usepackage{xcolor}
 \usepackage{enumitem}
+% Etiqueta al ras del margen del nivel y líneas envueltas con sangrado colgante.
+% Dimensiones explícitas porque leftmargin=* no recalcula en niveles anidados.
+% itemize,1 son los guiones de tercera profundidad (\labelitemi).
+%
+% El hook para/begin hace que todo párrafo posterior al primero dentro de un
+% ítem (salto de línea "manual") retroceda completo a la posición de la
+% etiqueta de su nivel. Se hace con \parshape por párrafo y no con \everypar
+% ni redefiniendo \par: el sangrado de lista vive en un \parshape que persiste
+% entre párrafos, y \everypar lo pisa la maquinaria de \item. El primer
+% \parshape restaura el default de la lista (el del párrafo anterior persiste);
+% \if@inlabel exime al párrafo que lleva la etiqueta, que conserva el colgante.
+\makeatletter
+\newif\if@listflush
+\newcommand{\itemparflush}{\@listflushtrue}
+\AddToHook{para/begin}{\ifdim\@totalleftmargin>\z@
+  \parshape \@ne \@totalleftmargin \linewidth
+  \if@listflush\if@inlabel\else
+    \parshape \@ne \dimexpr\@totalleftmargin-\leftmargin\relax
+      \dimexpr\linewidth+\leftmargin\relax
+    \parindent\z@ \fi\fi\fi}
+\makeatother
+\setlist[enumerate,1]{leftmargin=2em, labelindent=0pt, labelwidth=1.5em,
+  labelsep=0.5em, align=left, before=\itemparflush}
+\setlist[enumerate,2]{leftmargin=2.3em, labelindent=0pt, labelwidth=1.8em,
+  labelsep=0.5em, align=left, before=\itemparflush}
+\setlist[itemize,1]{leftmargin=1.5em, labelindent=0pt, labelwidth=1em,
+  labelsep=0.5em, align=left, before=\itemparflush}
 
 % Los identificadores de código (SetSpanCostCoefficientForAllVehicles, rutas de la
 % API) son palabras sin puntos de corte: sin esto desbordan el margen derecho.
