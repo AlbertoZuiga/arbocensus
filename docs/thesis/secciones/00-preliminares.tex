@@ -43,14 +43,13 @@ iteraciones anteriores desarrollaron una plataforma web de censado
 con participación ciudadana, ludificación y un modelo de estimación de cobertura. El propósito del
 proyecto exige un historial de observaciones por árbol, y construirlo obliga a volver sobre un
 conjunto conocido de ejemplares ya georreferenciados. Planificar ese re-censo es un problema de
-asignación de trabajo que las iteraciones anteriores no abordaron.
+asignación de trabajo aún no abordado.
 
 Esta memoria desarrolla esa etapa mediante una plataforma web que cubre el ciclo operacional
-completo del re-censo y un motor de ruteo que lo planifica. El problema se formula como ruteo de
-vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
-duración por ruta ---con el número de rutas, la jornada acotada y el balance de carga resueltos por
-el modelo y no declarados por el usuario---, y se resuelve mediante el \textit{solver} de ruteo
-vehicular de \textit{OR-Tools}. Los tiempos de desplazamiento peatonal se calculan con OSRM sobre
+completo del re-censo y un motor de optimización que lo planifica. El problema se formula como
+ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
+duración por ruta, y se resuelve mediante el \textit{solver} de \textit{OR-Tools}. Los tiempos de
+desplazamiento peatonal se calculan con OSRM sobre
 la red vial real de \textit{OpenStreetMap}, sin costos de APIs externas. El
 administrador importa los árboles desde las bases legadas del proyecto, configura los parámetros,
 optimiza y publica el plan; el censista accede desde su teléfono a la ruta asignada, con
