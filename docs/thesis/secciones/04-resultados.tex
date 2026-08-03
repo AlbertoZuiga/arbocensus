@@ -65,26 +65,16 @@ tiempo límite de \textit{solver} de 120\,s, que coincide con el tope de la heur
 $\min(30 + 1{,}5\,n,\ 120)$ para todo \textit{dataset} de $n \geq 60$ y se fija también en las
 instancias menores de la suite para mantener el presupuesto homogéneo.
 
-Los experimentos del capítulo razonan sobre la estructura de precios de la función objetivo que
-minimiza el \textit{solver} (Ecuación~\ref{eq:objetivo}), en particular sobre las dos
-penalizaciones blandas de la dimensión temporal y sobre el término de extensión geográfica que
-distingue a \texttt{spatial\_term} de \texttt{global}.
-
 Cada corrida se repite tres veces. \textit{OR-Tools} no expone una semilla de generador
-pseudoaleatorio que produzca repeticiones distintas, de modo que cada repetición se construye
-permutando el orden en que los nodos entran al \textit{solver}. La razón de forzar esas repeticiones
-es que una corrida única no permite distinguir el efecto de la configuración evaluada del accidente
-de una trayectoria de búsqueda particular: sin repetir, cualquier diferencia entre dos configuraciones podría
-deberse por completo al azar de una sola ejecución. Repetir acota esa duda por dos vías: entrega la
-dispersión contra la cual se contrasta el tamaño de cada diferencia reportada, y establece que un
-resultado sostenido en las tres permutaciones es atribuible al método y no al orden en que se
-enumeró el arbolado. Ese orden no cambia el problema matemático, pero decide
-los empates de la heurística que construye la solución inicial y, con ella, toda la trayectoria de
-la búsqueda local del GLS \citep{voudouris1999guided}: tres órdenes distintos producen tres
-soluciones distintas del mismo problema. El texto llama «semillas» a esas permutaciones. La
-dispersión que generan es mayor en las métricas de calidad que en el tiempo de desplazamiento, y
-acota la variación dentro de una corrida, no la variación entre corridas
-distintas.\footnote{Ver \hyperref[anx:alcance-replicas]{Anexo 4}.}
+pseudoaleatorio (RE-05), de modo que cada repetición se construye permutando el orden en que los
+nodos entran al \textit{solver}: ese orden no cambia el problema matemático, pero decide los
+empates de la heurística que construye la solución inicial y, con ella, toda la trayectoria de la
+búsqueda local del GLS \citep{voudouris1999guided}. El texto llama «semillas» a esas permutaciones.
+Repetir entrega la dispersión contra la cual se contrasta el tamaño de cada diferencia reportada, y
+establece que un resultado sostenido en las tres permutaciones es atribuible al método y no al
+orden en que se enumeró el arbolado; la dispersión resultante acota la variación dentro de una
+corrida, no la variación entre corridas distintas.\footnote{Ver
+\hyperref[anx:alcance-replicas]{Anexo 4}.}
 
 \begin{enumerate}
 \item Entorno de medición.
@@ -249,29 +239,20 @@ Sección~\ref{sec:criterios-aceptacion}.
 \end{xltabular}
 
 El número de rutas, $k=25$, es la flota que el \textit{solver} activa bajo esta configuración, no
-una cota mínima demostrada. No se calcula ninguna cota inferior sobre $k$; el \textit{baseline}
-\textit{greedy} de la Sección~\ref{sec:comparacion-greedy} resuelve el mismo problema con 24 rutas.
-Esa diferencia no indica una solución mejor sino un régimen de operación distinto: el heurístico,
-incluso con el mismo refinamiento local, satura cada ruta hasta un promedio del $98{,}0$\,\% de
-$T_{\max}$, mientras que las penalizaciones blandas del modelo empujan las duraciones hacia el punto
-medio del intervalo y dejan holgura operacional en promedio, aunque no en la ruta más larga. La
-discusión completa de ese compromiso se encuentra en la Sección~\ref{sec:comparacion-greedy}.
+una cota mínima demostrada: el \textit{baseline} \textit{greedy} de la
+Sección~\ref{sec:comparacion-greedy} resuelve el mismo problema con 24 rutas, y esa diferencia no
+indica una solución mejor sino un régimen distinto ---el heurístico satura cada ruta hasta un
+promedio del $98{,}0$\,\% de $T_{\max}$, mientras que las penalizaciones blandas del modelo empujan
+las duraciones hacia el punto medio y dejan holgura operacional en promedio---. Ninguna ruta excede
+$T_{\max}$, que el modelo impone como capacidad dura, y la cobertura fue total: ninguna repetición
+descartó árboles, pese a que el modelo lo permite.
 
-Ninguna ruta excede $T_{\max}$, que el modelo impone como capacidad dura de la dimensión temporal
-(Sección~\ref{sec:formulacion}). La cobertura fue total: ninguna de las tres repeticiones descartó
-árboles, pese a que el modelo lo permite mediante disyunciones penalizadas.
-
-Las tres repeticiones agotaron el presupuesto completo de 120\,s del metaheurístico GLS. Los tiempos
-de desplazamiento fueron 59\,718\,s, 56\,722\,s y 58\,696\,s (media 58\,379\,s), con una diferencia
-de 2\,996\,s entre el mejor y el peor resultado, esto es, un 5{,}1\,\% de la media. El número de
-rutas $k$ coincide en las tres repeticiones y el índice de balance varía dentro de un margen
-estrecho (0{,}829 a 0{,}837), pero la varianza en el tiempo total de desplazamiento no es
-despreciable.
-
-Esa varianza refleja la mecánica de replicación por permutación del orden de nodos descrita en la
-Sección~\ref{sec:protocolo-evaluacion}. La desviación estándar de 564\,s en la duración de las
-rutas individuales (Tabla~\ref{tab:metricas}) es el promedio de las desviaciones estándar
-calculadas dentro de cada repetición, no la desviación del conjunto agregado de rutas.
+Las tres repeticiones agotaron el presupuesto completo de 120\,s del metaheurístico GLS. Los
+tiempos de desplazamiento fueron 59\,718\,s, 56\,722\,s y 58\,696\,s (media 58\,379\,s), con una
+diferencia del 5{,}1\,\% de la media entre el mejor y el peor resultado: $k$ y el balance varían
+poco entre semillas, pero la varianza del desplazamiento no es despreciable. La desviación estándar
+de 564\,s de la Tabla~\ref{tab:metricas} es el promedio de las desviaciones calculadas dentro de
+cada repetición, no la del conjunto agregado de rutas.
 
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en caché. En esta
 misma corrida, la primera repetición ---ejecutada con la matriz fuera de caché--- tardó 334{,}6\,s
@@ -285,36 +266,24 @@ Sección~\ref{sec:cumplimiento-criterios} recoge esa lectura.
 \label{sec:comparacion-greedy}
 
 Este apartado reúne la evidencia del criterio CA-06, que exige una mejora sobre una alternativa
-trivial de planificación. Como referencia de comparación se implementó una solución \textit{greedy}
-basada en el heurístico del vecino más cercano \citep{rosenkrantz1977analysis}, generada
-programáticamente sobre el mismo \textit{dataset} ($N = 1\,607$),
-con la misma matriz de costos de OSRM ---la caché de la corrida anterior--- y con los mismos
-parámetros temporales ($T_{\max} = 10\,800$\,s y 2 minutos de servicio por árbol) que la solución de
-\textit{OR-Tools} de la Sección~\ref{sec:metricas-calidad}, producida con la versión $9.15$ de la
-biblioteca \citep{ortools} que detalla la Sección~\ref{sec:protocolo-evaluacion}. El \textit{baseline}
-construye cada ruta encadenando en cada paso el árbol no visitado más cercano y la cierra cuando el
-siguiente salto haría exceder el presupuesto temporal de la ruta; entonces abre una ruta nueva con
-el primer árbol que quede sin visitar. No hay optimización global, ni balance de carga, ni
-reasignación posterior de árboles entre rutas.
+trivial de planificación. Como referencia se implementó una solución \textit{greedy} basada en el
+heurístico del vecino más cercano \citep{rosenkrantz1977analysis}: cada ruta encadena en cada paso
+el árbol no visitado más cercano y se cierra cuando el siguiente salto excedería el presupuesto
+temporal, abriendo entonces una ruta nueva; no hay optimización global, ni balance de carga, ni
+reasignación posterior. Se evalúa en dos variantes, porque la solución de \textit{OR-Tools} recibe
+un post-proceso de 2-opt intra-ruta habilitado por defecto: contrastar el método propio con
+refinamiento contra un competidor sin refinamiento mediría el post-proceso y no el \textit{solver},
+de modo que la segunda variante aplica al \textit{greedy} exactamente el mismo post-proceso.
 
-El \textit{baseline} se evalúa en dos variantes, porque la solución de \textit{OR-Tools} recibe
-desde 2026-07-24 un post-proceso de 2-opt intra-ruta \citep{croes1958method} habilitado por
-defecto: contrastar el método
-propio con refinamiento contra un competidor sin refinamiento mediría el post-proceso y no el
-\textit{solver}. La segunda variante aplica al \textit{greedy} exactamente el mismo post-proceso, de
-modo que ambos lados reciban el mismo trato. La Tabla~\ref{tab:comparativa} contrasta los tres
-enfoques sobre una única corrida de este ciclo: la solución de \textit{OR-Tools} ---con la
-configuración de producción declarada en la Sección~\ref{sec:protocolo-evaluacion}, estrategia
-\texttt{spatial\_term} y presupuesto de \textit{solver} de 120\,s--- se volvió a
-ejecutar aquí en lugar de citar la de la Sección~\ref{sec:metricas-calidad}, y las dos variantes del
+La Tabla~\ref{tab:comparativa} contrasta los tres enfoques sobre una única corrida de este ciclo:
+la solución de \textit{OR-Tools} ---con la configuración de producción de la
+Sección~\ref{sec:protocolo-evaluacion}--- se volvió a ejecutar aquí, y las dos variantes del
 \textit{greedy} operan sobre el mismo \textit{dataset} congelado, con lo que las tres columnas
-comparten el conjunto de árboles, sus identificadores y la matriz de costos. El orden interno de los
-nodos no es común a las tres: el heurístico recorre los árboles ordenados por identificador,
-mientras que cada semilla de \textit{OR-Tools} aplica una permutación distinta de ese orden, que es
-el mecanismo de réplica descrito en la Sección~\ref{sec:protocolo-evaluacion}. Esa reejecución con las
-mismas tres semillas reprodujo el resultado de aquella sección ---las medias difieren en 52\,s sobre
-un total de 58\,000, y ninguna semilla se aparta más de 82\,s de su valor de referencia---, lo que descarta
-que las diferencias de la tabla provengan de la variabilidad entre corridas discutida más arriba.
+comparten el conjunto de árboles, la matriz de costos y los parámetros temporales; el heurístico es
+determinista y recorre los árboles ordenados por identificador. La reejecución con las mismas tres
+semillas reprodujo el resultado de la Sección~\ref{sec:metricas-calidad} ---las medias difieren en
+52\,s sobre un total de 58\,000---, lo que descarta que las diferencias de la tabla provengan de la
+variabilidad entre corridas.
 
 \begin{table}[H]
   \centering
@@ -400,9 +369,8 @@ que las diferencias de la tabla provengan de la variabilidad entre corridas disc
     \bottomrule
   \end{tabularx}
   \begin{tablenotes}[flushleft]\footnotesize
-    \item[1] Media de tres semillas (59\,649\,s, 56\,640\,s y 58\,693\,s), con post-proceso
-      2-opt habilitado por defecto desde 2026-07-24; la desviación estándar entre semillas es de
-      1\,538\,s. Toda la columna de \textit{OR-Tools} promedia las tres semillas, salvo las dos
+    \item[1] Media de tres semillas (59\,649\,s, 56\,640\,s y 58\,693\,s), con desviación estándar
+      de 1\,538\,s. Toda la columna de \textit{OR-Tools} promedia las tres semillas, salvo las dos
       filas marcadas con la nota 3. El ahorro contra el \textit{greedy} crudo es de 4\,746\,s
       ($-7{,}5$\,\%), pero contra el \textit{greedy} que recibe el mismo post-proceso se reduce a
       2\,907\,s ($-4{,}7$\,\%), aproximadamente 48 minutos de caminata. Ese segundo margen es el
@@ -424,60 +392,49 @@ $-7{,}5$\,\% que arroja el \textit{greedy} sin refinar.
 
 Las filas de balance y desviación estándar favorecen al \textit{greedy}, y requieren lectura
 cuidadosa, porque ambas son consecuencia de un mismo comportamiento: la heurística voraz llena cada
-ruta hasta el borde de la cota dura. Su duración media por ruta es un 98{,}0\,\% de $T_{\max}$ en la
-variante refinada, mientras que la de \textit{OR-Tools} es de 93{,}0\,\%, porque el modelo empuja
-las duraciones hacia el punto medio del intervalo $[T_{\min}, T_{\max}]$ mediante la penalización
-blanda superior. De ahí que el \textit{greedy} necesite una ruta menos (24 frente a 25) y que tanto
-su balance como la desviación estándar de sus duraciones sean mejores: no es balance de carga, es
-saturación. El indicador $\min_r T_r / \max_r T_r$ no distingue una cosa de la otra, lo que limita
-su valor como criterio de calidad. Un plan cuyas rutas ocupan el 98\,\% de la jornada no deja
-holgura alguna ante cualquier imprevisto de terreno, y el número de rutas no es un objetivo del
-problema una vez que todas caben dentro de la jornada.
-
-Esa holgura, sin embargo, es una propiedad del conjunto de rutas y no una garantía por ruta. La ruta
+ruta hasta el borde de la cota dura ---98{,}0\,\% de $T_{\max}$ de duración media en la variante
+refinada, frente al 93{,}0\,\% de \textit{OR-Tools}, cuyo modelo empuja las duraciones hacia el
+punto medio---. De ahí que el \textit{greedy} necesite una ruta menos y que su balance y su
+desviación estándar sean mejores: no es balance de carga, es saturación, y el indicador
+$\min_r T_r / \max_r T_r$ no distingue una cosa de la otra, lo que limita su valor como criterio de
+calidad. Esa holgura es, con todo, una propiedad del conjunto y no una garantía por ruta: la ruta
 más larga de \textit{OR-Tools} alcanza el 99{,}4\,\% de $T_{\max}$ frente al 99{,}8\,\% del
-\textit{greedy}: en el peor caso ---el que decide si un imprevisto rompe el plan--- la ventaja es
-despreciable. Lo que \textit{OR-Tools} ofrece es un conjunto de rutas con holgura media, no un techo
-por ruta más bajo.
+\textit{greedy}, de modo que en el peor caso la ventaja es despreciable.
 
 El defecto estructural del \textit{baseline} que la tabla sí alcanza a mostrar es otro: la ausencia
 de reasignación produce una ruta degenerada por número de paradas. Su última ruta visita 5 árboles
 con 9\,466\,s de desplazamiento ---más de dos horas y media de caminata para censar cinco
-árboles---, porque son los árboles aislados que las cadenas de proximidad anteriores fueron dejando
-atrás, y el post-proceso no la mejora en absoluto: reordenar cinco paradas ya contiguas no tiene
-margen. \textit{OR-Tools} atenúa esa patología pero no la elimina: la ruta más pequeña de sus
-soluciones visita entre 6 y 12 árboles con 7\,798 a 8\,666\,s de desplazamiento, según la semilla.
-Las disyunciones penalizadas y la minimización global reparten mejor esos árboles entre rutas
-vecinas, aunque el aislamiento geográfico de un puñado de ellos es una propiedad del territorio que
-ninguna de las dos formulaciones puede deshacer. Ninguna ruta de ninguno de los tres enfoques
-resulta degenerada por duración: con esta configuración, todas superan holgadamente los 1\,800\,s.
+árboles---, porque son los árboles aislados que las cadenas de proximidad fueron dejando atrás, y
+el post-proceso no la mejora: reordenar cinco paradas contiguas no tiene margen. \textit{OR-Tools}
+atenúa esa patología pero no la elimina ---su ruta más pequeña visita entre 6 y 12 árboles con
+7\,798 a 8\,666\,s---: el aislamiento geográfico de un puñado de árboles es una propiedad del
+territorio que ninguna formulación puede deshacer. Ninguna ruta de ningún enfoque resulta
+degenerada por duración.
 
-El costo de la calidad restante es tiempo de cómputo: el \textit{greedy} resuelve en 0{,}09\,s sobre
-la matriz ya cacheada, frente a los 120\,s de presupuesto del metaheurístico de \textit{OR-Tools}.
-En una planificación que se ejecuta una vez por campaña de censo, 120\,s de cómputo a cambio de un
-$4{,}7$\,\% menos de caminata, de un 93\,\% de ocupación media en lugar de un 98\,\% y de una ruta
-residual menos patológica es un intercambio favorable, aunque el margen es más estrecho de lo que
-sugiere la comparación contra un \textit{baseline} sin refinar.
+El costo de la calidad restante es tiempo de cómputo: el \textit{greedy} resuelve en 0{,}09\,s
+sobre la matriz cacheada, frente a los 120\,s de presupuesto del metaheurístico. En una
+planificación que se ejecuta una vez por campaña, ese presupuesto a cambio de un $4{,}7$\,\% menos
+de caminata, una ocupación media del 93\,\% en lugar del 98\,\% y una ruta residual menos
+patológica es un intercambio favorable, aunque el margen es más estrecho de lo que sugiere la
+comparación contra un \textit{baseline} sin refinar.
 
 \subsection{Evaluación sobre áreas reales de censo y precio de la partición}
 \label{sec:areas-reales}
 
-Las comparaciones anteriores se ejecutaron sobre la instancia de estrés agregada, cuya falta de
-correlato operativo quedó declarada en la Sección~\ref{sec:protocolo-evaluacion}. Queda entonces
-sin responder la pregunta que la operación plantea de forma
-directa: qué obtiene un censo real cuando el problema se entrega en su escala natural ---un área
-individual de extensión $\leq 1{,}32$\,km--- en lugar de la unión de varias. Este apartado la
-responde con una medición propia y, además, pone precio a la partición misma.
+Las comparaciones anteriores se ejecutaron sobre la instancia de estrés agregada. Queda entonces
+sin responder la pregunta que la operación plantea de forma directa: qué obtiene un censo real
+cuando el problema se entrega en su escala natural ---un área individual de extensión
+$\leq 1{,}32$\,km--- en lugar de la unión de varias. Este apartado la responde con una medición
+propia y, además, pone precio a la partición misma.
 
 \begin{enumerate}
 \item Instancias y brazos.
 
 Se emplearon las tres áreas del censo histórico con mayor arbolado y su unión, congeladas como
-instancias versionadas en el repositorio. Las tres áreas son disjuntas por
-identidad de árbol ---intersección vacía en las tres parejas sobre la clave \texttt{(source,
-external\_id)}, con $157 + 72 + 43 = 272$ igual al cardinal de la unión---, de modo que la unión y
-la suma de las partes resuelven exactamente el mismo arbolado. La Tabla~\ref{tab:areas-instancias}
-las describe; el diámetro es la mayor distancia de \textit{haversine} entre dos árboles de la
+instancias versionadas en el repositorio. Las tres áreas son disjuntas por identidad de árbol
+---con $157 + 72 + 43 = 272$ igual al cardinal de la unión---, de modo que la unión y la suma de
+las partes resuelven exactamente el mismo arbolado. La Tabla~\ref{tab:areas-instancias} las
+describe; el diámetro es la mayor distancia de \textit{haversine} entre dos árboles de la
 instancia.
 
 \begin{table}[H]
@@ -507,14 +464,12 @@ instancia.
 \end{table}
 
 Sobre cada instancia se ejecutaron los mismos tres brazos de la
-Sección~\ref{sec:comparacion-greedy} ---se llama brazo a cada uno de los métodos que se comparan
-entre sí bajo condiciones idénticas de instancia, matriz de costos y presupuesto---: la
-configuración de producción de \textit{OR-Tools} con tres
-semillas, el \textit{baseline} \textit{greedy} determinista y ese mismo \textit{baseline} con el
-post-proceso 2-opt, por la simetría de tratamiento que allí se justifica. El refinamiento pesa aquí
-más que en la instancia de estrés: el 2-opt reduce el desplazamiento del \textit{greedy} un
-$6{,}7$\,\%, $22{,}5$\,\%, $4{,}6$\,\% y $1{,}7$\,\% según la instancia, de manera que omitirlo
-habría inflado la ventaja aparente del \textit{solver} hasta en 35 puntos porcentuales.
+Sección~\ref{sec:comparacion-greedy} ---se llama brazo a cada método comparado bajo condiciones
+idénticas de instancia, matriz y presupuesto---: \textit{OR-Tools} con tres semillas, el
+\textit{greedy} determinista y ese mismo \textit{greedy} con el post-proceso 2-opt. El refinamiento
+pesa aquí más que en la instancia de estrés: el 2-opt reduce el desplazamiento del \textit{greedy}
+entre un $1{,}7$\,\% y un $22{,}5$\,\% según la instancia, de manera que omitirlo habría inflado la
+ventaja aparente del \textit{solver} hasta en 35 puntos porcentuales.
 
 El criterio de decisión del experimento otorga la victoria al \textit{solver} si, en las tres áreas
 y contra el tercer brazo, su desplazamiento no supera al del \textit{greedy}
@@ -712,16 +667,14 @@ Sección~\ref{sec:metricas-calidad}, medida el mismo día con la misma configura
   \end{tabularx}
 \end{table}
 
-Las
-soluciones sobre áreas reales no están libres de auto-cruces ---solo una de las doce corridas de
-área registró cero---, aunque sus conteos absolutos son bajos, entre 0 y 6 por solución completa y
-entre 6 y 10 en la unión, un orden de magnitud por debajo de los 24--37 de la instancia de estrés.
-La corrección más informativa es la tasa: por ruta, el indicador queda entre $1{,}33$ y $1{,}56$ en
-las áreas y su unión, y en $1{,}25$ en la instancia agregada, de modo que el material no sostiene
-que el régimen disperso produzca más auto-cruces por ruta; lo que multiplica es el número de rutas
-y, con él, el conteo absoluto que la inspección visual percibe. La serie es descriptiva y no formó
-parte del criterio pre-registrado de este apartado, que se fijó en desplazamiento, saturación y
-balance.
+Las soluciones sobre áreas reales no están libres de auto-cruces ---solo una de las doce corridas
+de área registró cero---, aunque sus conteos absolutos son bajos: entre 0 y 6 por solución
+completa, un orden de magnitud por debajo de los 24--37 de la instancia de estrés. La corrección
+más informativa es la tasa por ruta, que queda entre $1{,}33$ y $1{,}56$ en las áreas y su unión y
+en $1{,}25$ en la instancia agregada: el material no sostiene que el régimen disperso produzca más
+auto-cruces por ruta; lo que multiplica es el número de rutas y, con él, el conteo absoluto que la
+inspección visual percibe. La serie es descriptiva y no formó parte del criterio pre-registrado de
+este apartado.
 
 \item Precio de particionar.
 
@@ -772,30 +725,21 @@ con 272 árboles el \textit{solver} arma cinco jornadas de aproximadamente $8\,4
 seis de unos $6\,800$\,s, de las cuales tres quedarían bajo $T_{\min}$.
 
 La ventaja aparente de la partición en desplazamiento medio ---un $12{,}2$\,\% menos--- exige una
-reserva: descansa casi entera en una semilla: la unión resuelve en $8\,381$, $7\,964$ y $12\,040$\,s
-según la repetición, un $51$\,\% de dispersión, y con la mediana la diferencia cae a un $1{,}3$\,\%.
-La lectura que el material sostiene es que, al mismo presupuesto por corrida, la instancia
-monolítica resulta menos estable, y no que particionar ahorre caminata. Ese presupuesto por corrida,
-además, no es comparable en total: la partición consumió el triple de cómputo. Ese triple es, a su
-vez, consecuencia del protocolo, que fija los $120$\,s también en las instancias menores para
-mantener el presupuesto homogéneo (Sección~\ref{sec:protocolo-evaluacion}); con la heurística de
-producción $\min(30 + 1{,}5\,n,\ 120)$ el área menor costaría $\approx 95$\,s por corrida.
+reserva: descansa casi entera en una semilla. La unión resuelve en $8\,381$, $7\,964$ y
+$12\,040$\,s según la repetición, un $51$\,\% de dispersión, y con la mediana la diferencia cae a
+un $1{,}3$\,\%. La lectura que el material sostiene es que, al mismo presupuesto por corrida, la
+instancia monolítica resulta menos estable, y no que particionar ahorre caminata. Ese presupuesto,
+además, no es comparable en total: la partición consumió el triple de cómputo, consecuencia del
+protocolo que fija los $120$\,s también en las instancias menores.
 
 El precio medido de particionar es, entonces, una jornada de censista más, tres jornadas por debajo
-de $T_{\min}$ y el triple de cómputo, a cambio de instancias de aproximadamente $1{,}3$\,km que
-corresponden a una unidad operativa real y de una varianza entre repeticiones sustancialmente menor.
-Los auto-cruces y el solapamiento entre rutas se registraron como contexto y no formaron parte del
-criterio de este ciclo.
-
-Este resultado convierte en medición lo que la Sección~\ref{sec:discusion-calidad} argumenta desde
-la geometría. La segmentación previa por área, que la Sección~\ref{sec:posibles-mejoras} documenta
-como trabajo futuro, deja de sostenerse solo en que el régimen disperso produce auto-cruces y pasa a
-tener un costo cuantificado ---una ruta adicional, jornadas cortas y triple cómputo--- frente a un
-beneficio también cuantificado, a saber, instancias con correlato operativo y menor varianza. Es
-esta medición la que sostiene la tesis con que abre el capítulo, y que las conclusiones retoman: la
-unidad operativa correcta del motor es el área de censo individual. El
-protocolo, los comandos reproducibles y los datos crudos de este experimento se encuentran
-versionados en el repositorio.
+de $T_{\min}$ y el triple de cómputo, a cambio de instancias que corresponden a una unidad
+operativa real y de una varianza entre repeticiones sustancialmente menor. Este resultado convierte
+en medición lo que la Sección~\ref{sec:discusion-calidad} argumenta desde la geometría: la
+segmentación previa por área deja de sostenerse solo en los auto-cruces y pasa a tener un costo y
+un beneficio cuantificados. Es esta medición la que sostiene la tesis con que abre el capítulo, y
+que las conclusiones retoman: la unidad operativa correcta del motor es el área de censo
+individual.
 
 \end{enumerate}
 
