@@ -9,6 +9,9 @@ from apps.optimization.solver import (
     SOFT_LOWER_PENALTY,
 )
 
+# Sentinel: None is a legitimate caller-provided value (no cached matrix).
+_UNSET = object()
+
 
 def _minutes(seconds):
     value = seconds / 60
@@ -28,7 +31,13 @@ def _msf_by_k(mst_edges):
     }
 
 
-def check_config(dataset, min_route_time_sec, max_route_time_sec, service_time_sec):
+def check_config(
+    dataset,
+    min_route_time_sec,
+    max_route_time_sec,
+    service_time_sec,
+    matrix=_UNSET,
+):
     blocking = []
     warnings = []
     diagnostics = {}
@@ -68,7 +77,8 @@ def check_config(dataset, min_route_time_sec, max_route_time_sec, service_time_s
         diagnostics["matrix_cached"] = False
         return {"blocking": blocking, "warnings": warnings, "diagnostics": diagnostics}
 
-    matrix = OSRMCostMatrixBuilder().get_cached(trees)
+    if matrix is _UNSET:
+        matrix = OSRMCostMatrixBuilder().get_cached(trees)
     diagnostics["matrix_cached"] = matrix is not None
 
     if matrix is None:
