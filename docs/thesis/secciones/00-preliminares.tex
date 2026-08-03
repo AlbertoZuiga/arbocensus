@@ -38,41 +38,41 @@ memoria continúa.
 \chapter*{RESUMEN}
 \addcontentsline{toc}{chapter}{RESUMEN}
 
-Arbocensus es un proyecto de la Universidad de los Andes orientado a automatizar la gestión de
-censos de árboles urbanos. Sus iteraciones anteriores desarrollaron una plataforma web de censado
+Arbocensus es un proyecto orientado a automatizar la gestión de censos de árboles urbanos. Sus
+iteraciones anteriores desarrollaron una plataforma web de censado
 con participación ciudadana, ludificación y un modelo de estimación de cobertura. El propósito del
 proyecto exige un historial de observaciones por árbol, y construirlo obliga a volver sobre un
 conjunto conocido de ejemplares ya georreferenciados. Planificar ese re-censo es un problema de
-asignación de trabajo que las iteraciones anteriores no abordaron: repartir el arbolado entre
-censistas y ordenar sus visitas mediante rutas eficientes, bajo jornadas acotadas.
+asignación de trabajo que las iteraciones anteriores no abordaron.
 
 Esta memoria desarrolla esa etapa mediante una plataforma web que cubre el ciclo operacional
-completo del re-censo y un motor de ruteo que lo planifica. El problema se formula como un problema
-de ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
+completo del re-censo y un motor de ruteo que lo planifica. El problema se formula como ruteo de
+vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
 duración por ruta ---con el número de rutas, la jornada acotada y el balance de carga resueltos por
 el modelo y no declarados por el usuario---, y se resuelve mediante el \textit{solver} de ruteo
-vehicular de \textit{OR-Tools}. Los tiempos de desplazamiento peatonal se calculan sobre la red
-vial real de \textit{OpenStreetMap} mediante OSRM, lo que elimina costos de APIs externas. El
+vehicular de \textit{OR-Tools}. Los tiempos de desplazamiento peatonal se calculan con OSRM sobre
+la red vial real de \textit{OpenStreetMap}, sin costos de APIs externas. El
 administrador importa los árboles desde las bases legadas del proyecto, configura los parámetros,
-optimiza y publica el plan; el censista accede desde su teléfono a la ruta asignada, con las
-paradas en secuencia y navegación peatonal por parada, sobre un despliegue productivo con HTTPS y
+optimiza y publica el plan; el censista accede desde su teléfono a la ruta asignada, con
+navegación peatonal parada por parada, sobre un despliegue productivo con HTTPS y
 entrega continua.
 
-Durante el desarrollo del proyecto se realizaron experimentos sobre doce instancias reales
+Se realizaron experimentos sobre doce instancias reales
 congeladas de entre $43$ y $1\,607$ árboles, organizados en dieciséis ciclos de evaluación con
-criterio de decisión fijado antes de cada corrida y datos crudos versionados. Los ciclos
+criterio fijado antes de cada corrida y datos crudos versionados. Los ciclos
 compararon configuraciones del motor entre sí y contra un heurístico \textit{greedy} de vecino más
-cercano sometido al mismo refinamiento local, y doce de ellos cerraron descartando la modificación
-que evaluaban, lo que acota el margen de mejora atribuible a la función objetivo.
+cercano sometido al mismo refinamiento local; doce cerraron descartando la modificación evaluada,
+lo que acota el margen de mejora de la función objetivo.
 
 En la instancia de mayor tamaño, la configuración de producción cubre los 1\,607 árboles con 25
 rutas, un índice de balance de carga de 0{,}83 y ninguna ruta que exceda la jornada máxima, en un
-presupuesto de cómputo de 120\,s que captura prácticamente toda la mejora alcanzable con
-presupuestos mayores, y con un 4{,}7\,\% menos de desplazamiento total ---cerca de 48 minutos---
+presupuesto de cómputo de 120\,s que captura casi toda la mejora alcanzable con presupuestos
+mayores,
+y con un 4{,}7\,\% menos de desplazamiento total ---cerca de 48 minutos---
 que el heurístico. En las áreas de censo individuales, la escala de una jornada real, el motor
-cubre todos los árboles con conteos bajos de auto-cruces, aunque el contraste frente al heurístico
+cubre todos los árboles con pocos auto-cruces, aunque el contraste frente al heurístico
 se cumple en dos de las tres áreas exigidas. Se concluye que la formulación propuesta resuelve el
 problema planteado en tiempos compatibles con la planificación de una campaña; su validación en
-una jornada de terreno queda pendiente y es la extensión de mayor valor para el proyecto.
+terreno queda pendiente y es la extensión de mayor valor.
 
 \newpage
