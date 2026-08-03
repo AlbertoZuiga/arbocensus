@@ -114,7 +114,9 @@
 \usepackage{amssymb}     % Necesario para símbolos matemáticos como \mathbb{R}
 \usepackage{xcolor}
 \usepackage{enumitem}
-\setlist[enumerate,1]{leftmargin=*}
+% align=left + labelindent=0pt: sin ellos la etiqueta va alineada a la derecha
+% de su caja y queda un sangrado residual antes de la letra.
+\setlist[enumerate,1]{leftmargin=*, align=left, labelindent=0pt}
 
 % Los identificadores de código (SetSpanCostCoefficientForAllVehicles, rutas de la
 % API) son palabras sin puntos de corte: sin esto desbordan el margen derecho.
