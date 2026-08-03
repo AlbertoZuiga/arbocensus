@@ -125,6 +125,24 @@ export default function SurveyorRoutePage() {
       </StatusScreen>
     );
   }
+  if (activeRouteId && routeDetail.isError) {
+    return (
+      <StatusScreen>
+        <p className="text-muted-foreground">
+          No se pudo cargar el detalle de tu ruta.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => routeDetail.refetch()}
+          disabled={routeDetail.isFetching}
+        >
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+          Reintentar
+        </Button>
+      </StatusScreen>
+    );
+  }
   if (!activeRouteId) {
     return (
       <StatusScreen>

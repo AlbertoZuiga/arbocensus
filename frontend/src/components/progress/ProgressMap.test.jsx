@@ -50,7 +50,7 @@ const stops = {
       properties: {
         tree_id: "t1",
         route_number: 1,
-        sequence: 0,
+        sequence: 1,
         status: "visited",
         surveyor_name: "ana",
       },
@@ -61,7 +61,7 @@ const stops = {
       geometry: { type: "Point", coordinates: [-70.66, -33.46] },
       properties: {
         route_number: 1,
-        sequence: 1,
+        sequence: 2,
         status: "pending",
         surveyor_name: "ana",
       },
@@ -72,7 +72,7 @@ const stops = {
       geometry: { type: "Point", coordinates: [-70.67, -33.47] },
       properties: {
         route_number: 2,
-        sequence: 0,
+        sequence: 1,
         status: "pending",
         surveyor_name: null,
       },
@@ -130,6 +130,13 @@ describe("ProgressMap", () => {
     expect(fetchTreeObservations).toHaveBeenCalledTimes(1);
     expect(fetchTreeObservations).toHaveBeenCalledWith("t1");
     expect(await screen.findByText("Historial")).toBeInTheDocument();
+  });
+
+  it("shows the backend 1-based sequence without re-numbering", () => {
+    render(<ProgressMap stops={stops} />);
+
+    expect(screen.getByText("Ruta 1 · Parada 1")).toBeInTheDocument();
+    expect(screen.getByText("Ruta 1 · Parada 2")).toBeInTheDocument();
   });
 
   it("renders stops as [lat, lon] colored by status", () => {
@@ -220,7 +227,7 @@ describe("ProgressMap", () => {
               type: "Feature",
               id: "stop-broken",
               geometry: null,
-              properties: { route_number: 1, sequence: 2, status: "pending" },
+              properties: { route_number: 1, sequence: 3, status: "pending" },
             },
           ],
         }}
