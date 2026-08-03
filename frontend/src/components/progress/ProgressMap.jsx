@@ -93,7 +93,7 @@ export default function ProgressMap({
           >
             <Popup minWidth={248} maxWidth={280} keepInView>
               <span className="font-medium">
-                Ruta {stop.route_number} · Parada {stop.sequence + 1}
+                Ruta {stop.route_number} · Parada {stop.sequence}
               </span>
               <br />
               {STATUS_LABELS[stop.status]}

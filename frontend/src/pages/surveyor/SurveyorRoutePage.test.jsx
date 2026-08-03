@@ -90,6 +90,18 @@ describe("SurveyorRoutePage status screens", () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the route detail error with a retry button that refetches", () => {
+    const refetch = vi.fn();
+    useMyRoute.mockReturnValue({ ...idleQuery, data: [route] });
+    useRouteDetail.mockReturnValue({ ...idleQuery, isError: true, refetch });
+    renderPage();
+    expect(
+      screen.getByText("No se pudo cargar el detalle de tu ruta."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Reintentar/ }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it("shows a friendly empty state with an update button when no routes are assigned", () => {
     const refetch = vi.fn();
     useMyRoute.mockReturnValue({ ...idleQuery, data: [], refetch });
