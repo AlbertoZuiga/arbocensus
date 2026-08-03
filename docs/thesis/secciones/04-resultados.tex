@@ -75,7 +75,7 @@ Cada corrida se repite tres veces. \textit{OR-Tools} no expone una semilla de ge
 pseudoaleatorio que produzca repeticiones distintas, de modo que cada repetición se construye
 permutando el orden en que los nodos entran al \textit{solver}. La razón de forzar esas repeticiones
 es que una corrida única no permite distinguir el efecto de la configuración evaluada del accidente
-de una trayectoria de búsqueda particular: sin repetir, cualquier diferencia entre dos brazos podría
+de una trayectoria de búsqueda particular: sin repetir, cualquier diferencia entre dos configuraciones podría
 deberse por completo al azar de una sola ejecución. Repetir acota esa duda por dos vías: entrega la
 dispersión contra la cual se contrasta el tamaño de cada diferencia reportada, y establece que un
 resultado sostenido en las tres permutaciones es atribuible al método y no al orden en que se
