@@ -158,7 +158,11 @@ export default function JobDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Comparación de estrategias</CardTitle>
+          <CardTitle>
+            {strategies.length > 1
+              ? "Comparación de estrategias"
+              : "Resultado de la optimización"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {solutionsError && (
