@@ -40,7 +40,7 @@ Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada co
 criterio que resolvió la elección.
 
 \small
-\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.6cm} X@{}}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.1cm} X@{}}
   \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
   \label{tab:stack-decisions} \\
   \toprule
@@ -279,7 +279,7 @@ Actions que construye las imágenes de la aplicación y del proxy, las publica e
 contenedores de GitHub etiquetadas por confirmación y se conecta al servidor por SSH para
 actualizar la composición con las imágenes nuevas. Cada despliegue queda así asociado a una
 confirmación concreta, y volver a una versión anterior se reduce a redesplegar su etiqueta. Un
-respaldo diario programado en el servidor genera un volcado de la base de datos y un archivo con
+respaldo diario programado en el servidor genera un \textit{dump} de la base de datos y un archivo con
 las fotografías, con una retención de siete días; ambos residen en el propio servidor, sin copia
 externa, límite que el Capítulo~\ref{cap:resultados} registra entre las limitaciones vigentes.
 
@@ -312,8 +312,8 @@ Los modelos de dominio centrales son los siguientes:
   \item TreeObservation: registro histórico del estado de un árbol en un instante dado
         (Sección~\ref{sec:recenso}). Es la entidad que convierte el sistema en una herramienta de
         re-censo y no solo de censo inicial.
-  \item DistanceMatrix: caché persistente de la matriz $n \times n$ de tiempos OSRM,
-        indexada por un hash SHA-256 de los IDs de árboles activos.
+  \item DistanceMatrix: caché persistente de la matriz $n \times n$ de tiempos de caminata entre
+        árboles obtenida de OSRM (Sección~\ref{sec:matriz}).
 \end{itemize}
 
 La procedencia se modela en el propio \texttt{Tree} en lugar de en una entidad aparte, porque solo
@@ -523,15 +523,18 @@ implementación, sobre la variable acumulada del nodo terminal de cada vehículo
 vale $T_r$; un vehículo inactivo no contribuye a ninguno de los seis términos.
 
 \small
-\begin{xltabular}{\textwidth}{@{}l l l X@{}}
+\begin{xltabular}{\textwidth}{@{}l p{2.2cm} l X@{}}
   \caption{Coeficientes de la función objetivo en producción.}
   \label{tab:coeficientes} \\
+  \addlinespace
   \toprule
   Símbolo & Término & Valor & Unidad y lectura \\
+  \addlinespace
   \midrule
   \endfirsthead
   \toprule
   Símbolo & Término & Valor & Unidad y lectura \\
+  \addlinespace
   \midrule
   \endhead
   \bottomrule
@@ -541,27 +544,33 @@ vale $T_r$; un vehículo inactivo no contribuye a ninguno de los seis términos.
       $1$ &
       Por segundo de tránsito: el término que expresa el tiempo de caminata que el modelo minimiza.
       \\
+      \addlinespace
     $C_{\text{fijo}}$ &
       Costo fijo de vehículo &
       $100\,000$ &
       Por vehículo activo. Es el mecanismo que minimiza la flota (Sección~\ref{sec:flota}). \\
+      \addlinespace
     $\alpha$ &
       Penalización inferior &
       $10\,000$ &
       Por segundo en que $T_r$ queda bajo $T_{\min}$. \\
+      \addlinespace
     $\beta$ &
       Penalización superior &
       $500$ &
       Por segundo en que $T_r$ supera el objetivo blando $\tau$. \\
+      \addlinespace
     $\tau$ &
       Objetivo blando superior &
       $(T_{\min}+T_{\max})/2$ &
       En segundos: el punto medio del intervalo de jornada. \\
+      \addlinespace
     $\pi$ &
       Penalización de descarte &
       $10^{6}$ &
       Por árbol excluido del plan, esto es $10\,C_{\text{fijo}}$ (Sección~\ref{sec:disyunciones}).
       \\
+      \addlinespace
     $\lambda_{\text{span}}$ &
       Coeficiente de extensión geográfica &
       $3$ &
@@ -697,8 +706,7 @@ de todos los pares porque una ruta real encadena árboles contiguos, no pares ar
 promedio general sobreestima el desplazamiento por árbol en un factor que crece con la extensión
 geográfica del \textit{dataset}, e inflaría $N_{\max}$ innecesariamente. El término $b$ es un margen
 de holgura de $5$ vehículos, que absorbe la subestimación del estimador de vecino más cercano sin
-ampliar el espacio de búsqueda de forma apreciable ---es fijo y pequeño frente al techo de
-$N_{\max}=36$ que la Ecuación~\ref{eq:nmax} produce sobre la instancia de referencia---; el mínimo
+ampliar el espacio de búsqueda de forma apreciable; el mínimo
 con $n$ impide que el techo supere el caso degenerado de un árbol por ruta.
 
 $N_{\max}$ es una cota superior, no una predicción: solo debe ser lo bastante amplia como para no
@@ -758,7 +766,8 @@ La formulación en \textit{OR-Tools} \citep{ortools} usa el modelo de ruteo vehi
         familia que el clásico algoritmo de ahorros \citep{clarke1964scheduling}---, con tiempo
         límite configurable. El GLS es una metaheurística sin criterio de término por convergencia
         demostrada (RE-04): sin un límite explícito no se detiene por sí sola, de modo que fijarlo
-        es una decisión de diseño y no un hecho que el \textit{solver} imponga. A falta de un valor
+        no es una decisión de diseño sino una condición que la metaheurística impone; lo que sí es
+        decisión de diseño es su valor. A falta de un valor
         explícito, el \textit{pipeline} lo deriva del tamaño del problema como
         $\min(30 + 1{,}5\,n,\ 120)$ segundos, de modo que un \textit{dataset} pequeño no consume el
         presupuesto completo; para los tamaños de esta memoria la expresión satura en su tope de
@@ -767,7 +776,9 @@ La formulación en \textit{OR-Tools} \citep{ortools} usa el modelo de ruteo vehi
 
 Si el \textit{solver} no encuentra solución, el \textit{pipeline} no falla en silencio: emite un
 error que reporta el número de árboles y los parámetros de configuración vigentes (tiempo de
-servicio y $T_{\max}$), de modo que el administrador pueda identificar qué restricción relajar.
+servicio y $T_{\max}$), de modo que el administrador pueda identificar qué restricción relajar. Esa
+rama no se activa con la formulación vigente: las disyunciones de la Sección~\ref{sec:disyunciones}
+garantizan siempre una solución, aunque el precio de esa garantía sea descartar árboles.
 
 % ---- 3.3.5 ------------------------------------------------------
 \subsection{Disyunciones de nodos}
@@ -827,24 +838,7 @@ rutas, pero no incorpora ningún criterio geográfico explícito en la partició
 consecuencia, las rutas se agrupan por proximidad temporal y no espacial, lo que produce
 solapamiento (\textit{interleaving}) entre rutas distintas que crece con la densidad de árboles
 (Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias de
-partición, registradas en el campo \texttt{strategy} del trabajo de optimización. La estrategia
-\texttt{global} reproduce el comportamiento de la formulación anterior sin cambios y constituye la
-línea base.
-
-Ninguna de las tres se ofrece como elección del administrador, y no todas cumplen el mismo papel. En
-producción, el lanzamiento ordinario despliega un abanico fijo de combinaciones
-(Sección~\ref{sec:abanico}) construido solo sobre \texttt{global} y \texttt{spatial\_term}.
-\texttt{cluster\_first} queda fuera de ese abanico, y su exclusión es un resultado empírico y no una
-preferencia de diseño: medida contra las otras dos bajo la misma matriz de costos y el mismo
-presupuesto, deja árboles fuera de la solución y degrada el balance
-(Sección~\ref{sec:comparacion-estrategias}, Tabla~\ref{tab:estrategias}). Mantenerla en producción
-gastaría un tercio del cómputo en una candidata que el criterio de selección nunca elige.
-
-Fuera de producción, un cuarto valor del campo, \texttt{compare}, ejecuta las tres sobre el mismo
-conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por estrategia. Ese es el
-mecanismo que hace homogénea la comparación ---misma matriz, mismo presupuesto, mismas semillas--- y
-con el que se produjeron las cifras del Capítulo~\ref{cap:resultados}. \texttt{cluster\_first}
-permanece accesible por esa vía, la experimental, y no por la del administrador.
+partición, registradas en el campo \texttt{strategy} del trabajo de optimización.
 
 \begin{itemize}[label=--]
   \item \texttt{global}: el \textit{Open mTSP} único descrito en la Sección~\ref{sec:solver}, sin
@@ -866,6 +860,21 @@ permanece accesible por esa vía, la experimental, y no por la del administrador
         construcción.
 \end{itemize}
 
+En producción la estrategia no es una elección del administrador: el lanzamiento ordinario de una
+optimización despliega automáticamente un abanico fijo de combinaciones
+(Sección~\ref{sec:abanico}), construido solo sobre \texttt{global} y \texttt{spatial\_term}.
+\texttt{cluster\_first} queda fuera de ese abanico, y su exclusión es un resultado empírico y no una
+preferencia de diseño: medida contra las otras dos bajo la misma matriz de costos y el mismo
+presupuesto, deja árboles fuera de la solución y degrada el balance
+(Sección~\ref{sec:comparacion-estrategias}, Tabla~\ref{tab:estrategias}). Mantenerla en producción
+gastaría un tercio del cómputo en una candidata que el criterio de selección nunca elige.
+
+Fuera de producción, un cuarto valor del campo, \texttt{compare}, ejecuta las tres sobre el mismo
+conjunto de árboles y persiste una \texttt{RoutingSolution} independiente por estrategia. Ese es el
+mecanismo que hace homogénea la comparación ---misma matriz, mismo presupuesto, mismas semillas--- y
+con el que se produjeron las cifras del Capítulo~\ref{cap:resultados}. \texttt{cluster\_first}
+permanece accesible por esa vía, la experimental, y no por la del administrador.
+
 % ---- 3.3.7 ------------------------------------------------------
 \subsection{Post-proceso de resecuenciación intra-ruta}
 \label{sec:postpass}
@@ -878,7 +887,8 @@ cruces que un refinamiento local elimina de inmediato. El sistema explota esa as
 post-proceso que se aplica a toda solución antes de persistirla, sin condición ni parámetro que lo
 desactive.
 
-Hay una segunda razón, y es de precio y no de presupuesto. Por debajo de $T_{\min}$ el costo
+Hay una segunda razón, y tiene que ver con el precio que la función objetivo asigna a una solución,
+no con una restricción de presupuesto. Por debajo de $T_{\min}$ el costo
 marginal del tiempo es negativo: alargar una ruta corta la acerca al piso y abarata la solución. Un
 \textit{solver} enfrentado a una instancia cuyo trabajo real no alcanza a llenar las rutas que abre
 no tiene entonces ningún incentivo para que el recorrido interno de esas rutas sea corto, y puede
@@ -1025,11 +1035,9 @@ ordena sus candidatas.
 
 Las dos bases de datos que dejaron las iteraciones anteriores, descritas en la
 Sección~\ref{sec:estado-actual}, se incorporan como fuentes de importación, identificadas por el
-campo \texttt{source} del modelo \texttt{Tree}. Lo que esta sección aporta no es su contenido sino
-lo que esta iteración hace con ellas: cómo se reconstruye una posición canónica donde no la hay,
-cómo se resuelve el solapamiento entre ambas y cómo el administrador elige qué subconjunto importar.
+campo \texttt{source} del modelo \texttt{Tree}.
 
-% Orden cronológico confirmado por los volcados de las bases (migraciones y muestras): legacy_app
+% Orden cronológico confirmado por los dumps de las bases (migraciones y muestras): legacy_app
 % (esquema arbocensus_app_*, muestras por QR) es la más antigua: génesis de base 2021-10 y capturas
 % de terreno desde 2021-10; mapea a la app de censado inicial (repo mrecabarren/arbocensus).
 % legacy_api (arbocensus_api_app_*, posición/especie explícitas, real_tree_id) es posterior: génesis
@@ -1037,7 +1045,7 @@ cómo se resuelve el solapamiento entre ambas y cómo el administrador elige qu�
 % badge/score/campaign, sin datos de identificación de árboles). La asignación de cada base a una
 % MEMORIA concreta sigue siendo inferencia por esquema (no consta en las fuentes), por lo que el
 % texto cita ambas memorias en conjunto; pero el orden relativo app-antes-que-api sí está respaldado
-% por los timestamps de los volcados. Por eso se presenta primero legacy_app.
+% por los timestamps de los dumps. Por eso se presenta primero legacy_app.
 \begin{itemize}[label=--]
   \item \texttt{legacy\_app} (esquema \texttt{arbocensus\_app\_*}): la más antigua, base de la
         aplicación de censado previa ---una aplicación web orientada a dispositivos móviles---,
@@ -1479,7 +1487,7 @@ las comprobaciones que la acompañan.
 % flotante [H] se desborda 330 pt fuera de la caja de texto. En xltabular se parte entre páginas y
 % queda donde la prosa la introduce.
 \small
-\begin{xltabular}{\textwidth}{@{}l l X@{}}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.2cm} X@{}}
   \caption{Verificación automatizada del sistema.}
   \label{tab:verificacion} \\
   \toprule
