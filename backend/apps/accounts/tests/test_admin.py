@@ -2,6 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import ReadOnlyPasswordHashField, UserChangeForm
 from django.test import Client
+from django.urls import reverse
 from tests.factories import CustomUserFactory
 
 pytestmark = pytest.mark.django_db
@@ -16,7 +17,7 @@ def test_admin_add_view_hashes_password():
 
     raw_password = "s3cret-pass-1234"
     response = client.post(
-        "/admin/accounts/customuser/add/",
+        reverse("admin:accounts_customuser_add"),
         {
             "username": "newuser",
             "password1": raw_password,
