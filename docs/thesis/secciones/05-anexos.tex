@@ -9,9 +9,11 @@
   Comando de demostración (\texttt{seed\_demo}) & \pageref{anx:demo} \\
   Comandos reproducibles de los experimentos & \pageref{anx:comandos} \\
   Perfil de rendimiento, grilla de variantes y auditoría de robustez & \pageref{anx:grilla-variantes} \\
-  Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
+  Trazabilidad de requisitos y verificación automatizada & \pageref{anx:trazabilidad} \\
   Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
   Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
+  Alternativas de \textit{stack} evaluadas & \pageref{anx:stack} \\
+  Formulación extendida del modelo de ruteo & \pageref{anx:formulacion} \\
 \end{tabularx}
 
 % Encabezado de cada anexo: salto de página, "Anexo N. Título" en negrita de subcapítulo, y entrada
@@ -589,6 +591,26 @@ GLS y el carácter \textit{OSRM-bound} en frío---, que no dependen de la estrat
 y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de \textit{solver}
 como variable del experimento y no como constante del régimen.
 
+\item Entorno de medición --- detalle.
+
+El entorno local de la Sección~\ref{sec:protocolo-evaluacion} difiere del despliegue real en tres
+condiciones. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con
+los contenedores de base de datos y OSRM emulados en \texttt{linux/amd64} mediante Rosetta,
+mientras que el servidor de producción del sistema es x86 nativo con recursos muy inferiores
+(Sección~\ref{sec:despliegue-produccion}). La comunicación con OSRM y la base de datos ocurre,
+además, por la red interna de \textit{compose} en la misma máquina, con latencia cercana a cero,
+mientras que en un centro de datos la latencia de red encarecería la fase de consulta a OSRM (100
+solicitudes HTTP para $n=1\,607$). Por último, el punto de entrada fue el comando de gestión
+ejecutado secuencialmente dentro del contenedor, en lugar del flujo API~$\rightarrow$~Celery del
+sistema en operación; ambos recorren el mismo código (\texttt{OptimizationPipeline.run}), por lo
+que la diferencia agrega únicamente latencia de encolado, no de cómputo.
+
+La medición de contraste sobre el servidor de producción (1--2 de agosto de 2026) ejecutó el mismo
+comando de gestión sobre las mismas instancias congeladas: el \textit{pipeline} caliente tomó entre
+120{,}0 y 122{,}7\,s según la instancia, mientras que en frío las 100 solicitudes de la matriz
+costaron 780{,}9\,s frente a los 170{,}8\,s de la réplica local (un factor de 4{,}6), con lo que el
+\textit{pipeline} frío completo ronda los 15\,min en ese hardware.
+
 \item Desglose de tiempo por fase.
 
 El \textit{pipeline} se instrumentó por fases: construcción de la matriz de costos
@@ -975,9 +997,171 @@ que la compuerta habilitaría: la mediana de auto-cruces sobre el trazado de cal
 $69$ en \texttt{reference-n1607} ($\overline{\text{sat}} = 0{,}94$), de $46$ a $75$ en
 \texttt{battery-n1000} ($0{,}91$) y de $26$ a $59$ en \texttt{battery-n800} ($0{,}89$).
 
-\phantomsection
+\item Instrumentación del objetivo en \texttt{area-27}.
+\phantomsection\label{anx:objetivo-area27}
+
+El diagnóstico de relleno por $T_{\min}$ de la Sección~\ref{sec:areas-reales} se estableció
+instrumentando el valor de la función objetivo del \textit{solver}
+(\texttt{docs/experiments/warmstart-area27-20260730.md}). Con la configuración de producción, el
+método \texttt{PenaltyConfig.vehicle\_bounds} devuelve para las cuatro instancias de ese apartado
+un piso en $T_{\min} = 7\,200$\,s con coeficiente $10\,000\,\text{s}^{-1}$ y un objetivo superior
+en el punto medio de $9\,000$\,s con coeficiente $500\,\text{s}^{-1}$.
+
+Las duraciones que reporta \texttt{total\_estimated\_time\_sec} no son el valor que ve la dimensión
+Time del \textit{solver}: la primera magnitud suma el servicio y el tránsito de la secuencia final
+de paradas, mientras que la dimensión Time es la variable acumulada sobre la que actúan las cotas
+blandas. Esas duraciones son $5\,766$ y $5\,597$\,s en la corrida de la
+Sección~\ref{sec:areas-reales}, y $5\,299$ y $5\,819$\,s en la repetición instrumentada; la
+diferencia con la dimensión Time es relleno de trayecto añadido gratis, y ambas rutas terminan
+exactamente en el piso $T_{\min} = 7\,200$\,s. Con esa cifra la partición no paga penalización de
+piso, $(7\,200 - 7\,200) \times 10\,000 = 0$ por vehículo, y su costo se reduce al fijo de dos
+vehículos, $200\,000$. La jornada única del \textit{greedy}, en cambio, paga
+$(10\,694 - 9\,000) \times 500 = 847\,000$ de exceso sobre el objetivo superior más $100\,000$ de
+costo fijo (los $10\,694$\,s corresponden a la variante cruda inyectada, no a la refinada de la
+Tabla~\ref{tab:areas-brazos}). El valor de la función objetivo lo confirma: $964\,903$ para la
+jornada única inyectada como \textit{warm start} frente a $229\,709$ para la partición que devuelve
+el \textit{solver}, el factor cercano a $4{,}2$ que reporta el cuerpo.
+
+Las restantes instancias son consistentes con estos mismos precios: en \texttt{area-26} el
+\textit{solver} deja sus tres rutas dentro de la banda $[7\,200,\ 9\,000]$, donde no se paga nada,
+y en la unión la ruta más larga de cada semilla queda en el $82$--$83$\,\% de $T_{\max}$, por
+debajo de los $9\,000$\,s del objetivo superior, con duraciones medias por semilla de $8\,204$,
+$8\,121$ y $8\,936$\,s.
+
+\item Grilla operacional de \texttt{spatial\_term}.
+\phantomsection\label{anx:grilla-spatial}
+
+La Tabla~\ref{tab:grilla-spatial} detalla la grilla de seis variantes operacionales que la
+Sección~\ref{sec:comparacion-estrategias} resume, ejecutada con la estrategia
+\texttt{spatial\_term} vigente y el límite de \textit{solver} de 120\,s; no debe confundirse con
+la grilla del perfilamiento (Tabla~\ref{tab:grilla-variantes}), anterior al régimen vigente.
+
+\begin{table}[H]
+  \centering
+  \caption{Grilla de seis variantes con la estrategia \texttt{spatial\_term}.}
+  \label{tab:grilla-spatial}
+  \small
+  \begin{tabularx}{\textwidth}{rrXXXXXXX}
+    \toprule
+    Serv. [min] &
+      $T_{\max}$ [h] &
+      $k$ &
+      Balance &
+      $\sigma(T)$ [s] &
+      Descart. &
+      Des\-plaz. [s] &
+      $\sum r_{\max}$ [m] &
+      Solap.\slash ruta \\
+    \midrule
+    1 &
+      2 &
+      23{,}0 &
+      0{,}996 &
+      7   &
+      0     &
+      68\,410 &
+      20\,937 &
+      109{,}2 \\
+      \addlinespace
+    1 &
+      3 &
+      16{,}0 &
+      0{,}835 &
+      601 &
+      0     &
+      59\,491 &
+      19\,905 &
+      146{,}1 \\
+      \addlinespace
+    2 &
+      2 &
+      36{,}0 &
+      0{,}998 &
+      3   &
+      1{,}0 &
+      65\,727 &
+      16\,917 &
+      82{,}8  \\
+      \addlinespace
+    2 &
+      3 &
+      25{,}0 &
+      0{,}833 &
+      606 &
+      0     &
+      60\,588 &
+      19\,588 &
+      75{,}2  \\
+      \addlinespace
+    3 &
+      2 &
+      49{,}0 &
+      0{,}998 &
+      2   &
+      2{,}0 &
+      63\,146 &
+      17\,347 &
+      55{,}8  \\
+      \addlinespace
+    3 &
+      3 &
+      34{,}0 &
+      0{,}836 &
+      522 &
+      0     &
+      61\,611 &
+      24\,267 &
+      79{,}9  \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\item Serie de auto-cruces sobre calle por instancia.
+\phantomsection\label{anx:crossings-areas}
+
+La Tabla~\ref{tab:areas-crossings} detalla la serie descriptiva de auto-cruces sobre el trazado
+real de calles que la Sección~\ref{sec:areas-reales} resume: configuración de producción, tres
+semillas por instancia y el límite de \textit{solver} de la heurística de producción ---94\,s en
+\texttt{area-29-n43}, 120\,s en las demás instancias---, junto a la corrida de referencia unificada
+de la Sección~\ref{sec:metricas-calidad}.
+
+\begin{table}[H]
+  \centering
+  \caption{Auto-cruces sobre calle por instancia bajo la configuración de producción.}
+  \label{tab:areas-crossings}
+  \begin{tabularx}{\textwidth}{lXXX}
+    \toprule
+    Instancia &
+      $k$ &
+      Auto-cruces por solución (media de 3 semillas) &
+      Auto-cruces por ruta \\
+    \midrule
+    \texttt{area-26-n157} &
+      3 &
+      $4{,}7$ (2--6) &
+      $1{,}56$ \\
+    \texttt{area-27-n72} &
+      2 &
+      $3{,}0$ (2--4) &
+      $1{,}50$ \\
+    \texttt{area-29-n43} &
+      1 &
+      $1{,}3$ (0--3) &
+      $1{,}33$ \\
+    \texttt{areas-26-27-29-n272} &
+      5 &
+      $7{,}7$ (6--10) &
+      $1{,}53$ \\
+    \texttt{reference-n1607} &
+      25 &
+      $31{,}3$ (24--37) &
+      $1{,}25$ \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
 \item Auditoría de robustez metodológica --- detalle.
-\label{anx:auditoria-robustez}
+\phantomsection\label{anx:auditoria-robustez}
 
 La Sección~\ref{sec:discusion-calidad} resume los cuatro defectos de
 instrumentación detectados en la serie experimental. Este apartado los describe
@@ -1105,7 +1289,7 @@ la validación pendiente de mayor valor para el uso operativo de la plataforma.
 
 \end{enumerate}
 
-\anexo{5}{Trazabilidad de requisitos al diseño}{Trazabilidad de requisitos al diseño}
+\anexo{5}{Trazabilidad de requisitos y verificación automatizada}{Trazabilidad de requisitos y verificación automatizada}
 \label{anx:trazabilidad}
 
 La Tabla~\ref{tab:trazabilidad} remite cada requisito funcional de la
@@ -1154,6 +1338,53 @@ donde se documenta su realización y, cuando corresponde, al inventario de
   RF-26 & \S\ref{sec:api} \\
 \end{xltabular}
 
+La Tabla~\ref{tab:verificacion} detalla el volumen y el alcance de la verificación automatizada
+que la Sección~\ref{sec:verificacion} resume.
+
+\small
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}p{2.2cm} X@{}}
+  \caption{Verificación automatizada del sistema.}
+  \label{tab:verificacion} \\
+  \toprule
+  Componente &
+    Volumen &
+    Alcance \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Componente &
+    Volumen &
+    Alcance \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
+  Pruebas de \textit{backend} &
+    524 funciones en 47 archivos &
+    \textit{Solver} y \textit{pipeline} de optimización, estimación de flota, construcción y caché
+    de la matriz de costos, importadores de CSV y de ambas fuentes legadas, ciclo de publicación,
+    autorización por rol y registro de visitas y omisiones. \\
+  Pruebas de \textit{frontend} &
+    304 casos en 44 archivos &
+    Componentes de la interfaz, cliente de API, cola \textit{offline}, utilidades de selección
+    cartográfica y de progreso. \\
+  Análisis estático &
+    Tres verificaciones &
+    Estilo y formato con \textit{Ruff}, tipos con \textit{Pyright} y estilo de \textit{JavaScript}
+    con \textit{ESLint}. \\
+  Integración continua (CI) &
+    Tres flujos de trabajo &
+    Un flujo por componente ---\textit{backend} y \textit{frontend}--- más la validación del formato
+    de los mensajes de \textit{commit}. Cada flujo encadena análisis estático, pruebas y, en el caso
+    del \textit{frontend}, la construcción del paquete de producción. \\
+  Entrega continua (CD) &
+    Un flujo de trabajo &
+    Construcción y publicación de las imágenes de producción y actualización del servidor por SSH
+    ante cada \textit{push} a la rama \texttt{production}
+    (Sección~\ref{sec:despliegue-produccion}). \\
+\end{xltabular}
+\normalsize
+
 \anexo{6}{Capturas complementarias de la interfaz}{Capturas complementarias de la interfaz}
 \label{anx:capturas}
 
@@ -1184,13 +1415,9 @@ donde se documenta su realización y, cuando corresponde, al inventario de
   \end{figure}%
 }
 
-Este anexo recorre el flujo completo de la plataforma sobre un \textit{dataset} de demostración de
-288 árboles seleccionados por polígono en Providencia, primero desde la perspectiva del
-administrador y luego desde la del censista en terreno. Las capturas complementan a las incluidas
-en la Sección~\ref{sec:ui}, que muestran la selección de arbolado legado
-(Ilustración~\ref{fig:ui_legacy}), el panel de optimización
-(Ilustración~\ref{fig:ui_optimization}), el panel de asignación (Ilustración~\ref{fig:ui_routes})
-y el portal del censista (Ilustración~\ref{fig:ui_surveyor}).
+Este anexo recorre el flujo completo de la plataforma descrito en la Sección~\ref{sec:ui}, sobre un
+\textit{dataset} de demostración de 288 árboles seleccionados por polígono en Providencia, primero
+desde la perspectiva del administrador y luego desde la del censista en terreno.
 
 \subsection*{Flujo del administrador}
 
@@ -1232,13 +1459,18 @@ de disponibles}{Importación de arbolado legado: filtro de disponibles.}{fig:anx
 Los dos modos de selección por región se muestran en las
 Ilustraciones~\ref{fig:anx_import_rect} y~\ref{fig:anx_import_poly}: rectángulo arrastrable y
 polígono de vértices editables. El resultado de cerrar un polígono sobre el arbolado aparece en la
-Ilustración~\ref{fig:ui_legacy} de la Sección~\ref{sec:ui}.
+Ilustración~\ref{fig:ui_legacy}: verde para disponible, azul para seleccionado en la sesión actual
+y gris para ya importado en otro \textit{dataset}; el panel lateral lista la selección acumulada
+---3\,182 árboles en esa sesión--- y permite revisarla árbol por árbol antes de confirmar.
 
 \capturaanexo{flow-07-legacy-import-modo-rectangulo.png}{Selección por rectángulo}{Selección por
 rectángulo.}{fig:anx_import_rect}
 
 \capturaanexo{flow-08-legacy-import-modo-poligono.png}{Selección por polígono}{Selección por
 polígono.}{fig:anx_import_poly}
+
+\capturaanexo{flow-09-legacy-import-seleccion-poligono.png}{Mapa de selección de arbolado
+legado}{Mapa de selección de arbolado legado.}{fig:ui_legacy}
 
 Confirmada la selección, el diálogo de creación ofrece dos salidas: un único \textit{dataset}
 (Ilustración~\ref{fig:anx_crear}) o la partición de la selección en varios \textit{datasets}
@@ -1270,10 +1502,14 @@ optimización}{Formulario de configuración de la optimización.}{fig:anx_opt_fo
 \capturaanexo{flow-14-optimizacion-en-progreso.png}{Optimización en progreso}{Optimización en
 progreso.}{fig:anx_opt_progreso}
 
-Terminada la corrida, las candidatas a plan se listan ordenadas por el criterio de selección, cada
-una con sus rutas, caminata, balance de carga y la caminata adicional respecto de la recomendada
-(Ilustración~\ref{fig:anx_candidatas}); el detalle del trabajo compara las estrategias de búsqueda
-ejecutadas (Ilustración~\ref{fig:anx_job}).
+Terminada la corrida, el panel de optimización muestra la solución recomendada sobre la red
+peatonal (Ilustración~\ref{fig:ui_optimization}) y las candidatas a plan se listan ordenadas por el
+criterio de selección, cada una con sus rutas, caminata, balance de carga y la caminata adicional
+respecto de la recomendada (Ilustración~\ref{fig:anx_candidatas}); el detalle del trabajo compara
+las estrategias de búsqueda ejecutadas (Ilustración~\ref{fig:anx_job}).
+
+\capturaanexo{flow-16-optimizacion-candidatas.png}{Detalle de un \textit{dataset}: panel de
+optimización}{Detalle de un \textit{dataset}: panel de optimización.}{fig:ui_optimization}
 
 \capturaanexo{flow-16b-optimizacion-candidatas-detalle.png}{Candidatas a plan con sus
 métricas}{Candidatas a plan con sus métricas.}{fig:anx_candidatas}
@@ -1294,8 +1530,9 @@ El panel de asignación presenta cada ruta con su selector de censista
 (Ilustración~\ref{fig:anx_asignacion}). La asignación automática opera en dos pasos: primero
 muestra la carga acumulada de cada censista (Ilustración~\ref{fig:anx_asig_modal}) y luego
 previsualiza la propuesta con los saldos resultantes (Ilustración~\ref{fig:anx_asig_prev}) antes de
-aplicarla; el estado final aparece en la Ilustración~\ref{fig:ui_routes} de la
-Sección~\ref{sec:ui}.
+aplicarla; el estado final ---el plan publicado como polilíneas sobre la red peatonal y, por cada
+ruta, sus paradas, su duración estimada y el censista asignado--- aparece en la
+Ilustración~\ref{fig:ui_routes}.
 
 \capturaanexo{flow-19-asignacion-panel.png}{Panel de asignación de rutas}{Panel de asignación de
 rutas.}{fig:anx_asignacion}
@@ -1305,6 +1542,9 @@ censistas}{Asignación automática: carga de los censistas.}{fig:anx_asig_modal}
 
 \capturaanexo{flow-21-asignacion-previsualizacion.png}{Asignación automática:
 previsualización}{Asignación automática: previsualización.}{fig:anx_asig_prev}
+
+\capturaanexo{flow-22-asignacion-aplicada.png}{Detalle de un \textit{dataset}: panel de
+asignación}{Detalle de un \textit{dataset}: panel de asignación.}{fig:ui_routes}
 
 El tablero de avance del censo (\texttt{/admin/datasets/\{id\}/progress}) abre en cero al publicar
 el plan (Ilustración~\ref{fig:anx_avance_cero}). La Ilustración~\ref{fig:ui_progress} lo muestra
@@ -1333,12 +1573,17 @@ censo con trazado de rutas.}{fig:anx_avance_trazado}
 
 Las vistas del censista son \textit{mobile-first} y se presentan aquí en pares. Tras el acceso,
 el selector de rutas lista las rutas del plan vigente asignadas al usuario
-(Ilustración~\ref{fig:anx_cen_login}); la vista general de la ruta activa corresponde a la
-Ilustración~\ref{fig:ui_surveyor} de la Sección~\ref{sec:ui}.
+(Ilustración~\ref{fig:anx_cen_login}); la vista general de la ruta activa
+(Ilustración~\ref{fig:ui_surveyor}) presenta el mapa con las paradas numeradas, la parada activa
+---aquí dentro del radio de proximidad («en rango»), con el registro habilitado--- y la lista de
+paradas con su estado.
 
 \capturamovil{flow-25-login-movil.png}{flow-27-censista-selector-rutas.png}{Acceso móvil y selector
 de rutas}{Acceso móvil (izquierda) y selector de rutas del censista
 (derecha).}{fig:anx_cen_login}
+
+\capturaanexo{flow-27b-censista-vista-general.png}{Portal del censista en vista
+\textit{mobile}}{Portal del censista en vista \textit{mobile}.}{fig:ui_surveyor}
 
 El registro de un árbol abre una hoja con los estados posibles y la captura fotográfica
 (Ilustración~\ref{fig:anx_cen_registro}); la fotografía se toma con la cámara del dispositivo y se
@@ -1447,3 +1692,154 @@ la observación (\texttt{sample.real\_tree\_id}), mientras que \texttt{legacy\_a
 de árboles propia y el árbol se reconstruye a partir del código QR que agrupa sus muestras. La
 identidad persistente que \texttt{Tree} conserva en toda importación es, en ambos casos, el par
 (\texttt{source}, \texttt{external\_id}) y no el identificador de fila de la base legada.
+
+\anexo{8}{Alternativas de \textit{stack} evaluadas}{Alternativas de \textit{stack} evaluadas}
+\label{anx:stack}
+
+La Sección~\ref{sec:arquitectura} enuncia los tres criterios que guiaron las decisiones de
+\textit{stack} ---costo, tiempo de ejecución y simplicidad del desarrollo--- y el componente
+elegido en cada caso. La Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas y el
+criterio que resolvió cada elección.
+
+\small
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.1cm} X@{}}
+  \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
+  \label{tab:stack-decisions} \\
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
+    Django + GeoDjango &
+      \textit{FastAPI}, \textit{Flask}, \textit{Ruby on Rails} &
+      Simplicidad. GeoDjango es la única de las cuatro que integra PostGIS en el ORM: tipos
+      geográficos, consultas espaciales y migraciones vienen resueltos. \textit{FastAPI} y
+      \textit{Flask} exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con
+      extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un
+      proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\
+      \addlinespace
+    \textit{OR-Tools} &
+      Heurística propia, \textit{Gurobi}, \textit{CPLEX} &
+      Costo y simplicidad. La heurística propia se consideró seriamente, pero la magnitud del
+      problema ($n \leq 2\,000$, una campaña por vez) queda holgadamente dentro de lo que resuelve
+      un \textit{solver} especializado ya construido y probado, de modo que el costo de construirla
+      y validarla no compraba una capacidad que el producto necesitara. \textit{Gurobi} y
+      \textit{CPLEX} resuelven mejor el VRP exacto, pero su licencia comercial es un gasto
+      recurrente y su licencia académica no acompaña al producto fuera de la titulación.
+      \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el
+      mismo proceso Python. \\
+      \addlinespace
+    OSRM &
+      \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}),
+      \textit{Mapbox Directions}, Valhalla, GraphHopper &
+      Costo y tiempo de ejecución. Las dos primeras cobran por consulta, y el tamaño esperado del
+      problema hacía previsible el orden de magnitud: una matriz de $1\,607$ árboles supera el
+      millón de pares origen-destino, y esa cifra se paga entera cada vez que se reconstruye. A ello
+      se suma que cada bloque de consultas paga latencia de red y cuotas de tasa, que fijan un piso
+      al tiempo de construcción de la matriz. El beneficio marginal sobre OSRM es acotado, porque el
+      perfil peatonal se resuelve sobre la misma red de \textit{OpenStreetMap}. OSRM se preprocesa
+      localmente, responde sin salir del \textit{host} y deja la red congelada en un archivo,
+      condición sin la cual los experimentos del Capítulo~\ref{cap:resultados} no serían repetibles
+      meses después sobre la misma base. \\
+      \addlinespace
+    \textit{React}~18 + Vite &
+      \textit{Vue}, \textit{Angular}, \textit{Svelte} &
+      Simplicidad. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el
+      ecosistema con integración más directa con \textit{Leaflet}
+      (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada
+      (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\
+      \addlinespace
+    \textit{Leaflet} &
+      \textit{MapLibre GL}, \textit{Google Maps JavaScript API} &
+      Costo y simplicidad. La API de \textit{Google} requiere clave facturada por carga de mapa.
+      \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, una pieza más de
+      infraestructura que el alcance de visualización no justifica. \textit{Leaflet} consume teselas
+      de \textit{OpenStreetMap} sin costo. \\
+      \addlinespace
+    Celery + Redis &
+      Ejecución síncrona, \textit{cron} sobre tabla de tareas &
+      Tiempo de ejecución y simplicidad. La construcción de la matriz de costos y la ejecución del
+      \textit{solver} tardan varios minutos: resolverlas dentro de la petición HTTP excede los
+      tiempos de respuesta aceptables de un servidor web, y un sondeo periódico sobre una tabla de
+      tareas añade al trabajo la espera hasta el siguiente ciclo. Celery ejecuta el trabajo apenas
+      se encola y libera la petición de inmediato, a cambio de dos procesos adicionales
+      ---\textit{worker} y \textit{broker}--- que se declaran en la misma composición de
+      contenedores que el resto del sistema. \\
+      \addlinespace
+    Monolito modular &
+      Servicios separados por dominio &
+      Simplicidad. Las operaciones de importación y optimización cruzan módulos en una sola
+      transacción; el proyecto cuenta con un único desarrollador, y la escala prevista no justifica
+      la complejidad operacional de desplegar servicios independientes. \\
+\end{xltabular}
+\normalsize
+
+\anexo{9}{Formulación extendida del modelo de ruteo}{Formulación extendida del modelo de ruteo}
+\label{anx:formulacion}
+
+Este anexo desarrolla las restricciones del modelo que la Sección~\ref{sec:formulacion} resume en
+prosa, sobre los conjuntos, parámetros y variables allí definidos.
+
+Cada árbol incluido en el plan se visita exactamente una vez, y cada visita es consistente entre la
+entrada y la salida del nodo:
+
+\begin{equation}
+  \sum_{r \in R} \sum_{i \in V} x_{ijr} = u_j, \quad \forall j \in \{1,\ldots,n\}
+  \label{eq:grado}
+\end{equation}
+
+\begin{equation}
+  \sum_{i \in V} x_{ihr} - \sum_{j \in V} x_{hjr} = 0,
+  \quad \forall h \in \{1,\ldots,n\},\ \forall r \in R
+  \label{eq:flujo}
+\end{equation}
+
+La Ecuación~\ref{eq:grado} es la restricción de grado. Su lado izquierdo cuenta los arcos que
+entran al nodo $j$ sumando sobre todos los vehículos y todos los orígenes posibles; igualarlo a la
+variable de inclusión $u_j$ hace que un árbol incluido ($u_j = 1$) reciba exactamente un arco
+entrante y uno descartado ($u_j = 0$), ninguno, con lo que la misma igualdad expresa la visita
+única y la exención de los nodos descartados. La Ecuación~\ref{eq:flujo} es la conservación de
+flujo: para cada nodo real $h$ y cada vehículo $r$, los arcos con que $r$ entra a $h$ igualan a los
+arcos con que sale, lo que impide que un vehículo entre a un nodo sin salir de él o inicie su
+recorrido fuera del depósito. Cada vehículo activo sale del depósito y regresa a él a lo sumo una
+vez:
+
+\begin{equation}
+  \sum_{j \in V} x_{0jr} = \sum_{i \in V} x_{i0r} = z_r, \quad \forall r \in R
+  \label{eq:deposito}
+\end{equation}
+
+La Ecuación~\ref{eq:deposito} liga la activación de un vehículo con su uso efectivo: la primera
+suma cuenta las salidas del depósito del vehículo $r$ y la segunda sus regresos, e igualar ambas a
+$z_r$ obliga a que un vehículo activo describa exactamente un circuito por el depósito, mientras
+que uno inactivo no sale de él y, por la Ecuación~\ref{eq:flujo}, no puede tocar nodo alguno. La
+dimensión temporal, definida en la Ecuación~\ref{eq:dimension-tiempo}, encadena los tiempos
+acumulados a lo largo de cada ruta:
+
+\begin{equation}
+  x_{ijr} = 1 \;\Longrightarrow\; t_j \geq t_i + \left\lceil c_{ij} + s\cdot\mathbf{1}[i \neq 0]
+  \right\rceil,
+  \qquad t_0 = 0
+  \label{eq:dimension-tiempo}
+\end{equation}
+
+La implicación se activa solo sobre los arcos recorridos: si el vehículo va de $i$ a $j$, el tiempo
+acumulado al abandonar $j$ es al menos el acumulado en $i$ más el tránsito $c_{ij}$ y el servicio.
+El término indicador $\mathbf{1}[i \neq 0]$ carga el tiempo de servicio al abandonar un nodo real y
+no al llegar a él, con el depósito ficticio exento; el redondeo hacia arriba refleja que el
+\textit{solver} opera en aritmética entera. El tiempo total de la ruta del vehículo $r$ es el valor
+terminal de esa dimensión, que por la Ecuación~\ref{eq:route_time} equivale al desplazamiento más
+el servicio de sus $m_r$ árboles:
+
+\begin{equation}
+  T_r = \sum_{(i,j)} c_{ij}\,x_{ijr} + m_r \cdot s
+  \label{eq:route_time}
+\end{equation}
+
+Sobre ese valor terminal actúan la cota dura $T_{\max}$ y las dos penalizaciones blandas de la
+función objetivo, ya presentadas en la Sección~\ref{sec:formulacion}.
