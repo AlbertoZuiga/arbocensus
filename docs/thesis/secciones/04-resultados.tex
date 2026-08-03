@@ -1162,24 +1162,21 @@ El costo de planificación (CA-05) se cumple con $123{,}3$\,s de corrida complet
 caché, pero su lectura exige una precisión: $120$\,s de esa cifra son el tope configurado del
 \textit{solver}, de modo que el criterio se satisface por construcción mientras el tope se mantenga
 bajo cinco minutos; solo los $3{,}3$\,s restantes son tiempo que el sistema podría hacer crecer
-hasta incumplirlo, y no lo hace. La evidencia sobre la elección del tope es el análisis de
-sensibilidad de la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la
-mejora alcanzable con presupuestos mayores. Con caché fría la corrida sube a $334{,}6$\,s, por
+hasta incumplirlo, y no lo hace. La elección del tope la respalda el análisis de sensibilidad de la
+Tabla~\ref{tab:sensibilidad-tl}. Con caché fría la corrida sube a $334{,}6$\,s, por
 sobre el umbral: el criterio se enuncia sobre el caso con caché porque es el de operación normal,
 pero el primer cálculo de un \textit{dataset} nuevo lo excede y así se reporta.
 
 La mejora sobre la alternativa trivial (CA-06) se cumple. Sobre la misma instancia, con la misma
 matriz y con el heurístico dotado del mismo post-proceso (Tabla~\ref{tab:comparativa}), el ahorro
 es de $2\,907$\,s ---un $4{,}7$\,\%--- y supera la dispersión entre semillas ($1\,538$\,s), de modo
-que la reducción es atribuible al método y no al azar de la búsqueda; alrededor de un tercio de la
-ventaja contra el \textit{greedy} sin refinar es atribuible al post-proceso que solo un lado
-recibiría. Junto al margen subsiste una diferencia cualitativa: el \textit{baseline} produce una
-ruta degenerada de cinco árboles y satura las jornadas al $98$\,\% de $T_{\max}$, mientras que el
-modelo opera al $93$\,\%; la atenuación de esa patología es de grado y no de naturaleza. El alcance
-del veredicto es el del régimen saturado en que el criterio se comprometió: sobre las áreas reales
-el margen no se generaliza ---el \textit{solver} gana un $11{,}7$\,\% en \texttt{area-26-n157} y
-pierde en \texttt{area-27-n72}---, y lo que se sostiene es la entrega de jornadas ejecutables, con
-el caso adverso diagnosticado como defecto de cotas blandas insensibles a la densidad
+que la reducción es atribuible al método y no al azar de la búsqueda; a ese margen se suma la
+diferencia cualitativa de la Sección~\ref{sec:comparacion-greedy}: jornadas con holgura operacional
+en lugar de saturadas y una ruta residual menos patológica. El alcance del veredicto es el del
+régimen saturado en que el criterio se comprometió: sobre las áreas reales el margen no se
+generaliza ---el \textit{solver} gana un $11{,}7$\,\% en \texttt{area-26-n157} y pierde en
+\texttt{area-27-n72}---, y lo que se sostiene es la entrega de jornadas ejecutables, con el caso
+adverso diagnosticado como defecto de cotas blandas insensibles a la densidad
 (Sección~\ref{sec:posibles-mejoras}).
 
 \subsection{Cumplimiento de los atributos de calidad}
@@ -1202,10 +1199,9 @@ registro sobrevive a pérdidas de conexión momentáneas pero no a una intermite
 atributo se cumple en su forma débil ---no se pierde lo registrado ante un corte breve--- y queda
 pendiente en la fuerte.
 
-La eficiencia de cómputo se cumple en sus dos componentes: planificar cuesta $123{,}3$\,s con la
-matriz en caché, muy por debajo de la cota, y ampliar el presupuesto a $180$\,s altera el
-desplazamiento en un $0{,}6$\,\% ---bajo la dispersión entre semillas--- sin cambiar rutas ni
-balance.
+La eficiencia de cómputo se cumple en sus dos componentes: el costo de planificación queda muy por
+debajo de la cota (CA-05, más arriba) y ampliar el presupuesto a $180$\,s altera el desplazamiento
+en un $0{,}6$\,\% ---bajo la dispersión entre semillas--- sin cambiar rutas ni balance.
 
 La calidad geográfica de las rutas se cumple de forma acotada, y su alcance quedó redefinido por la
 propia experimentación: el atributo se juzga sobre el trazado real de calles, porque la correlación
