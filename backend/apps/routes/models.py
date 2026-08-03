@@ -36,6 +36,7 @@ class Route(models.Model):
     total_trees = models.IntegerField()
     travel_time_sec = models.IntegerField(default=0)
     total_estimated_time_sec = models.IntegerField(default=0)
+    geometry = gis_models.LineStringField(srid=4326, null=True, blank=True)
     surveyor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
