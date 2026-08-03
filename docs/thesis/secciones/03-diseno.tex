@@ -277,8 +277,8 @@ con valores por defecto $T_{\min} = 2\,\text{h}$ y $T_{\max} = 3\,\text{h}$, par
 administrador. La cota inferior $T_{\min}$ no es una restricción del modelo sino un objetivo blando:
 se penaliza el déficit en la función objetivo en lugar de prohibirlo, por la razón que se detalla en
 la Sección~\ref{sec:solver}. En consecuencia, una solución puede presentar rutas de duración
-inferior a $T_{\min}$; el Capítulo~\ref{cap:resultados} las observa en las áreas reales de baja
-carga, no en la instancia de referencia.
+inferior a $T_{\min}$.\footnote{El Capítulo~\ref{cap:resultados} las observa en las áreas reales
+de baja carga, no en la instancia de referencia.}
 
 \item Función objetivo.
 
@@ -460,9 +460,7 @@ entre «faltan vehículos» y «el modelo no admite solución».
 El tiempo de servicio $s$, en cambio, sí es un dato de entrada, y es un parámetro y no una constante
 del sistema porque el protocolo de censo no está fijado de una campaña a otra: el número de
 fotografías y de preguntas que un censista completa por árbol varía según lo que la campaña exija
-registrar, y esa variación es la que $s$ traslada al modelo. Esa indefinición no es un detalle de
-calibración sino una cuestión abierta del proyecto, que la Sección~\ref{sec:recenso} retoma al
-discutir qué evidencia exige cada observación en terreno.
+registrar, y esa variación es la que $s$ traslada al modelo.
 
 En su lugar, el sistema entrega a \textit{OR-Tools} un techo $N_{\max}$ de vehículos disponibles y
 deja que el \textit{solver} decida cuántos activa. El techo se calcula a partir del trabajo total
@@ -646,12 +644,10 @@ misma matriz de OSRM que alimenta el costo de arco---; nunca empeora una ruta, p
 inversiones que reducen el costo; y no altera nada más ---la asignación, $k$, los descartes y el
 número de paradas por ruta quedan intactos, aunque el índice de balance puede subir o bajar según
 cuál sea la ruta que el refinamiento acorta---. Su costo es del orden de milisegundos, tres órdenes
-de magnitud bajo el presupuesto del \textit{solver}.
-
-Este post-proceso es hoy el comportamiento por defecto, pero no lo fue siempre: un ciclo de
-evaluación anterior lo rechazó porque empeoraba la métrica de auto-cruces medida sobre cuerdas
-rectas; al corregirse el instrumento se estableció que mejora simultáneamente el tiempo de viaje y
-la geometría real, lo que revirtió el rechazo (Sección~\ref{sec:discusion-calidad}).
+de magnitud bajo el presupuesto del \textit{solver}.\footnote{Un ciclo de evaluación anterior lo
+rechazó porque empeoraba la métrica de auto-cruces medida sobre cuerdas rectas; al corregirse el
+instrumento se estableció que mejora simultáneamente el tiempo de viaje y la geometría real, lo que
+revirtió el rechazo (Sección~\ref{sec:discusion-calidad}).}
 
 % ---- 3.3.8 ------------------------------------------------------
 \subsection{Perfiles de precios y abanico de producción}
