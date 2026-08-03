@@ -7,7 +7,12 @@ import {
 } from "@tanstack/react-query";
 
 import { fetchSolution } from "@/api/optimization.js";
-import { fetchRoutes, setSolutionParticipants, suggestAssignment } from "@/api/routes.js";
+import {
+  assignRoute,
+  fetchRoutes,
+  setSolutionParticipants,
+  suggestAssignment,
+} from "@/api/routes.js";
 import { fetchSurveyors } from "@/api/surveyors.js";
 import { useAssignRoute } from "@/hooks/useAssignRoute";
 import { useSurveyorWorkload } from "@/hooks/useSurveyorWorkload";
@@ -17,6 +22,7 @@ import {
   totalDurationSec,
 } from "@/lib/optimization.js";
 import { getErrorMessage } from "@/lib/errors";
+import { toast } from "@/store/toastStore.js";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -351,6 +357,7 @@ function AssignmentModal({ open, onOpenChange, surveyors, solutionId, onApply })
 
 export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const solutionResults = useQueries({
     queries: datasetSolutionIds.map((id) => ({
@@ -384,6 +391,26 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
 
   const assign = useAssignRoute();
 
+  const bulkAssign = useMutation({
+    mutationFn: (assignments) =>
+      Promise.allSettled(
+        assignments.map((a) => assignRoute(a.route_id, a.surveyor_id)),
+      ),
+    onSuccess: (settled) => {
+      const failed = settled.filter((r) => r.status === "rejected").length;
+      if (failed > 0) {
+        toast.error(`${failed} de ${settled.length} asignaciones fallaron`);
+      } else {
+        toast.success("Rutas asignadas");
+      }
+      queryClient.invalidateQueries({ queryKey: ["routes"] });
+      queryClient.invalidateQueries({ queryKey: ["surveyors"] });
+      queryClient.invalidateQueries({ queryKey: ["surveyor-workload"] });
+      queryClient.invalidateQueries({ queryKey: ["census-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["census-progress-stops"] });
+    },
+  });
+
   const published = !!solutionId;
 
   function handleSelectChange(routeId, nextValue) {
@@ -392,9 +419,7 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
   }
 
   function handleApply(assignments) {
-    for (const a of assignments) {
-      assign.mutate({ routeId: a.route_id, surveyorId: a.surveyor_id });
-    }
+    bulkAssign.mutate(assignments);
   }
 
   return (
@@ -418,6 +443,7 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
       {published && (
         <Button
           className="self-start bg-green-600 text-white hover:bg-green-700"
+          disabled={assign.isPending || bulkAssign.isPending}
           onClick={() => setModalOpen(true)}
         >
           Asignación automática
@@ -463,7 +489,7 @@ export default function RouteAssignmentPanel({ datasetSolutionIds = [] }) {
 
             <Select
               value={route.surveyor ?? UNASSIGNED}
-              disabled={!published}
+              disabled={!published || assign.isPending || bulkAssign.isPending}
               onValueChange={(next) => handleSelectChange(route.id, next)}
             >
               <SelectTrigger
