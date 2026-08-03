@@ -87,17 +87,14 @@ del esquema de cada volcado y de sus fechas ---la más antigua registra muestras
 2021 y la posterior, posiciones y especies explícitas desde 2023---, y no un dato que las fuentes
 declaren.
 
-De ese catastro, lo que importa a esta memoria es su escala. La base más antigua,
-\texttt{legacy\_app}, no registra árboles sino muestras de censo: capturas individuales que anotan
-el código QR de la placa del ejemplar y la lectura GPS del teléfono, con más de una captura para un
-mismo árbol cuando se lo revisitó o se lo muestreó repetidamente en una jornada. Sus 17\,208
-muestras se agrupan así, por código QR, en 13\,076 árboles distintos. La base más reciente, \texttt{legacy\_api}, registra 429
-árboles, cada uno con posición y especie explícitas. El conjunto, más de 13\,000 ejemplares
-georreferenciados, sitúa la preparación de una jornada de censo en una escala donde repartir el
-arbolado entre equipos y ordenar sus visitas a mano deja de ser practicable. El detalle de ambos
-esquemas y las reglas con que esta iteración los depura e importa pertenecen al diseño del producto
-y se documentan en la Sección~\ref{sec:legacy} y en el \hyperref[anx:modelo-legado]{Anexo 7}; las
-instancias experimentales derivadas de ese arbolado se describen en el
+Ese catastro define la escala del problema: entre ambas bases suman 21\,169
+muestras de terreno, correspondientes a 13\,319 árboles importables georreferenciados. Una muestra
+es una captura individual y un mismo ejemplar puede acumular varias, de modo que el arbolado se
+consolida agrupándolas por su identificador; las reglas de depuración y consolidación se documentan
+en la Sección~\ref{sec:legacy} y el detalle de ambos esquemas, con el efecto de cada filtro, en el
+\hyperref[anx:modelo-legado]{Anexo 7}. Un catastro de esa magnitud sitúa la preparación de una
+jornada de censo en una escala donde repartir el arbolado entre equipos y ordenar sus visitas a
+mano deja de ser practicable; las instancias experimentales derivadas de él se describen en el
 Capítulo~\ref{cap:resultados}.
 
 Ninguna de esas iteraciones abordó la planificación de rutas. En las campañas documentadas por
@@ -128,10 +125,9 @@ La tercera es el registro en terreno. El censista recorre desde su teléfono la 
 de su ruta y anota en cada parada lo que observa del árbol, de modo que el resultado de la jornada
 quede asociado al ejemplar ya catastrado y no a una muestra sin correspondencia entre campañas.
 
-La verificación del producto se realiza sobre el arbolado real de las bases legadas ---del que se
-derivan la instancia de referencia de 1\,607 árboles, la suite de doce instancias congeladas
-entre $n=43$ y $n=1\,607$ descrita en el \hyperref[anx:suite-instancias]{Anexo 4} y las áreas de
-censo efectivamente registradas---, mediante experimentos que comparan las configuraciones del motor entre sí y contra
+La verificación del producto se realiza sobre el arbolado real de las bases legadas ---para ello
+se congelaron doce instancias entre $n=43$ y $n=1\,607$ árboles
+(\hyperref[anx:suite-instancias]{Anexo 4})---, mediante experimentos que comparan las configuraciones del motor entre sí y contra
 una solución heurística\footnote{Procedimiento que construye una solución razonable mediante reglas
 simples, sin garantizar que sea la mejor posible.} simple. Queda fuera del alcance la operación del
 sistema en una jornada de censo real, con
