@@ -4,17 +4,7 @@
 Este capítulo responde tres preguntas sobre el producto: si el motor de optimización genera planes
 de censo que cumplen los criterios de aceptación comprometidos en el
 Capítulo~\ref{cap:solucion}; si esos planes son mejores que los de una alternativa trivial; y en
-qué régimen geográfico se sostienen ambas respuestas. La Sección~\ref{sec:resultados-obtenidos} las
-responde en ese orden: primero declara el protocolo de evaluación ---instancias, entorno de
-medición, presupuesto de cómputo y criterios
-(Sección~\ref{sec:protocolo-evaluacion})---, luego acredita la calidad del plan sobre la instancia
-de mayor tamaño (Sección~\ref{sec:metricas-calidad}) y su mejora sobre la alternativa trivial
-(Sección~\ref{sec:comparacion-greedy}), después mide el efecto del término de dispersión geográfica
-(Sección~\ref{sec:comparacion-estrategias}) y el papel del régimen geográfico de la instancia
-(Sección~\ref{sec:discusion-calidad}), y cierra con la evaluación sobre las áreas de censo reales
-(Sección~\ref{sec:areas-reales}). Las conclusiones (Sección~\ref{sec:conclusiones}) recogen lo que
-esos resultados muestran sobre el problema y el cumplimiento de criterios y atributos; las dos
-secciones finales registran las limitaciones del sistema y las mejoras posibles.
+qué régimen geográfico se sostienen ambas respuestas.
 
 Conviene anticipar el hallazgo central, porque ordena la lectura de todo el capítulo: no existe una
 configuración única de la función objetivo que gane en todos los regímenes geográficos, y la unidad
@@ -84,24 +74,25 @@ los experimentos del capítulo razonan sobre esa estructura de precios, en parti
 penalizaciones blandas de la dimensión temporal y sobre el término de extensión geográfica que
 distingue a \texttt{spatial\_term} de \texttt{global}.
 
-Las réplicas de cada corrida no provienen de una semilla de generador pseudoaleatorio
----\textit{OR-Tools} no la expone--- sino de permutar el orden de entrada de los nodos. Esta
-permutación altera el desempate en la heurística de construcción inicial
-(\texttt{PATH\_CHEAPEST\_ARC}), que recorre los arcos en orden de índice, y propaga la perturbación
-a toda la trayectoria del metaheurístico GLS \citep{voudouris1999guided}: aunque el \textit{solver}
-es determinista dados sus parámetros de entrada, el orden de los nodos ---información irrelevante
-para el problema matemático--- basta para generar soluciones distintas. La sensibilidad al orden de
-entrada no se limita al tiempo de desplazamiento: sobre las métricas de calidad alcanza un orden de
-magnitud mayor, y las barras de error entre semillas de una corrida no acotan la varianza entre
-corridas distintas (\hyperref[anx:alcance-replicas]{Anexo 4}).
+Cada corrida se repite tres veces. \textit{OR-Tools} no expone una semilla de generador
+pseudoaleatorio que produzca repeticiones distintas (restricción RE-05 de la
+Sección~\ref{sec:restricciones}), de modo que cada repetición se construye permutando el orden en
+que los nodos entran al \textit{solver}. Ese orden no cambia el problema matemático, pero decide
+los empates de la heurística que construye la solución inicial y, con ella, toda la trayectoria de
+la búsqueda local del GLS \citep{voudouris1999guided}: tres órdenes distintos producen tres
+soluciones distintas del mismo problema. El texto llama «semillas» a esas permutaciones. La
+dispersión que generan es mayor en las métricas de calidad que en el tiempo de desplazamiento, y
+acota la variación dentro de una corrida, no la variación entre corridas distintas
+(\hyperref[anx:alcance-replicas]{Anexo 4}).
 
 \subsubsection*{Entorno de medición}
 \phantomsection\label{sec:entorno-medicion}%
-Las mediciones de este capítulo preceden al despliegue productivo del sistema
-(Sección~\ref{sec:despliegue-produccion}), incorporado al cierre de la iteración, y se realizaron
-sobre una réplica local del entorno de producción: las mismas imágenes de contenedor del
-despliegue, una instancia real de OSRM \citep{osrm} cargada con el extracto completo de Chile de
-\textit{OpenStreetMap} con perfil peatonal, y PostGIS \citep{postgis} como base de datos. Las
+Todas las mediciones de este capítulo se ejecutaron en un entorno local que replica al de
+producción; el servidor del despliegue productivo (Sección~\ref{sec:despliegue-produccion}),
+incorporado al cierre de la iteración, no es el entorno de medición y aporta únicamente la corrida
+de contraste que cierra este apartado. La réplica local emplea las mismas imágenes de contenedor
+del despliegue, una instancia real de OSRM \citep{osrm} cargada con el extracto completo de Chile
+de \textit{OpenStreetMap} con perfil peatonal, y PostGIS \citep{postgis} como base de datos. Las
 versiones de todas las piezas quedan fijadas en el repositorio; la que condiciona la reproducción
 de las cifras es la de \textit{OR-Tools} (9.15), que el \hyperref[anx:comandos]{Anexo 3} precisa
 junto a los comandos.
@@ -531,11 +522,9 @@ Sección~\ref{sec:estrategias} describe ---\texttt{spatial\_term} y \texttt{clus
 aquí se miden contra la formulación vigente (\texttt{global}) sobre la instancia de estrés de
 $n = 1\,607$ árboles.
 
-Las cifras de \texttt{cluster\_first} corresponden a una implementación corregida en dos puntos
-respecto de su versión inicial ---la estimación de $k$ emplea el viaje medio al vecino más cercano
-en lugar del promedio entre todos los pares, y el presupuesto del \textit{solver} se reparte entre
-los grupos en proporción a su tamaño---, sin lo cual la estrategia no era medible en condiciones
-homogéneas.
+En \texttt{cluster\_first}, la estimación de $k$ emplea el viaje medio al vecino más cercano y el
+presupuesto del \textit{solver} se reparte entre los grupos en proporción a su tamaño, condiciones
+necesarias para medir la estrategia en igualdad con las otras dos.
 
 \subsubsection*{Protocolo}
 
@@ -544,7 +533,7 @@ Las tres estrategias se compararon en un \textit{head-to-head} bajo condiciones 
 $T_{\max} = 3$\,h, la configuración censal de referencia) y mismo límite de \textit{solver} (120\,s,
 justificado en la Tabla~\ref{tab:sensibilidad-tl}, que acota el presupuesto de tiempo del
 \textit{solver} y no compara estrategias entre sí). También se fijaron las mismas tres semillas (42,
-43 y 44) y la misma versión del código, posterior a la corrección del redondeo del tránsito. El
+43 y 44) y la misma versión del código. El
 criterio de decisión se fijó antes de ejecutar el experimento: una estrategia supera a la
 \textit{baseline} si reduce el solapamiento por ruta o mejora el IoU del peor par \textit{sin}
 degradar el balance temporal respecto de \texttt{global}, sin producir rutas que excedan $T_{\max}$
@@ -630,7 +619,7 @@ la repetición, de modo que su media esconde una repetición notoriamente mejor.
 repetición de \texttt{global} ($150$), \texttt{spatial\_term} ($81$, $75$ y $75$) reduce el
 solapamiento en al menos un $45$\,\%, por lo que la conclusión no depende de la agregación.
 
-\texttt{cluster\_first} queda descartada con datos, incluso en su versión corregida.
+\texttt{cluster\_first} queda descartada con datos.
 Alcanza, como era esperable, la mejor separación espacial de las tres ---solapamiento de $20$ por
 ruta ($-88$\,\%) y $\sum r_{\max}$ de $9\,714$\,m ($-57$\,\%)---, cifras que sirven como cota de la
 separación alcanzable, pero lo hace incumpliendo dos de las tres salvaguardas del criterio: a)
@@ -646,7 +635,7 @@ penalizadas antes de encontrar una asignación completa.
 
 \subsubsection*{Grilla operacional de la estrategia ganadora}
 
-Confirmada \texttt{spatial\_term}, se repitió sobre ella la grilla de seis variantes operacionales
+Confirmada \texttt{spatial\_term}, se ejecutó sobre ella una grilla de seis variantes operacionales
 ---el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
 combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), sobre el
 \textit{dataset} de $n=1\,607$, con el mismo límite de 120\,s y tres semillas
@@ -757,7 +746,7 @@ que deben leerse todas las comparaciones de esta subsección.
 Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head} de la
 Tabla~\ref{tab:estrategias}, el único contraste homogéneo disponible: mismo código, mismo
 presupuesto de \textit{solver} y mismas semillas. La grilla del perfil de rendimiento del
-\hyperref[anx:perfil-rendimiento]{Anexo 4} proviene de un régimen de medición anterior y no es
+\hyperref[anx:perfil-rendimiento]{Anexo 4} no es
 comparable arco a arco con la Tabla~\ref{tab:grilla-spatial}, por las razones que ese anexo
 detalla.
 
@@ -1128,9 +1117,9 @@ combinado, recalibración de penalizaciones--- ya fueron exploradas y descartada
 
 \subsubsection*{Serie de auto-cruces sobre calle}
 
-La afirmación de la Sección~\ref{sec:discusion-calidad} sobre el régimen de área real se midió en
-una corrida propia, posterior al ciclo de partición: configuración de producción, tres semillas por
-instancia y auto-cruces contados sobre el trazado real de calles
+La relación entre el régimen geográfico y los auto-cruces que analiza la
+Sección~\ref{sec:discusion-calidad} se midió en una corrida propia: configuración de producción,
+tres semillas por instancia y auto-cruces contados sobre el trazado real de calles
 (\texttt{docs/experiments/areas-crossings-road-20260802.csv}). La Tabla~\ref{tab:areas-crossings}
 resume la serie junto a la corrida de referencia unificada de la
 Sección~\ref{sec:metricas-calidad}, medida el mismo día con la misma configuración y semillas.
@@ -1170,7 +1159,7 @@ Sección~\ref{sec:metricas-calidad}, medida el mismo día con la misma configura
   \end{tabularx}
 \end{table}
 
-La serie corrige la forma fuerte de la observación cualitativa que este capítulo arrastraba: las
+Las
 soluciones sobre áreas reales no están libres de auto-cruces ---solo una de las doce corridas de
 área registró cero---, aunque sus conteos absolutos son bajos, entre 0 y 6 por solución completa y
 entre 6 y 10 en la unión, un orden de magnitud por debajo de los 24--37 de la instancia de estrés.
@@ -1329,10 +1318,7 @@ tiempo que el sistema podría hacer crecer hasta incumplirlo, y el desglose conf
 lo hace: el $97{,}3$\,\% del tiempo está en la metaheurística y no en la infraestructura que la
 rodea. Lo que sí constituye evidencia sobre la elección del tope es el análisis de sensibilidad de
 la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la mejora alcanzable
-con presupuestos mayores; conviene registrar que la decisión de bajar el tope se tomó en el régimen
-anterior del perfil de rendimiento (\hyperref[anx:perfil-rendimiento]{Anexo 4}) y que esa tabla es
-la remedición posterior, ya
-sobre la estrategia \texttt{spatial\_term} y el código vigente. Con caché fría la corrida completa
+con presupuestos mayores. Con caché fría la corrida completa
 sube a $334{,}6$\,s por la construcción de la matriz contra OSRM, por sobre el umbral de los
 $300$\,s; el criterio se enuncia sobre el caso con caché precisamente porque es el de operación
 normal, pero el primer cálculo de un \textit{dataset} nuevo lo excede y así se reporta.
