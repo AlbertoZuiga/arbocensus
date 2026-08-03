@@ -21,23 +21,20 @@ caso operativo.
 
 La calidad de la solución producida por el motor de optimización se evalúa sobre doce instancias
 reales congeladas, entre $n = 43$ y $n = 1\,607$ árboles, versionadas en el
-repositorio.\footnote{Ver \hyperref[anx:suite-instancias]{Anexo 4}.} La suite cubre dos regímenes geográficos de naturaleza
-distinta. El primero es el régimen agregado de la instancia de referencia \texttt{reference-n1607}:
-1\,607 árboles de ambas fuentes legadas ---429 de \texttt{legacy\_api} y 1\,178 de
-\texttt{legacy\_app}--- repartidos en 10,3\,km de extensión. Los árboles son
-reales, pero la agrupación carece de
-correlato operativo, dado que el censo histórico se organizó por áreas, y el conjunto no
-corresponde a una única comuna: reúne una porción del arbolado disponible en ambas bases legadas,
-elegida por reproducibilidad y no la totalidad del universo importable (Sección~\ref{sec:legacy}).
-La Ilustración~\ref{fig:instancia-legada} muestra la distribución geográfica de sus nodos,
-diferenciada por fuente ---círculos para \texttt{legacy\_api} y cuadrados para
-\texttt{legacy\_app}---: ambas se concentran en el mismo territorio, de modo que la instancia
-agrega observaciones del mismo arbolado urbano y no concatena zonas geográficamente independientes.
-El segundo régimen es el de área de censo individual ---diámetros de hasta 1,32\,km---, que
+repositorio.\footnote{Ver \hyperref[anx:suite-instancias]{Anexo 4}.} La suite cubre dos regímenes
+geográficos de naturaleza distinta. El primero es el régimen agregado de la instancia de referencia
+\texttt{reference-n1607}: 1\,607 árboles de ambas fuentes legadas ---429 de \texttt{legacy\_api} y
+1\,178 de \texttt{legacy\_app}--- repartidos en 10,3\,km de extensión. Los árboles son reales, pero
+la agrupación carece de correlato operativo: el censo histórico se organizó por áreas, y el
+conjunto reúne una porción del arbolado disponible elegida por reproducibilidad
+(Sección~\ref{sec:legacy}). La Ilustración~\ref{fig:instancia-legada} muestra la distribución de
+sus nodos, diferenciada por fuente: ambas se concentran en el mismo territorio, de modo que la
+instancia agrega observaciones del mismo arbolado urbano y no concatena zonas independientes. El
+segundo régimen es el de área de censo individual ---diámetros de hasta 1,32\,km---, que
 corresponde a la operación habitual. La instancia agregada funciona como instancia de estrés: es la
-de mayor tamaño y la que fija los criterios de aceptación del Capítulo~\ref{cap:solucion}. Las
+de mayor tamaño y la que fija los criterios de aceptación del Capítulo~\ref{cap:solucion}; las
 áreas reales miden el motor en su unidad operativa (Sección~\ref{sec:areas-reales}), y varias
-conclusiones obtenidas en el régimen agregado no se trasladan sin más a ellas.
+conclusiones del régimen agregado no se trasladan sin más a ellas.
 
 \begin{figure}[H]
   \centering
@@ -756,21 +753,13 @@ valor es delimitar el régimen en que esa configuración es la adecuada.
 \subsection{Calidad geográfica de rutas y comparación de estrategias}
 \label{sec:comparacion-estrategias}
 
-La comparación de estrategias emplea los siguientes indicadores de calidad geográfica, definidos
-sobre las coordenadas reales de las paradas (\texttt{RouteStop}) y calculados con la distancia de
-\textit{haversine} \citep{sinnott1984virtues}:
-
-\begin{enumerate}
-  \item Compacidad ($\sum r_{\max}$): suma, sobre las rutas, del radio máximo de cada ruta
-        (distancia del centroide a su parada más lejana). Menor es mejor.
-  \item Solapamiento (\textit{interleaving}): número de paradas pertenecientes a \textit{otras}
-        rutas que caen dentro de la caja envolvente (\textit{bounding box}) de una ruta dada, sumado
-        sobre todas las rutas. Se reporta tanto el total como su valor normalizado por número de
-        rutas ($\overline{\text{solap}} = \text{total}/k$), para comparar entre tamaños de
-        \textit{dataset}. Mayor indica peor partición espacial.
-  \item IoU peor par: intersección sobre unión de las cajas envolventes del par de rutas con mayor
-        superposición. Mayor indica mayor solapamiento espacial entre dos rutas.
-\end{enumerate}
+La comparación de estrategias emplea tres indicadores de calidad geográfica, definidos sobre las
+coordenadas reales de las paradas y calculados con la distancia de \textit{haversine}
+\citep{sinnott1984virtues}: la compacidad ($\sum r_{\max}$, suma sobre las rutas del radio máximo
+de cada una; menor es mejor), el solapamiento (\textit{interleaving}: paradas de otras rutas dentro
+de la caja envolvente de una ruta dada, sumado sobre todas y también normalizado por $k$; mayor es
+peor) y el IoU del peor par (intersección sobre unión de las cajas envolventes del par de rutas con
+mayor superposición; mayor es peor).
 
 Estos indicadores tienen lectura operacional directa: cada ruta del plan se asigna a un censista
 distinto, de modo que dos rutas entrelazadas obligan a dos censistas a recorrer las mismas calles y

@@ -11,14 +11,6 @@ introduce restricciones de ventanas horarias en nodos \citep{solomon1987algorith
 toth2014vehicle}. Su resolución práctica recurre a metaheurísticas como \textit{Guided Local Search} (GLS)
 \citep{voudouris1999guided}.
 
-Sin embargo, los problemas de ruteo urbano reales presentan características específicas:
-\begin{enumerate}
-  \item jornadas globales por ruta, no ventanas en nodos individuales;
-  \item rutas abiertas sin depósito obligatorio;
-  \item determinación automática del número de rutas necesarias;
-  \item distancias caminables sobre redes viales reales, no euclidianas.
-\end{enumerate}
-
 Las herramientas de ruteo de propósito general resuelven variantes del problema de ruteo de
 vehículos; sin embargo, ninguna cubre la integración con el flujo de trabajo de este proyecto:
 partir del catastro que dejaron
@@ -29,8 +21,9 @@ producto debe aportar, y es específica del dominio y no del algoritmo.
 
 Se propone el desarrollo de una plataforma web que formule el problema de ruteo de censo como un
 problema de ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
-duración por ruta. La plataforma debe resolver esa formulación mediante programación con
-restricciones y cubrir las cuatro carencias que las herramientas genéricas no abordan:
+duración por ruta, sobre distancias caminables de la red vial real y no euclidianas. La plataforma
+debe resolver esa formulación mediante programación con restricciones y cubrir las cuatro
+condiciones del ruteo urbano real que esas variantes no reúnen juntas:
 \begin{enumerate}
   \item determinar automáticamente el número de rutas necesarias $k$ dado el conjunto de árboles $P =
         \{p_1, \ldots, p_n\}$ y los parámetros $T_{\min}$, $T_{\max}$, $s$ (tiempo de servicio por

@@ -12,6 +12,7 @@
   Trazabilidad de requisitos al diseño & \pageref{anx:trazabilidad} \\
   Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
   Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
+  Alternativas de \textit{stack} evaluadas & \pageref{anx:stack} \\
 \end{tabularx}
 
 % Encabezado de cada anexo: salto de página, "Anexo N. Título" en negrita de subcapítulo, y entrada
@@ -1507,3 +1508,89 @@ la observación (\texttt{sample.real\_tree\_id}), mientras que \texttt{legacy\_a
 de árboles propia y el árbol se reconstruye a partir del código QR que agrupa sus muestras. La
 identidad persistente que \texttt{Tree} conserva en toda importación es, en ambos casos, el par
 (\texttt{source}, \texttt{external\_id}) y no el identificador de fila de la base legada.
+
+\anexo{8}{Alternativas de \textit{stack} evaluadas}{Alternativas de \textit{stack} evaluadas}
+\label{anx:stack}
+
+La Sección~\ref{sec:arquitectura} enuncia los tres criterios que guiaron las decisiones de
+\textit{stack} ---costo, tiempo de ejecución y simplicidad del desarrollo--- y el componente
+elegido en cada caso. La Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas y el
+criterio que resolvió cada elección.
+
+\small
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.1cm} X@{}}
+  \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
+  \label{tab:stack-decisions} \\
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endfirsthead
+  \toprule
+  Decisión & Alternativas consideradas & Criterio de elección \\
+  \midrule
+  \endhead
+  \bottomrule
+  \endlastfoot
+    Django + GeoDjango &
+      \textit{FastAPI}, \textit{Flask}, \textit{Ruby on Rails} &
+      Simplicidad. GeoDjango es la única de las cuatro que integra PostGIS en el ORM: tipos
+      geográficos, consultas espaciales y migraciones vienen resueltos. \textit{FastAPI} y
+      \textit{Flask} exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con
+      extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un
+      proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\
+      \addlinespace
+    \textit{OR-Tools} &
+      Heurística propia, \textit{Gurobi}, \textit{CPLEX} &
+      Costo y simplicidad. La heurística propia se consideró seriamente, pero la magnitud del
+      problema ($n \leq 2\,000$, una campaña por vez) queda holgadamente dentro de lo que resuelve
+      un \textit{solver} especializado ya construido y probado, de modo que el costo de construirla
+      y validarla no compraba una capacidad que el producto necesitara. \textit{Gurobi} y
+      \textit{CPLEX} resuelven mejor el VRP exacto, pero su licencia comercial es un gasto
+      recurrente y su licencia académica no acompaña al producto fuera de la titulación.
+      \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el
+      mismo proceso Python. \\
+      \addlinespace
+    OSRM &
+      \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}),
+      \textit{Mapbox Directions}, Valhalla, GraphHopper &
+      Costo y tiempo de ejecución. Las dos primeras cobran por consulta, y el tamaño esperado del
+      problema hacía previsible el orden de magnitud: una matriz de $1\,607$ árboles supera el
+      millón de pares origen-destino, y esa cifra se paga entera cada vez que se reconstruye. A ello
+      se suma que cada bloque de consultas paga latencia de red y cuotas de tasa, que fijan un piso
+      al tiempo de construcción de la matriz. El beneficio marginal sobre OSRM es acotado, porque el
+      perfil peatonal se resuelve sobre la misma red de \textit{OpenStreetMap}. OSRM se preprocesa
+      localmente, responde sin salir del \textit{host} y deja la red congelada en un archivo,
+      condición sin la cual los experimentos del Capítulo~\ref{cap:resultados} no serían repetibles
+      meses después sobre la misma base. \\
+      \addlinespace
+    \textit{React}~18 + Vite &
+      \textit{Vue}, \textit{Angular}, \textit{Svelte} &
+      Simplicidad. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el
+      ecosistema con integración más directa con \textit{Leaflet}
+      (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada
+      (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\
+      \addlinespace
+    \textit{Leaflet} &
+      \textit{MapLibre GL}, \textit{Google Maps JavaScript API} &
+      Costo y simplicidad. La API de \textit{Google} requiere clave facturada por carga de mapa.
+      \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, una pieza más de
+      infraestructura que el alcance de visualización no justifica. \textit{Leaflet} consume teselas
+      de \textit{OpenStreetMap} sin costo. \\
+      \addlinespace
+    Celery + Redis &
+      Ejecución síncrona, \textit{cron} sobre tabla de tareas &
+      Tiempo de ejecución y simplicidad. La construcción de la matriz de costos y la ejecución del
+      \textit{solver} tardan varios minutos: resolverlas dentro de la petición HTTP excede los
+      tiempos de respuesta aceptables de un servidor web, y un sondeo periódico sobre una tabla de
+      tareas añade al trabajo la espera hasta el siguiente ciclo. Celery ejecuta el trabajo apenas
+      se encola y libera la petición de inmediato, a cambio de dos procesos adicionales
+      ---\textit{worker} y \textit{broker}--- que se declaran en la misma composición de
+      contenedores que el resto del sistema. \\
+      \addlinespace
+    Monolito modular &
+      Servicios separados por dominio &
+      Simplicidad. Las operaciones de importación y optimización cruzan módulos en una sola
+      transacción; el proyecto cuenta con un único desarrollador, y la escala prevista no justifica
+      la complejidad operacional de desplegar servicios independientes. \\
+\end{xltabular}
+\normalsize

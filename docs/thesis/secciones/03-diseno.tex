@@ -35,91 +35,16 @@ criterios.
         una capacidad que el producto necesita.
 \end{enumerate}
 
-Los tres criterios se aplican de forma conjunta, sin un orden de prioridad fijo. La
-Tabla~\ref{tab:stack-decisions} registra las alternativas evaluadas para cada componente y el
-criterio que resolvió la elección.
-
-\small
-\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}p{2.1cm} X@{}}
-  \caption{Decisiones de \textit{stack} tecnológico: alternativas evaluadas y criterio de elección.}
-  \label{tab:stack-decisions} \\
-  \toprule
-  Decisión & Alternativas consideradas & Criterio de elección \\
-  \midrule
-  \endfirsthead
-  \toprule
-  Decisión & Alternativas consideradas & Criterio de elección \\
-  \midrule
-  \endhead
-  \bottomrule
-  \endlastfoot
-    Django + GeoDjango &
-      \textit{FastAPI}, \textit{Flask}, \textit{Ruby on Rails} &
-      Simplicidad. GeoDjango es la única de las cuatro que integra PostGIS en el ORM: tipos
-      geográficos, consultas espaciales y migraciones vienen resueltos. \textit{FastAPI} y
-      \textit{Flask} exigirían construir esa capa sobre \textit{GeoAlchemy}, y \textit{Rails} ---con
-      extensión espacial equivalente vía \textit{RGeo}--- introduciría un segundo lenguaje en un
-      proyecto cuyo \textit{solver} y cuya ciencia de datos son de Python. \\
-      \addlinespace
-    \textit{OR-Tools} &
-      Heurística propia, \textit{Gurobi}, \textit{CPLEX} &
-      Costo y simplicidad. La heurística propia se consideró seriamente, pero la magnitud del
-      problema ($n \leq 2\,000$, una campaña por vez) queda holgadamente dentro de lo que resuelve
-      un \textit{solver} especializado ya construido y probado, de modo que el costo de construirla
-      y validarla no compraba una capacidad que el producto necesitara. \textit{Gurobi} y
-      \textit{CPLEX} resuelven mejor el VRP exacto, pero su licencia comercial es un gasto
-      recurrente y su licencia académica no acompaña al producto fuera de la titulación.
-      \textit{OR-Tools} es libre, trae metaheurísticas de VRP ya construidas y se invoca desde el
-      mismo proceso Python. \\
-      \addlinespace
-    OSRM &
-      \textit{Google Maps Platform} (\textit{Distance Matrix} y \textit{Routes}),
-      \textit{Mapbox Directions}, Valhalla, GraphHopper &
-      Costo y tiempo de ejecución. Las dos primeras cobran por consulta, y el tamaño esperado del
-      problema hacía previsible el orden de magnitud: una matriz de $1\,607$ árboles supera el
-      millón de pares origen-destino, y esa cifra se paga entera cada vez que se reconstruye. A ello
-      se suma que cada bloque de consultas paga latencia de red y cuotas de tasa, que fijan un piso
-      al tiempo de construcción de la matriz. El beneficio marginal sobre OSRM es acotado, porque el
-      perfil peatonal se resuelve sobre la misma red de \textit{OpenStreetMap}. OSRM se preprocesa
-      localmente, responde sin salir del \textit{host} y deja la red congelada en un archivo,
-      condición sin la cual los experimentos del Capítulo~\ref{cap:resultados} no serían repetibles
-      meses después sobre la misma base. \\
-      \addlinespace
-    \textit{React}~18 \citep{react} + Vite &
-      \textit{Vue}, \textit{Angular}, \textit{Svelte} &
-      Simplicidad. Las cuatro cubren los requisitos de interfaz; \textit{React} se eligió por ser el
-      ecosistema con integración más directa con \textit{Leaflet} \citep{leaflet}
-      (\textit{react-leaflet}) y con la biblioteca de estado de servidor adoptada
-      (\textit{React Query}), y por ser el que el desarrollador ya dominaba. \\
-      \addlinespace
-    \textit{Leaflet} &
-      \textit{MapLibre GL}, \textit{Google Maps JavaScript API} &
-      Costo y simplicidad. La API de \textit{Google} requiere clave facturada por carga de mapa.
-      \textit{MapLibre GL} exige un servidor de teselas vectoriales propio, una pieza más de
-      infraestructura que el alcance de visualización no justifica. \textit{Leaflet} consume teselas
-      de \textit{OpenStreetMap} sin costo. \\
-      \addlinespace
-    Celery + Redis &
-      Ejecución síncrona, \textit{cron} sobre tabla de tareas &
-      Tiempo de ejecución y simplicidad. La construcción de la matriz de costos y la ejecución del
-      \textit{solver} tardan varios minutos: resolverlas dentro de la petición HTTP excede los
-      tiempos de respuesta aceptables de un servidor web, y un sondeo periódico sobre una tabla de
-      tareas añade al trabajo la espera hasta el siguiente ciclo. Celery ejecuta el trabajo apenas
-      se encola y libera la petición de inmediato, a cambio de dos procesos adicionales
-      ---\textit{worker} y \textit{broker}--- que se declaran en la misma composición de
-      contenedores que el resto del sistema. \\
-      \addlinespace
-    Monolito modular &
-      Servicios separados por dominio &
-      Simplicidad. Las operaciones de importación y optimización cruzan módulos en una sola
-      transacción; el proyecto cuenta con un único desarrollador, y la escala prevista no justifica
-      la complejidad operacional de desplegar servicios independientes. \\
-\end{xltabular}
-\normalsize
-
-El patrón que recorre la tabla es que ninguna decisión se resolvió por rendimiento aislado del
-componente: donde existía una alternativa de pago, su aporte no compensaba el gasto proyectado ni
-la latencia que introduce, y entre las alternativas libres decidió la simplicidad de operarlas.
+Los tres criterios se aplican de forma conjunta, sin un orden de prioridad fijo, y resolvieron la
+elección de cada componente: Django con GeoDjango ---la única alternativa evaluada que integra
+PostGIS en el ORM---, \textit{OR-Tools} frente a una heurística propia y a los \textit{solvers}
+comerciales de licencia recurrente, OSRM frente a las APIs de ruteo tarificadas por consulta,
+\textit{React}~18 \citep{react} con Vite y \textit{Leaflet} \citep{leaflet} para la interfaz
+cartográfica, Celery con Redis para el trabajo asíncrono, y un monolito modular en lugar de
+servicios separados por dominio.\footnote{Ver \hyperref[anx:stack]{Anexo 8}.} El patrón que recorre
+esas decisiones es que ninguna se resolvió por rendimiento aislado del componente: donde existía
+una alternativa de pago, su aporte no compensaba el gasto proyectado ni la latencia que introduce,
+y entre las alternativas libres decidió la simplicidad de operarlas.
 
 La arquitectura resultante sigue el patrón de monolito modular: un único servicio Django
 \citep{django} con módulos separados por dominio (\texttt{accounts}, \texttt{datasets},
@@ -180,41 +105,28 @@ de apoyo desplegados como contenedores independientes.
 
 Al cierre de la iteración el sistema quedó desplegado en un servidor virtual (\textit{droplet}) de
 \textit{DigitalOcean} con Ubuntu 24.04 y 2\,GB de memoria\footnote{Se amplió la memoria con 2\,GB
-de intercambio porque el preprocesamiento inicial de OSRM excede la memoria física del servidor;
-tras esa fase el servicio opera dentro de los 2\,GB.}. Se descartó una plataforma como servicio
----la vía de despliegue de iteraciones pasadas del proyecto---: alojar allí una composición de seis
-servicios, con OSRM residente en memoria, implica contratar y configurar cada pieza por separado,
-con un costo que crece por servicio, mientras que un servidor virtual único ofrece la flexibilidad
-de alojar el conjunto completo a costo fijo, en línea con los criterios de costo y simplicidad ya
-enunciados. La composición de contenedores de producción, definida con \textit{Docker Compose}
+de intercambio porque el preprocesamiento inicial de OSRM excede la memoria física del servidor.}.
+Se descartó una plataforma como servicio ---la vía de iteraciones pasadas del proyecto---: alojar
+allí una composición de seis servicios, con OSRM residente en memoria, implica contratar cada pieza
+por separado con un costo que crece por servicio, mientras que un servidor virtual único aloja el
+conjunto completo a costo fijo. La composición de producción, definida con \textit{Docker Compose}
 \citep{merkel2014docker,dockercompose}, declara seis servicios ---PostGIS, Redis, OSRM, la
 aplicación Django, el \textit{worker} de Celery y Caddy \citep{caddy}--- con reinicio automático y
-verificaciones de salud encadenadas: el \textit{worker} no arranca hasta que la base de datos y
-OSRM responden, y el proxy no expone la aplicación hasta que esta contesta. A diferencia del
-entorno de desarrollo, OSRM opera sobre un extracto de Santiago recortado del de Chile, lo que
-reduce sus artefactos preprocesados a una fracción y permite que el servicio quepa en la memoria
-del servidor.
+verificaciones de salud encadenadas; OSRM opera aquí sobre un extracto de Santiago recortado del de
+Chile, lo que permite que el servicio quepa en la memoria del servidor.
 
 Caddy actúa como proxy inverso y único punto de entrada: sirve el paquete estático del
-\textit{frontend} ---construido por Vite y empaquetado en la propia imagen del proxy--- y redirige
-las peticiones de \texttt{/api}, \texttt{/admin} y \texttt{/static} a la aplicación Django, además
-de entregar las fotografías desde un volumen compartido con ella. El sistema queda accesible
-públicamente en \url{https://134.122.20.233.sslip.io}, un dominio derivado de la IP del servidor
-que permite operar con TLS mientras el proyecto no fija un dominio propio. El certificado se
-obtiene y renueva automáticamente contra
-\textit{Let's Encrypt} \citep{letsencrypt}, y como el \textit{frontend} y la API comparten origen,
-la configuración de producción no requiere excepciones de CORS. La aplicación añade el
-endurecimiento correspondiente: archivos estáticos comprimidos con huella de contenido
-(\textit{WhiteNoise}), HSTS y \textit{cookies} restringidas a HTTPS.
-
-La entrega es continua: un \textit{push} a la rama \texttt{production} dispara un flujo de GitHub
-Actions que construye las imágenes de la aplicación y del proxy, las publica en el registro de
-contenedores de GitHub etiquetadas por confirmación y se conecta al servidor por SSH para
-actualizar la composición con las imágenes nuevas. Cada despliegue queda así asociado a una
-confirmación concreta, y volver a una versión anterior se reduce a redesplegar su etiqueta. Un
-respaldo diario programado en el servidor genera un \textit{dump} de la base de datos y un archivo con
-las fotografías, con una retención de siete días; ambos residen en el propio servidor, sin copia
-externa, límite que el Capítulo~\ref{cap:resultados} registra entre las limitaciones vigentes.
+\textit{frontend} y redirige las peticiones de la API a la aplicación Django. El sistema queda
+accesible públicamente en \url{https://134.122.20.233.sslip.io}, un dominio derivado de la IP del
+servidor que permite operar con TLS ---obtenido y renovado contra \textit{Let's Encrypt}
+\citep{letsencrypt}--- mientras el proyecto no fija un dominio propio; como el \textit{frontend} y
+la API comparten origen, no se requieren excepciones de CORS, y la aplicación añade archivos
+estáticos con huella de contenido, HSTS y \textit{cookies} restringidas a HTTPS. La entrega es
+continua: un \textit{push} a la rama \texttt{production} construye las imágenes, las publica
+etiquetadas por confirmación y actualiza el servidor por SSH, de modo que volver a una versión
+anterior se reduce a redesplegar su etiqueta. Un respaldo diario genera un \textit{dump} de la base
+de datos y un archivo con las fotografías, con retención de siete días y sin copia externa, límite
+que el Capítulo~\ref{cap:resultados} registra entre las limitaciones vigentes.
 
 % ---- 3.2 -------------------------------------------------------
 \section{MODELO DE DATOS}
@@ -233,11 +145,9 @@ Los modelos de dominio centrales son los siguientes:
         \texttt{completed}, \texttt{failed}) y referencia a la tarea Celery.
   \item RoutingSolution: resultado de un \texttt{OptimizationJob} para una estrategia de partición
         dada (campo \texttt{strategy}). Almacena el número de rutas $k$, el tiempo total de
-        desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución (suma
-        de radios máximos, solapamiento total y por ruta, e \textit{IoU} (intersección sobre unión)
-        del peor par de rutas) y el desglose de tiempos por fase del \textit{pipeline} (campo
-        \texttt{timing}). La relación \texttt{participants} registra los censistas que participan
-        de la solución y alimenta el cálculo de carga acumulada por censista (Sección~\ref{sec:ui}).
+        desplazamiento, el puntaje de balance temporal, las métricas espaciales de la solución y el
+        desglose de tiempos por fase del \textit{pipeline}; la relación \texttt{participants}
+        alimenta el cálculo de carga acumulada por censista (Sección~\ref{sec:ui}).
   \item Route: ruta individual con tiempos estimados; su asignación a un censista 
         (\texttt{surveyor}) es opcional.
   \item RouteStop: visita de un árbol en una ruta, con número de secuencia y estado de
@@ -261,15 +171,11 @@ desde CSV, que no tienen identificador externo. El orden de visita de cada ruta 
 
 Cada \texttt{OptimizationJob} produce una \texttt{RoutingSolution} por cada estrategia de partición
 ejecutada (Sección~\ref{sec:estrategias}), lo que permite comparar los enfoques sobre un mismo
-conjunto de árboles. Con el fin de gobernar cuál de estas soluciones es la vigente en terreno, el
-modelo incorpora un ciclo de vida de publicación: el campo \texttt{published\_at} marca la solución
-activa de un \textit{dataset} y una restricción de unicidad parcial (\texttt{UniqueConstraint}
-condicionada a \texttt{published\_at} no nulo) garantiza que exista a lo más una
-\texttt{RoutingSolution} publicada por \textit{dataset}. Publicar una nueva solución despublica
-atómicamente la anterior. La asignación de un censista a una \texttt{Route} solo se permite sobre la
-solución publicada, y el campo \texttt{surveyor} admite valor nulo (\texttt{SET\_NULL}), de modo que
-las rutas de soluciones no publicadas permanecen sin asignar hasta que el administrador defina el
-plan vigente.
+conjunto de árboles. Para gobernar cuál es la vigente en terreno, el modelo incorpora un ciclo de
+publicación: el campo \texttt{published\_at} marca la solución activa y una restricción de unicidad
+parcial garantiza a lo más una solución publicada por \textit{dataset}; publicar una nueva
+despublica atómicamente la anterior, y la asignación de censistas solo se permite sobre la solución
+publicada.
 
 La Ilustración~\ref{fig:er} presenta el modelo entidad-relación simplificado. Se omiten los
 atributos no estructurales, así como la relación auxiliar que vincula cada observación con el
@@ -969,16 +875,12 @@ Capítulo~\ref{cap:resultados}.
 
 \subsection{Mapa de selección}
 
-La interfaz de selección (\texttt{LegacyImport}, con el componente \texttt{LegacySelectionMap})
-presenta sobre un mapa \textit{Leaflet} la totalidad del arbolado legado y los polígonos de las
-áreas de censo. Un área de censo es la unidad con que se organizó la operación histórica: son
-polígonos que vienen de \texttt{legacy\_api}, donde cada campaña agrupaba su arbolado por sector, y
-no una entidad que esta iteración defina. Se dibujan porque el administrador reconoce el territorio
-por ellas, y porque son la unidad que el Capítulo~\ref{cap:resultados} identifica como la escala
-natural del motor. Cada árbol se dibuja como un marcador circular cuyo color codifica su estado:
-disponible, seleccionado o ya importado --- estos últimos, además, no son interactivos, lo que hace
-imposible seleccionar dos veces el mismo árbol---. La selección puede componerse mediante tres
-mecanismos combinables:
+La interfaz de selección presenta sobre un mapa \textit{Leaflet} la totalidad del arbolado legado y
+los polígonos de las áreas de censo ---la unidad con que se organizó la operación histórica, que el
+administrador reconoce y que el Capítulo~\ref{cap:resultados} identifica como la escala natural del
+motor---. Cada árbol se dibuja como un marcador cuyo color codifica su estado: disponible,
+seleccionado o ya importado; estos últimos no son interactivos, lo que hace imposible seleccionar
+dos veces el mismo árbol. La selección puede componerse mediante tres mecanismos combinables:
 
 \begin{enumerate}
   \item Por área: al hacer clic sobre el polígono de un área se alternan de una vez todos los
@@ -1136,11 +1038,11 @@ ruta vigente.
 \section{INTERFAZ DE USUARIO}
 \label{sec:ui}
 
-La interfaz se implementa como una \textit{Single Page Application} con \textit{React}~18 y Vite. El
-estado de servidor se gestiona con \textit{React Query} y el estado de sesión (autenticación,
-notificaciones) con Zustand; los mapas emplean \textit{Leaflet} sobre teselas de
-\textit{OpenStreetMap} \citep{openstreetmap}. La aplicación distingue dos experiencias según el rol
-del usuario: el panel de administración y el portal del censista.
+La interfaz se implementa como una \textit{Single Page Application} con \textit{React}~18 y Vite;
+el estado de servidor se gestiona con \textit{React Query}, el de sesión con Zustand y los mapas
+emplean \textit{Leaflet} sobre teselas de \textit{OpenStreetMap} \citep{openstreetmap}. La
+aplicación distingue dos experiencias según el rol: el panel de administración y el portal del
+censista.
 
 El panel de administración comprende cinco etapas:
 
@@ -1148,18 +1050,15 @@ El panel de administración comprende cinco etapas:
   \item Sesión. El administrador inicia sesión y obtiene un \textit{token} JWT.
   \item Constitución del \textit{dataset}. Importa un archivo CSV o selecciona el arbolado sobre el
         mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza
-        como puntos sobre el mapa (\texttt{DatasetMap}).\footnote{Ver \hyperref[anx:capturas]{Anexo 6}.}
-  \item Configuración y lanzamiento. Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por
-        árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del
-        objetivo: una sola solicitud despliega el abanico de seis combinaciones descrito en la
-        Sección~\ref{sec:abanico}. El \textit{endpoint} \texttt{GET /api/optimization/estimate/} se
-        consulta a medida que el administrador escribe y comprueba la factibilidad de la
-        configuración antes de que se cree el trabajo: las advertencias se muestran junto al
+        como puntos sobre el mapa.\footnote{Ver \hyperref[anx:capturas]{Anexo 6}.}
+  \item Configuración y lanzamiento. Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio, y
+        lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del objetivo:
+        una sola solicitud despliega el abanico de seis combinaciones de la
+        Sección~\ref{sec:abanico}. La estimación de flota y la comprobación de factibilidad se
+        consultan a medida que el administrador escribe: las advertencias se muestran junto al
         formulario y los bloqueos inhabilitan el botón de lanzamiento.
-  \item Monitoreo. \textit{React Query} consulta el estado del trabajo cada 3 segundos mientras se
-        encuentra en \texttt{queued} o \texttt{running}, y detiene las consultas al alcanzar un
-        estado terminal o superar 15 minutos; el registro permanece en \texttt{running} si el
-        \textit{worker} muere (Sección~\ref{sec:limitaciones}).
+  \item Monitoreo. \textit{React Query} consulta el estado del trabajo cada 3 segundos y detiene
+        las consultas al alcanzar un estado terminal o superar 15 minutos.
   \item Presentación, recomendación y publicación. Las rutas resultantes se presentan como
         polilíneas coloreadas sobre la red peatonal real, y las seis soluciones se listan como
         candidatas a plan ordenadas por el criterio lexicográfico de la
@@ -1217,9 +1116,10 @@ fotografía pendiente--- permite que el registro realizado sin conexión se sinc
 la red.
 
 La Ilustración~\ref{fig:ui_surveyor} presenta el portal del censista (\texttt{/}) en vista
-\textit{mobile}: mapa de la ruta con las paradas numeradas, parada activa con su distancia y la
-lista de paradas con su estado; el registro con captura fotográfica se abre desde el botón de la
-parada activa.
+\textit{mobile}: mapa de la ruta con las paradas numeradas según \texttt{RouteStop.sequence},
+parada activa con su distancia ---dentro del radio de proximidad («en rango»), con el registro
+habilitado--- y lista de paradas con su estado, con las posteriores a la activa bloqueadas hasta
+completar la anterior.
 
 % [H] forzado: con colocación flotante [htbp] esta captura (vertical, 0.55\textheight) queda
 % relegada tres páginas después de su mención.
@@ -1229,12 +1129,6 @@ parada activa.
   \caption{Portal del censista en vista \textit{mobile}.}
   \label{fig:ui_surveyor}
 \end{figure}
-
-Los marcadores numerados sobre el mapa reflejan el orden de visita derivado de
-\texttt{RouteStop.sequence}; las paradas posteriores a la activa aparecen bloqueadas hasta que el
-censista complete la anterior, lo que impone el orden secuencial estricto de la ruta. En la
-ilustración el censista se encuentra dentro del radio de proximidad («en rango»), por lo que el
-registro está habilitado; fuera de ese radio el botón se sustituye por «Registrar de todos modos».
 
 % ---- 3.8 -------------------------------------------------------
 \section{VERIFICACIÓN Y VALIDACIÓN}
