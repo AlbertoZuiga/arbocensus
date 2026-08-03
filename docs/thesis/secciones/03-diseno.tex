@@ -289,7 +289,7 @@ externa, límite que el Capítulo~\ref{cap:resultados} registra entre las limita
 
 Los modelos de dominio centrales son los siguientes:
 
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item Dataset: agrupa un conjunto de árboles importados desde CSV o desde una fuente legada.
   \item Tree: punto geográfico (\texttt{PointField}, SRID 4326) perteneciente a un \texttt{Dataset}.
         Registra además su procedencia mediante los campos \texttt{source} y \texttt{external\_id},
@@ -314,7 +314,7 @@ Los modelos de dominio centrales son los siguientes:
         re-censo y no solo de censo inicial.
   \item DistanceMatrix: caché persistente de la matriz $n \times n$ de tiempos de caminata entre
         árboles obtenida de OSRM (Sección~\ref{sec:matriz}).
-\end{itemize}
+\end{enumerate}
 
 La procedencia se modela en el propio \texttt{Tree} en lugar de en una entidad aparte, porque solo
 se necesita para dos fines: evitar la doble importación de un mismo árbol legado y vincular sus
@@ -416,7 +416,7 @@ Sección~\ref{sec:estrategias}.
 
 El modelo emplea tres familias de variables de decisión:
 
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item $x_{ijr} \in \{0,1\}$: vale $1$ si el vehículo $r$ recorre el arco
         $(i,j)$ y $0$ en caso contrario.
   \item $u_i \in \{0,1\}$, para $i \in \{1,\ldots,n\}$: vale $1$ si el árbol $p_i$
@@ -424,7 +424,7 @@ El modelo emplea tres familias de variables de decisión:
         (Sección~\ref{sec:disyunciones}).
   \item $z_r \in \{0,1\}$: vale $1$ si el vehículo $r$ queda activo, esto es, si
         se le asigna al menos un árbol.
-\end{itemize}
+\end{enumerate}
 
 A ellas se añaden las variables acumuladas $t_i \geq 0$ de la dimensión temporal, que registran el
 tiempo transcurrido al abandonar el nodo $i$, y su análogo $g_i \geq 0$ sobre la dimensión
@@ -746,7 +746,7 @@ optimización.
 La formulación en \textit{OR-Tools} \citep{ortools} usa el modelo de ruteo vehicular
 (\textit{Vehicle Routing Problem}, VRP) con las siguientes características:
 
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item Rutas abiertas: se introduce un depósito ficticio (\textit{dummy depot}) en el nodo 0 con
         costo de tránsito cero hacia todos los nodos reales. Los nodos reales se indexan de $1$ a
         $n$.
@@ -775,7 +775,7 @@ La formulación en \textit{OR-Tools} \citep{ortools} usa el modelo de ruteo vehi
         $\min(30 + 1{,}5\,n,\ 120)$ segundos, de modo que un \textit{dataset} pequeño no consume el
         presupuesto completo; para los tamaños de esta memoria la expresión satura en su tope de
         $120$\,s.
-\end{itemize}
+\end{enumerate}
 
 Si el \textit{solver} no encuentra solución, el \textit{pipeline} no falla en silencio: emite un
 error que reporta el número de árboles y los parámetros de configuración vigentes (tiempo de
@@ -843,7 +843,7 @@ solapamiento (\textit{interleaving}) entre rutas distintas que crece con la dens
 (Sección~\ref{sec:comparacion-estrategias}). El sistema implementa por ello tres estrategias de
 partición, registradas en el campo \texttt{strategy} del trabajo de optimización.
 
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item \texttt{global}: el \textit{Open mTSP} único descrito en la Sección~\ref{sec:solver}, sin
         término espacial. Recibe ese nombre porque resuelve el \textit{dataset} completo como un
         único problema, sin ninguna partición previa del territorio ni de los árboles. Constituye la
@@ -861,7 +861,7 @@ partición, registradas en el campo \texttt{strategy} del trabajo de optimizaci�
         por árbol sobre el tiempo objetivo. Luego se resuelve un VRP independiente por grupo con el
         mismo \texttt{ArbocensusVRPSolver}, lo que acota la dispersión geográfica de cada ruta por
         construcción.
-\end{itemize}
+\end{enumerate}
 
 En producción la estrategia no es una elección del administrador: el lanzamiento ordinario de una
 optimización despliega automáticamente un abanico fijo de combinaciones
@@ -911,7 +911,7 @@ retorno no existe y no debe contabilizarse.
 
 Tres propiedades hacen que el post-proceso sea seguro incorporarlo de forma incondicional:
 
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item Optimiza la misma magnitud que el \textit{solver}. El 2-opt evalúa las inversiones sobre la
         matriz de tiempos de OSRM, exactamente la misma que alimenta el costo de arco de la
         Ecuación~\ref{eq:objetivo}. No introduce un criterio nuevo ni una geometría distinta.
@@ -923,7 +923,7 @@ Tres propiedades hacen que el post-proceso sea seguro incorporarlo de forma inco
         número de paradas por ruta quedan intactos. El índice de balance, en cambio, no queda
         garantizado: como es el cociente $\min_r T_r / \max_r T_r$, puede subir o bajar según cuál
         sea la ruta que el refinamiento acorta, aunque ninguna duración aumente.
-\end{itemize}
+\end{enumerate}
 
 Su costo computacional es despreciable frente al del \textit{solver}. Cada barrido examina
 $O(m_r^2)$ pares para una ruta de $m_r$ paradas y el procedimiento repite barridos hasta el óptimo
@@ -955,7 +955,7 @@ El sistema resuelve la indeterminación sin trasladarla al administrador: en lug
 coeficientes como parámetros, define tres perfiles de precios cerrados, con nombre y descripción en
 el lenguaje del usuario, y los ejecuta todos.
 
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item Equilibrada (\texttt{default}): los precios de producción tal como se describieron en las
         secciones anteriores. Es el punto de partida y la combinación de control.
   \item Rutas más parejas (\texttt{temporal\_span\_100}): activa el costo sobre el \textit{span} de
@@ -963,7 +963,7 @@ el lenguaje del usuario, y los ejecuta todos.
         de caminata adicional.
   \item Menos zigzag (\texttt{arc\_linear\_30}): eleva a $30$ el peso lineal del arco, lo que
         penaliza los tramos largos y compacta el trazado cuando sobra tiempo de desplazamiento.
-\end{itemize}
+\end{enumerate}
 
 Una única solicitud de optimización despliega el producto cartesiano de los tres perfiles por las
 dos estrategias de producción ---\texttt{global} y \texttt{spatial\_term}, con
@@ -1049,7 +1049,7 @@ campo \texttt{source} del modelo \texttt{Tree}.
 % MEMORIA concreta sigue siendo inferencia por esquema (no consta en las fuentes), por lo que el
 % texto cita ambas memorias en conjunto; pero el orden relativo app-antes-que-api sí está respaldado
 % por los timestamps de los dumps. Por eso se presenta primero legacy_app.
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item \texttt{legacy\_app} (esquema \texttt{arbocensus\_app\_*}): la más antigua, base de la
         aplicación de censado previa ---una aplicación web orientada a dispositivos móviles---,
         donde el árbol no tiene una posición canónica sino un conjunto de muestras
@@ -1064,7 +1064,7 @@ campo \texttt{source} del modelo \texttt{Tree}.
   \item \texttt{legacy\_api} (esquema \texttt{arbocensus\_api\_app\_*}): posterior a la anterior, 
         aporta $429$ árboles con posición explícita y especie, organizados en áreas pertenecientes a
         campañas de censo.
-\end{itemize}
+\end{enumerate}
 
 Ambas fuentes se solapan geográficamente, por lo que se descarta el árbol de \texttt{legacy\_app}
 que se encuentre a $5$\,m o menos de uno de \texttt{legacy\_api} ---se conserva este último, que
@@ -1288,7 +1288,7 @@ clave natural y no por el identificador de fila.
 
 La API REST se implementa con Django REST Framework y expone los siguientes grupos de recursos:
 
-\begin{itemize}[label=--]
+\begin{enumerate}
   \item Autenticación (\texttt{/api/auth/}): obtención y renovación de \textit{tokens}
         \textit{JSON Web Token} (JWT) mediante \textit{djangorestframework-simplejwt}, consulta del
         usuario en sesión y administración de las cuentas de censistas.
@@ -1307,7 +1307,7 @@ La API REST se implementa con Django REST Framework y expone los siguientes grup
         para visualización cartográfica, asignación de censistas, carga acumulada por censista
         con sugerencia de asignación voraz, consulta de la ruta propia del censista, y registro de
         visitas y omisiones en terreno con su observación asociada.
-\end{itemize}
+\end{enumerate}
 
 Los dos usuarios objetivo de la Sección~\ref{sec:usuarios} se materializan en la API como dos roles:
 Administrador (acceso completo) y Censista (lectura de las rutas propias del plan vigente y registro
