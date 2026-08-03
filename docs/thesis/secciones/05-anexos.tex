@@ -424,19 +424,22 @@ docker compose -f docker-compose.prod.yml run --rm backend \
   python manage.py baseline_postpass \
     --dataset reference-n1607 \
     --strategy spatial_term \
-    --seeds 42,43,44
+    --seeds 42,43,44 \
+    --cold-first \
+    --csv docs/experiments/reference-unified-20260802.csv
 \end{verbatim}
 
 \begin{sloppypar}
-Los datos crudos de la corrida de referencia de la Sección~\ref{sec:metricas-calidad} ---una fila
-por semilla--- son los que ese comando escribe en
-\texttt{20260724-225420-postpass-baseline.csv}. Las cifras que esa misma sección toma de corridas
-distintas provienen de \texttt{20260713-real-case-metrics-spatial.csv} (tiempo de reloj extremo a
-extremo con la matriz en caché), de \texttt{reference-n1607-20260730.csv} (auto-cruces sobre el
-trazado de calles) y de \texttt{penalty-sensitivity-20260713-reference.csv}, columna
-\texttt{tmin\_gap\_routes} (rutas por debajo de $T_{\min}$). Los resultados de la corrida de
-referencia anterior ---estrategia \texttt{global} y límite de $180$\,s, los \textit{defaults}
-previos al ajuste de la Sección~\ref{sec:comparacion-estrategias}--- se conservan en
+Los datos crudos de la corrida de referencia unificada de la
+Sección~\ref{sec:metricas-calidad} ---una fila por semilla, con rutas bajo $T_{\min}$, tiempo de
+reloj extremo a extremo (caché fría en la primera repetición, caliente en las siguientes) y
+auto-cruces sobre el trazado de calles instrumentados en la misma corrida--- son los que ese
+comando escribe en \texttt{reference-unified-20260802.csv}; el reporte
+\texttt{reference-unified-20260802.md} documenta el protocolo y las diferencias contra las cifras
+compuestas que reemplaza. Corridas de referencia previas se conservan en
+\texttt{20260724-225420-postpass-baseline.csv}, \texttt{reference-n1607-20260730.csv} y
+\texttt{20260713-real-case-metrics-spatial.csv}, y la anterior al ajuste de la
+Sección~\ref{sec:comparacion-estrategias} ---estrategia \texttt{global} y límite de $180$\,s--- en
 \texttt{20260712-real-case-metrics.csv}.
 \end{sloppypar}
 
@@ -461,6 +464,10 @@ previos al ajuste de la Sección~\ref{sec:comparacion-estrategias}--- se conserv
     \texttt{--csv <ruta>} &
       Ruta del CSV de salida. Si se omite, el comando escribe en \texttt{docs/experiments/}
       con marca temporal. \\
+    \texttt{--cold-first} &
+      Borra la matriz de costos cacheada antes de la primera semilla, de modo que esa
+      repetición mide el tiempo extremo a extremo con caché fría y las siguientes con caché
+      caliente. \\
     \bottomrule
   \end{tabularx}
 \end{table}

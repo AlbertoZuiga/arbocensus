@@ -206,12 +206,16 @@ Sección~\ref{sec:protocolo-evaluacion}. Se reportan nueve indicadores:
   \item el número de árboles descartados;
   \item el costo de planificación, tiempo de reloj de una corrida completa con la matriz de costos
     en caché, del que el presupuesto configurado al \textit{solver} es el término dominante;
-  \item el número de auto-cruces sobre el trazado real de calles, descriptivo y sin criterio
-     en esta corrida.
+  \item el número de auto-cruces sobre el trazado real de calles, descriptivo y sin criterio.
 \end{enumerate}
-La Tabla~\ref{tab:metricas} resume estos resultados como el promedio de tres repeticiones (semillas
-42, 43 y 44), y remite, en su columna de criterio, a los criterios de aceptación comprometidos en
-la Sección~\ref{sec:criterios-aceptacion}.
+Los nueve indicadores se instrumentaron en una misma corrida de tres repeticiones (semillas 42, 43
+y 44), cuyos datos crudos ---una fila por semilla--- se versionan en
+\texttt{docs/experiments/reference-unified-20260802.csv}; la primera repetición se ejecutó con la
+matriz de costos fuera de caché y las dos siguientes con la matriz cacheada, lo que permite medir
+el tiempo extremo a extremo en ambos casos dentro de la misma corrida. La
+Tabla~\ref{tab:metricas} resume estos resultados como el promedio de las tres repeticiones, y
+remite, en su columna de criterio, a los criterios de aceptación comprometidos en la
+Sección~\ref{sec:criterios-aceptacion}.
 
 \begin{xltabular}{\textwidth}{lXX}
   \caption{Métricas de calidad de rutas sobre la instancia de estrés \texttt{reference-n1607}.}
@@ -227,17 +231,6 @@ la Sección~\ref{sec:criterios-aceptacion}.
   \bottomrule
   \endfoot
   \bottomrule
-  \multicolumn{3}{@{}p{\textwidth}@{}}{\footnotesize\textsuperscript{1} Cifra de un barrido
-    distinto sobre el mismo \textit{dataset} y configuración, no de esta corrida de referencia
-    (reserva de instrumento detallada en el \hyperref[anx:reservas-sensibilidad]{Anexo 4}).} \\
-  \multicolumn{3}{@{}p{\textwidth}@{}}{\footnotesize\textsuperscript{2} Corresponde a las dos
-    repeticiones con la matriz de costos ya en caché de una corrida de julio de 2026 que sí
-    instrumentó el tiempo extremo a extremo; se detalla más abajo junto con el caso de caché
-    fría.} \\
-  \multicolumn{3}{@{}p{\textwidth}@{}}{\footnotesize\textsuperscript{3} Cifra de una repetición
-    posterior que sí recupera la geometría real de cada tramo desde \textit{OSRM}; la corrida de
-    referencia de esta sección solo instrumenta auto-cruces sobre la cuerda recta entre
-    paradas.} \\
   \endlastfoot
     Número de rutas $k$ &
       25 &
@@ -252,7 +245,7 @@ la Sección~\ref{sec:criterios-aceptacion}.
       $\geq 0{,}80$ (CA-03) \\
       \addlinespace
     Desviación estándar &
-      559\,s (5{,}6\,\% del promedio) &
+      564\,s (5{,}6\,\% del promedio) &
       sin criterio: descriptiva \\
       \addlinespace
     Rutas que exceden $T_{\max}$ &
@@ -260,7 +253,7 @@ la Sección~\ref{sec:criterios-aceptacion}.
       $= 0$ (CA-02) \\
       \addlinespace
     Rutas por debajo de $T_{\min}$ &
-      3$^{1}$ &
+      0 &
       sin criterio: cota blanda \\
       \addlinespace
     Árboles descartados &
@@ -268,23 +261,21 @@ la Sección~\ref{sec:criterios-aceptacion}.
       $= 0$ (CA-01) \\
       \addlinespace
     Tiempo de planificación &
-      122{,}3\,s$^{2}$ de corrida completa con la matriz en caché, de los cuales 120{,}0\,s
+      123{,}3\,s de corrida completa con la matriz en caché, de los cuales 120{,}0\,s
       son el presupuesto configurado del \textit{solver}, agotado en las tres repeticiones &
       $< 5$ min (CA-05) \\
       \addlinespace
-    Auto-cruces sobre calle$^{3}$ &
-      37{,}7 (33--40 según la repetición) &
-      sin criterio en esta corrida: descriptiva \\
+    Auto-cruces sobre calle &
+      31{,}3 (24--37 según la repetición) &
+      sin criterio: descriptiva \\
 \end{xltabular}
 
-La tabla es una composición declarada: las tres celdas marcadas con nota provienen de corridas
-distintas de la de referencia, sobre el mismo \textit{dataset} y configuración. El tiempo extremo a
-extremo y los auto-cruces sobre calle se incorporaron al instrumento en un ciclo posterior al de la
-corrida original; el número de rutas bajo $T_{\min}$ se toma del barrido de sensibilidad a
-penalizaciones, con las reservas que detalla el \hyperref[anx:reservas-sensibilidad]{Anexo 4}. De
-las tres, solo el tiempo de planificación participa de un criterio de aceptación (CA-05), y su
-holgura frente al umbral ---$177{,}7$\,s: $122{,}3$ medidos frente a $300$--- excede cualquier diferencia atribuible
-al cambio de corrida; las otras dos son descriptivas y no sostienen criterio alguno.
+Las corridas de referencia anteriores componían tres de estas celdas desde corridas distintas,
+porque las rutas bajo $T_{\min}$, el tiempo extremo a extremo y los auto-cruces sobre calle se
+incorporaron al instrumento en ciclos posteriores al de la corrida original; la corrida unificada
+de esta sección elimina esa composición. El cambio corrige una de las cifras compuestas: la corrida
+de julio de la que provenía el conteo de rutas bajo $T_{\min}$ reportaba tres, y la corrida
+unificada no deja ruta alguna bajo el piso en ninguna de las tres repeticiones.
 
 El número de rutas, $k=25$, es la flota que el \textit{solver} activa bajo esta configuración, no
 una cota mínima demostrada. No se calcula ninguna cota inferior sobre $k$; el \textit{baseline}
@@ -300,14 +291,14 @@ Ninguna ruta excede $T_{\max}$, que el modelo impone como capacidad dura de la d
 árboles, pese a que el modelo lo permite mediante disyunciones penalizadas.
 
 Las tres repeticiones agotaron el presupuesto completo de 120\,s del metaheurístico GLS. Los tiempos
-de desplazamiento fueron 59\,690\,s, 56\,707\,s y 58\,696\,s (media 58\,364\,s), con una diferencia
-de 2\,983\,s entre el mejor y el peor resultado, esto es, un 5{,}1\,\% de la media. El número de
+de desplazamiento fueron 59\,718\,s, 56\,722\,s y 58\,696\,s (media 58\,379\,s), con una diferencia
+de 2\,996\,s entre el mejor y el peor resultado, esto es, un 5{,}1\,\% de la media. El número de
 rutas $k$ coincide en las tres repeticiones y el índice de balance varía dentro de un margen
 estrecho (0{,}829 a 0{,}837), pero la varianza en el tiempo total de desplazamiento no es
 despreciable.
 
 Esa varianza refleja la mecánica de replicación por permutación del orden de nodos descrita en la
-Sección~\ref{sec:protocolo-evaluacion}. La desviación estándar de 559\,s en la duración de las
+Sección~\ref{sec:protocolo-evaluacion}. La desviación estándar de 564\,s en la duración de las
 rutas individuales (Tabla~\ref{tab:metricas}) es el promedio de las desviaciones estándar
 calculadas dentro de cada repetición, no la desviación del conjunto agregado de rutas.
 
@@ -318,13 +309,14 @@ medir el sistema. La evidencia de que el presupuesto elegido basta es el anális
 de la Tabla~\ref{tab:sensibilidad-tl}, ya presentado en la
 Sección~\ref{sec:protocolo-evaluacion} y que la Sección~\ref{sec:cumplimiento-criterios} retoma.
 
-El tiempo total del \textit{pipeline} depende de si la matriz de costos está en caché. En la corrida
-de referencia de julio de 2026 que instrumentó esos tiempos
-(\texttt{docs/experiments/20260713-real-case-metrics-spatial.csv}), con caché fría, la primera
-repetición tardó 299{,}3\,s en total, de los cuales 177{,}4\,s correspondieron a la construcción de
-la matriz de costos contra OSRM; con la matriz ya cacheada ---el caso de operación normal, dado que
-la clave de caché es estable para un mismo conjunto de árboles activos--- las dos repeticiones
-siguientes tardaron 122{,}3\,s cada una.
+El tiempo total del \textit{pipeline} depende de si la matriz de costos está en caché. En esta
+misma corrida, la primera repetición ---ejecutada con la matriz fuera de caché--- tardó 334{,}6\,s
+en total, y las dos repeticiones con la matriz ya cacheada ---el caso de operación normal, dado que
+la clave de caché es estable para un mismo conjunto de árboles activos--- tardaron 122{,}9 y
+123{,}7\,s; la diferencia, unos 211\,s, corresponde a la construcción de la matriz de costos contra
+OSRM. El caso frío queda así por sobre el umbral de cinco minutos de CA-05, que la corrida de julio
+de 2026 había medido en 299{,}3\,s, al borde; la Sección~\ref{sec:cumplimiento-criterios} recoge
+esa lectura.
 
 El comando reproducible y los datos crudos de esta corrida se documentan en el
 \hyperref[anx:comandos]{Anexo 3} (\texttt{baseline\_postpass}). El \textit{dataset}
@@ -368,8 +360,8 @@ comparten el conjunto de árboles, sus identificadores y la matriz de costos. El
 nodos no es común a las tres: el heurístico recorre los árboles ordenados por identificador,
 mientras que cada semilla de \textit{OR-Tools} aplica una permutación distinta de ese orden, que es
 el mecanismo de réplica descrito en la Sección~\ref{sec:protocolo-evaluacion}. Esa reejecución con las
-mismas tres semillas reprodujo el resultado de aquella sección ---las medias difieren en 37\,s sobre
-un total de 58\,000, y ninguna semilla se aparta más de 68\,s de su valor previo---, lo que descarta
+mismas tres semillas reprodujo el resultado de aquella sección ---las medias difieren en 52\,s sobre
+un total de 58\,000, y ninguna semilla se aparta más de 82\,s de su valor de referencia---, lo que descarta
 que las diferencias de la tabla provengan de la variabilidad entre corridas discutida más arriba.
 
 \begin{table}[H]
@@ -937,13 +929,17 @@ individual mayor ---razón cercana a $8\times$, según las instancias versionada
 \texttt{docs/experiments/instances/}---. Los árboles son reales; lo sin correlato operativo es
 tratar esa unión ---las veintiuna áreas no vacías de \texttt{legacy\_api} (429 árboles, 27\,\% del
 conjunto) más los 1\,178 árboles de \texttt{legacy\_app}, sin área asignada--- como un único trabajo
-de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). En el régimen de área real la
-configuración de producción no muestra auto-cruces apreciables ---observación cualitativa sobre las
-rutas generadas; la serie sistemática de \texttt{crossings\_road} por área individual no se midió y
-queda pendiente---; estos emergen al procesar
-el conjunto agregado disperso bajo la estrategia \texttt{spatial\_term}
+de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). La serie sistemática de
+\texttt{crossings\_road} por área individual, medida con la configuración de producción y tres
+semillas (Sección~\ref{sec:areas-reales}), acota lo que ese régimen significa para los auto-cruces:
+una solución completa sobre un área real contiene entre 0 y 6 auto-cruces sobre calle (medias de
+$1{,}3$ a $4{,}7$ según el área), frente a 24--37 en el conjunto agregado disperso
 (Ilustración~\ref{fig:ruta-vueltas-r1}), situación que en operación solo surgiría si se procesaran
-múltiples áreas de censo como un único problema.
+múltiples áreas de censo como un único problema. La diferencia es de conteo absoluto y no de tasa:
+normalizado por ruta el indicador es esencialmente plano en toda la serie ($1{,}33$--$1{,}56$ en
+las áreas y su unión frente a $1{,}25$ en la agregada), de modo que el conjunto agregado no produce
+más auto-cruces por ruta, sino más rutas ---$k=25$ frente a $k=1$--$5$--- y, con ellas, el conteo
+que la inspección visual percibe.
 
 \begin{figure}[H]
   \centering
@@ -978,8 +974,10 @@ solución estructural es la segmentación previa por área de censo.
 
 De los resultados anteriores se derivan dos lecturas que conviene dejar explícitas. La primera es
 geométrica: en áreas de extensión real ($\leq 1{,}32$\,km) las rutas de la configuración de
-producción no muestran auto-cruces apreciables, y cuando los auto-cruces aparecen responden a la
-función objetivo, no a una limitación del tiempo de cómputo. La segunda es la cercanía del
+producción contienen pocos auto-cruces sobre calle en términos absolutos ---0 a 6 por solución
+completa, según la serie medida en la Sección~\ref{sec:areas-reales}, aunque no cero, y con una
+tasa por ruta comparable a la del conjunto agregado---, y cuando los auto-cruces aparecen responden
+a la función objetivo, no a una limitación del tiempo de cómputo. La segunda es la cercanía del
 \textit{baseline} \textit{greedy} en desplazamiento total, que proviene de la saturación: el
 heurístico llena cada ruta hasta un $98$\,\% de $T_{\max}$ ---sin dejar holgura operacional---, de
 modo que su reducción de caminata proviene de la cota, no de la calidad del ordenamiento. La
@@ -990,8 +988,8 @@ residual son las dimensiones que el tiempo total de desplazamiento no captura de
 
 La unidad operativa del motor es el área de censo individual, no el arbolado metropolitano en su
 conjunto. Procesar cada área como un problema independiente reduciría la extensión del
-\textit{dataset} a la escala en que el \textit{solver} produce rutas limpias con la configuración
-actual; esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su
+\textit{dataset} a la escala en que el \textit{solver} produce soluciones con pocos auto-cruces
+absolutos con la configuración actual; esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su
 costo se mide sobre las áreas reales en la Sección~\ref{sec:areas-reales}. El problema que esa extensión
 plantea ---repartir un territorio en distritos compactos y equilibrados antes de rutear--- tiene
 tratamiento propio en la literatura bajo la denominación de diseño territorial
@@ -1261,6 +1259,61 @@ recalibración de coeficientes son la palanca pertinente aquí: ambas vías ---p
 combinado, recalibración de penalizaciones--- ya fueron exploradas y descartadas por otras razones
 (Sección~\ref{sec:discusion-calidad}).
 
+\subsubsection*{Serie de auto-cruces sobre calle}
+
+La afirmación de la Sección~\ref{sec:discusion-calidad} sobre el régimen de área real se midió en
+una corrida propia, posterior al ciclo de partición: configuración de producción, tres semillas por
+instancia y auto-cruces contados sobre el trazado real de calles
+(\texttt{docs/experiments/areas-crossings-road-20260802.csv}). La Tabla~\ref{tab:areas-crossings}
+resume la serie junto a la corrida de referencia unificada de la
+Sección~\ref{sec:metricas-calidad}, medida el mismo día con la misma configuración y semillas.
+
+\begin{table}[H]
+  \centering
+  \caption{Auto-cruces sobre calle por instancia bajo la configuración de producción.}
+  \label{tab:areas-crossings}
+  \begin{tabularx}{\textwidth}{lXXX}
+    \toprule
+    Instancia &
+      $k$ &
+      Auto-cruces por solución (media de 3 semillas) &
+      Auto-cruces por ruta \\
+    \midrule
+    \texttt{area-26-n157} &
+      3 &
+      $4{,}7$ (2--6) &
+      $1{,}56$ \\
+    \texttt{area-27-n72} &
+      2 &
+      $3{,}0$ (2--4) &
+      $1{,}50$ \\
+    \texttt{area-29-n43} &
+      1 &
+      $1{,}3$ (0--3) &
+      $1{,}33$ \\
+    \texttt{areas-26-27-29-n272} &
+      5 &
+      $7{,}7$ (6--10) &
+      $1{,}53$ \\
+    \texttt{reference-n1607} &
+      25 &
+      $31{,}3$ (24--37) &
+      $1{,}25$ \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+La serie corrige la forma fuerte de la observación cualitativa que este capítulo arrastraba: las
+soluciones sobre áreas reales no están libres de auto-cruces ---solo una de las doce corridas de
+área registró cero---, aunque sus conteos absolutos son bajos, entre 0 y 6 por solución completa y
+entre 6 y 10 en la unión, un orden de magnitud por debajo de los 24--37 de la instancia de estrés.
+La corrección más informativa es la tasa: por ruta, el indicador queda entre $1{,}33$ y $1{,}56$ en
+las áreas y su unión, y en $1{,}25$ en la instancia agregada, de modo que el material no sostiene
+que el régimen disperso produzca más auto-cruces por ruta; lo que multiplica es el número de rutas
+y, con él, el conteo absoluto que la inspección visual percibe. La serie es descriptiva y no formó
+parte del criterio pre-registrado de este apartado, que se fijó en desplazamiento, saturación y
+balance.
+
 \subsubsection*{Precio de particionar}
 
 El segundo contraste enfrenta la unión de las tres áreas contra la suma de resolverlas por separado.
@@ -1357,14 +1410,18 @@ densidad, y la búsqueda de una ---la hipótesis con que se abrió el barrido de
 algoritmo--- queda refutada con datos.
 
 El corolario operacional es que la unidad correcta del problema es el área de censo individual y no
-el arbolado metropolitano agregado: los auto-cruces que motivaron buena parte de la experimentación
-son propios del régimen disperso del conjunto agregado (Sección~\ref{sec:discusion-calidad}) y no
-se observan sobre un área real, donde la inspección de las rutas de la configuración de producción
-no muestra auto-cruces ---con la reserva, declarada allí, de que esa observación es
-cualitativa---. Esto convierte la segmentación previa por área, que la
-Sección~\ref{sec:posibles-mejoras} documenta como trabajo futuro, en la extensión de mayor impacto
-del sistema: no porque el motor esté mal calibrado, sino porque el motor se comporta como
-corresponde cuando el problema se le entrega en su escala natural.
+el arbolado metropolitano agregado: la serie de auto-cruces sobre calle medida en la
+Sección~\ref{sec:areas-reales} muestra que una solución sobre un área real contiene entre 0 y 6
+auto-cruces (medias de $1{,}3$ a $4{,}7$), frente a 24--37 del conjunto agregado. La medición
+corrige, eso sí, la lectura cualitativa que este capítulo sostuvo durante la experimentación: las
+rutas de área real no están libres de auto-cruces, y la tasa por ruta es comparable entre regímenes
+($1{,}33$--$1{,}56$ frente a $1{,}25$), de modo que la ventaja del área real es de conteo absoluto
+---menos rutas y, con ellas, un orden de magnitud menos de auto-cruces por solución--- y no una
+geometría por ruta intrínsecamente más limpia. Esto convierte la segmentación previa por área, que
+la Sección~\ref{sec:posibles-mejoras} documenta como trabajo futuro, en la extensión de mayor
+impacto del sistema, sostenida por el precio medido de la partición y el correlato operativo de las
+instancias más que por la geometría: el motor entrega soluciones con pocos auto-cruces absolutos
+cuando el problema se le entrega en su escala natural.
 
 El argumento dejó de ser solo geométrico cuando se midió sobre las áreas reales
 (Sección~\ref{sec:areas-reales}). Particionar no cuesta caminata en el territorio del censo
@@ -1391,7 +1448,7 @@ la carga de servicio excede la capacidad de la flota bajo $T_{\max}=2$\,h, y esa
 caracterizada en la Tabla~\ref{tab:grilla-spatial}. La jornada máxima (CA-02) se respeta sin
 excepción: la cota es dura por construcción del modelo. El balance de carga (CA-03) queda dentro
 del criterio, con un índice de $0{,}829$ a $0{,}837$ según la repetición frente al $0{,}80$
-exigido, acompañado de una desviación estándar de $559$\,s equivalente al $5{,}6$\,\% del promedio;
+exigido, acompañado de una desviación estándar de $564$\,s equivalente al $5{,}6$\,\% del promedio;
 el índice acredita el umbral y no ordena soluciones entre sí, porque no distingue un reparto
 equitativo de una flota saturada, como muestra la Sección~\ref{sec:comparacion-greedy}. La flota
 (CA-04) es en efecto una salida del sistema: el administrador declara la duración de la jornada y el
@@ -1399,22 +1456,23 @@ tiempo de servicio, y el número de censistas necesarios se deriva de ellos, lo 
 diferencia funcional más nítida respecto de la planificación manual descrita en la
 Sección~\ref{sec:estado-actual}.
 
-El costo de planificación (CA-05) se cumple con $122{,}3$\,s de corrida completa sobre la matriz en
+El costo de planificación (CA-05) se cumple con $123{,}3$\,s de corrida completa sobre la matriz en
 caché, pero su lectura exige una precisión: $120$\,s de esa cifra son el tope configurado del
 \textit{solver} y no una medición de convergencia, de modo que el criterio se satisface por
-construcción mientras el tope se mantenga bajo cinco minutos. Solo los $2{,}3$\,s restantes
+construcción mientras el tope se mantenga bajo cinco minutos. Solo los $3{,}3$\,s restantes
 ---lectura del \textit{dataset}, acierto de caché de la matriz y persistencia de la solución--- son
-tiempo que el sistema podría hacer crecer hasta incumplirlo, y el desglose por fases confirma que no
-lo hace: el $98{,}1$\,\% del tiempo está en la metaheurística y no en la infraestructura que la
+tiempo que el sistema podría hacer crecer hasta incumplirlo, y el desglose confirma que no
+lo hace: el $97{,}3$\,\% del tiempo está en la metaheurística y no en la infraestructura que la
 rodea. Lo que sí constituye evidencia sobre la elección del tope es el análisis de sensibilidad de
 la Tabla~\ref{tab:sensibilidad-tl}, que muestra que captura la mayor parte de la mejora alcanzable
 con presupuestos mayores; conviene registrar que la decisión de bajar el tope se tomó en el régimen
 anterior del perfil de rendimiento (\hyperref[anx:perfil-rendimiento]{Anexo 4}) y que esa tabla es
 la remedición posterior, ya
 sobre la estrategia \texttt{spatial\_term} y el código vigente. Con caché fría la corrida completa
-sube a $299{,}3$\,s por la construcción de la matriz contra OSRM, al borde del umbral; el criterio
-se enuncia sobre el caso con caché precisamente porque es el de operación normal, pero el margen en
-el primer cálculo de un \textit{dataset} nuevo es estrecho.
+sube a $334{,}6$\,s por la construcción de la matriz contra OSRM, por sobre el umbral de los
+$300$\,s; el criterio se enuncia sobre el caso con caché precisamente porque es el de operación
+normal, pero el primer cálculo de un \textit{dataset} nuevo lo excede en esta medición ---la
+corrida de julio de 2026 había medido $299{,}3$\,s, al borde--- y así se reporta.
 
 La mejora sobre la alternativa trivial (CA-06) se cumple con un margen menor que el que se reportó
 en una primera medición. Aquella restaba cifras de corridas distintas sobre reconstrucciones del
@@ -1477,7 +1535,7 @@ exigiría una intermitencia prolongada. El atributo se cumple en su forma débil
 registrado ante un corte breve--- y queda pendiente en la fuerte.
 
 La eficiencia de cómputo se cumple en sus dos componentes. Planificar la instancia cuesta
-$122{,}3$\,s de reloj con la matriz en caché, muy por debajo de la cota, y el análisis de
+$123{,}3$\,s de reloj con la matriz en caché, muy por debajo de la cota, y el análisis de
 sensibilidad de la Tabla~\ref{tab:sensibilidad-tl} muestra que ese presupuesto captura la mayor
 parte de la mejora alcanzable: ampliarlo a $180$\,s altera el desplazamiento total en un $0{,}6$\,\%
 ---por debajo de la dispersión entre semillas--- y no cambia ni el número de rutas ni el balance. La
@@ -1494,7 +1552,11 @@ componente del \textit{pipeline} que mejora la geometría con evidencia directa 
 resecuenciación, que reduce simultáneamente el tiempo de viaje y los auto-cruces en las doce
 instancias de prueba. El resto de los componentes de la función objetivo actúa sobre la geometría de
 forma indirecta y sin evidencia equivalente sobre calle real, de modo que el atributo se sostiene
-sobre ese post-proceso y no sobre el modelo completo.
+sobre ese post-proceso y no sobre el modelo completo. En el régimen de operación real ---el área de
+censo individual--- la serie medida en la Sección~\ref{sec:areas-reales} acota el indicador: entre
+0 y 6 auto-cruces sobre calle por solución completa (medias de $1{,}3$ a $4{,}7$ según el área),
+con una tasa por ruta comparable a la de la instancia de estrés, lo que sitúa el cumplimiento del
+atributo en el conteo absoluto por solución y no en la ausencia de auto-cruces.
 
 \subsection{Lo que aportó la metodología}
 
@@ -1705,7 +1767,8 @@ evidencia recogida sobre él y los resultados del propio capítulo que condicion
   \item Límites de la evidencia
   \begin{itemize}
     \item Base empírica de la conclusión sobre la unidad operativa: la medición de la
-        Sección~\ref{sec:areas-reales} comprende tres áreas de un mismo territorio ($43$, $72$ y
+        Sección~\ref{sec:areas-reales} ---incluida la serie de auto-cruces sobre calle---
+        comprende tres áreas de un mismo territorio ($43$, $72$ y
         $157$ árboles) y su unión, con tres semillas en el brazo del \textit{solver} y una única
         corrida en los dos brazos deterministas. La conclusión de que particionar
         no cuesta desplazamiento vale para ese territorio, cuyas áreas están separadas entre sí;
