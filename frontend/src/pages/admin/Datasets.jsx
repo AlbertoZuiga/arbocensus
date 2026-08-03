@@ -36,7 +36,7 @@ function formatDate(value) {
 }
 
 function treeCount(dataset) {
-  return dataset.tree_count ?? dataset.total_trees ?? 0;
+  return dataset.total_trees ?? 0;
 }
 
 export default function Datasets() {

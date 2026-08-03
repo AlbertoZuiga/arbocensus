@@ -39,7 +39,7 @@ describe("Datasets", () => {
       {
         id: "d1",
         name: "Providencia 2025",
-        tree_count: 42,
+        total_trees: 42,
         imported_at: "2025-06-01T10:00:00Z",
       },
     ]);
@@ -48,15 +48,6 @@ describe("Datasets", () => {
     const link = await screen.findByRole("link", { name: "Providencia 2025" });
     expect(link).toHaveAttribute("href", "/admin/datasets/d1");
     expect(screen.getByText("42")).toBeInTheDocument();
-  });
-
-  it("falls back to total_trees when tree_count is absent", async () => {
-    fetchDatasets.mockResolvedValue([
-      { id: "d2", name: "Ñuñoa", total_trees: 7, imported_at: null },
-    ]);
-    renderPage();
-
-    expect(await screen.findByText("7")).toBeInTheDocument();
   });
 
   it("shows an empty message when there are no datasets", async () => {
@@ -78,7 +69,7 @@ describe("Datasets", () => {
   it("uploads a CSV and shows a toast with the imported tree count", async () => {
     const user = userEvent.setup();
     fetchDatasets.mockResolvedValue([]);
-    uploadDataset.mockResolvedValue({ id: "d9", name: "Nuevo", tree_count: 128 });
+    uploadDataset.mockResolvedValue({ id: "d9", name: "Nuevo", total_trees: 128 });
     renderPage();
 
     const file = new File(["lat,lon\n1,2"], "trees.csv", { type: "text/csv" });
@@ -112,7 +103,7 @@ describe("Datasets", () => {
   it("uploads a JSON file too", async () => {
     const user = userEvent.setup();
     fetchDatasets.mockResolvedValue([]);
-    uploadDataset.mockResolvedValue({ id: "d10", name: "GeoJSON", tree_count: 5 });
+    uploadDataset.mockResolvedValue({ id: "d10", name: "GeoJSON", total_trees: 5 });
     renderPage();
 
     const file = new File(['{"type":"FeatureCollection"}'], "trees.json", {
@@ -127,7 +118,7 @@ describe("Datasets", () => {
   it("asks for confirmation before deleting and calls the API on confirm", async () => {
     const user = userEvent.setup();
     fetchDatasets.mockResolvedValue([
-      { id: "d1", name: "Providencia 2025", tree_count: 42, imported_at: null },
+      { id: "d1", name: "Providencia 2025", total_trees: 42, imported_at: null },
     ]);
     deleteDataset.mockResolvedValue(undefined);
     renderPage();
@@ -151,7 +142,7 @@ describe("Datasets", () => {
   it("does not delete when the confirmation dialog is cancelled", async () => {
     const user = userEvent.setup();
     fetchDatasets.mockResolvedValue([
-      { id: "d1", name: "Providencia 2025", tree_count: 42, imported_at: null },
+      { id: "d1", name: "Providencia 2025", total_trees: 42, imported_at: null },
     ]);
     renderPage();
 
