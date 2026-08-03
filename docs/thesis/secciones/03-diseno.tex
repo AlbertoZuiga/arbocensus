@@ -8,12 +8,10 @@ que las decisiones de \textit{stack} se tomaron antes de construir el sistema, g
 criterios.
 
 \begin{enumerate}
-  \item Costo. Se anticipó un volumen elevado de ejecuciones durante el desarrollo y la evaluación
-        experimental del sistema. Bajo ese escenario, un componente tarificado por consulta
-        convierte cualquier precio unitario en un gasto difícil de acotar. El criterio fue mantener
-        en cero el gasto de la etapa de desarrollo. Este criterio califica las alternativas para esa
-        etapa; no excluye adoptar más adelante un componente de pago cuyo aporte al producto en
-        operación justifique su costo recurrente.
+  \item Costo. Bajo un volumen elevado de ejecuciones, un componente tarificado por consulta
+        convierte cualquier precio unitario en un gasto difícil de acotar; el criterio fue mantener
+        en cero el gasto de la etapa de desarrollo, sin excluir adoptar más adelante un componente
+        de pago cuyo aporte al producto en operación justifique su costo recurrente.
   \item Tiempo de ejecución. Se descartan las latencias que no provienen del trabajo útil: la ida y
         vuelta a un servicio remoto por cada consulta de ruteo, o una implementación que recalcule
         lo ya calculado. El presupuesto de tiempo del sistema se reserva para el trabajo propio del
@@ -142,8 +140,7 @@ Los modelos de dominio centrales son los siguientes:
   \item RouteStop: visita de un árbol en una ruta, con número de secuencia y estado de
         visita.
   \item TreeObservation: registro histórico del estado de un árbol en un instante dado
-        (Sección~\ref{sec:recenso}). Es la entidad que convierte el sistema en una herramienta de
-        re-censo y no solo de censo inicial.
+        (Sección~\ref{sec:recenso}).
   \item DistanceMatrix: caché persistente de la matriz $n \times n$ de tiempos de caminata entre
         árboles obtenida de OSRM (Sección~\ref{sec:matriz}); su cardinalidad 1:1 con
         \texttt{Dataset} refleja que la matriz se cachea una vez por conjunto de árboles activos,
@@ -595,9 +592,7 @@ partición, registradas en el campo \texttt{strategy} del trabajo de optimizaci�
 
 \begin{enumerate}
   \item \texttt{global}: el \textit{Open mTSP} único descrito en la Sección~\ref{sec:solver}, sin
-        término espacial. Recibe ese nombre porque resuelve el \textit{dataset} completo como un
-        único problema, sin ninguna partición previa del territorio ni de los árboles. Constituye la
-        línea base.
+        término espacial ni partición previa del territorio. Constituye la línea base.
   \item \texttt{spatial\_term}: añade una segunda dimensión de distancia geográfica ---la fórmula de
         \textit{haversine} entre paradas \citep{sinnott1984virtues}--- y penaliza la extensión
         geográfica de cada ruta mediante \texttt{SetSpanCostCoefficientForAllVehicles} con
@@ -790,10 +785,10 @@ horizontales medios de $7$--$13$\,m \citep{merry2019smartphone}, mayores que el 
 modo que el criterio deja pasar duplicados antes que fusionar dos ejemplares distintos que caen
 cerca; se prefiere ese error porque un árbol duplicado cuesta una visita redundante, mientras que
 uno fusionado por error desaparece del catastro. El explorador expone así $13\,319$ árboles
-importables: $429$ de \texttt{legacy\_api} y $12\,890$ de \texttt{legacy\_app}. Ese es el universo
-disponible; el \textit{dataset} de $n = 1\,607$ árboles con que se evalúa el sistema
-(Capítulo~\ref{cap:resultados}) es una instancia congelada de ese universo, elegida por
-reproducibilidad, y no su totalidad. El acceso a las bases legadas es estrictamente de solo lectura
+importables: $429$ de \texttt{legacy\_api} y $12\,890$ de
+\texttt{legacy\_app}.\footnote{El \textit{dataset} de $n = 1\,607$ árboles con que se evalúa el
+sistema (Capítulo~\ref{cap:resultados}) es una instancia congelada de ese universo.} El acceso a
+las bases legadas es estrictamente de solo lectura
 (RE-03).
 
 \subsection{Selección previa a la creación del \textit{dataset}}
@@ -885,8 +880,7 @@ garantía del sistema.
 
 La excepción es el estado \texttt{not\_found}, que se registra como visita pero sin exigir imagen,
 por la razón evidente de que no hay árbol que fotografiar; lo mismo vale para las omisiones, que se
-tratan más abajo. La regla es entonces que se exige evidencia gráfica de toda afirmación positiva
-sobre el estado de un árbol, y no de la constatación de su ausencia.
+tratan más abajo.
 
 Conviene precisar el alcance de esa garantía. La fotografía es la evidencia documental de la
 observación, pero no acredita por sí sola que el censista haya estado frente al árbol correcto: no
@@ -919,8 +913,7 @@ La importación de una fuente legada no trae solo la posición de los árboles: 
 misma transacción, sus observaciones previas, que se materializan como \texttt{TreeObservation} con
 el campo \texttt{source}, que registra su procedencia. El resultado es que un árbol recién importado
 ya llega al sistema con su historial de campañas anteriores, y la primera visita del censista se
-registra como una observación más en esa serie ---esto es, como un re-censo y no como un censo
-inicial.
+registra como una observación más en esa serie.
 
 El vínculo entre una observación legada y su árbol difiere según la fuente: en \texttt{legacy\_api}
 las muestras referencian al árbol directamente, mientras que en \texttt{legacy\_app} lo hacen a
