@@ -8,8 +8,7 @@ El problema de ruteo de censos se relaciona con dos variantes conocidas de la in
 operativa. El \textit{Multiple Travelling Salesman Problem} (mTSP) generaliza el TSP a múltiples
 agentes \citep{bektas2006multiple}. El \textit{Vehicle Routing Problem with Time Windows} (VRPTW)
 introduce restricciones de ventanas horarias en nodos \citep{solomon1987algorithms,
-toth2014vehicle}. Su resolución práctica recurre a metaheurísticas ---procedimientos de búsqueda que
-exploran soluciones sin garantizar el óptimo--- como \textit{Guided Local Search} (GLS)
+toth2014vehicle}. Su resolución práctica recurre a metaheurísticas como \textit{Guided Local Search} (GLS)
 \citep{voudouris1999guided}.
 
 Sin embargo, los problemas de ruteo urbano reales presentan características específicas:
@@ -24,16 +23,14 @@ Las herramientas de ruteo de propósito general resuelven variantes del problema
 vehículos; sin embargo, ninguna cubre la integración con el flujo de trabajo de este proyecto:
 partir del catastro que dejaron
 las iteraciones anteriores de Arbocensus, publicar el plan como asignación de trabajo a censistas
-identificados y recoger de vuelta, parada por parada, la observación histórica de cada árbol. Esa
+identificados y recoger la observación histórica de cada árbol. Esa
 cadena ---catastro legado, optimización, asignación, captura en terreno e historial--- es lo que el
 producto debe aportar, y es específica del dominio y no del algoritmo.
 
 Se propone el desarrollo de una plataforma web que formule el problema de ruteo de censo como un
 problema de ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
-duración por ruta; la taxonomía precisa se detalla en la Sección~\ref{sec:formulacion}. La
-plataforma debe resolver esa formulación mediante el \textit{solver} de ruteo vehicular de
-\textit{OR-Tools}, basado en programación con restricciones \citep{ortools}, y cubrir las cuatro
-carencias que las herramientas genéricas no abordan:
+duración por ruta. La plataforma debe resolver esa formulación mediante programación con
+restricciones y cubrir las cuatro carencias que las herramientas genéricas no abordan:
 \begin{enumerate}
   \item determinar automáticamente el número de rutas necesarias $k$ dado el conjunto de árboles $P =
         \{p_1, \ldots, p_n\}$ y los parámetros $T_{\min}$, $T_{\max}$, $s$ (tiempo de servicio por
