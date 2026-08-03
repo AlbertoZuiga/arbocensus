@@ -1312,8 +1312,7 @@ de visitas). La autorización se resuelve por rol mediante los
 permisos propios \texttt{IsAdminRole} e \texttt{IsSurveyorRole}, definidos sobre el campo
 \texttt{role} del usuario y no sobre los permisos estándar del \textit{framework}, que validan el
 atributo \texttt{is\_staff} de Django ---un concepto ajeno al rol de negocio. La
-Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes; el
-\hyperref[anx:api]{Anexo 1} contiene el inventario completo con sus permisos y respuestas.
+Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes.\footnote{Ver \hyperref[anx:api]{Anexo 1}.}
 
 \begin{table}[H]
   \centering
@@ -1368,8 +1367,7 @@ El panel de administración comprende cinco etapas:
   \item Sesión. El administrador inicia sesión y obtiene un \textit{token} JWT.
   \item Constitución del \textit{dataset}. Importa un archivo CSV o selecciona el arbolado sobre el
         mapa de fuentes legadas (Sección~\ref{sec:legacy}); en ambos casos el resultado se visualiza
-        como puntos sobre el mapa (\texttt{DatasetMap}). El listado de \textit{datasets} disponibles
-        aparece en la Ilustración~\ref{fig:ui_datasets} del \hyperref[anx:capturas]{Anexo 6}.
+        como puntos sobre el mapa (\texttt{DatasetMap}).\footnote{Ver \hyperref[anx:capturas]{Anexo 6}.}
   \item Configuración y lanzamiento. Configura $T_{\min}$, $T_{\max}$ y el tiempo de servicio por
         árbol, y lanza el trabajo. El formulario no expone ni la estrategia ni los coeficientes del
         objetivo: una sola solicitud despliega el abanico de seis combinaciones descrito en la
@@ -1433,8 +1431,7 @@ una sola corrida a la vez y un selector permite alternar entre ellas.
 Publicado el plan, el administrador supervisa el avance del censo desde la pestaña de progreso: el
 tablero resume el porcentaje de árboles censados, omitidos y pendientes, los sitúa sobre el mapa
 según su estado y desglosa el avance por ruta y por censista, de modo que se identifican qué rutas
-van retrasadas. Esta vista realiza RF-19 y RF-20; la ilustración correspondiente se incluye en el
-\hyperref[anx:capturas]{Anexo 6} (Ilustración~\ref{fig:ui_progress}).
+van retrasadas. Esta vista realiza RF-19 y RF-20.
 
 El portal del censista (\texttt{SurveyorRoutePage}) es una vista \textit{mobile-first} orientada al
 trabajo en terreno. Recupera únicamente las rutas del plan vigente asignadas al usuario y presenta

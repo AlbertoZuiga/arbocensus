@@ -20,12 +20,11 @@ caso operativo.
 \label{sec:protocolo-evaluacion}
 
 La calidad de la solución producida por el motor de optimización se evalúa sobre doce instancias
-reales congeladas, entre $n = 43$ y $n = 1\,607$ árboles, versionadas en la suite del
-\hyperref[anx:suite-instancias]{Anexo 4}. La suite cubre dos regímenes geográficos de naturaleza
+reales congeladas, entre $n = 43$ y $n = 1\,607$ árboles, versionadas en el
+repositorio.\footnote{Ver \hyperref[anx:suite-instancias]{Anexo 4}.} La suite cubre dos regímenes geográficos de naturaleza
 distinta. El primero es el régimen agregado de la instancia de referencia \texttt{reference-n1607}:
 1\,607 árboles de ambas fuentes legadas ---429 de \texttt{legacy\_api} y 1\,178 de
-\texttt{legacy\_app}; su composición y congelamiento se detallan en el
-\hyperref[anx:suite-instancias]{Anexo 4}--- repartidos en 10,3\,km de extensión. Los árboles son
+\texttt{legacy\_app}--- repartidos en 10,3\,km de extensión. Los árboles son
 reales, pero la agrupación carece de
 correlato operativo, dado que el censo histórico se organizó por áreas, y el conjunto no
 corresponde a una única comuna: reúne una porción del arbolado disponible en ambas bases legadas,
@@ -84,8 +83,8 @@ los empates de la heurística que construye la solución inicial y, con ella, to
 la búsqueda local del GLS \citep{voudouris1999guided}: tres órdenes distintos producen tres
 soluciones distintas del mismo problema. El texto llama «semillas» a esas permutaciones. La
 dispersión que generan es mayor en las métricas de calidad que en el tiempo de desplazamiento, y
-acota la variación dentro de una corrida, no la variación entre corridas distintas
-(\hyperref[anx:alcance-replicas]{Anexo 4}).
+acota la variación dentro de una corrida, no la variación entre corridas
+distintas.\footnote{Ver \hyperref[anx:alcance-replicas]{Anexo 4}.}
 
 \subsubsection*{Entorno de medición}
 \phantomsection\label{sec:entorno-medicion}%
@@ -96,8 +95,7 @@ de medición: aporta únicamente la corrida de contraste que cierra este apartad
 las mismas imágenes de contenedor del despliegue, una instancia real de OSRM cargada con el extracto
 completo de Chile de \textit{OpenStreetMap} con perfil peatonal, y PostGIS como base de datos. Las
 versiones de todas las piezas quedan fijadas en el repositorio; la que condiciona la reproducción
-de las cifras es la de \textit{OR-Tools} (9.15), que el \hyperref[anx:comandos]{Anexo 3} precisa
-junto a los comandos.
+de las cifras es la de \textit{OR-Tools} (9.15).\footnote{Ver \hyperref[anx:comandos]{Anexo 3}.}
 
 Este entorno difiere del despliegue real en tres condiciones que acotan la extrapolación de sus
 cifras. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con los
@@ -112,8 +110,8 @@ API~$\rightarrow$~Celery del sistema en operación; ambos recorren el mismo cód
 (\texttt{OptimizationPipeline.run}), por lo que la diferencia agrega únicamente latencia de
 encolado, no de cómputo.
 
-El perfil de tiempo del \textit{pipeline}, documentado en detalle en el
-\hyperref[anx:perfil-rendimiento]{Anexo 4}, fija el término dominante del costo de planificación.
+El perfil de tiempo del \textit{pipeline} fija el término dominante del costo de
+planificación.\footnote{Ver \hyperref[anx:perfil-rendimiento]{Anexo 4}.}
 Con la caché de la matriz de costos caliente ---el caso de operación normal--- el GLS concentra el
 $98{,}1$\,\% del tiempo total y las demás fases suman menos del 2\,\%; en el primer contacto con un
 \textit{dataset}, con la caché fría, domina en cambio la consulta a OSRM con el $97{,}6$\,\%
@@ -178,7 +176,7 @@ Una reserva de instrumento acota, por último, las cifras de auto-cruces que apa
 capítulo: salvo indicación en contrario, se calculan sobre la cuerda recta entre paradas, cuya
 correlación con el conteo sobre el trazado real de calles es parcial ($\rho$ de Spearman de
 $0{,}527$) y se invierte en la instancia agregada, por lo que ningún criterio de decisión del
-capítulo se fija sobre esa métrica (\hyperref[anx:auditoria-robustez]{Anexo 4}).
+capítulo se fija sobre esa métrica.\footnote{Ver \hyperref[anx:auditoria-robustez]{Anexo 4}.}
 
 \subsection{Métricas de calidad de rutas sobre la instancia de estrés}
 \label{sec:metricas-calidad}
@@ -203,7 +201,7 @@ Sección~\ref{sec:protocolo-evaluacion}. Se reportan nueve indicadores:
 \end{enumerate}
 
 Los nueve indicadores se instrumentaron en una misma corrida de tres repeticiones (semillas 42, 43
-y 44, las que por defecto fija el \hyperref[anx:comandos]{Anexo 3}), cuyos datos crudos quedan
+y 44), cuyos datos crudos quedan
 versionados en el repositorio; la primera repetición se ejecutó con la
 matriz de costos fuera de caché y las dos siguientes con la matriz cacheada, lo que permite medir
 el tiempo extremo a extremo en ambos casos dentro de la misma corrida. La
@@ -487,7 +485,7 @@ responde con una medición propia y, además, pone precio a la partición misma.
 \subsubsection*{Instancias y brazos}
 
 Se emplearon las tres áreas del censo histórico con mayor arbolado y su unión, congeladas como
-instancias versionadas en el repositorio (\hyperref[anx:comandos]{Anexo 3}). Las tres áreas son disjuntas por
+instancias versionadas en el repositorio. Las tres áreas son disjuntas por
 identidad de árbol ---intersección vacía en las tres parejas sobre la clave \texttt{(source,
 external\_id)}, con $157 + 72 + 43 = 272$ igual al cardinal de la unión---, de modo que la unión y
 la suma de las partes resuelven exactamente el mismo arbolado. La Tabla~\ref{tab:areas-instancias}
@@ -833,7 +831,7 @@ beneficio también cuantificado, a saber, instancias con correlato operativo y m
 esta medición la que sostiene la tesis con que abre el capítulo, y que las conclusiones retoman: la
 unidad operativa correcta del motor es el área de censo individual. El
 protocolo, los comandos reproducibles y los datos crudos de este experimento se encuentran
-versionados en el repositorio (\hyperref[anx:comandos]{Anexo 3}).
+versionados en el repositorio.
 
 \section{ANÁLISIS DE CONFIGURACIÓN Y RÉGIMEN GEOGRÁFICO}
 \label{sec:analisis-configuracion}
@@ -876,8 +874,7 @@ Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, la form
 ---un único \textit{Open mTSP} global resuelto con \textit{OR-Tools}, sin agrupamiento previo de
 los nodos--- se caracterizó con un diagnóstico sobre nodos sintéticos de distribución uniforme
 ($n \in \{20, 40, 80\}$ en la zona de Providencia/Santiago Centro), la única medición de esta
-memoria que no usa arbolado real; su protocolo y sus cifras se documentan en el
-\hyperref[anx:baseline-geo-sintetico]{Anexo 4}. El hallazgo es un desacople entre balance temporal
+memoria que no usa arbolado real.\footnote{Ver \hyperref[anx:baseline-geo-sintetico]{Anexo 4}.} El hallazgo es un desacople entre balance temporal
 y calidad geográfica: el balance se mantiene alto ($0{,}87$--$0{,}95$) mientras el solapamiento
 entre rutas crece de forma monótona con la densidad, con un caso recurrente de una ruta compacta
 contenida dentro de la caja envolvente de otra más extensa, coherente con que el modelo optimiza
@@ -1113,14 +1110,11 @@ que deben leerse todas las comparaciones de esta subsección.
 
 Las tres estrategias se comparan exclusivamente dentro del \textit{head-to-head} de la
 Tabla~\ref{tab:estrategias}, el único contraste homogéneo disponible: mismo código, mismo
-presupuesto de \textit{solver} y mismas semillas. La grilla del perfil de rendimiento del
-\hyperref[anx:perfil-rendimiento]{Anexo 4} no es
-comparable arco a arco con la Tabla~\ref{tab:grilla-spatial}, por las razones que ese anexo
-detalla.
+presupuesto de \textit{solver} y mismas semillas.
 
 El valor del coeficiente \texttt{SPATIAL\_SPAN\_COEF} se sometió a un barrido posterior sobre los
-valores $\{0,\,3,\,10,\,30\}$, con tres semillas por punto y las doce instancias congeladas del
-\hyperref[anx:suite-instancias]{Anexo 4}. Su resultado no habilita ningún valor mejor que el de
+valores $\{0,\,3,\,10,\,30\}$, con tres semillas por punto y las doce instancias congeladas. Su
+resultado no habilita ningún valor mejor que el de
 fábrica, pero tampoco lo confirma como óptimo: sobre la instancia de referencia los auto-cruces
 sobre calle no varían de forma monótona con el coeficiente ---$39{,}7$ sin penalización espacial,
 $34{,}3$ en el valor de producción, y $46{,}0$ y $48{,}0$ al subirlo a $10$ y a $30$---, la mejora
@@ -1136,7 +1130,7 @@ global separa. Se adopta, en consecuencia, \texttt{spatial\_term} como estrategi
 \texttt{SPATIAL\_SPAN\_COEF} $=3$ y el límite de \textit{solver} de 120\,s;
 \texttt{cluster\_first} se mantiene como opción de comparación, no de producción. El protocolo
 completo, los comandos reproducibles y los datos crudos de este experimento se encuentran
-versionados en el repositorio (\hyperref[anx:comandos]{Anexo 3}).
+versionados en el repositorio.
 
 \subsection{El régimen geográfico de la instancia}
 \label{sec:discusion-calidad}
@@ -1147,7 +1141,7 @@ La razón entre las dos penalizaciones blandas de la dimensión temporal, resumi
 la función objetivo en la Sección~\ref{sec:protocolo-evaluacion}, es de $20\mathord{:}1$
 ($10\,000 / 500$), y el
 experimento de sensibilidad a los coeficientes de penalización ---cuyos datos se conservan en el
-repositorio (\hyperref[anx:barrido-configuraciones]{Anexo 4})--- ofrece evidencia causal de
+repositorio--- ofrece evidencia causal de
 la función que cumple cada término. Al suprimir la penalización inferior (coeficiente $= 0$),
 manteniendo fijo el resto de los coeficientes, el balance de carga cae de $0{,}838$ a $0{,}739$, la
 flota sube de 25 a 32 rutas y el número de rutas que quedan por debajo de $T_{\min}$ pasa, en esa
@@ -1160,8 +1154,8 @@ intervalo hasta $T_{\max}$, el número de auto-cruces medido sobre cuerdas cae d
 ---una reducción del $91{,}7$\,\%--- sin variar el presupuesto de cómputo ni el número de rutas. Esa
 cifra no sostiene, sin embargo, una relación causal directa: el barrido no tiene réplicas de semilla
 independientes, la métrica de cuerdas está invertida ($\rho = -0{,}575$) precisamente en la
-instancia donde se midió, y el mismo brazo degrada el balance de $0{,}838$ a $0{,}715$. El
-\hyperref[anx:reservas-sensibilidad]{Anexo 4} detalla las tres reservas. Con ellas, lo que el
+instancia donde se midió, y el mismo brazo degrada el balance de $0{,}838$ a
+$0{,}715$.\footnote{Ver \hyperref[anx:reservas-sensibilidad]{Anexo 4}.} Con esas reservas, lo que el
 material sostiene es evidencia consistente con la hipótesis de que la geometría de las rutas
 responde a la configuración de la función objetivo y no al corte por tiempo del GLS, reforzada por
 dos observaciones independientes: el presupuesto del \textit{solver} no altera el número de rutas ni
@@ -1227,7 +1221,7 @@ con los dos ejes que esta sección mide.
 
 Con el fin de confirmar el origen de los auto-cruces en la función objetivo y explorar si existe una
 configuración universal, se ejecutó un barrido de configuración $\times$ algoritmo $\times$ tamaño
-sobre las doce instancias reales congeladas del \hyperref[anx:suite-instancias]{Anexo 4} ($n=43$ a
+sobre las doce instancias reales congeladas ($n=43$ a
 $n=1\,607$). El único brazo que satisface el criterio de decisión sobre $n=1\,607$
 ---\texttt{upper-tmax-tmin9000}, que ancla la penalización blanda superior en $T_{\max}$ y eleva el
 piso blando--- reduce los auto-cruces sobre cuerdas un $92{,}5$\,\% sin costo de viaje ni de balance
@@ -1236,8 +1230,7 @@ en esa instancia, porque a esa densidad las rutas saturan $T_{\max}$ de forma na
 áreas reales individuales, donde la instancia no satura $T_{\max}$: fuerza relleno de trayecto con
 incrementos de viaje de hasta $+89$\,\%. Los brazos restantes no mejoran el criterio (el término de
 \textit{span} temporal queda por debajo del umbral exigido) o rompen el balance de carga en varias
-instancias. El \hyperref[anx:barrido-configuraciones]{Anexo 4} detalla las ocho configuraciones
-evaluadas, brazo por brazo, sobre las 96 celdas del barrido.
+instancias.\footnote{Ver \hyperref[anx:barrido-configuraciones]{Anexo 4}.}
 
 La conclusión del barrido es que no existe una configuración única ganadora para todos los regímenes
 sin una compuerta previa: la hipótesis queda refutada. El escenario donde
@@ -1247,8 +1240,8 @@ escalamiento, un censo de cobertura mayor o el ruteo de una comuna completa como
 La decisión adoptada es conservar la configuración de producción sin modificación. El brazo ganador
 del régimen agregado tampoco se adopta tras una compuerta de activación por saturación: la
 re-medición de sus soluciones sobre el trazado real de calles invierte el signo de su efecto
-geométrico precisamente en el régimen que esa compuerta habilitaría
-(\hyperref[anx:barrido-configuraciones]{Anexo 4}), y la Sección~\ref{sec:posibles-mejoras} registra
+geométrico precisamente en el régimen que esa compuerta habilitaría, y la
+Sección~\ref{sec:posibles-mejoras} registra
 el descarte.
 
 \section{LIMITACIONES DEL SISTEMA}
@@ -1362,14 +1355,14 @@ evidencia recogida sobre él.
         GLS se corta por reloj de pared, ese costo se traduce en calidad menor alcanzable dentro del
         mismo presupuesto, no en tiempo mayor. La ablación que mediría el efecto no se ejecutó
         porque la alternativa sin disyunciones no es operable: sin ellas, un árbol inalcanzable deja
-        al \textit{solver} sin solución para todo el \textit{dataset}
-        (\hyperref[anx:efectos-no-medidos]{Anexo 4}).
+        al \textit{solver} sin solución para todo el
+        \textit{dataset}.\footnote{Ver \hyperref[anx:efectos-no-medidos]{Anexo 4}.}
 
     \item Ausencia de una cota inferior de referencia para el relleno de trayecto: la
         Sección~\ref{sec:discusion-calidad} caracteriza el relleno de trayecto por la variación
         relativa del desplazamiento entre configuraciones, sin una cota inferior absoluta que separe
-        qué fracción es geometría irreducible. El \hyperref[anx:auditoria-robustez]{Anexo 4}
-        construye esa cota ($\text{MSF}_k$, el bosque generador mínimo de $k$ componentes) y un
+        qué fracción es geometría irreducible. La auditoría de
+        robustez\footnote{Ver \hyperref[anx:auditoria-robustez]{Anexo 4}.} construye esa cota ($\text{MSF}_k$, el bosque generador mínimo de $k$ componentes) y un
         ancla alcanzable ($\text{UB}_k$) que mide su flojedad: el ancla se sitúa entre un $13$\,\% y
         un $29$\,\% por encima de la cota en las instancias reales, de modo que el exceso medido
         contra $\text{MSF}_k$ sobreestima el relleno evitable en a lo sumo esa magnitud, sin que
@@ -1383,8 +1376,7 @@ evidencia recogida sobre él.
         calles). La correspondencia entre las dos primeras no se ha comprobado; la de las cuerdas
         con el trazado real sí está medida y es parcial ($\rho = 0{,}527$, invertida en el conjunto
         agregado), de modo que las cifras de auto-cruces sobre cuerdas de este capítulo conservan su
-        valor comparativo entre configuraciones medidas con la misma vara, con la reserva que el
-        \hyperref[anx:auditoria-robustez]{Anexo 4} detalla.
+        valor comparativo entre configuraciones medidas con la misma vara.
 
     \item Exactitud no medida del estimador de distancias: el perfil peatonal de OSRM se aparta de
         la caminata real de terreno por no modelar pendientes, semáforos, congestión peatonal ni el
@@ -1392,8 +1384,7 @@ evidencia recogida sobre él.
         de terreno con registro de tiempos, fuera del alcance de esta memoria
         (Sección~\ref{sec:verificacion}). Cabe esperar que el error sea sistemático ---todas las
         rutas se estiman con el mismo perfil sobre la misma red---, lo que lo hace más sensible para
-        las cifras absolutas de duración que para las comparaciones relativas entre configuraciones
-        (\hyperref[anx:efectos-no-medidos]{Anexo 4}).
+        las cifras absolutas de duración que para las comparaciones relativas entre configuraciones.
   \end{itemize}
 
 \end{itemize}
@@ -1537,8 +1528,8 @@ dejarla registrada. La compuerta de régimen por saturación consistía en activ
 \texttt{upper-tmax-tmin9000} por encima de un umbral $\overline{\text{sat}} \gtrsim 0{,}9$, apoyada
 en la reducción de auto-cruces que ese brazo mide sobre cuerdas
 (Sección~\ref{sec:discusion-calidad}). La re-medición sobre \texttt{crossings\_road} invierte el
-signo del efecto precisamente en el régimen que la compuerta habilitaría
-(\hyperref[anx:barrido-configuraciones]{Anexo 4}): sobre la geometría real el brazo empeora aquello
+signo del efecto precisamente en el régimen que la compuerta habilitaría: sobre la geometría real
+el brazo empeora aquello
 que pretendía corregir, de modo que la compuerta no se propone para activación y su código permanece
 en el árbol como opción no activa de uso experimental.
 
@@ -1744,10 +1735,9 @@ instrumento tiene mayor rendimiento esperado que añadir un brazo más al barrid
 
 El análisis retrospectivo de la serie identificó cuatro defectos de instrumentación en los ciclos iniciales
 ---semillas no propagadas, una cota de relleno inalcanzable, la métrica de auto-cruces sobre cuerdas
-en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos distintos---,
-que el \hyperref[anx:auditoria-robustez]{Anexo 4} detalla con el alcance necesario para reproducir
-cada corrección.
-Estas correcciones se originaron dentro de la propia serie y no invalidan sus conclusiones: de los
+en lugar del trazado real, y un criterio de degeneración que mezclaba dos fenómenos
+distintos---.\footnote{Ver \hyperref[anx:auditoria-robustez]{Anexo 4}.}
+La corrección de estos defectos se originó dentro de la propia serie y no invalida sus conclusiones: de los
 dieciséis ciclos, uno queda con el veredicto impugnado, dos se releyeron con el instrumento
 corregido sin que cambiara el descarte final y los demás descansan en criterios
 ---tiempo de viaje, relleno, balance--- ajenos a los defectos detectados.
@@ -1776,8 +1766,8 @@ corresponde al alcance declarado en la Sección~\ref{sec:verificacion} y a las r
 Sección~\ref{sec:restricciones}.
 
 Valen sobre el arbolado real de las dos bases legadas del proyecto ---con la excepción del
-diagnóstico geográfico inicial sobre nodos sintéticos de distribución uniforme
-(\hyperref[anx:baseline-geo-sintetico]{Anexo 4})--- y sobre doce instancias reales de entre $43$ y $1\,607$ nodos, con
+diagnóstico geográfico inicial sobre nodos sintéticos de distribución uniforme--- y sobre doce
+instancias reales de entre $43$ y $1\,607$ nodos, con
 densidad controlada; no se emplearon los bancos de referencia de la literatura
 \citep{solomon1987algorithms}, cuyas instancias sintéticas suponen un depósito central y ventanas
 de tiempo, condiciones ajenas al problema de rutas abiertas sobre una red vial real aquí tratado.
@@ -1801,6 +1791,6 @@ Por último, dos reservas de instrumento acompañan a la lectura de la geometrí
 las cifras de auto-cruces de este capítulo se calcula sobre cuerdas rectas, cuya correspondencia con
 el trazado real está medida y es parcial, y la replicación de los experimentos se obtiene permutando
 el orden de los nodos, lo que acota la varianza entre semillas de una corrida pero no la varianza
-entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez del
-\hyperref[anx:auditoria-robustez]{Anexo 4}, y ninguna de las dos afecta a los criterios de aceptación
+entre corridas distintas. Ambas están cuantificadas en la auditoría de robustez, y ninguna de las
+dos afecta a los criterios de aceptación
 ---cobertura, jornada, balance, flota y tiempo---, que descansan en magnitudes ajenas a ellas.
