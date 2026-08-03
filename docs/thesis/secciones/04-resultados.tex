@@ -296,21 +296,13 @@ Sección~\ref{sec:protocolo-evaluacion}. La desviación estándar de 564\,s en l
 rutas individuales (Tabla~\ref{tab:metricas}) es el promedio de las desviaciones estándar
 calculadas dentro de cada repetición, no la desviación del conjunto agregado de rutas.
 
-El criterio de $< 5$ minutos (CA-05) se enuncia sobre la corrida completa, y esa corrida la domina
-el presupuesto de 120\,s que se configura al \textit{solver}: mientras ese presupuesto se mantenga
-bajo el umbral el criterio no puede fallar, de modo que acota la configuración elegida antes que
-medir el sistema. La evidencia de que el presupuesto elegido basta es el análisis de sensibilidad
-de la Tabla~\ref{tab:sensibilidad-tl}, ya presentado en la
-Sección~\ref{sec:protocolo-evaluacion} y que la Sección~\ref{sec:cumplimiento-criterios} retoma.
-
 El tiempo total del \textit{pipeline} depende de si la matriz de costos está en caché. En esta
 misma corrida, la primera repetición ---ejecutada con la matriz fuera de caché--- tardó 334{,}6\,s
 en total, y las dos repeticiones con la matriz ya cacheada ---el caso de operación normal, dado que
 la clave de caché es estable para un mismo conjunto de árboles activos--- tardaron 122{,}9 y
 123{,}7\,s; la diferencia, unos 211\,s, corresponde a la construcción de la matriz de costos contra
-OSRM. El caso frío queda así por sobre el umbral de cinco minutos de CA-05, que la corrida de julio
-de 2026 había medido en 299{,}3\,s, al borde; la Sección~\ref{sec:cumplimiento-criterios} recoge
-esa lectura.
+OSRM. El caso frío queda así por sobre el umbral de cinco minutos de CA-05; la
+Sección~\ref{sec:cumplimiento-criterios} recoge esa lectura.
 
 El comando reproducible y los datos crudos de esta corrida se documentan en el
 \hyperref[anx:comandos]{Anexo 3} (\texttt{baseline\_postpass}). Sus cifras y las de la comparación
@@ -1343,8 +1335,7 @@ la remedición posterior, ya
 sobre la estrategia \texttt{spatial\_term} y el código vigente. Con caché fría la corrida completa
 sube a $334{,}6$\,s por la construcción de la matriz contra OSRM, por sobre el umbral de los
 $300$\,s; el criterio se enuncia sobre el caso con caché precisamente porque es el de operación
-normal, pero el primer cálculo de un \textit{dataset} nuevo lo excede en esta medición ---la
-corrida de julio de 2026 había medido $299{,}3$\,s, al borde--- y así se reporta.
+normal, pero el primer cálculo de un \textit{dataset} nuevo lo excede y así se reporta.
 
 La mejora sobre la alternativa trivial (CA-06) se cumple. Sobre la misma instancia congelada, con
 la misma matriz de costos y con el heurístico dotado del mismo post-proceso de resecuenciación
