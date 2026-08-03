@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 import pytest
 from apps.datasets.models import Dataset, Tree
@@ -208,6 +210,29 @@ def test_pipeline_drops_all_when_time_budget_too_tight(requests_mock):
     metrics = OptimizationPipeline(job).run()
 
     assert len(metrics["dropped_trees"]) == tree_count
+
+
+def test_pipeline_persists_route_geometry(requests_mock):
+    tree_count = 10
+    job = make_job(tree_count)
+    requests_mock.get(ANY, json=osrm_durations(tree_count))
+    requests_mock.get(
+        re.compile("/route/v1/"),
+        json={
+            "routes": [
+                {"geometry": {"coordinates": [[-70.65, -33.45], [-70.66, -33.46]]}}
+            ]
+        },
+    )
+
+    OptimizationPipeline(job).run(strategy="global")
+
+    solution = job.solutions.get(strategy=RoutingSolution.Strategy.GLOBAL)
+    routes = Route.objects.filter(solution=solution)
+    assert routes.exists()
+    for route in routes:
+        assert route.geometry is not None
+        assert list(route.geometry.coords) == [(-70.65, -33.45), (-70.66, -33.46)]
 
 
 def capture_penalties(monkeypatch):
