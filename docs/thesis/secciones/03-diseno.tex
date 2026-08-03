@@ -269,51 +269,15 @@ geográfica.
 
 \item Restricciones.
 
-Cada árbol incluido en el plan se visita exactamente una vez, y cada visita es consistente entre la
-entrada y la salida del nodo:
-
-\begin{equation}
-  \sum_{r \in R} \sum_{i \in V} x_{ijr} = u_j, \quad \forall j \in \{1,\ldots,n\}
-  \label{eq:grado}
-\end{equation}
-
-\begin{equation}
-  \sum_{i \in V} x_{ihr} - \sum_{j \in V} x_{hjr} = 0,
-  \quad \forall h \in \{1,\ldots,n\},\ \forall r \in R
-  \label{eq:flujo}
-\end{equation}
-
-La Ecuación~\ref{eq:grado} es la restricción de grado ---un árbol incluido recibe exactamente un
-arco entrante, y uno descartado, ninguno--- y la Ecuación~\ref{eq:flujo} es la conservación de
-flujo, que impide que un vehículo entre a un nodo sin salir de él. Cada vehículo activo sale del
-depósito y regresa a él a lo sumo una vez:
-
-\begin{equation}
-  \sum_{j \in V} x_{0jr} = \sum_{i \in V} x_{i0r} = z_r, \quad \forall r \in R
-  \label{eq:deposito}
-\end{equation}
-
-La Ecuación~\ref{eq:deposito} liga la activación de un vehículo con su uso efectivo: un vehículo
-inactivo no sale del depósito y, por la Ecuación~\ref{eq:flujo}, no puede tocar nodo alguno. La
-dimensión temporal, definida en la Ecuación~\ref{eq:dimension-tiempo}, encadena los tiempos
-acumulados a lo largo de cada ruta y acota su valor terminal:
-
-\begin{equation}
-  x_{ijr} = 1 \;\Longrightarrow\; t_j \geq t_i + \left\lceil c_{ij} + s\cdot\mathbf{1}[i \neq 0]
-  \right\rceil,
-  \qquad t_0 = 0
-  \label{eq:dimension-tiempo}
-\end{equation}
-
-El tiempo de servicio se carga al abandonar un nodo real y no al llegar a él, y el depósito ficticio
-queda exento por la condición $i \neq 0$ del término indicador. El tiempo total de la ruta del
-vehículo $r$ es el valor terminal de esa dimensión, que por la Ecuación~\ref{eq:route_time} equivale
-al desplazamiento más el servicio de sus $m_r$ árboles:
-
-\begin{equation}
-  T_r = \sum_{(i,j)} c_{ij}\,x_{ijr} + m_r \cdot s
-  \label{eq:route_time}
-\end{equation}
+Las restricciones estructurales son las estándar de la familia: cada árbol incluido en el plan se
+visita exactamente una vez ---la restricción de grado, que un árbol descartado ($u_j = 0$) exime de
+todo arco entrante---, todo vehículo que entra a un nodo sale de él ---la conservación de flujo---
+y cada vehículo activo sale del depósito y regresa a él a lo sumo una vez, lo que liga la variable
+de activación $z_r$ con el uso efectivo del vehículo. La dimensión temporal encadena los tiempos
+acumulados $t_i$ a lo largo de cada ruta ---el tiempo de servicio se carga al abandonar cada nodo
+real, con el depósito ficticio exento---, y su valor terminal es el tiempo total $T_r$ de la ruta
+del vehículo $r$: el desplazamiento más el servicio de sus $m_r$ árboles.\footnote{Ver
+\hyperref[anx:formulacion]{Anexo 9}.}
 
 La única restricción temporal dura del modelo es la cota superior de la
 Ecuación~\ref{eq:time_constraints}, implementada como capacidad de la dimensión:

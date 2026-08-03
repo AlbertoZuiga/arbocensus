@@ -13,6 +13,7 @@
   Capturas complementarias de la interfaz & \pageref{anx:capturas} \\
   Modelo de datos de las bases legadas & \pageref{anx:modelo-legado} \\
   Alternativas de \textit{stack} evaluadas & \pageref{anx:stack} \\
+  Formulación extendida del modelo de ruteo & \pageref{anx:formulacion} \\
 \end{tabularx}
 
 % Encabezado de cada anexo: salto de página, "Anexo N. Título" en negrita de subcapítulo, y entrada
@@ -1594,3 +1595,68 @@ criterio que resolvió cada elección.
       la complejidad operacional de desplegar servicios independientes. \\
 \end{xltabular}
 \normalsize
+
+\anexo{9}{Formulación extendida del modelo de ruteo}{Formulación extendida del modelo de ruteo}
+\label{anx:formulacion}
+
+Este anexo desarrolla las restricciones del modelo que la Sección~\ref{sec:formulacion} resume en
+prosa, sobre los conjuntos, parámetros y variables allí definidos.
+
+Cada árbol incluido en el plan se visita exactamente una vez, y cada visita es consistente entre la
+entrada y la salida del nodo:
+
+\begin{equation}
+  \sum_{r \in R} \sum_{i \in V} x_{ijr} = u_j, \quad \forall j \in \{1,\ldots,n\}
+  \label{eq:grado}
+\end{equation}
+
+\begin{equation}
+  \sum_{i \in V} x_{ihr} - \sum_{j \in V} x_{hjr} = 0,
+  \quad \forall h \in \{1,\ldots,n\},\ \forall r \in R
+  \label{eq:flujo}
+\end{equation}
+
+La Ecuación~\ref{eq:grado} es la restricción de grado. Su lado izquierdo cuenta los arcos que
+entran al nodo $j$ sumando sobre todos los vehículos y todos los orígenes posibles; igualarlo a la
+variable de inclusión $u_j$ hace que un árbol incluido ($u_j = 1$) reciba exactamente un arco
+entrante y uno descartado ($u_j = 0$), ninguno, con lo que la misma igualdad expresa la visita
+única y la exención de los nodos descartados. La Ecuación~\ref{eq:flujo} es la conservación de
+flujo: para cada nodo real $h$ y cada vehículo $r$, los arcos con que $r$ entra a $h$ igualan a los
+arcos con que sale, lo que impide que un vehículo entre a un nodo sin salir de él o inicie su
+recorrido fuera del depósito. Cada vehículo activo sale del depósito y regresa a él a lo sumo una
+vez:
+
+\begin{equation}
+  \sum_{j \in V} x_{0jr} = \sum_{i \in V} x_{i0r} = z_r, \quad \forall r \in R
+  \label{eq:deposito}
+\end{equation}
+
+La Ecuación~\ref{eq:deposito} liga la activación de un vehículo con su uso efectivo: la primera
+suma cuenta las salidas del depósito del vehículo $r$ y la segunda sus regresos, e igualar ambas a
+$z_r$ obliga a que un vehículo activo describa exactamente un circuito por el depósito, mientras
+que uno inactivo no sale de él y, por la Ecuación~\ref{eq:flujo}, no puede tocar nodo alguno. La
+dimensión temporal, definida en la Ecuación~\ref{eq:dimension-tiempo}, encadena los tiempos
+acumulados a lo largo de cada ruta:
+
+\begin{equation}
+  x_{ijr} = 1 \;\Longrightarrow\; t_j \geq t_i + \left\lceil c_{ij} + s\cdot\mathbf{1}[i \neq 0]
+  \right\rceil,
+  \qquad t_0 = 0
+  \label{eq:dimension-tiempo}
+\end{equation}
+
+La implicación se activa solo sobre los arcos recorridos: si el vehículo va de $i$ a $j$, el tiempo
+acumulado al abandonar $j$ es al menos el acumulado en $i$ más el tránsito $c_{ij}$ y el servicio.
+El término indicador $\mathbf{1}[i \neq 0]$ carga el tiempo de servicio al abandonar un nodo real y
+no al llegar a él, con el depósito ficticio exento; el redondeo hacia arriba refleja que el
+\textit{solver} opera en aritmética entera. El tiempo total de la ruta del vehículo $r$ es el valor
+terminal de esa dimensión, que por la Ecuación~\ref{eq:route_time} equivale al desplazamiento más
+el servicio de sus $m_r$ árboles:
+
+\begin{equation}
+  T_r = \sum_{(i,j)} c_{ij}\,x_{ijr} + m_r \cdot s
+  \label{eq:route_time}
+\end{equation}
+
+Sobre ese valor terminal actúan la cota dura $T_{\max}$ y las dos penalizaciones blandas de la
+función objetivo, ya presentadas en la Sección~\ref{sec:formulacion}.
