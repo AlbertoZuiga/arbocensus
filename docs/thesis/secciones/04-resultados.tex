@@ -645,51 +645,27 @@ pre-registro es de incumplimiento, y así se reporta.
 \item Diagnóstico de \texttt{area-27}: relleno por $T_{\min}$.
 
 El resultado adverso admite un diagnóstico preciso, pero no el de un fallo de búsqueda: es un
-régimen de relleno por $T_{\min}$, propio de instancias que no saturan su presupuesto temporal,
-cuyo análisis en el plano de la función objetivo desarrolla la Sección~\ref{sec:discusion-calidad}. Con la configuración de producción las cotas
-blandas no dependen de la instancia: el método \texttt{PenaltyConfig.vehicle\_bounds} devuelve, para
-las cuatro instancias de este apartado, un piso en $T_{\min} = 7\,200$\,s con coeficiente
-$10\,000\,\text{s}^{-1}$ y un objetivo superior en el punto medio de $9\,000$\,s con coeficiente
-$500\,\text{s}^{-1}$.
-
-Instrumentar directamente el valor de la función objetivo del \textit{solver} en esta instancia
----inyectando la solución del \textit{greedy} como \textit{warm start} y comparando su costo contra
-el de la solución final de partición--- muestra que las
-duraciones de las dos rutas que reporta \texttt{total\_estimated\_time\_sec} no son el valor que ve
-la dimensión Time del \textit{solver}: la primera magnitud suma el servicio y el tránsito de la
-secuencia final de paradas, mientras que la dimensión Time es la variable acumulada sobre la que
-actúan las cotas blandas. Esas duraciones son $5\,766$ y $5\,597$\,s en la corrida de
-esta sección, y $5\,299$ y $5\,819$\,s en la repetición instrumentada; la diferencia con la
-dimensión Time es relleno de trayecto añadido gratis, y ambas rutas terminan exactamente en el piso
-$T_{\min} = 7\,200$\,s. Con esa cifra la partición no paga penalización de piso, $(7\,200 - 7\,200)
-\times 10\,000 = 0$ por vehículo, y su costo se reduce al fijo de dos vehículos, $200\,000$. La
-jornada única del \textit{greedy}, en cambio, paga $(10\,694 - 9\,000) \times 500 = 847\,000$ de
-exceso sobre el objetivo superior más $100\,000$ de costo fijo (los $10\,694$\,s corresponden a la
-variante cruda inyectada, no a la refinada de la Tabla~\ref{tab:areas-brazos}). El valor de la
-función objetivo lo confirma:
-$964\,903$ para la jornada única inyectada como \textit{warm start} frente a $229\,709$ para la
-partición que devuelve el \textit{solver}, un factor cercano a $4{,}2$ a favor de partir. El
-\textit{solver} la devuelve, en efecto, en las tres semillas, con y sin \textit{warm start} de la
-jornada única. No hay óptimo local que reprochar a la búsqueda: el GLS encontró y conservó la
-solución más barata bajo el precio vigente.
+régimen de relleno por $T_{\min}$, propio de instancias que no saturan su presupuesto temporal.
+Con la configuración de producción las cotas blandas no dependen de la instancia ---un piso en
+$T_{\min} = 7\,200$\,s y un objetivo superior en el punto medio de $9\,000$\,s---, y bajo esos
+precios partir resulta más barato que la jornada única: las dos rutas de la partición terminan
+exactamente en el piso, donde no pagan penalización alguna, mientras que la jornada única paga el
+exceso sobre el objetivo superior. Instrumentar el valor de la función objetivo ---inyectando la
+solución del \textit{greedy} como \textit{warm start}--- lo confirma: la partición cuesta cerca de
+una cuarta parte que la jornada única (un factor de $4{,}2$), y el \textit{solver} la devuelve en
+las tres semillas, con y sin \textit{warm start}.\footnote{Ver
+\hyperref[anx:objetivo-area27]{Anexo 4}.} No hay óptimo local que reprochar a la búsqueda: el GLS
+encontró y conservó la solución más barata bajo el precio vigente.
 
 El mecanismo del relleno por $T_{\min}$ es general
 (Sección~\ref{sec:discusion-calidad}): cuando $k \cdot T_{\min}$ excede holgadamente el trabajo real
 de la instancia ---aquí $2 \times 7\,200 = 14\,400$\,s frente a los $10\,694$\,s que exige recorrer
 los 72 árboles en una sola ruta---, partir y rellenar hasta el piso resulta más barato que una única
 ruta que se pasa del objetivo superior. La palanca para este defecto ya se intentó por la vía de los
-pisos (piso de paradas, piso combinado) y quedó cerrada sin cambio de \textit{default}: no es un
-hueco de búsqueda nuevo que abra un ciclo de precios adicional.
-
-Las restantes instancias son consistentes con estos mismos precios. En \texttt{area-26} el
-\textit{solver} deja sus tres rutas dentro de la banda $[7\,200,\ 9\,000]$, donde no se paga nada, y
-en la unión la ruta más larga de cada semilla se queda en el $82$--$83$\,\% de $T_{\max}$, esto es,
-por debajo de los $9\,000$\,s del objetivo superior, con duraciones medias por semilla de $8\,204$,
-$8\,121$ y $8\,936$\,s. \texttt{area-29} es el caso sin salida: 43 árboles no alcanzan para
-$7\,200$\,s, así que su única ruta paga el piso porque no existe alternativa. Ni la búsqueda ni la
-recalibración de coeficientes son la palanca pertinente aquí: ambas vías ---piso de paradas, piso
-combinado, recalibración de penalizaciones--- ya fueron exploradas y descartadas por otras razones
-(Sección~\ref{sec:discusion-calidad}).
+pisos (piso de paradas, piso combinado) y quedó cerrada sin cambio de \textit{default}.
+\texttt{area-29} es el caso sin salida: 43 árboles no alcanzan para $7\,200$\,s, de modo que su
+única ruta paga el piso porque no existe alternativa; \texttt{area-26} y la unión, en cambio,
+quedan dentro de la banda $[7\,200,\ 9\,000]$ en que no se paga nada.
 
 \item Serie de auto-cruces sobre calle.
 

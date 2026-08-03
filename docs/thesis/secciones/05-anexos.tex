@@ -996,7 +996,39 @@ $69$ en \texttt{reference-n1607} ($\overline{\text{sat}} = 0{,}94$), de $46$ a $
 \texttt{battery-n1000} ($0{,}91$) y de $26$ a $59$ en \texttt{battery-n800} ($0{,}89$).
 
 \phantomsection
-\item Auditoría de robustez metodológica --- detalle.
+\subsubsection*{Instrumentación del objetivo en \texttt{area-27}}
+\label{anx:objetivo-area27}
+
+El diagnóstico de relleno por $T_{\min}$ de la Sección~\ref{sec:areas-reales} se estableció
+instrumentando el valor de la función objetivo del \textit{solver}
+(\texttt{docs/experiments/warmstart-area27-20260730.md}). Con la configuración de producción, el
+método \texttt{PenaltyConfig.vehicle\_bounds} devuelve para las cuatro instancias de ese apartado
+un piso en $T_{\min} = 7\,200$\,s con coeficiente $10\,000\,\text{s}^{-1}$ y un objetivo superior
+en el punto medio de $9\,000$\,s con coeficiente $500\,\text{s}^{-1}$.
+
+Las duraciones que reporta \texttt{total\_estimated\_time\_sec} no son el valor que ve la dimensión
+Time del \textit{solver}: la primera magnitud suma el servicio y el tránsito de la secuencia final
+de paradas, mientras que la dimensión Time es la variable acumulada sobre la que actúan las cotas
+blandas. Esas duraciones son $5\,766$ y $5\,597$\,s en la corrida de la
+Sección~\ref{sec:areas-reales}, y $5\,299$ y $5\,819$\,s en la repetición instrumentada; la
+diferencia con la dimensión Time es relleno de trayecto añadido gratis, y ambas rutas terminan
+exactamente en el piso $T_{\min} = 7\,200$\,s. Con esa cifra la partición no paga penalización de
+piso, $(7\,200 - 7\,200) \times 10\,000 = 0$ por vehículo, y su costo se reduce al fijo de dos
+vehículos, $200\,000$. La jornada única del \textit{greedy}, en cambio, paga
+$(10\,694 - 9\,000) \times 500 = 847\,000$ de exceso sobre el objetivo superior más $100\,000$ de
+costo fijo (los $10\,694$\,s corresponden a la variante cruda inyectada, no a la refinada de la
+Tabla~\ref{tab:areas-brazos}). El valor de la función objetivo lo confirma: $964\,903$ para la
+jornada única inyectada como \textit{warm start} frente a $229\,709$ para la partición que devuelve
+el \textit{solver}, el factor cercano a $4{,}2$ que reporta el cuerpo.
+
+Las restantes instancias son consistentes con estos mismos precios: en \texttt{area-26} el
+\textit{solver} deja sus tres rutas dentro de la banda $[7\,200,\ 9\,000]$, donde no se paga nada,
+y en la unión la ruta más larga de cada semilla queda en el $82$--$83$\,\% de $T_{\max}$, por
+debajo de los $9\,000$\,s del objetivo superior, con duraciones medias por semilla de $8\,204$,
+$8\,121$ y $8\,936$\,s.
+
+\phantomsection
+\subsubsection*{Auditoría de robustez metodológica --- detalle}
 \label{anx:auditoria-robustez}
 
 La Sección~\ref{sec:discusion-calidad} resume los cuatro defectos de
