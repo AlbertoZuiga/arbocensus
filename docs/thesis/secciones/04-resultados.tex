@@ -90,39 +90,23 @@ distintas.\footnote{Ver \hyperref[anx:alcance-replicas]{Anexo 4}.}
 \item Entorno de medición.
 
 Todas las mediciones de este capítulo se ejecutaron en un entorno local que replica al de
-producción.\footnote{El servidor del despliegue productivo
-(Sección~\ref{sec:despliegue-produccion}), incorporado al cierre de la iteración, no es el entorno
-de medición: aporta únicamente la corrida de contraste que cierra este apartado.} La réplica emplea
-las mismas imágenes de contenedor del despliegue, una instancia real de OSRM cargada con el extracto
-completo de Chile de \textit{OpenStreetMap} con perfil peatonal, y PostGIS como base de datos. Las
-versiones de todas las piezas quedan fijadas en el repositorio; la que condiciona la reproducción
-de las cifras es la de \textit{OR-Tools} (9.15).\footnote{Ver \hyperref[anx:comandos]{Anexo 3}.}
+producción: las mismas imágenes de contenedor del despliegue, una instancia real de OSRM cargada
+con el extracto completo de Chile de \textit{OpenStreetMap} con perfil peatonal, y PostGIS como
+base de datos. La versión que condiciona la reproducción de las cifras es la de \textit{OR-Tools}
+(9.15).\footnote{Ver \hyperref[anx:comandos]{Anexo 3}.} La réplica difiere del servidor del
+despliegue en hardware, latencia de red y punto de entrada, condiciones que acotan la
+extrapolación de las cifras absolutas de tiempo (RE-07) y que un contraste posterior sobre el
+propio servidor cuantifica.\footnote{Ver \hyperref[anx:perfil-rendimiento]{Anexo 4}.}
 
-Este entorno difiere del despliegue real en tres condiciones que acotan la extrapolación de sus
-cifras. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con los
-contenedores de base de datos y OSRM emulados en \texttt{linux/amd64} mediante Rosetta, mientras que
-el servidor de producción del sistema es x86 nativo con recursos muy inferiores
-(Sección~\ref{sec:despliegue-produccion}). La comunicación con OSRM y
-la base de datos ocurre, además, por la red interna de \textit{compose} en la misma máquina, con
-latencia cercana a cero, mientras que en un centro de datos la latencia de red encarecería la fase
-de consulta a OSRM (100 solicitudes HTTP para $n=1\,607$). Por último, el punto de entrada fue el
-comando de gestión ejecutado secuencialmente dentro del contenedor, en lugar del flujo
-API~$\rightarrow$~Celery del sistema en operación; ambos recorren el mismo código
-(\texttt{OptimizationPipeline.run}), por lo que la diferencia agrega únicamente latencia de
-encolado, no de cómputo.
-
-El perfil de tiempo del \textit{pipeline} fija el término dominante del costo de
-planificación.\footnote{Ver \hyperref[anx:perfil-rendimiento]{Anexo 4}.}
+El perfil de tiempo del \textit{pipeline} fija el término dominante del costo de planificación.
 Con la caché de la matriz de costos caliente ---el caso de operación normal--- el GLS concentra el
 $98{,}1$\,\% del tiempo total y las demás fases suman menos del 2\,\%; en el primer contacto con un
 \textit{dataset}, con la caché fría, domina en cambio la consulta a OSRM con el $97{,}6$\,\%
 (170{,}8\,s para $n=1\,607$, 100 solicitudes que escalan como $O(n^2)$), costo que se paga una sola
-vez por \textit{dataset} porque la matriz queda en caché indexada por SHA-256. Una medición de
-contraste sobre el servidor de producción (1--2 de agosto de 2026) confirma ambos regímenes en el
-hardware real: el \textit{pipeline} caliente tomó entre 120{,}0 y 122{,}7\,s según la instancia,
-mientras que en frío las 100 solicitudes de la matriz costaron 780{,}9\,s frente a los 170{,}8\,s
-de la réplica local (un factor de 4{,}6), con lo que el \textit{pipeline} frío completo ronda los
-15\,min. La operación normal del sistema desplegado queda por tanto acotada por el presupuesto del
+vez por \textit{dataset} porque la matriz queda en caché indexada por SHA-256. La medición de
+contraste sobre el servidor de producción confirma ambos regímenes en el hardware real ---120{,}0 a
+122{,}7\,s en caliente; 780{,}9\,s solo la matriz en frío, un factor de 4{,}6 sobre la réplica---,
+de modo que la operación normal del sistema desplegado queda acotada por el presupuesto del
 \textit{solver}, igual que en la réplica local.
 
 \item Sensibilidad al presupuesto del \textit{solver}.

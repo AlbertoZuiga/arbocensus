@@ -589,7 +589,27 @@ GLS y el carácter \textit{OSRM-bound} en frío---, que no dependen de la estrat
 y porque el barrido de la Tabla~\ref{tab:sensibilidad-tl} trata el presupuesto de \textit{solver}
 como variable del experimento y no como constante del régimen.
 
-\item Desglose de tiempo por fase.
+\subsubsection*{Entorno de medición --- detalle}
+
+El entorno local de la Sección~\ref{sec:protocolo-evaluacion} difiere del despliegue real en tres
+condiciones. El hardware es un Apple M4 Pro (arm64, 12 núcleos, 24\,GB) bajo Docker Desktop, con
+los contenedores de base de datos y OSRM emulados en \texttt{linux/amd64} mediante Rosetta,
+mientras que el servidor de producción del sistema es x86 nativo con recursos muy inferiores
+(Sección~\ref{sec:despliegue-produccion}). La comunicación con OSRM y la base de datos ocurre,
+además, por la red interna de \textit{compose} en la misma máquina, con latencia cercana a cero,
+mientras que en un centro de datos la latencia de red encarecería la fase de consulta a OSRM (100
+solicitudes HTTP para $n=1\,607$). Por último, el punto de entrada fue el comando de gestión
+ejecutado secuencialmente dentro del contenedor, en lugar del flujo API~$\rightarrow$~Celery del
+sistema en operación; ambos recorren el mismo código (\texttt{OptimizationPipeline.run}), por lo
+que la diferencia agrega únicamente latencia de encolado, no de cómputo.
+
+La medición de contraste sobre el servidor de producción (1--2 de agosto de 2026) ejecutó el mismo
+comando de gestión sobre las mismas instancias congeladas: el \textit{pipeline} caliente tomó entre
+120{,}0 y 122{,}7\,s según la instancia, mientras que en frío las 100 solicitudes de la matriz
+costaron 780{,}9\,s frente a los 170{,}8\,s de la réplica local (un factor de 4{,}6), con lo que el
+\textit{pipeline} frío completo ronda los 15\,min en ese hardware.
+
+\subsubsection*{Desglose de tiempo por fase}
 
 El \textit{pipeline} se instrumentó por fases: construcción de la matriz de costos
 (\texttt{cost\_matrix}), construcción del modelo (\texttt{model\_build}), resolución
