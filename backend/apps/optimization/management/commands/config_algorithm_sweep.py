@@ -92,6 +92,7 @@ INSTANCES = [
     "area-26-n157",
     "area-27-n72",
     "area-29-n43",
+    "areas-26-27-29-n272",
     "reference-n1607",
 ]
 

@@ -1,0 +1,4 @@
+instance,n,strategy,seed,k,drops,travel_sec,balance,crossings,worst_iou,interleave_per_route,walk_ratio,saturation_mean,route_time_mean_sec,route_time_std_sec,routes_over_t_max,routes_under_t_min,crossings_road,wall_clock_sec,t_matrix_sec,cache_state
+reference-n1607,1607,spatial_term,42,25,0,59718.10000000001,0.8357898644885836,45,0.62,136.36,0.236,0.935,10102,555,0,0,24,334.6,422.0,cold
+reference-n1607,1607,spatial_term,43,25,0,56721.7,0.8373289107121228,63,0.53,84.64,0.227,0.924,9982,526,0,0,37,122.9,0.7,warm
+reference-n1607,1607,spatial_term,44,25,0,58695.80000000001,0.829004228428047,58,0.44,122.2,0.233,0.932,10061,612,0,0,33,123.7,0.9,warm
