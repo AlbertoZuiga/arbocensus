@@ -91,13 +91,13 @@ Comparativa sobre áreas reales, línea base golosa refinada y tiempo de servici
 \hline
 Endurecimiento y detalle del producto & Se restringió el historial al censista asignado y se añadieron la galería de fotografías previas en la parada, un límite de tasa en el inicio de sesión, una frontera de error en la interfaz, la edición de metadatos del conjunto, filtros de reutilización en la importación legada, la exclusión de árboles fuera de ruta y el bloqueo de configuraciones infactibles. & 2026-07-27 a\newline 2026-07-29 & 8 & A. Zúñiga \\
 \hline
+Demostración en video y correcciones derivadas & Se reparó el entorno de demostración, se creó y publicó un conjunto sobre datos legados reales y se capturaron 39 pantallas del recorrido completo. Con el guion y una presentación de nueve láminas se grabó el video del producto en funcionamiento. La grabación expuso la carga lenta del mapa de rutas ---geometría calculada a demanda y una carrera en la caché de la matriz---, resuelta persistiendo la geometría al resolver, junto con correcciones de numeración de paradas, paginación, asignación masiva y avisos de error. & 2026-07-27 a\newline 2026-08-03 & 22 & A. Zúñiga \\
+\hline
+Despliegue productivo y contraste de rendimiento & Se desplegó la plataforma en un servidor virtual de nube con composición de producción, servidor web frontal y certificados. La medición por fases repetida allí mostró la matriz en frío 4,6 veces más lenta que en desarrollo, con el motor de optimización comparable; la memoria se actualizó con ese contraste. & 2026-07-28 a\newline 2026-08-02 & 9 & A. Zúñiga \\
+\hline
 Carga acumulada por censista y sugerencia de asignación & Se calculó la carga acumulada por censista y se expuso en el panel de administración. La sugerencia de asignación usa los participantes reales de la solución publicada y una heurística golosa en dos pasos. & 2026-07-29 & 5 & A. Zúñiga \\
 \hline
 Recomendación entre configuraciones y recorte del abanico & Se implementó la recomendación automática de la configuración con mejor relación caminata--balance entre pares de preajuste y estrategia, con desempate por número de rutas y regla de empate técnico. El abanico se recortó a pares con diferencias medibles y se añadieron los deltas contra el control. & 2026-07-29 a\newline 2026-07-30 & 7 & A. Zúñiga \\
-\hline
-Despliegue productivo y contraste de rendimiento & Se desplegó la plataforma en un servidor virtual de nube con composición de producción, servidor web frontal y certificados. La medición por fases repetida allí mostró la matriz en frío 4,6 veces más lenta que en desarrollo, con el motor de optimización comparable; la memoria se actualizó con ese contraste. & 2026-08-01 a\newline 2026-08-02 & 9 & A. Zúñiga \\
-\hline
-Demostración en video y correcciones derivadas & Se reparó el entorno de demostración, se creó y publicó un conjunto sobre datos legados reales y se capturaron 39 pantallas del recorrido completo. Con el guion y una presentación de nueve láminas se grabó el video del producto en funcionamiento. La grabación expuso la carga lenta del mapa de rutas ---geometría calculada a demanda y una carrera en la caché de la matriz---, resuelta persistiendo la geometría al resolver, junto con correcciones de numeración de paradas, paginación, asignación masiva y avisos de error. & 2026-08-01 a\newline 2026-08-03 & 22 & A. Zúñiga \\
 \hline
 \multicolumn{3}{|r|}{\textbf{Total}} & \textbf{592} & \\
 \hline
