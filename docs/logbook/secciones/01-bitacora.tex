@@ -105,6 +105,14 @@ Preparación de la demostración en video & Se reparó el entorno local de demos
 \hline
 Despliegue productivo y contraste de rendimiento & Se desplegó la plataforma en un servidor virtual de nube con una composición de contenedores propia de producción, servidor web frontal y certificados. Sobre ese servidor se repitió la medición por fases de la tubería: la construcción de la matriz de costos en frío resultó unas 4,6 veces más lenta que en el equipo de desarrollo, mientras que el motor de optimización mantuvo tiempos comparables. La memoria se actualizó con el despliegue y ese contraste. & 2026-08-01 a\newline 2026-08-02 & 9 & A. Zúñiga \\
 \hline
-\multicolumn{3}{|r|}{\textbf{Total}} & \textbf{572} & \\
+Guion, presentación y grabación del video & Se escribió el guion de la demostración sobre el recorrido capturado de la plataforma, se elaboró una presentación de nueve láminas sobre la plantilla institucional y se grabó el video con la demostración del producto en funcionamiento. & 2026-08-02 a\newline 2026-08-03 & 8 & A. Zúñiga \\
+\hline
+Correcciones posteriores a la grabación & La grabación expuso que el mapa de rutas tardaba minutos en cargar; la causa fue la geometría calculada a demanda y una carrera en la caché de la matriz de costos. La geometría pasó a persistirse al resolver, con relleno diferido y respaldo en OSRM, y la caché incorporó un bloqueo de exclusión. Se corrigieron además la numeración de paradas, el seguimiento de la paginación de rutas, la asignación masiva con reporte de fallos parciales, los avisos de error con reintento en la interfaz, y se unificó la importación legada con un número de conjuntos sugerido según el tamaño de la selección. & 2026-08-03 & 8 & A. Zúñiga \\
+\hline
+Acotación de escala en el capítulo 1 de la memoria & Tras la revisión del profesor guía, el capítulo introductorio se redujo a la escala del catastro y el detalle de las fuentes legadas se trasladó al capítulo de diseño y a los anexos. Se corrigió la cifra de árboles distintos de la aplicación legada y la distinción entre muestras y árboles. & 2026-08-03 & 2 & A. Zúñiga \\
+\hline
+Cierre de la bitácora y revisión final de entregables & Se completó la bitácora con las actividades finales, se revisó su redacción completa contra la rúbrica de evaluación y se verificó la consistencia de terminología con la memoria. & 2026-08-03 & 2 & A. Zúñiga \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Total}} & \textbf{592} & \\
 \hline
 \end{xltabular}
