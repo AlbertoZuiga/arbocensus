@@ -147,7 +147,7 @@ export default function ProgressBreakdown({
             <div
               key={row.key}
               className={cn(
-                "overflow-hidden rounded-lg border transition",
+                "shrink-0 overflow-hidden rounded-lg border transition",
                 selected && "border-primary ring-2 ring-primary",
                 !selected && childSelected && "border-primary/50",
                 !selected && !childSelected && "border-border",
