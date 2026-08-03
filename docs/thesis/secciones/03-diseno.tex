@@ -773,9 +773,8 @@ La formulación en \textit{OR-Tools} \citep{ortools} usa el modelo de ruteo vehi
         decisión de diseño es su valor. A falta de un valor
         explícito, el \textit{pipeline} lo deriva del tamaño del problema como
         $\min(30 + 1{,}5\,n,\ 120)$ segundos, de modo que un \textit{dataset} pequeño no consume el
-        presupuesto completo; para los tamaños de esta memoria la expresión satura en su tope de
-        $120$\,s.
-\end{enumerate}
+        presupuesto completo; la expresión satura en su tope de $120$\,s a partir de $n = 60$.
+\end{itemize}
 
 Si el \textit{solver} no encuentra solución, el \textit{pipeline} no falla en silencio: emite un
 error que reporta el número de árboles y los parámetros de configuración vigentes (tiempo de
