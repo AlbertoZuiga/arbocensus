@@ -380,13 +380,12 @@ vale $T_r$; un vehículo inactivo no contribuye a ninguno de los seis términos.
     --- &
       Costo de arco &
       $1$ &
-      Por segundo de tránsito: el término que expresa el tiempo de caminata que el modelo minimiza.
-      \\
+      Por segundo de tránsito. \\
       \addlinespace
     $C_{\text{fijo}}$ &
       Costo fijo de vehículo &
       $100\,000$ &
-      Por vehículo activo. Es el mecanismo que minimiza la flota (Sección~\ref{sec:flota}). \\
+      Por vehículo activo (Sección~\ref{sec:flota}). \\
       \addlinespace
     $\alpha$ &
       Penalización inferior &
@@ -401,18 +400,17 @@ vale $T_r$; un vehículo inactivo no contribuye a ninguno de los seis términos.
     $\tau$ &
       Objetivo blando superior &
       $(T_{\min}+T_{\max})/2$ &
-      En segundos: el punto medio del intervalo de jornada. \\
+      Punto medio del intervalo de jornada, en segundos. \\
       \addlinespace
     $\pi$ &
       Penalización de descarte &
       $10^{6}$ &
-      Por árbol excluido del plan, esto es $10\,C_{\text{fijo}}$ (Sección~\ref{sec:disyunciones}).
-      \\
+      Por árbol excluido, esto es $10\,C_{\text{fijo}}$ (Sección~\ref{sec:disyunciones}). \\
       \addlinespace
     $\lambda_{\text{span}}$ &
       Coeficiente de extensión geográfica &
       $3$ &
-      Por metro de extensión de la ruta en la dimensión de \textit{haversine}
+      Por metro de extensión en la dimensión de \textit{haversine}
       (Sección~\ref{sec:estrategias}). \\
 \end{xltabular}
 \normalsize

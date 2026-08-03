@@ -285,17 +285,14 @@ como la respuesta que el diseño les dio.
     \addlinespace
     RE-04 &
     El \textit{solver} de \textit{OR-Tools} resuelve mediante una metaheurística de búsqueda local:
-    no converge ni certifica optimalidad, y la biblioteca no ofrece un criterio de término por
-    calidad demostrada. Sin un límite de tiempo explícito no se detiene por sí sola, de modo que toda
-    solución que el sistema entrega es la mejor hallada dentro del presupuesto concedido, no la mejor
-    existente. \\
+    no converge ni certifica optimalidad, y sin un límite de tiempo explícito no se detiene por sí
+    sola, de modo que toda solución entregada es la mejor hallada dentro del presupuesto concedido,
+    no la mejor existente. \\
     \addlinespace
     RE-05 &
-    \textit{OR-Tools} no expone una semilla ---el valor que fija el punto de partida del generador
-    de números pseudoaleatorios y que, al repetirse, reconstruye una corrida idéntica---, por lo que
-    las réplicas de un experimento deben construirse permutando el orden de entrada de los nodos:
-    ese orden es el que resuelve los empates de la heurística de construcción, de modo que
-    alterarlo cambia la solución inicial y con ella toda la trayectoria de la búsqueda local. \\
+    \textit{OR-Tools} no expone una semilla del generador pseudoaleatorio, por lo que las réplicas
+    de un experimento deben construirse permutando el orden de entrada de los nodos, que es el que
+    resuelve los empates de la heurística de construcción y decide la trayectoria de la búsqueda. \\
     \addlinespace
     RE-06 &
     La conectividad en terreno es intermitente, de modo que el portal del censista no puede suponer
