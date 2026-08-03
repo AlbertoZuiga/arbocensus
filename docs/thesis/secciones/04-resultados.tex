@@ -692,13 +692,10 @@ coordenadas reales de las paradas y calculados con la distancia de \textit{haver
 de cada una; menor es mejor), el solapamiento (\textit{interleaving}: paradas de otras rutas dentro
 de la caja envolvente de una ruta dada, sumado sobre todas y también normalizado por $k$; mayor es
 peor) y el IoU del peor par (intersección sobre unión de las cajas envolventes del par de rutas con
-mayor superposición; mayor es peor).
-
-Estos indicadores tienen lectura operacional directa: cada ruta del plan se asigna a un censista
-distinto, de modo que dos rutas entrelazadas obligan a dos censistas a recorrer las mismas calles y
-desdibujan el territorio del que cada uno responde, mientras que la compacidad acota la extensión
-que una jornada debe cubrir. El balance temporal se reporta como $\min_r T_r / \max_r T_r$
-(\textit{balance\_score} del modelo).
+mayor superposición; mayor es peor). Su lectura operacional es directa: cada ruta se asigna a un
+censista distinto, de modo que dos rutas entrelazadas obligan a dos censistas a recorrer las mismas
+calles, mientras que la compacidad acota la extensión que una jornada debe cubrir. El balance
+temporal se reporta como $\min_r T_r / \max_r T_r$.
 
 Antes de evaluar un preprocesamiento de \textit{clustering} geográfico, la formulación vigente se
 caracterizó con un diagnóstico sobre nodos sintéticos de distribución uniforme
@@ -786,10 +783,9 @@ adicional dentro de la misma corrida: el IoU del peor par no mejora sino que emp
 ($0{,}51 \rightarrow 0{,}55$), porque la penalización del \textit{span} comprime cada ruta de forma
 individual pero no separa el par de rutas vecinas que se superponen en la zona más densa: ese par
 persiste como problema de geometría local que ningún coeficiente global resuelve, y se retoma en la
-Sección~\ref{sec:discusion-calidad}. Las métricas de forma son además las más sensibles a la
-semilla ---\texttt{global} produce solapamientos por ruta de $150$ a $177$ según la repetición---,
-pero aun contra su mejor repetición \texttt{spatial\_term} reduce el solapamiento en al menos un
-$45$\,\%, por lo que la conclusión no depende de la agregación.
+Sección~\ref{sec:discusion-calidad}.\footnote{Las métricas de forma son las más sensibles a la
+semilla: \texttt{global} produce solapamientos por ruta de $150$ a $177$ según la repetición. Aun
+contra su mejor repetición, \texttt{spatial\_term} reduce el solapamiento en al menos un $45$\,\%.}
 
 \texttt{cluster\_first} queda descartada con datos. Alcanza, como era esperable, la mejor
 separación espacial de las tres ---solapamiento de $20$ por ruta y $\sum r_{\max}$ de
@@ -817,10 +813,10 @@ torno a un 30\,\% con un balance de $\approx 0{,}83$. En la única variante con 
 \texttt{global} ($k=25$), lo que indica que el término espacial \textit{no} infla la flota. La
 observación operacional relevante es que las variantes de $T_{\max}=2$\,h con tiempo de servicio
 alto descartan árboles (uno con servicio de 2\,min, dos con 3\,min, de forma consistente en las
-tres semillas): si el censo exige cobertura total debe emplearse $T_{\max}=3$\,h. La fila del
-\textit{head-to-head}, reejecutada aquí, difiere de la Tabla~\ref{tab:estrategias} en menos de un
-$0{,}1$\,\% de desplazamiento por el corte por reloj de pared del GLS, lo que acota la precisión de
-todas las comparaciones de esta subsección.
+tres semillas): si el censo exige cobertura total debe emplearse
+$T_{\max}=3$\,h.\footnote{La fila del \textit{head-to-head}, reejecutada aquí, difiere de la
+Tabla~\ref{tab:estrategias} en menos de un $0{,}1$\,\% de desplazamiento por el corte por reloj de
+pared del GLS, lo que acota la precisión de estas comparaciones.}
 
 \item Alcance de las comparaciones y decisión.
 
@@ -867,15 +863,13 @@ balance por sobre los 120\,s (Tabla~\ref{tab:sensibilidad-tl}), y la re-medició
 
 \item El régimen geográfico del \textit{dataset} de evaluación.
 
-El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. El conjunto
-de evaluación de $n = 1\,607$ árboles agrega arbolado real de múltiples áreas de censo dispersas en
-$\approx 10{,}3$\,km de extensión, frente a $1{,}32$\,km del área individual mayor ---razón cercana
-a $8\times$---. Los árboles son reales; lo sin correlato operativo es tratar esa unión como un
-único trabajo de ruteo (Ilustración~\ref{fig:regimen-disperso-vs-real}). La serie de
-\texttt{crossings\_road} por área (Sección~\ref{sec:areas-reales}) acota lo que ese régimen
-significa para los auto-cruces: entre 0 y 6 por solución en las áreas reales frente a 24--37 en el
-conjunto agregado, con una tasa por ruta esencialmente plana entre ambos regímenes ---el agregado
-no produce más auto-cruces por ruta, sino más rutas---.
+El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. La
+instancia agregada dispersa el arbolado en una extensión cercana a ocho veces la del área
+individual mayor (Sección~\ref{sec:protocolo-evaluacion}), y tratar esa unión como un único trabajo
+de ruteo carece de correlato operativo (Ilustración~\ref{fig:regimen-disperso-vs-real}). Para los
+auto-cruces, la serie por área de la Sección~\ref{sec:areas-reales} acota lo que ese régimen
+significa: el agregado no produce más auto-cruces por ruta, sino más rutas y, con ellas, un conteo
+absoluto mayor.
 
 \begin{figure}[H]
   \centering
@@ -895,12 +889,10 @@ circundantes; la solución estructural es la segmentación previa por área de c
 La lectura que estos resultados dejan explícita es que los auto-cruces responden a la forma de la
 función objetivo y al régimen geográfico de la instancia, no a una limitación del tiempo de
 cómputo: ampliar el presupuesto del \textit{solver} no los altera
-(Tabla~\ref{tab:sensibilidad-tl}) y redirigir la penalización blanda superior sí. La unidad
-operativa del motor es el área de censo individual, no el arbolado metropolitano en su conjunto;
-esa extensión se documenta como trabajo futuro en la Sección~\ref{sec:posibles-mejoras} y su costo
-se mide en la Sección~\ref{sec:areas-reales}. El problema que plantea ---repartir un territorio en
-distritos compactos y equilibrados antes de rutear--- tiene tratamiento propio en la literatura
-bajo la denominación de diseño territorial \citep{kalcsics2005towards,rios2009reactive}.
+(Tabla~\ref{tab:sensibilidad-tl}) y redirigir la penalización blanda superior sí. El problema que
+la segmentación previa por área plantea ---repartir un territorio en distritos compactos y
+equilibrados antes de rutear--- tiene tratamiento propio en la literatura bajo la denominación de
+diseño territorial \citep{kalcsics2005towards,rios2009reactive}.
 
 \item Barrido de configuraciones sobre la suite completa.
 
@@ -919,9 +911,8 @@ La conclusión del barrido es que no existe una configuración única ganadora p
 regímenes: la hipótesis queda refutada, y la decisión adoptada es conservar la configuración de
 producción sin modificación. El escenario donde \texttt{upper-tmax-tmin9000} gana ---el conjunto
 agregado--- no tiene correlato operativo en el censo histórico, que se organizó por área. Ese brazo
-tampoco se adopta tras una compuerta de activación por saturación: la re-medición sobre el trazado
-real de calles invierte el signo de su efecto geométrico precisamente en el régimen que esa
-compuerta habilitaría (Sección~\ref{sec:posibles-mejoras}).
+tampoco se adopta tras una compuerta de activación por saturación
+(Sección~\ref{sec:posibles-mejoras}).
 
 \end{enumerate}
 
