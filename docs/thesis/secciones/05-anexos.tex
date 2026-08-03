@@ -847,6 +847,13 @@ densidad del efecto del tamaño.
   \end{tabularx}
 \end{table}
 
+La instancia de referencia \texttt{reference-n1607} reúne los 429 árboles de \texttt{legacy\_api}
+con posición explícita y 1\,178 de \texttt{legacy\_app} con posición reconstruida por mediana
+(Sección~\ref{sec:legacy}). Esos 1\,178 superaban, al momento del congelamiento, una validación de
+calidad que entonces aplicaba el importador y que no forma parte del sistema vigente, de modo que
+la instancia no puede regenerarse desde el importador actual y se emplea siempre en su forma
+congelada y versionada.
+
 \phantomsection
 \subsubsection*{Reservas del experimento de sensibilidad a penalizaciones}
 \label{anx:reservas-sensibilidad}
@@ -1346,7 +1353,7 @@ estrictamente de solo lectura (RE-03).
     \texttt{area} & 48 &
       \texttt{coordinates} (lista de vértices, se reconstruye como polígono), \texttt{campaign\_id}.
       27 sin arbolado, 21 no vacías que se reducen a 12 polígonos distintos por recreación entre
-      campañas (Sección~\ref{sec:estado-actual}). \\
+      campañas. \\
     \texttt{campaign} & 10 &
       Nombre, usado solo como metadato de exploración; no se importa como entidad propia. \\
     \texttt{step} & --- &
@@ -1376,6 +1383,17 @@ estrictamente de solo lectura (RE-03).
     \bottomrule
   \end{tabularx}
 \end{table}
+
+De las 17\,208 muestras de \texttt{sample}, 233 carecen de código QR, 56 portan un código compuesto
+solo de ceros y 1\,636 carecen de lectura GPS utilizable ---nula o fuera del rango de Chile
+continental---. Se eligió descartar las muestras sin código QR en lugar de intentar asignarlas a un
+árbol por proximidad: dado que incluso las muestras con código exhiben lecturas de GPS
+inconsistentes entre sí ---la razón por la que la posición se consolida como mediana---, una
+asignación basada solo en la coordenada arriesga atribuir la observación a un ejemplar equivocado.
+Consolidar esas muestras sin introducir información incorrecta queda como posible trabajo futuro.
+Las muestras con código válido se agrupan en 13\,076 árboles distintos, de los cuales 12\,941
+conservan al menos una lectura utilizable y reciben su posición como mediana de ellas; los filtros
+que materializan estas exclusiones se definen en la Sección~\ref{sec:legacy}.
 
 La diferencia estructural entre ambos esquemas es la que obliga al doble camino de vinculación
 descrito en la Sección~\ref{sec:recenso}: \texttt{legacy\_api} referencia el árbol directamente desde
