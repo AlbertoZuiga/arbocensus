@@ -486,7 +486,8 @@ con valores por defecto $T_{\min} = 2\,\text{h}$ y $T_{\max} = 3\,\text{h}$, par
 administrador. La cota inferior $T_{\min}$ no es una restricción del modelo sino un objetivo blando:
 se penaliza el déficit en la función objetivo en lugar de prohibirlo, por la razón que se detalla en
 la Sección~\ref{sec:solver}. En consecuencia, una solución puede presentar rutas de duración
-inferior a $T_{\min}$, y las presenta en la solución de producción (Capítulo~\ref{cap:resultados}).
+inferior a $T_{\min}$; el Capítulo~\ref{cap:resultados} las observa en las áreas reales de baja
+carga, no en la instancia de referencia.
 
 \subsubsection*{Función objetivo}
 
@@ -852,8 +853,7 @@ permanece accesible por esa vía, la experimental, y no por la del administrador
         geográfica de cada ruta mediante \texttt{SetSpanCostCoefficientForAllVehicles} con
         coeficiente $\lambda_{\text{span}} = 3$. El \textit{span} de una ruta es la diferencia entre
         el máximo y el mínimo acumulado de la dimensión a lo largo del vehículo; penalizarlo empuja
-        al \textit{solver} hacia rutas más compactas a costa de mayor tiempo total. La cota superior
-        temporal se ajusta al punto medio $(T_{\min} + T_{\max})/2$ para preservar el balance.
+        al \textit{solver} hacia rutas más compactas a costa de mayor tiempo total.
   \item \texttt{cluster\_first}: enfoque \textit{cluster-first, route-second}
         \citep{fisher1981generalized}: los árboles se agrupan en $k$ clústeres mediante el algoritmo
         de Lloyd \citep{lloyd1982least} con inicialización \textit{k-means++}

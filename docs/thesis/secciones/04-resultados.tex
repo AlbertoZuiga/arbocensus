@@ -1017,8 +1017,8 @@ configuración universal, se ejecutó un barrido de configuración $\times$ algo
 sobre las doce instancias reales congeladas del \hyperref[anx:suite-instancias]{Anexo 4} ($n=43$ a
 $n=1\,607$). El único brazo que satisface el criterio de decisión sobre $n=1\,607$
 ---\texttt{upper-tmax-tmin9000}, que ancla la penalización blanda superior en $T_{\max}$ y eleva el
-piso blando--- reduce los auto-cruces un $92{,}5$\,\% sin costo de viaje ni de balance en esa
-instancia, porque a esa densidad las rutas saturan $T_{\max}$ de forma natural
+piso blando--- reduce los auto-cruces sobre cuerdas un $92{,}5$\,\% sin costo de viaje ni de balance
+en esa instancia, porque a esa densidad las rutas saturan $T_{\max}$ de forma natural
 ($\overline{\text{sat}} = 0{,}94$). El mismo brazo produce, sin embargo, el peor resultado sobre las
 áreas reales individuales, donde la instancia no satura $T_{\max}$: fuerza relleno de trayecto con
 incrementos de viaje de hasta $+89$\,\%. Los brazos restantes no mejoran el criterio (el término de
@@ -1031,11 +1031,12 @@ sin una compuerta previa: la hipótesis queda refutada. El escenario donde
 \texttt{upper-tmax-tmin9000} gana ---el conjunto agregado de $n=1\,607$--- no tiene correlato
 operativo en el censo histórico, que se organizó por área; representa en cambio el régimen de
 escalamiento, un censo de cobertura mayor o el ruteo de una comuna completa como un solo problema.
-La decisión adoptada es conservar la configuración de producción (\texttt{actual}) sin modificación
-y publicar \texttt{upper-tmax-tmin9000} como propuesta verificada para un \textit{guard} por
-saturación a priori ($\overline{\text{sat}} \gtrsim 0{,}9$): el código de los \textit{overrides}
-queda en el árbol (opt-in, producción intacta) para habilitar ese \textit{guard} cuando se
-implemente el selector, extensión que se documenta en la Sección~\ref{sec:posibles-mejoras}.
+La decisión adoptada es conservar la configuración de producción sin modificación. El brazo ganador
+del régimen agregado tampoco se adopta tras una compuerta de activación por saturación: la
+re-medición de sus soluciones sobre el trazado real de calles invierte el signo de su efecto
+geométrico precisamente en el régimen que esa compuerta habilitaría
+(\hyperref[anx:barrido-configuraciones]{Anexo 4}), y la Sección~\ref{sec:posibles-mejoras} registra
+el descarte.
 % ---- 4.1.5 ------------------------------------------------------
 \subsection{Evaluación sobre áreas reales de censo y precio de la partición}
 \label{sec:areas-reales}
