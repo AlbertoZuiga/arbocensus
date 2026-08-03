@@ -1028,9 +1028,9 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
 \begin{enumerate}
   \item Validación en terreno: las conclusiones de este capítulo verifican que el producto hace lo
       que su diseño declara, pero no que resuelva en operación el problema logístico que lo motivó.
-      El despliegue productivo deja esa jornada sin prerrequisitos de infraestructura. Debe
-      construirse una jornada instrumentada que contraste el tiempo estimado por OSRM contra el
-      observado en terreno y que ejercite la cola \textit{offline} bajo conectividad real.
+      Debe construirse una jornada instrumentada ---sin prerrequisitos de infraestructura tras el
+      despliegue--- que contraste el tiempo estimado por OSRM contra el observado en terreno y que
+      ejercite la cola \textit{offline} bajo conectividad real.
 
   \item Segmentación previa por área: la unidad operativa correcta del motor es el área de censo
       individual (Secciones~\ref{sec:areas-reales} y~\ref{sec:discusion-calidad}), con el costo ya
@@ -1052,11 +1052,11 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
 
   \item Protocolo de censo y almacenamiento de fotografías: el orden correcto es primero decidir el
       protocolo ---si la fotografía es necesaria, cuántas por árbol y con qué retención--- y solo
-      entonces dimensionar la arquitectura. La evidencia de que el almacenamiento importa la da el
-      propio proyecto: las $10\,008$ fotografías de \texttt{legacy\_api} son hoy inaccesibles por
-      el cierre del plan de facturación que las alojaba. Fijado el protocolo, debe construirse la
-      persistencia sobre un almacenamiento de objetos externo cuya propiedad y facturación queden
-      bajo el proyecto y no bajo una persona.
+      entonces construir la persistencia sobre un almacenamiento de objetos externo cuya propiedad
+      y facturación queden bajo el proyecto y no bajo una persona.\footnote{La evidencia de que el
+      almacenamiento importa la da el propio proyecto: las $10\,008$ fotografías de
+      \texttt{legacy\_api} son hoy inaccesibles por el cierre del plan de facturación que las
+      alojaba.}
 
   \item Importación de formatos adicionales: soporte de GeoJSON como tercer formato de entrada,
       junto a CSV y JSON.
@@ -1070,10 +1070,10 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
       (Sección~\ref{sec:verificacion}).
 
   \item Preferir rutas cortas antes que descartar árboles: subir el costo fijo por vehículo no es
-      el mecanismo, aunque sea la intuición más inmediata: abrir la ruta que absorbería al árbol
-      cuesta $C_{\text{fijo}} = 10^{5}$\,s más una penalización de piso blando que para una ruta
-      corta ronda los $7\times10^{7}$\,s ---es el piso, no la flota, el término que domina esa
-      decisión---. La palanca correcta es eximir del piso a la última ruta activa
+      el mecanismo, porque es el piso blando y no la flota el término que domina esa
+      decisión.\footnote{Abrir la ruta que absorbería al árbol cuesta
+      $C_{\text{fijo}} = 10^{5}$\,s más una penalización de piso que para una ruta corta ronda los
+      $7\times10^{7}$\,s.} La palanca correcta es eximir del piso a la última ruta activa
       (\textit{exempt-last}) o escalar $T_{\min}$ con el trabajo real, vía que la mejora de cotas
       sensibles a la densidad ya identifica.
 
@@ -1090,17 +1090,16 @@ indica la evidencia que la respalda, su costo y qué habría que construir.
       frente a las demás, pero el balance que el sistema persigue es de largo plazo entre censistas
       y ya lo sostiene \texttt{suggest\_assignment} (RF-24).
 
-  \item Modelo de aprendizaje automático para generar rutas: evaluado y no propuesto, por tres
-      razones: las restricciones duras del problema no son garantizables por un modelo aprendido;
-      entrenarlo exigiría un corpus de planes etiquetados que solo podría generar el propio
-      \textit{solver}, lo que vuelve circular el entrenamiento; y es sobreingeniería frente a un
-      problema que la formulación actual resuelve en $120$\,s.
+  \item Modelo de aprendizaje automático para generar rutas: evaluado y no propuesto: las
+      restricciones duras no son garantizables por un modelo aprendido, el corpus de entrenamiento
+      solo podría generarlo el propio \textit{solver} ---entrenamiento circular--- y es
+      sobreingeniería frente a un problema que la formulación actual resuelve en $120$\,s.
 
   \item Partición \textit{route-first, cluster-second}: evaluada y no propuesta
-      (Sección~\ref{sec:solucion}). Los resultados del capítulo refuerzan el descarte: el balance
-      no se obtiene por añadidura sino que es lo que más cuesta sostener, y la compacidad exigió un
-      término explícito en el objetivo. Si se retoma, debe construirse un criterio de corte que
-      optimice la partición en lugar de heredarla del recorrido.
+      (Sección~\ref{sec:solucion}), descarte que los resultados refuerzan: el balance es lo que más
+      cuesta sostener y la compacidad exigió un término explícito en el objetivo. Si se retoma,
+      debe construirse un criterio de corte que optimice la partición en lugar de heredarla del
+      recorrido.
 \end{itemize}
 
 Una extensión adicional se evaluó y quedó descartada por la propia medición: la compuerta de
