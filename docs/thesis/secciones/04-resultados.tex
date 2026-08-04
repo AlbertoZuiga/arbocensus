@@ -31,10 +31,10 @@ conjunto reúne una porción del arbolado disponible elegida por reproducibilida
 sus nodos, diferenciada por fuente: ambas se concentran en el mismo territorio, de modo que la
 instancia agrega observaciones del mismo arbolado urbano y no concatena zonas independientes. El
 segundo régimen es el de área de censo individual ---diámetros de hasta 1,32\,km---, que
-corresponde a la operación habitual. La instancia agregada funciona como instancia de estrés: es la
-de mayor tamaño y la que fija los criterios de aceptación del Capítulo~\ref{cap:solucion}; las
-áreas reales miden el motor en su unidad operativa (Sección~\ref{sec:areas-reales}), y varias
-conclusiones del régimen agregado no se trasladan sin más a ellas.
+corresponde a la operación habitual. La instancia agregada es la que fija los criterios de
+aceptación del Capítulo~\ref{cap:solucion}; las áreas reales miden el motor en su unidad operativa
+(Sección~\ref{sec:areas-reales}), y varias conclusiones del régimen agregado no se trasladan sin
+más a ellas.
 
 \begin{figure}[H]
   \centering
@@ -238,9 +238,9 @@ Sección~\ref{sec:criterios-aceptacion}.
 El número de rutas, $k=25$, es la flota que el \textit{solver} activa bajo esta configuración, no
 una cota mínima demostrada: el \textit{baseline} \textit{greedy} de la
 Sección~\ref{sec:comparacion-greedy} resuelve el mismo problema con 24 rutas, y esa diferencia no
-indica una solución mejor sino un régimen distinto ---el heurístico satura cada ruta hasta un
-promedio del $98{,}0$\,\% de $T_{\max}$, mientras que las penalizaciones blandas del modelo empujan
-las duraciones hacia el punto medio y dejan holgura operacional en promedio---. Ninguna ruta excede
+indica una solución mejor sino un régimen distinto ---el heurístico satura cada ruta al borde de
+$T_{\max}$, mientras que las penalizaciones blandas del modelo dejan holgura operacional, contraste
+que ese apartado cuantifica---. Ninguna ruta excede
 $T_{\max}$, que el modelo impone como capacidad dura, y la cobertura fue total: ninguna repetición
 descartó árboles, pese a que el modelo lo permite.
 
@@ -667,9 +667,7 @@ de $T_{\min}$ y el triple de cómputo, a cambio de instancias que corresponden a
 operativa real y de una varianza entre repeticiones sustancialmente menor. Este resultado convierte
 en medición lo que la Sección~\ref{sec:discusion-calidad} argumenta desde la geometría: la
 segmentación previa por área deja de sostenerse solo en los auto-cruces y pasa a tener un costo y
-un beneficio cuantificados. Es esta medición la que sostiene la tesis con que abre el capítulo, y
-que las conclusiones retoman: la unidad operativa correcta del motor es el área de censo
-individual.
+un beneficio cuantificados. Es esta medición la que sostiene la tesis con que abre el capítulo.
 
 \end{enumerate}
 
@@ -782,9 +780,8 @@ decisión se cumple en dos de las tres; y el barrido del coeficiente espacial qu
 apartado, que muestra que la compacidad comprada se paga en tiempo y en balance. Una matización
 adicional dentro de la misma corrida: el IoU del peor par no mejora sino que empeora levemente
 ($0{,}51 \rightarrow 0{,}55$), porque la penalización del \textit{span} comprime cada ruta de forma
-individual pero no separa el par de rutas vecinas que se superponen en la zona más densa: ese par
-persiste como problema de geometría local que ningún coeficiente global resuelve, y se retoma en la
-Sección~\ref{sec:discusion-calidad}.\footnote{Las métricas de forma son las más sensibles a la
+individual pero no separa el par de rutas vecinas que se superponen en la zona más densa
+(Sección~\ref{sec:discusion-calidad}).\footnote{Las métricas de forma son las más sensibles a la
 semilla: \texttt{global} produce solapamientos por ruta de $150$ a $177$ según la repetición. Aun
 contra su mejor repetición, \texttt{spatial\_term} reduce el solapamiento en al menos un $45$\,\%.}
 
@@ -801,8 +798,7 @@ disyunciones penalizadas antes de encontrar una asignación completa.
 \item Grilla operacional de la estrategia ganadora.
 
 Confirmada \texttt{spatial\_term}, se ejecutó sobre ella una grilla de seis variantes operacionales
----el producto cartesiano de los valores admitidos de dos parámetros, con una corrida por
-combinación--- (tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), sobre el
+(tiempo de servicio $\{1,2,3\}$\,min $\times$ $T_{\max} \in \{2,3\}$\,h), sobre el
 \textit{dataset} de $n=1\,607$, con el mismo límite de 120\,s y tres
 semillas.\footnote{Ver \hyperref[anx:grilla-spatial]{Anexo 4}.}
 
@@ -887,12 +883,9 @@ de $0{,}55$, persiste con la estrategia \texttt{spatial\_term} porque su solapam
 geometría local del par, y ningún coeficiente global lo elimina sin penalizar las rutas
 circundantes; la solución estructural es la segmentación previa por área de censo.
 
-La lectura que estos resultados dejan explícita es que los auto-cruces responden a la forma de la
-función objetivo y al régimen geográfico de la instancia, no a una limitación del tiempo de
-cómputo: ampliar el presupuesto del \textit{solver} no los altera
-(Tabla~\ref{tab:sensibilidad-tl}) y redirigir la penalización blanda superior sí. El problema que
-la segmentación previa por área plantea ---repartir un territorio en distritos compactos y
-equilibrados antes de rutear--- tiene tratamiento propio en la literatura bajo la denominación de
+El problema que la segmentación previa por área plantea ---repartir un territorio en distritos
+compactos y equilibrados antes de rutear--- tiene tratamiento propio en la literatura bajo la
+denominación de
 diseño territorial \citep{kalcsics2005towards,rios2009reactive}.
 
 \item Barrido de configuraciones sobre la suite completa.
@@ -949,9 +942,8 @@ evidencia recogida sobre él.
     \item Alcance del problema de ruteo: el motor optimiza el \textit{dataset} completo como un
         único problema, sin segmentación previa por área geográfica; la correcta delimitación del
         \textit{dataset} de entrada recae en el administrador. En la operación habitual ---un área
-        individual--- la limitación no se manifiesta, y automatizar la segmentación es la mejora de
-        mayor impacto geométrico identificada, con el costo que mide la
-        Sección~\ref{sec:areas-reales}.
+        individual--- la limitación no se manifiesta; su automatización se recoge entre las mejoras
+        (Sección~\ref{sec:posibles-mejoras}).
 
     \item Captura sin conectividad: la cola \textit{offline} preserva los datos ante pérdidas de
         conexión momentáneas; no se implementó un \textit{service worker} para teselas de mapa ni
@@ -1027,10 +1019,10 @@ serie experimental, y las dos últimas registran alternativas evaluadas y descar
 indica la evidencia que la respalda, su costo y qué habría que construir.
 
 \begin{enumerate}
-  \item Validación en terreno: las conclusiones de este capítulo verifican que el producto hace lo
-      que su diseño declara, pero no que resuelva en operación el problema logístico que lo motivó.
-      Debe construirse una jornada instrumentada ---sin prerrequisitos de infraestructura tras el
-      despliegue--- que contraste el tiempo estimado por OSRM contra el observado en terreno y que
+  \item Validación en terreno: es la comprobación que ninguna suite de pruebas sustituye
+      (Sección~\ref{sec:verificacion}). Debe construirse una jornada instrumentada ---sin
+      prerrequisitos de infraestructura tras el despliegue--- que contraste el tiempo estimado por
+      OSRM contra el observado en terreno y que
       ejercite la cola \textit{offline} bajo conectividad real.
 
   \item Segmentación previa por área: la unidad operativa correcta del motor es el área de censo

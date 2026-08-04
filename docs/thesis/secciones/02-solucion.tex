@@ -19,11 +19,11 @@ identificados y recoger la observación histórica de cada árbol. Esa
 cadena ---catastro legado, optimización, asignación, captura en terreno e historial--- es lo que el
 producto debe aportar, y es específica del dominio y no del algoritmo.
 
-Se propone el desarrollo de una plataforma web que formule el problema de ruteo de censo como un
-problema de ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
+Se propone el desarrollo de una plataforma web que formule la planificación del censo como un
+ruteo de vehículos de rutas abiertas con visitas opcionales penalizadas y restricción de
 duración por ruta, sobre distancias caminables de la red vial real y no euclidianas. La plataforma
 debe resolver esa formulación mediante programación con restricciones y cubrir las cuatro
-condiciones del ruteo urbano real que esas variantes no reúnen juntas:
+condiciones del ruteo urbano real que el mTSP y el VRPTW no reúnen juntas:
 \begin{enumerate}
   \item determinar automáticamente el número de rutas necesarias $k$ dado el conjunto de árboles $P =
         \{p_1, \ldots, p_n\}$ y los parámetros $T_{\min}$, $T_{\max}$, $s$ (tiempo de servicio por
@@ -46,8 +46,7 @@ una campaña, desde la constitución del conjunto de árboles a censar hasta el 
 en terreno. El administrador importa el arbolado, configura los parámetros de jornada,
 ejecuta la optimización, publica el plan resultante y asigna cada ruta a un censista. El censista
 recorre su ruta desde el navegador de su teléfono y registra, parada por parada, el estado en que
-encontró cada árbol. Cada uno de esos registros se convierte en una observación histórica, que es
-lo que convierte al sistema en una herramienta de re-censo y no de censo inicial.
+encontró cada árbol. Cada registro es una observación histórica.
 
 \section{USUARIOS OBJETIVO}
 \label{sec:usuarios}
@@ -57,10 +56,8 @@ gobierna las decisiones de diseño del Capítulo~\ref{cap:diseno}.
 
 \begin{enumerate}
   \item Administrador de campaña. Coordina el censo dentro del proyecto Arbocensus. No se supone en
-        él conocimiento de optimización combinatoria: no debe tener que declarar cuántos equipos
-        necesita ni ajustar coeficientes del \textit{solver}: el número de censistas que
-        requiere una campaña lo determina el sistema automáticamente
-        (RF-07 y Sección~\ref{sec:flota}). Trabaja desde un
+        él conocimiento de optimización combinatoria: no debe declarar cuántos equipos
+        necesita ni ajustar coeficientes del \textit{solver}. Trabaja desde un
         computador de escritorio, con conexión estable, en sesiones de planificación previas a la
         jornada de terreno. Se espera un único administrador activo por campaña.
   \item Censista. Participa en la jornada de terreno recorriendo a pie la ruta que le fue asignada.
@@ -77,12 +74,8 @@ sobrevivir a una pérdida momentánea de red en lugar de perderse.
 \section{REQUISITOS FUNCIONALES}
 \label{sec:requisitos-funcionales}
 
-Los requisitos funcionales se derivan del problema descrito en el capítulo anterior: para que el
-re-censo estructurado sea ejecutable, el sistema debe partir del catastro que dejaron las
-iteraciones anteriores, convertirlo en un plan de trabajo repartido entre censistas, llevar ese
-plan al terreno y devolver de la jornada una observación nueva por árbol. La
-Tabla~\ref{tab:requisitos} enumera los requisitos que la solución compromete, agrupados por la etapa
-de esa cadena a la que pertenecen.
+La Tabla~\ref{tab:requisitos} enumera los requisitos que la solución compromete, agrupados por la
+etapa de la cadena operacional de la Sección~\ref{sec:solucion} a la que pertenecen.
 
 \begin{xltabular}{\textwidth}{@{}l X@{}}
   \caption{Requisitos funcionales de la solución.}
@@ -173,20 +166,16 @@ de esa cadena a la que pertenecen.
           sin borrarlos del sistema. \\
 \end{xltabular}
 
-Los veintiséis requisitos se reparten en las cinco etapas de la cadena: cuatro para incorporar el
-catastro existente, nueve para planificar, tres para publicar y asignar, seis para la captura en
-terreno y cuatro para el seguimiento.\footnote{Ver \hyperref[anx:trazabilidad]{Anexo 5}.} RF-07 es el que separa a esta solución de la práctica actual,
-dado que convierte el número de equipos en un resultado del sistema y no en una decisión previa del
+RF-07 es el requisito que separa a esta solución de la práctica actual, dado que convierte el
+número de equipos en un resultado del sistema y no en una decisión previa del
 administrador.
 
 \section{ATRIBUTOS DE CALIDAD}
 \label{sec:atributos-calidad}
 
 Los atributos de calidad no expresan qué hace el sistema, sino con qué grado de suficiencia debe
-hacerlo. Se comprometen cuatro, que la Tabla~\ref{tab:atributos-calidad} resume. Dos de ellos
-reciben prioridad alta porque su incumplimiento inutiliza la campaña: un plan que no resiste el
-cambio de parámetros y un portal que no resiste la calle no sirven, por buenas que sean sus demás
-propiedades.
+hacerlo. Se comprometen cuatro, que la Tabla~\ref{tab:atributos-calidad} resume; los dos primeros
+reciben prioridad alta porque su incumplimiento inutiliza la campaña.
 \begin{table}[H]
   \centering
   \caption{Atributos de calidad comprometidos por la solución.}
@@ -242,10 +231,9 @@ observa comparando contra un presupuesto mayor.
 La calidad geográfica de las rutas se juzga sobre el trazado real de calles porque el censista
 camina por la vereda y no en línea recta. Su prioridad es media porque una ruta con auto-cruces
 sigue siendo ejecutable ---no invalida el censo, lo encarece--- y porque el tiempo de
-desplazamiento, objetivo explícito del modelo, ya penaliza buena parte de esa ineficiencia.
-
-Los cuatro se retoman en la Sección~\ref{sec:cumplimiento-atributos}, ya con las mediciones a la
-vista.
+desplazamiento, objetivo explícito del modelo, ya penaliza buena parte de esa
+ineficiencia.\footnote{Los cuatro atributos se retoman en la
+Sección~\ref{sec:cumplimiento-atributos}.}
 
 \section{RESTRICCIONES}
 \label{sec:restricciones}
