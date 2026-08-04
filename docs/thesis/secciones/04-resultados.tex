@@ -40,8 +40,7 @@ más a ellas.
   \centering
   \includegraphics[width=0.85\textwidth]{media/fig-instancia-legada.pdf}
   \caption{
-    Nodos de la instancia de referencia ($n = 1\,607$),\\
-    diferenciados por fuente de origen.
+    Nodos de la instancia de referencia diferenciados por fuente de origen.
   }
   \label{fig:instancia-legada}
 \end{figure}
@@ -602,7 +601,8 @@ la misma configuración y semillas.\footnote{Ver \hyperref[anx:crossings-areas]{
 
 Las soluciones sobre áreas reales no están libres de auto-cruces ---solo una de las doce corridas
 de área registró cero---, aunque sus conteos absolutos son bajos: entre 0 y 6 por solución
-completa, un orden de magnitud por debajo de los 24--37 de la instancia de estrés. La corrección
+completa en las áreas individuales y entre 6 y 10 en su unión, un orden de magnitud por debajo de
+los 24--37 de la instancia de estrés. La corrección
 más informativa es la tasa por ruta, que queda entre $1{,}33$ y $1{,}56$ en las áreas y su unión y
 en $1{,}25$ en la instancia agregada: el material no sostiene que el régimen disperso produzca más
 auto-cruces por ruta; lo que multiplica es el número de rutas y, con él, el conteo absoluto que la
@@ -851,9 +851,9 @@ sostiene la distribución de carga y evita la fragmentación en rutas demasiado 
 La penalización superior actúa sobre la geometría: al redirigir su objetivo desde el punto medio
 hasta $T_{\max}$, el número de auto-cruces medido sobre cuerdas cae de $76{,}3$ a $6{,}3$ sin
 variar el presupuesto ni el número de rutas. Esa cifra no sostiene, sin embargo, una relación
-causal directa: el barrido no tiene réplicas de semilla independientes, la métrica de cuerdas está
-invertida precisamente en la instancia donde se midió, y el mismo brazo degrada el balance de
-$0{,}838$ a $0{,}715$.\footnote{Ver \hyperref[anx:reservas-sensibilidad]{Anexo 4}.} Con esas
+causal directa: el barrido no tiene réplicas de semilla independientes y la métrica de cuerdas está
+invertida precisamente en la instancia donde se midió. El mismo brazo degrada, además, el balance de
+$0{,}838$ a $0{,}714$.\footnote{Ver \hyperref[anx:reservas-sensibilidad]{Anexo 4}.} Con esas
 reservas, el material es consistente con la hipótesis de que la geometría de las rutas responde a
 la configuración de la función objetivo y no al corte por tiempo del GLS, reforzada por dos
 observaciones independientes: el presupuesto del \textit{solver} no altera el número de rutas ni el
@@ -862,13 +862,8 @@ balance por sobre los 120\,s (Tabla~\ref{tab:sensibilidad-tl}), y la re-medició
 
 \item El régimen geográfico del \textit{dataset} de evaluación.
 
-El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}. La
-instancia agregada dispersa el arbolado en una extensión cercana a ocho veces la del área
-individual mayor (Sección~\ref{sec:protocolo-evaluacion}), y tratar esa unión como un único trabajo
-de ruteo carece de correlato operativo (Ilustración~\ref{fig:regimen-disperso-vs-real}). Para los
-auto-cruces, la serie por área de la Sección~\ref{sec:areas-reales} acota lo que ese régimen
-significa: el agregado no produce más auto-cruces por ruta, sino más rutas y, con ellas, un conteo
-absoluto mayor.
+El significado de ese diagnóstico depende del régimen geográfico del \textit{dataset}, que la
+Ilustración~\ref{fig:regimen-disperso-vs-real} contrasta con el de las áreas reales.
 
 \begin{figure}[H]
   \centering
@@ -879,6 +874,13 @@ absoluto mayor.
   }
   \label{fig:regimen-disperso-vs-real}
 \end{figure}
+
+La instancia agregada dispersa el arbolado en una extensión cercana a ocho veces la del área
+individual mayor (Sección~\ref{sec:protocolo-evaluacion}), y tratar esa unión como un único trabajo
+de ruteo carece de correlato operativo. Para los
+auto-cruces, la serie por área de la Sección~\ref{sec:areas-reales} acota lo que ese régimen
+significa: el agregado no produce más auto-cruces por ruta, sino más rutas y, con ellas, un conteo
+absoluto mayor.
 
 El peor par de rutas anunciado en la Sección~\ref{sec:comparacion-estrategias}, con un \textit{IoU}
 de $0{,}55$, persiste con la estrategia \texttt{spatial\_term} porque su solapamiento responde a la
@@ -1201,8 +1203,8 @@ debajo de la cota (CA-05, más arriba) y ampliar el presupuesto a $180$\,s alter
 en un $0{,}6$\,\% ---bajo la dispersión entre semillas--- sin cambiar rutas ni balance.
 
 La calidad geográfica de las rutas se cumple de forma acotada, y su alcance quedó redefinido por la
-propia experimentación: el atributo se juzga sobre el trazado real de calles, porque la correlación
-de la métrica de cuerdas con la calle es débil e invertida en el conjunto agregado. Bajo esa
+propia experimentación: el atributo se juzga sobre el trazado real de calles, por la reserva de
+instrumento ya declarada. Bajo esa
 métrica, el único componente con evidencia directa de mejorar la geometría es el post-proceso de
 resecuenciación, que reduce simultáneamente el tiempo de viaje y los auto-cruces en las doce
 instancias; el resto del modelo actúa de forma indirecta y sin evidencia equivalente. En el régimen
@@ -1257,10 +1259,8 @@ dentro de la propia serie y no invalida sus conclusiones: de los dieciséis cicl
 veredicto impugnado, dos se releyeron con el instrumento corregido sin que cambiara el descarte y
 los demás descansan en criterios ajenos a los defectos detectados.
 
-Hay un hallazgo transversal que explica una decisión de diseño del Capítulo~\ref{cap:diseno}: en
-casi ningún ciclo apareció un brazo que ganara en todas las instancias a la vez, y el orden entre
-dos brazos se invierte al cambiar la densidad o el tamaño. Esa ausencia sistemática de un ganador
-único es la evidencia que descartó fijar un \textit{default} único y la que motivó el abanico de
+Ese mismo hallazgo ---la ausencia de un ganador único--- explica una decisión de diseño del
+Capítulo~\ref{cap:diseno}: es la evidencia que descartó fijar un \textit{default} único y la que motivó el abanico de
 seis candidatas con selección lexicográfica de la Sección~\ref{sec:abanico}: si ninguna combinación
 domina, la decisión correcta no es elegir una de antemano sino ejecutarlas todas sobre la instancia
 concreta y dejar que un criterio explícito ---y no el autor--- resuelva cuál se recomienda.
@@ -1283,6 +1283,6 @@ verificado es que el producto hace lo que su diseño declara y no que resuelva e
 problema logístico que lo motivó. Esa comprobación queda pendiente y es, de todas las extensiones
 identificadas, la de mayor valor para el proyecto. Dos reservas de instrumento acompañan, por
 último, la lectura de la geometría: la mayor parte de las cifras de auto-cruces se calcula sobre
-cuerdas rectas, de correspondencia parcial con el trazado real, y la replicación por permutación
+cuerdas rectas, y la replicación por permutación
 acota la varianza entre semillas de una corrida pero no la varianza entre corridas. Ninguna de las
 dos afecta a los criterios de aceptación, que descansan en magnitudes ajenas a ellas.
