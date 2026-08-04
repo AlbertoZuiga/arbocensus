@@ -30,7 +30,7 @@ conjunto reúne una porción del arbolado disponible elegida por reproducibilida
 (Sección~\ref{sec:legacy}). La Ilustración~\ref{fig:instancia-legada} muestra la distribución de
 sus nodos, diferenciada por fuente: ambas se concentran en el mismo territorio, de modo que la
 instancia agrega observaciones del mismo arbolado urbano y no concatena zonas independientes. El
-segundo régimen es el de área de censo individual ---diámetros de hasta 1,32\,km---, que
+segundo régimen es el de área de censo individual ---diámetros de hasta $1{,}35$\,km---, que
 corresponde a la operación habitual. La instancia agregada es la que fija los criterios de
 aceptación del Capítulo~\ref{cap:solucion}; las áreas reales miden el motor en su unidad operativa
 (Sección~\ref{sec:areas-reales}), y varias conclusiones del régimen agregado no se trasladan sin
@@ -256,7 +256,8 @@ misma corrida, la primera repetición ---ejecutada con la matriz fuera de caché
 en total, y las dos repeticiones con la matriz ya cacheada ---el caso de operación normal, dado que
 la clave de caché es estable para un mismo conjunto de árboles activos--- tardaron 122{,}9 y
 123{,}7\,s; la diferencia, unos 211\,s, corresponde a la construcción de la matriz de costos contra
-OSRM. El caso frío queda así por sobre el umbral de cinco minutos de CA-05; la
+OSRM, un 24\,\% por sobre los $170{,}8$\,s del perfilamiento, dispersión propia de cien solicitudes
+HTTP sucesivas. El caso frío queda así por sobre el umbral de cinco minutos de CA-05; la
 Sección~\ref{sec:cumplimiento-criterios} recoge esa lectura.
 
 \subsection{Mejora sobre la alternativa trivial (CA-06)}
@@ -420,8 +421,8 @@ comparación contra un \textit{baseline} sin refinar.
 
 Las comparaciones anteriores se ejecutaron sobre la instancia de estrés agregada. Queda entonces
 sin responder la pregunta que la operación plantea de forma directa: qué obtiene un censo real
-cuando el problema se entrega en su escala natural ---un área individual de extensión
-$\leq 1{,}32$\,km--- en lugar de la unión de varias. Este apartado la responde con una medición
+cuando el problema se entrega en su escala natural ---un área individual de a lo más
+$1{,}35$\,km de diámetro--- en lugar de la unión de varias. Este apartado la responde con una medición
 propia y, además, pone precio a la partición misma.
 
 \begin{enumerate}
@@ -572,7 +573,8 @@ régimen de relleno por $T_{\min}$, propio de instancias que no saturan su presu
 Con la configuración de producción las cotas blandas no dependen de la instancia ---un piso en
 $T_{\min} = 7\,200$\,s y un objetivo superior en el punto medio de $9\,000$\,s---, y bajo esos
 precios partir resulta más barato que la jornada única: las dos rutas de la partición terminan
-exactamente en el piso, donde no pagan penalización alguna, mientras que la jornada única paga el
+exactamente en el piso ---en la dimensión temporal del \textit{solver}, que el relleno de trayecto
+separa de la duración observada---, donde no pagan penalización alguna, mientras que la jornada única paga el
 exceso sobre el objetivo superior. Instrumentar el valor de la función objetivo ---inyectando la
 solución del \textit{greedy} como \textit{warm start}--- lo confirma: la partición cuesta cerca de
 una cuarta parte que la jornada única (un factor de $4{,}2$), y el \textit{solver} la devuelve en
@@ -1014,7 +1016,7 @@ evidencia recogida sobre él.
 
 Las mejoras enumeradas a continuación se derivan de los resultados del capítulo. La primera es la de
 mayor valor para el proyecto; las dos siguientes tienen además anclaje en mediciones propias de esta
-memoria. Las nueve restantes abordan limitaciones funcionales o de diseño, independientes o no de la
+memoria. Las diez restantes abordan limitaciones funcionales o de diseño, independientes o no de la
 serie experimental, y las dos últimas registran alternativas evaluadas y descartadas. Cada una
 indica la evidencia que la respalda, su costo y qué habría que construir.
 
@@ -1135,7 +1137,9 @@ segmentación previa por área queda así como la extensión de mayor impacto de
 \subsection{Cumplimiento de los criterios de aceptación}
 \label{sec:cumplimiento-criterios}
 
-Los seis criterios comprometidos en la Sección~\ref{sec:criterios-aceptacion}, antes de ejecutar
+Los seis criterios traducen las seis cláusulas de la hipótesis de trabajo de la
+Sección~\ref{sec:alcance-desarrollo}, de modo que su contraste es también el veredicto sobre ella.
+Los seis, comprometidos en la Sección~\ref{sec:criterios-aceptacion} antes de ejecutar
 experimento alguno, se contrastan aquí contra lo medido. Cinco se cumplen y el sexto se cumple con
 una reserva de protocolo que corresponde declarar.
 

@@ -953,8 +953,8 @@ Tabla~\ref{tab:endpoints} resume los \textit{endpoints} más relevantes.\footnot
       \textit{Tokens} JWT, consulta del usuario en sesión y gestión de cuentas de censistas. \\
     \textit{Datasets} &
       \texttt{/api/datasets/} &
-      Importación CSV/JSON y desde fuentes legadas, exploración, exportación \textit{GeoJSON} e
-      historial de observaciones. \\
+      Importación CSV/JSON y desde fuentes legadas, exploración, exportación \textit{GeoJSON},
+      historial de observaciones, edición de metadatos y desactivación de árboles. \\
     Optimización &
       \texttt{/api/optimization/} &
       Estimación de flota y comprobación de factibilidad, creación de trabajos, \textit{polling} de
@@ -1059,8 +1059,8 @@ de paradas, con las posteriores a la activa bloqueadas hasta completar la anteri
 
 El comportamiento descrito en este capítulo ---y con él los requisitos funcionales comprometidos en
 la Sección~\ref{sec:requisitos-funcionales}--- se sostiene sobre una suite de pruebas automatizadas
-que se ejecuta en cada integración de cambios: 524 funciones de prueba de \textit{backend} en 47
-archivos y 304 casos de \textit{frontend} en 44, acompañados de análisis estático
+que se ejecuta en cada integración de cambios: 533 funciones de prueba de \textit{backend} en 47
+archivos y 316 casos de \textit{frontend} en 44, acompañados de análisis estático
 ---\textit{Ruff}, \textit{Pyright} y \textit{ESLint}--- y de los flujos de integración y entrega
 continuas que encadenan análisis, pruebas y construcción, y que actualizan el servidor ante cada
 \textit{push} a la rama \texttt{production}
