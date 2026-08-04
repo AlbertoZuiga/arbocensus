@@ -23,19 +23,19 @@ Extracción del selector, limpieza de la interfaz de línea de comandos y herram
 \hline
 Recorrido de camino abierto y grafo disperso con árbol k-dimensional & El recorrido pasó a producir caminos abiertos sin retorno al origen. El grafo completo se reemplazó por uno disperso construido con un árbol k-dimensional, acotando las aristas evaluadas en cada paso. & 2026-03-21 & 10 & A. Zúñiga \\
 \hline
-Agrupamiento balanceado por k-means y optimización entre rutas & Se reemplazó la división recursiva por k-means balanceado, que reparte los nodos más uniformemente, y se añadió una pasada de optimización entre rutas para reasignar nodos de borde entre grupos vecinos. & 2026-03-22 a\newline 2026-03-23 & 16 & A. Zúñiga \\
+Agrupamiento balanceado por k-means y optimización entre rutas & Se reemplazó la división recursiva por k-means balanceado, que reparte los nodos más uniformemente, y se añadió una pasada de optimización entre rutas para reasignar nodos de borde entre grupos vecinos. & 2026-03-22 a\newline 2026-03-24 & 16 & A. Zúñiga \\
 \hline
-Clientes de ruteo y orquestador de la tubería & Se abstrajo el acceso a los servicios de ruteo tras una interfaz común y se construyó un orquestador que encadena las etapas y expone sus métricas. & 2026-03-22 a\newline 2026-03-23 & 14 & A. Zúñiga \\
+Clientes de ruteo y orquestador de la tubería & Se abstrajo el acceso a los servicios de ruteo tras una interfaz común y se construyó un orquestador que encadena las etapas y expone sus métricas. & 2026-03-24 a\newline 2026-03-26 & 14 & A. Zúñiga \\
 \hline
 Integración de OSRM local y exportación de trazados & Se desplegó una instancia local de OSRM sobre datos de OpenStreetMap, reemplazando las distancias geométricas por tiempos de caminata reales; la tubería pasó a exportar el trazado de cada ruta sobre la red vial. & 2026-03-27 & 10 & A. Zúñiga \\
 \hline
-Consolidación de la versión de prototipo y retiro del código heredado & Se eliminó el agrupamiento previo, se incorporaron controles y métricas al visor y se retiró el código de versiones anteriores, delimitando el alcance del prototipo antes de rediseñar la arquitectura. & 2026-03-27 a\newline 2026-03-28 & 21 & A. Zúñiga \\
+Consolidación de la versión de prototipo y retiro del código heredado & Se eliminó el agrupamiento previo, se incorporaron controles y métricas al visor y se retiró el código de versiones anteriores, delimitando el alcance del prototipo antes de rediseñar la arquitectura. & 2026-03-28 a\newline 2026-03-30 & 21 & A. Zúñiga \\
 \hline
 Reinicio del repositorio y decisión de arquitectura de la plataforma & Se cerró la etapa de prototipo y se decidió reconstruir la solución como plataforma web, separando el servicio de aplicación, la cola de tareas asíncronas y el motor de ruteo. & 2026-05-22 a\newline 2026-05-23 & 2 & A. Zúñiga \\
 \hline
 Infraestructura de contenedores y entorno de desarrollo & Se definió la composición de contenedores para la base de datos espacial, la cola de tareas, el motor de ruteo, la aplicación y la interfaz, con resolución automática de puertos para entornos simultáneos, verificaciones de salud y utilidades de desarrollo. & 2026-06-01 a\newline 2026-06-23 & 17 & A. Zúñiga \\
 \hline
-Redacción de la memoria, informes de experimento y bitácora & A lo largo del desarrollo se redactaron la memoria, los informes de cada ciclo experimental ---con protocolo, criterios de decisión fijados antes de ejecutar y datos crudos versionados--- y la bitácora de trabajo. Tras las revisiones críticas se reestructuró el documento: alcance y requisitos reescritos sobre lo efectivamente medido, atributos de calidad podados con criterio de falsabilidad, anexos de trazabilidad y bibliografía ampliada. Las cifras se mantuvieron sincronizadas con las mediciones vigentes y se cerró con la revisión final de los entregables. & 2026-06-01 a\newline 2026-08-03 & 63 & A. Zúñiga \\
+Redacción de la memoria, informes de experimento y bitácora & A lo largo del desarrollo se redactaron la memoria, los informes de cada ciclo experimental ---con protocolo, criterios de decisión fijados antes de ejecutar y datos crudos versionados--- y la bitácora de trabajo. Tras las revisiones críticas se reestructuró el documento: alcance y requisitos reescritos sobre lo efectivamente medido, atributos de calidad podados con criterio de falsabilidad, anexos de trazabilidad y bibliografía ampliada. Las cifras se mantuvieron sincronizadas con las mediciones vigentes y se cerró con la revisión final de los entregables, que reorganizó los capítulos según la retroalimentación del profesor guía y redujo el cuerpo del documento de 89 a 63 páginas. & 2026-06-01 a\newline 2026-08-03 & 73 & A. Zúñiga \\
 \hline
 Andamiaje del servidor e integración continua & Se estructuró el proyecto por módulos de dominio y se configuró la integración continua con análisis de estilo, verificación de tipos y pruebas sobre una base de datos espacial real, no sobre maquetas. & 2026-06-09 a\newline 2026-06-19 & 13 & A. Zúñiga \\
 \hline
@@ -99,6 +99,6 @@ Carga acumulada por censista y sugerencia de asignación & Se calculó la carga 
 \hline
 Recomendación entre configuraciones y recorte del abanico & Se implementó la recomendación automática de la configuración con mejor relación caminata--balance entre pares de preajuste y estrategia, con desempate por número de rutas y regla de empate técnico. El abanico se recortó a pares con diferencias medibles y se añadieron los deltas contra el control. & 2026-07-29 a\newline 2026-07-30 & 7 & A. Zúñiga \\
 \hline
-\multicolumn{3}{|r|}{\textbf{Total}} & \textbf{592} & \\
+\multicolumn{3}{|r|}{\textbf{Total}} & \textbf{602} & \\
 \hline
 \end{xltabular}
