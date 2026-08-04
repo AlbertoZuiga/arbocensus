@@ -59,7 +59,9 @@ Los experimentos emplean los parámetros temporales por defecto
 los \textit{defaults} de producción del motor: la estrategia \texttt{spatial\_term} y un
 tiempo límite de \textit{solver} de 120\,s, que coincide con el tope de la heurística
 $\min(30 + 1{,}5\,n,\ 120)$ para todo \textit{dataset} de $n \geq 60$ y se fija también en las
-instancias menores de la suite para mantener el presupuesto homogéneo.
+instancias menores de la suite para mantener el presupuesto homogéneo, con una sola excepción
+declarada donde se reporta: la serie descriptiva de auto-cruces por área conserva la heurística de
+producción.
 
 Cada corrida se repite tres veces. \textit{OR-Tools} no expone una semilla de generador
 pseudoaleatorio (RE-05), de modo que cada repetición se construye permutando el orden en que los
