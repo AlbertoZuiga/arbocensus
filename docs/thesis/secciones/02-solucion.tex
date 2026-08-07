@@ -166,16 +166,10 @@ etapa de la cadena operacional de la Sección~\ref{sec:solucion} a la que perten
           sin borrarlos del sistema. \\
 \end{xltabular}
 
-RF-07 es el requisito que separa a esta solución de la práctica actual, dado que convierte el
-número de equipos en un resultado del sistema y no en una decisión previa del
-administrador.
-
 \section{ATRIBUTOS DE CALIDAD}
 \label{sec:atributos-calidad}
 
-Los atributos de calidad no expresan qué hace el sistema, sino con qué grado de suficiencia debe
-hacerlo. Se comprometen cuatro, que la Tabla~\ref{tab:atributos-calidad} resume; los dos primeros
-reciben prioridad alta porque su incumplimiento inutiliza la campaña.
+Los atributos de calidad comprometidos son los cuatro presentados en laTabla~\ref{tab:atributos-calidad}.
 \begin{table}[H]
   \centering
   \caption{Atributos de calidad comprometidos por la solución.}
@@ -238,10 +232,7 @@ Sección~\ref{sec:cumplimiento-atributos}.}
 \section{RESTRICCIONES}
 \label{sec:restricciones}
 
-La Tabla~\ref{tab:restricciones} enumera las restricciones bajo las que se desarrolla el producto. Son
-condiciones impuestas por el entorno de operación, por los datos heredados o por las herramientas
-empleadas: el diseño responde a ellas, pero no puede levantarlas. Se enuncian como condición, y no
-como la respuesta que el diseño les dio.
+La Tabla~\ref{tab:restricciones} enumera las restricciones bajo las que se desarrolla el producto. 
 
 \small
 \begin{xltabular}{\textwidth}{@{}l X@{}}
@@ -257,60 +248,24 @@ como la respuesta que el diseño les dio.
   \endhead
   \bottomrule
   \endlastfoot
-    RE-01 &
-    El servicio \texttt{/table} de OSRM \citep{osrm} codifica cada coordenada en la ruta de la
-    petición, de modo
-    que una consulta de matriz falla por longitud de URL mucho antes de alcanzar el límite de tabla
-    del servidor. \\
-    \addlinespace
-    RE-02 &
-    El tamaño de una matriz de costos crece como $O(n^2)$, lo que acota el número de árboles que una
-    sola planificación puede abarcar. \\
+    
     \addlinespace
     RE-03 &
     Las bases de datos legadas pertenecen a sistemas ajenos al alcance de esta iteración y se
     acceden estrictamente en modo de solo lectura. \\
     \addlinespace
-    RE-04 &
-    El \textit{solver} de \textit{OR-Tools} resuelve mediante una metaheurística de búsqueda local:
-    no converge ni certifica optimalidad, y sin un límite de tiempo explícito no se detiene por sí
-    sola, de modo que toda solución entregada es la mejor hallada dentro del presupuesto concedido,
-    no la mejor existente. \\
-    \addlinespace
-    RE-05 &
-    \textit{OR-Tools} no expone una semilla del generador pseudoaleatorio, por lo que las réplicas
-    de un experimento deben construirse permutando el orden de entrada de los nodos, que es el que
-    resuelve los empates de la heurística de construcción y decide la trayectoria de la búsqueda. \\
-    \addlinespace
     RE-06 &
     La conectividad en terreno es intermitente, de modo que el portal del censista no puede suponer
     red disponible en el instante del registro. \\
-    \addlinespace
-    RE-07 &
-    Las mediciones del Capítulo~\ref{cap:resultados} preceden al despliegue productivo del sistema,
-    incorporado al cierre de la iteración: se realizaron sobre hardware de desarrollo, con los
-    contenedores de base de datos y de ruteo emulados sobre otra arquitectura, de modo que toda
-    medición proviene de una réplica local y las cifras absolutas de tiempo no son extrapolables a
-    otro hardware. \\
 \end{xltabular}
 \normalsize
 
-Las restricciones se reparten en tres grupos según a qué afectan. RE-01, RE-02 y RE-04 provienen de
-las herramientas de ruteo y de optimización y acotan lo que la plataforma puede calcular. RE-03 y
-RE-06 provienen del entorno de operación y de los datos heredados, y acotan de qué información
-dispone el sistema y bajo qué condiciones se usa. RE-05 y RE-07 no afectan al producto sino a la
-evidencia con que se lo juzga: limitan qué se puede medir, qué tan comparables son las réplicas
-entre sí y hasta dónde son extrapolables las cifras que se midan.
 
 \section{CRITERIOS DE ACEPTACIÓN}
 \label{sec:criterios-aceptacion}
 
 Los criterios de aceptación son la traducción de los atributos de calidad a condiciones
-verificables: fijan el umbral bajo el cual el producto se considera insuficiente, no la escala con
-que se ordenan sus variantes entre sí. La Tabla~\ref{tab:criterios} enumera los seis criterios
-comprometidos, que se enuncian sobre la configuración censal de referencia ---el arbolado importado
-de las bases legadas, con los parámetros de jornada por defecto--- y sobre ella se contrastan
-después contra lo medido.
+verificables.
 
 \begin{table}[H]
   \centering
@@ -359,15 +314,3 @@ después contra lo medido.
   \end{tablenotes}
   \end{threeparttable}
 \end{table}
-
-CA-05 exige una precisión de alcance. El presupuesto del \textit{solver} es un tope duro, no un
-tiempo de convergencia: cualquier presupuesto inferior a cinco minutos satisface el criterio sin que
-ello diga nada sobre la calidad de la solución que se alcanza dentro de él. Por eso el criterio se
-enuncia sobre la corrida completa y no sobre la metaheurística aislada, y su verificación debe
-acompañarse de la evidencia de que el presupuesto elegido basta, esto es, de que ampliarlo no mejora
-la solución de forma apreciable.
-
-CA-06 exige una precisión de método, porque un margen es comparable solo si ambos enfoques reciben
-el mismo trato: la comparación debe fijar la instancia, la matriz de costos y los refinamientos que
-se aplican a cada lado, y el margen resultante debe superar la variabilidad propia del
-\textit{solver} entre corridas para ser atribuible al método y no al azar de la búsqueda.

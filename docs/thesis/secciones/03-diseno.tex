@@ -28,10 +28,7 @@ PostGIS en el ORM---, \textit{OR-Tools} frente a una heurística propia y a los 
 comerciales de licencia recurrente, OSRM frente a las APIs de ruteo tarificadas por consulta,
 \textit{React}~18 \citep{react} con Vite y \textit{Leaflet} \citep{leaflet} para la interfaz
 cartográfica, Celery con Redis para el trabajo asíncrono, y un monolito modular en lugar de
-servicios separados por dominio.\footnote{Ver \hyperref[anx:stack]{Anexo 8}.} El patrón que recorre
-esas decisiones es que ninguna se resolvió por rendimiento aislado del componente: cuando existía
-una alternativa de pago, su aporte no compensaba el gasto proyectado ni la latencia que introduce,
-y entre las alternativas libres decidió la simplicidad de operarlas.
+servicios separados por dominio.\footnote{Ver \hyperref[anx:stack]{Anexo 8}.} 
 
 La arquitectura resultante sigue el patrón de monolito modular: un único servicio Django
 \citep{django} con módulos separados por dominio (\texttt{accounts}, \texttt{datasets},
@@ -147,13 +144,6 @@ Los modelos de dominio centrales son los siguientes:
         no una vez por optimización.
 \end{enumerate}
 
-La procedencia se modela en el propio \texttt{Tree} en lugar de en una entidad aparte, porque solo
-se necesita para dos fines: evitar la doble importación de un mismo árbol legado y vincular sus
-observaciones históricas. Una restricción de unicidad parcial sobre la terna (\texttt{dataset},
-\texttt{source}, \texttt{external\_id}), condicionada a \texttt{external\_id} no nulo, impide que un
-mismo árbol legado aparezca dos veces en un \textit{dataset} sin restringir a los árboles importados
-desde CSV, que no tienen identificador externo. El orden de visita de cada ruta se deriva de
-\texttt{RouteStop.sequence}; no existe un campo redundante de secuencia en \texttt{Route}.
 
 Cada \texttt{OptimizationJob} produce una \texttt{RoutingSolution} por cada estrategia de partición
 ejecutada (Sección~\ref{sec:estrategias}), lo que permite comparar los enfoques sobre un mismo
@@ -204,9 +194,6 @@ Todas las entidades usan claves primarias UUID.
   \label{fig:er}
 \end{figure}
 
-La doble ruta \texttt{RouteStop} $\to$ \texttt{TreeObservation} y \texttt{Tree} $\to$
-\texttt{TreeObservation} del diagrama es lo que permite que una observación de re-censo sobreviva
-al plan de rutas que la originó, incluso si esa ruta se reemplaza.
 
 % ---- 3.3 -------------------------------------------------------
 \section{MOTOR DE OPTIMIZACIÓN}
